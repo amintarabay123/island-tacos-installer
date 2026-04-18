@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, menuCategoriesTable, menuItemsTable } from "@workspace/db";
 import {
   CreateMenuCategoryBody,
@@ -20,10 +20,16 @@ const router: IRouter = Router();
 
 router.get("/menu/categories", async (_req, res): Promise<void> => {
   const categories = await db
-    .select()
+    .select({ category: menuCategoriesTable })
     .from(menuCategoriesTable)
+    .innerJoin(
+      menuItemsTable,
+      eq(menuItemsTable.categoryId, menuCategoriesTable.id)
+    )
+    .where(sql`${menuItemsTable.available} = true`)
+    .groupBy(menuCategoriesTable.id)
     .orderBy(menuCategoriesTable.sortOrder);
-  res.json(categories);
+  res.json(categories.map((r) => r.category));
 });
 
 router.post("/menu/categories", async (req, res): Promise<void> => {
