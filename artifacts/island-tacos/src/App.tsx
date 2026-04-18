@@ -8,6 +8,7 @@ import Checkout from "@/pages/checkout";
 import TrackOrder from "@/pages/track";
 import Admin from "@/pages/admin";
 import AdminMenu from "@/pages/admin-menu";
+import Kitchen from "@/pages/kitchen";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/track" component={TrackOrder} />
       <Route path="/admin" component={Admin} />
       <Route path="/admin/menu" component={AdminMenu} />
+      <Route path="/kitchen" component={Kitchen} />
       <Route component={NotFound} />
     </Switch>
   );
