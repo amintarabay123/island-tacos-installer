@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdminStatsQueryKey, getGetRecentOrdersQueryKey, type UpdateOrderStatusBodyStatus } from "@workspace/api-client-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw } from "lucide-react";
+import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw, Monitor } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -94,6 +94,12 @@ export default function Admin() {
               <RefreshCw className={`h-4 w-4 mr-2 ${syncLoyverse.isPending ? "animate-spin" : ""}`} />
               {syncLoyverse.isPending ? "Syncing..." : "Sync from Loyverse"}
             </Button>
+            <Link href="/kitchen">
+              <Button variant="outline" size="sm">
+                <Monitor className="h-4 w-4 mr-2" />
+                Kitchen Display
+              </Button>
+            </Link>
             <Link href="/admin/menu">
               <Button variant="outline" size="sm">
                 <Settings className="h-4 w-4 mr-2" />

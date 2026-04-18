@@ -22,17 +22,27 @@ type Order = {
 
 const STATUS_ORDER = ["pending", "confirmed", "preparing", "ready"];
 const ACTIVE_STATUSES = new Set(["pending", "confirmed", "preparing"]);
+const OVERDUE_MS = 10 * 60 * 1000; // 10 minutes
 
-function elapsed(createdAt: string): string {
-  const diff = Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  const m = Math.floor(diff / 60);
-  if (m < 60) return `${m}m ago`;
-  return `${Math.floor(m / 60)}h ${m % 60}m ago`;
+function useNow() {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 10_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
 }
 
-function statusLabel(status: string): string {
-  return { pending: "New", confirmed: "Confirmed", preparing: "Preparing", ready: "Ready" }[status] ?? status;
+function elapsed(createdAt: string, now: number): string {
+  const diff = Math.floor((now - new Date(createdAt).getTime()) / 1000);
+  if (diff < 60) return `${diff}s`;
+  const m = Math.floor(diff / 60);
+  if (m < 60) return `${m}m`;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+function isOverdue(createdAt: string, now: number): boolean {
+  return now - new Date(createdAt).getTime() > OVERDUE_MS;
 }
 
 function nextStatus(status: string): string | null {
@@ -41,40 +51,37 @@ function nextStatus(status: string): string | null {
 }
 
 function nextLabel(status: string): string {
-  return { pending: "Accept", confirmed: "Start Cooking", preparing: "Mark Ready" }[status] ?? "Advance";
-}
-
-function statusColor(status: string) {
   return (
-    {
-      pending: "border-yellow-400 bg-yellow-950/60",
-      confirmed: "border-blue-400 bg-blue-950/60",
-      preparing: "border-orange-400 bg-orange-950/60",
-      ready: "border-green-400 bg-green-950/60",
-    }[status] ?? "border-zinc-600 bg-zinc-900"
+    { pending: "Accept Order", confirmed: "Start Cooking", preparing: "Mark Ready" }[status] ?? "Advance"
   );
 }
 
-function statusBadge(status: string) {
-  return (
-    {
-      pending: "bg-yellow-400 text-yellow-950",
-      confirmed: "bg-blue-400 text-blue-950",
-      preparing: "bg-orange-400 text-orange-950",
-      ready: "bg-green-400 text-green-950",
-    }[status] ?? "bg-zinc-600 text-white"
-  );
-}
-
-function buttonColor(status: string) {
-  return (
-    {
-      pending: "bg-yellow-400 hover:bg-yellow-300 text-yellow-950",
-      confirmed: "bg-blue-400 hover:bg-blue-300 text-blue-950",
-      preparing: "bg-green-400 hover:bg-green-300 text-green-950",
-    }[status] ?? "bg-zinc-600 hover:bg-zinc-500 text-white"
-  );
-}
+const COL_CONFIG = [
+  {
+    key: "pending" as const,
+    label: "New",
+    badge: "bg-yellow-400 text-yellow-950",
+    border: "border-yellow-500",
+    bg: "bg-yellow-950/40",
+    btn: "bg-yellow-400 hover:bg-yellow-300 text-yellow-950 active:bg-yellow-200",
+  },
+  {
+    key: "confirmed" as const,
+    label: "Confirmed",
+    badge: "bg-blue-400 text-blue-950",
+    border: "border-blue-500",
+    bg: "bg-blue-950/40",
+    btn: "bg-blue-400 hover:bg-blue-300 text-blue-950 active:bg-blue-200",
+  },
+  {
+    key: "preparing" as const,
+    label: "Preparing",
+    badge: "bg-orange-400 text-orange-950",
+    border: "border-orange-500",
+    bg: "bg-orange-950/40",
+    btn: "bg-green-400 hover:bg-green-300 text-green-950 active:bg-green-200",
+  },
+];
 
 export default function Kitchen() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -83,53 +90,52 @@ export default function Kitchen() {
   const [error, setError] = useState<string | null>(null);
   const prevIdsRef = useRef<Set<number>>(new Set());
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const now = useNow();
 
   const playChime = useCallback(() => {
     try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext();
-      }
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
       const ctx = audioCtxRef.current;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.15);
-      gain.gain.setValueAtTime(0.4, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.5);
+      const times = [0, 0.2, 0.4];
+      const freqs = [880, 1100, 1320];
+      times.forEach((t, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = freqs[i];
+        gain.gain.setValueAtTime(0.35, ctx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.35);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + 0.35);
+      });
     } catch {}
   }, []);
 
   const fetchOrders = useCallback(async () => {
     try {
       const res = await fetch("/api/orders");
-      if (!res.ok) throw new Error("Failed to fetch orders");
+      if (!res.ok) throw new Error("Failed to fetch");
       const data: Order[] = await res.json();
       const active = data.filter((o) => ACTIVE_STATUSES.has(o.status));
-
       const newIds = new Set(active.map((o) => o.id));
-      const hasNew = active.some((o) => !prevIdsRef.current.has(o.id));
-      if (hasNew && prevIdsRef.current.size > 0) {
+      if (active.some((o) => !prevIdsRef.current.has(o.id)) && prevIdsRef.current.size > 0) {
         playChime();
       }
       prevIdsRef.current = newIds;
-
       setOrders(active);
       setLastFetch(new Date());
       setError(null);
     } catch {
-      setError("Connection error — retrying…");
+      setError("Connection lost — retrying…");
     }
   }, [playChime]);
 
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 10_000);
-    return () => clearInterval(interval);
+    const id = setInterval(fetchOrders, 10_000);
+    return () => clearInterval(id);
   }, [fetchOrders]);
 
   const advance = async (order: Order) => {
@@ -156,115 +162,128 @@ export default function Kitchen() {
   for (const o of orders) {
     if (byStatus[o.status]) byStatus[o.status].push(o);
   }
+  const hasOrders = orders.length > 0;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col select-none">
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col select-none overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 bg-zinc-900 border-b border-zinc-800 shrink-0">
+      <header className="flex items-center justify-between px-5 py-3 bg-zinc-900 border-b border-zinc-800 shrink-0">
         <div className="flex items-center gap-3">
-          <span className="text-xl font-bold tracking-tight">Island Tacos</span>
-          <span className="text-zinc-500 text-sm font-medium">Kitchen Display</span>
+          <span className="text-lg font-bold">Island Tacos</span>
+          <span className="text-zinc-500 text-sm">· Kitchen Display</span>
         </div>
         <div className="flex items-center gap-4">
-          {error && (
+          {error ? (
             <span className="text-red-400 text-sm font-medium">{error}</span>
-          )}
-          {lastFetch && !error && (
-            <span className="text-zinc-500 text-xs">Updated {lastFetch.toLocaleTimeString()}</span>
-          )}
+          ) : lastFetch ? (
+            <span className="text-zinc-600 text-xs">Refreshes every 10s · {lastFetch.toLocaleTimeString()}</span>
+          ) : null}
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-green-400 text-xs font-medium">Live</span>
+            <span className={`w-2 h-2 rounded-full ${error ? "bg-red-500" : "bg-green-400 animate-pulse"}`} />
+            <span className={`text-xs font-medium ${error ? "text-red-400" : "text-green-400"}`}>
+              {error ? "Offline" : "Live"}
+            </span>
           </div>
         </div>
       </header>
 
-      {/* Column headers */}
-      <div className="grid grid-cols-3 gap-4 px-4 pt-4 pb-2 shrink-0">
-        {(["pending", "confirmed", "preparing"] as const).map((s) => (
-          <div key={s} className="flex items-center gap-2">
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${statusBadge(s)}`}>
-              {statusLabel(s)}
-            </span>
-            <span className="text-zinc-500 text-sm">{byStatus[s].length} order{byStatus[s].length !== 1 ? "s" : ""}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Order grid */}
-      <div className="grid grid-cols-3 gap-4 px-4 pb-6 flex-1 overflow-y-auto items-start">
-        {(["pending", "confirmed", "preparing"] as const).map((col) => (
-          <div key={col} className="flex flex-col gap-3">
-            {byStatus[col].length === 0 && (
-              <div className="border border-dashed border-zinc-800 rounded-xl flex items-center justify-center h-32">
-                <span className="text-zinc-600 text-sm">No orders</span>
+      {hasOrders ? (
+        <>
+          {/* Column labels */}
+          <div className="grid grid-cols-3 gap-3 px-4 pt-4 pb-2 shrink-0">
+            {COL_CONFIG.map(({ key, label, badge }) => (
+              <div key={key} className="flex items-center gap-2">
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${badge}`}>
+                  {label}
+                </span>
+                <span className="text-zinc-500 text-sm">
+                  {byStatus[key].length} {byStatus[key].length === 1 ? "order" : "orders"}
+                </span>
               </div>
-            )}
-            {byStatus[col].map((order) => {
-              const next = nextStatus(order.status);
-              const isAdvancing = advancing.has(order.id);
-              return (
-                <div
-                  key={order.id}
-                  className={`rounded-xl border-2 ${statusColor(order.status)} p-4 flex flex-col gap-3`}
-                >
-                  {/* Order header */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-2xl font-black tracking-tight">{order.confirmationCode}</div>
-                      <div className="text-zinc-300 font-medium text-sm mt-0.5">{order.customerName}</div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-xs text-zinc-400">{elapsed(order.createdAt)}</div>
-                      <div className="text-xs text-zinc-500 mt-0.5 capitalize">{order.orderType}</div>
-                    </div>
-                  </div>
-
-                  {/* Items */}
-                  <div className="flex flex-col gap-2">
-                    {order.items.map((item) => (
-                      <div key={item.id} className="bg-black/30 rounded-lg px-3 py-2">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-lg font-bold text-white leading-tight">{item.quantity}×</span>
-                          <span className="text-base font-semibold text-white leading-tight">{item.menuItemName}</span>
-                        </div>
-                        {item.notes && (
-                          <div className="text-yellow-300 text-sm mt-1 leading-snug whitespace-pre-line">
-                            {item.notes}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Order-level notes */}
-                  {order.notes && (
-                    <div className="text-yellow-200 text-sm bg-yellow-900/40 rounded-lg px-3 py-2 leading-snug">
-                      {order.notes}
-                    </div>
-                  )}
-
-                  {/* Advance button */}
-                  {next && (
-                    <button
-                      onClick={() => advance(order)}
-                      disabled={isAdvancing}
-                      className={`w-full rounded-lg py-2.5 text-sm font-bold transition-all active:scale-95 ${buttonColor(order.status)} disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {isAdvancing ? "Updating…" : nextLabel(order.status)}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
+            ))}
           </div>
-        ))}
-      </div>
 
-      {orders.length === 0 && !error && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-2">
-          <div className="text-4xl font-black text-zinc-800">All clear</div>
-          <div className="text-zinc-600 text-sm">No active orders right now</div>
+          {/* Order cards */}
+          <div className="grid grid-cols-3 gap-3 px-4 pb-4 flex-1 overflow-y-auto items-start">
+            {COL_CONFIG.map(({ key, border, bg, btn }) => (
+              <div key={key} className="flex flex-col gap-3">
+                {byStatus[key].length === 0 && (
+                  <div className="border border-dashed border-zinc-800 rounded-xl flex items-center justify-center h-28">
+                    <span className="text-zinc-700 text-sm">No orders</span>
+                  </div>
+                )}
+                {byStatus[key].map((order) => {
+                  const overdue = isOverdue(order.createdAt, now);
+                  const age = elapsed(order.createdAt, now);
+                  const isAdvancing = advancing.has(order.id);
+                  const next = nextStatus(order.status);
+                  return (
+                    <div
+                      key={order.id}
+                      className={`rounded-xl border-2 ${overdue ? "border-red-500 bg-red-950/50 animate-pulse" : `${border} ${bg}`} p-4 flex flex-col gap-3 transition-colors`}
+                    >
+                      {/* Order header */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-2xl font-black tracking-tight leading-none">
+                            {order.confirmationCode}
+                          </div>
+                          <div className="text-zinc-200 font-semibold text-sm mt-1">{order.customerName}</div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className={`text-sm font-bold tabular-nums ${overdue ? "text-red-400" : "text-zinc-400"}`}>
+                            {age}
+                          </div>
+                          <div className="text-xs text-zinc-500 mt-0.5 capitalize">{order.orderType}</div>
+                        </div>
+                      </div>
+
+                      {/* Items */}
+                      <div className="flex flex-col gap-1.5">
+                        {order.items.map((item) => (
+                          <div key={item.id} className="bg-black/40 rounded-lg px-3 py-2.5">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-xl font-black text-white leading-none">{item.quantity}×</span>
+                              <span className="text-base font-semibold text-white leading-snug">{item.menuItemName}</span>
+                            </div>
+                            {item.notes && (
+                              <div className="text-yellow-300 text-sm mt-1.5 leading-snug whitespace-pre-line font-medium">
+                                {item.notes}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Order-level notes */}
+                      {order.notes && (
+                        <div className="bg-yellow-900/50 border border-yellow-700/40 rounded-lg px-3 py-2 text-yellow-200 text-sm leading-snug">
+                          {order.notes}
+                        </div>
+                      )}
+
+                      {/* Advance button */}
+                      {next && (
+                        <button
+                          onClick={() => advance(order)}
+                          disabled={isAdvancing}
+                          className={`w-full rounded-lg py-3 text-sm font-bold transition-all active:scale-95 ${btn} disabled:opacity-40 disabled:cursor-not-allowed`}
+                        >
+                          {isAdvancing ? "Updating…" : nextLabel(order.status)}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        /* All-clear state */
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+          <div className="text-6xl font-black text-zinc-800 tracking-tight">All Clear</div>
+          <div className="text-zinc-600 text-base">No active orders · refreshing every 10s</div>
         </div>
       )}
     </div>
