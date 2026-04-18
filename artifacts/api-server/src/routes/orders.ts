@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable } from "@workspace/db";
 import {
   CreateOrderBody,
@@ -9,6 +9,7 @@ import {
   TrackOrderParams,
   ListOrdersQueryParams,
 } from "@workspace/api-zod";
+import { pushOrderToLoyverse } from "../lib/loyverse";
 
 const router: IRouter = Router();
 
@@ -91,7 +92,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     .where(
       menuItemIds.length === 1
         ? eq(menuItemsTable.id, menuItemIds[0])
-        : menuItemsTable.id.in(menuItemIds)
+        : inArray(menuItemsTable.id, menuItemIds)
     );
 
   const menuItemMap = new Map(menuItems.map((m) => [m.id, m]));
@@ -236,9 +237,43 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     return;
   }
   const items = await db
-    .select()
+    .select({
+      id: orderItemsTable.id,
+      orderId: orderItemsTable.orderId,
+      menuItemId: orderItemsTable.menuItemId,
+      menuItemName: orderItemsTable.menuItemName,
+      menuItemPrice: orderItemsTable.menuItemPrice,
+      quantity: orderItemsTable.quantity,
+      notes: orderItemsTable.notes,
+      subtotal: orderItemsTable.subtotal,
+      loyverseItemId: menuItemsTable.loyverseItemId,
+      loyverseVariantId: menuItemsTable.loyverseVariantId,
+    })
     .from(orderItemsTable)
+    .leftJoin(menuItemsTable, eq(orderItemsTable.menuItemId, menuItemsTable.id))
     .where(eq(orderItemsTable.orderId, order.id));
+
+  // Auto-push to Loyverse when staff confirms an order
+  if (parsed.data.status === "confirmed" && process.env.LOYVERSE_API_TOKEN) {
+    pushOrderToLoyverse({
+      id: order.id,
+      customerName: order.customerName,
+      confirmationCode: order.confirmationCode,
+      notes: order.notes,
+      items: items.map((i) => ({
+        name: i.menuItemName,
+        quantity: i.quantity,
+        price: parseDecimal(i.menuItemPrice),
+        loyverseItemId: i.loyverseItemId ?? null,
+        loyverseVariantId: i.loyverseVariantId ?? null,
+      })),
+    }).then((receiptNum) => {
+      console.log(`Order ${order.confirmationCode} pushed to Loyverse: ${receiptNum}`);
+    }).catch((err) => {
+      console.error(`Failed to push order ${order.confirmationCode} to Loyverse:`, err);
+    });
+  }
+
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
 

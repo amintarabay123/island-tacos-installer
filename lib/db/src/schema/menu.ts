@@ -7,6 +7,7 @@ export const menuCategoriesTable = pgTable("menu_categories", {
   name: text("name").notNull(),
   description: text("description"),
   sortOrder: integer("sort_order").notNull().default(0),
+  loyverseId: text("loyverse_id").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -25,6 +26,9 @@ export const menuItemsTable = pgTable("menu_items", {
   popular: boolean("popular").notNull().default(false),
   spicy: boolean("spicy").notNull().default(false),
   vegetarian: boolean("vegetarian").notNull().default(false),
+  loyverseItemId: text("loyverse_item_id").unique(),
+  loyverseVariantId: text("loyverse_variant_id"),
+  loyverseModifierIds: text("loyverse_modifier_ids").array(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

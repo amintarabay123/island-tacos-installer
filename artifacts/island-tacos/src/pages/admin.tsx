@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdminStatsQueryKey, getGetRecentOrdersQueryKey, type UpdateOrderStatusBodyStatus } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings } from "lucide-react";
+import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
@@ -32,9 +33,29 @@ const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
 
 export default function Admin() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: stats } = useGetAdminStats();
   const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 });
   const updateStatus = useUpdateOrderStatus();
+
+  const syncLoyverse = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/loyverse/sync", { method: "POST" });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["listMenuCategories"] });
+      queryClient.invalidateQueries({ queryKey: ["listMenuItems"] });
+      toast({
+        title: "Loyverse sync complete",
+        description: `${data.itemsUpserted} items and ${data.categoriesUpserted} categories updated.${data.errors?.length ? ` ${data.errors.length} error(s).` : ""}`,
+      });
+    },
+    onError: (err) => {
+      toast({ title: "Sync failed", description: String(err), variant: "destructive" });
+    },
+  });
 
   const handleStatusChange = (orderId: number, status: UpdateOrderStatusBodyStatus) => {
     updateStatus.mutate(
@@ -64,6 +85,15 @@ export default function Admin() {
             <span className="text-muted-foreground">— Admin</span>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncLoyverse.mutate()}
+              disabled={syncLoyverse.isPending}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncLoyverse.isPending ? "animate-spin" : ""}`} />
+              {syncLoyverse.isPending ? "Syncing..." : "Sync from Loyverse"}
+            </Button>
             <Link href="/admin/menu">
               <Button variant="outline" size="sm">
                 <Settings className="h-4 w-4 mr-2" />
