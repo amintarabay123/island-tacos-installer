@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useLocation } from "wouter";
 
 type OrderItem = {
   id: number;
@@ -91,6 +92,12 @@ export default function Kitchen() {
   const prevIdsRef = useRef<Set<number>>(new Set());
   const audioCtxRef = useRef<AudioContext | null>(null);
   const now = useNow();
+  const [, navigate] = useLocation();
+
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    navigate("/staff-login");
+  };
 
   const playChime = useCallback(() => {
     try {
@@ -184,6 +191,12 @@ export default function Kitchen() {
               {error ? "Offline" : "Live"}
             </span>
           </div>
+          <button
+            onClick={logout}
+            className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors px-2 py-1 rounded"
+          >
+            Sign out
+          </button>
         </div>
       </header>
 

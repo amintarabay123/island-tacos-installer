@@ -3,7 +3,8 @@ import { Link } from "wouter";
 import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdminStatsQueryKey, getGetRecentOrdersQueryKey, type UpdateOrderStatusBodyStatus } from "@workspace/api-client-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw, Monitor } from "lucide-react";
+import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw, Monitor, LogOut } from "lucide-react";
+import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -34,6 +35,12 @@ const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
 export default function Admin() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    navigate("/staff-login");
+  };
   const { data: stats } = useGetAdminStats();
   const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 });
   const updateStatus = useUpdateOrderStatus();
@@ -109,6 +116,10 @@ export default function Admin() {
             <Link href="/">
               <Button variant="ghost" size="sm">View Store</Button>
             </Link>
+            <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground">
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign out
+            </Button>
           </div>
         </div>
       </header>

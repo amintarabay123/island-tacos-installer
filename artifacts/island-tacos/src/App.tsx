@@ -3,12 +3,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/lib/cart-context";
+import ProtectedRoute from "@/components/protected-route";
 import Home from "@/pages/home";
 import Checkout from "@/pages/checkout";
 import TrackOrder from "@/pages/track";
 import Admin from "@/pages/admin";
 import AdminMenu from "@/pages/admin-menu";
 import Kitchen from "@/pages/kitchen";
+import StaffLogin from "@/pages/staff-login";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -26,9 +28,16 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/track" component={TrackOrder} />
-      <Route path="/admin" component={Admin} />
-      <Route path="/admin/menu" component={AdminMenu} />
-      <Route path="/kitchen" component={Kitchen} />
+      <Route path="/staff-login" component={StaffLogin} />
+      <Route path="/admin">
+        <ProtectedRoute><Admin /></ProtectedRoute>
+      </Route>
+      <Route path="/admin/menu">
+        <ProtectedRoute><AdminMenu /></ProtectedRoute>
+      </Route>
+      <Route path="/kitchen">
+        <ProtectedRoute><Kitchen /></ProtectedRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
