@@ -1,0 +1,32 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "DKhwkiWVA5s5s7YzoIRl8"
+uri = "file://artifacts/island-tacos/public/images/hero.png"
+type = "image"
+title = "Vibrant tacos on sunny table"
+
+[[generated]]
+id = "vSId53F9H0hiDNiK05bEq"
+uri = "file://artifacts/island-tacos/public/images/al-pastor.png"
+type = "image"
+title = "Al Pastor Taco"
+
+[[generated]]
+id = "PrYc4i6Y5LVpKMPf1zH7T"
+uri = "file://artifacts/island-tacos/public/images/carne-asada.png"
+type = "image"
+title = "Carne Asada Taco"
+
+[[generated]]
+id = "eKsO6nycu8xxjia18COWN"
+uri = "file://artifacts/island-tacos/public/images/fish-taco.png"
+type = "image"
+title = "Fish Taco"
+
+[[generated]]
+id = "Zk8KomKjudUlpZucbWi4i"
+uri = "file://artifacts/island-tacos/public/images/veggie-taco.png"
+type = "image"
+title = "Veggie Taco"
