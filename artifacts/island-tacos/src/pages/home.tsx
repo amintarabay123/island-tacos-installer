@@ -36,6 +36,7 @@ export default function Home() {
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, Set<string>>>({});
   const [loadingModifiers, setLoadingModifiers] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   const { addItem } = useCart();
 
@@ -89,6 +90,7 @@ export default function Home() {
     setNotes("");
     setModifierGroups([]);
     setSelectedModifiers({});
+    setShowNotes(false);
   };
 
   const openItemModal = async (item: any) => {
@@ -97,6 +99,7 @@ export default function Home() {
     setNotes("");
     setModifierGroups([]);
     setSelectedModifiers({});
+    setShowNotes(false);
     setLoadingModifiers(true);
     try {
       const res = await fetch(`/api/menu/items/${item.id}/modifiers`);
@@ -342,17 +345,28 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Notes */}
-                <div className="space-y-2">
-                  <Label htmlFor="notes" className="text-sm font-medium">Special instructions</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="No onions, extra sauce..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="resize-none h-16 text-sm"
-                  />
-                </div>
+                {/* Notes — collapsed by default to avoid keyboard blocking */}
+                {!showNotes ? (
+                  <button
+                    type="button"
+                    className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors text-left"
+                    onClick={() => setShowNotes(true)}
+                  >
+                    + Add special instructions
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="notes" className="text-sm font-medium">Special instructions</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="No onions, extra sauce..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="resize-none h-20 text-sm"
+                      autoFocus
+                    />
+                  </div>
+                )}
 
                 {/* Quantity + Add */}
                 <div className="flex items-center gap-4">
