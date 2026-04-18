@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, menuCategoriesTable, menuItemsTable } from "@workspace/db";
+import { eq, sql, inArray } from "drizzle-orm";
+import { db, menuCategoriesTable, menuItemsTable, modifiersTable } from "@workspace/db";
 import {
   CreateMenuCategoryBody,
   UpdateMenuCategoryParams,
@@ -153,6 +153,29 @@ router.get("/menu/items/:id", async (req, res): Promise<void> => {
     return;
   }
   res.json({ ...item, price: parseFloat(item.price as unknown as string) });
+});
+
+router.get("/menu/items/:id/modifiers", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [item] = await db.select().from(menuItemsTable).where(eq(menuItemsTable.id, id));
+  if (!item) { res.status(404).json({ error: "Item not found" }); return; }
+
+  const modifierIds = item.loyverseModifierIds ?? [];
+  if (modifierIds.length === 0) { res.json([]); return; }
+
+  const mods = await db
+    .select()
+    .from(modifiersTable)
+    .where(inArray(modifiersTable.loyverseId, modifierIds));
+
+  // Return in same order as item's modifier_ids list
+  const ordered = modifierIds
+    .map((lid) => mods.find((m) => m.loyverseId === lid))
+    .filter(Boolean);
+
+  res.json(ordered);
 });
 
 router.patch("/menu/items/:id", async (req, res): Promise<void> => {

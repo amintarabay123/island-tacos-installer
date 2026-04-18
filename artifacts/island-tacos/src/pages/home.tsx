@@ -7,7 +7,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, Clock, MapPin, Plus, Minus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { ArrowRight, Clock, MapPin, Plus, Minus, Loader2 } from "lucide-react";
+
+interface ModifierOption {
+  id: string;
+  name: string;
+  price: number;
+  position: number;
+}
+
+interface ModifierGroup {
+  id: number;
+  loyverseId: string;
+  name: string;
+  options: ModifierOption[];
+}
 
 export default function Home() {
   const { data: categories, isLoading: loadingCategories } = useListMenuCategories();
@@ -17,6 +33,9 @@ export default function Home() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
+  const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
+  const [selectedModifiers, setSelectedModifiers] = useState<Record<string, Set<string>>>({});
+  const [loadingModifiers, setLoadingModifiers] = useState(false);
 
   const { addItem } = useCart();
 
@@ -31,19 +50,65 @@ export default function Home() {
     return items.filter(item => item.popular).slice(0, 3);
   }, [items]);
 
-  const handleAddToCart = () => {
-    if (selectedItem) {
-      addItem(selectedItem, quantity, notes);
-      setSelectedItem(null);
-      setQuantity(1);
-      setNotes("");
+  const extraPrice = useMemo(() => {
+    let extra = 0;
+    for (const group of modifierGroups) {
+      const selected = selectedModifiers[group.loyverseId];
+      if (!selected) continue;
+      for (const option of group.options) {
+        if (selected.has(option.id)) extra += option.price;
+      }
     }
+    return extra;
+  }, [modifierGroups, selectedModifiers]);
+
+  const toggleModifier = (groupId: string, optionId: string) => {
+    setSelectedModifiers(prev => {
+      const current = new Set(prev[groupId] ?? []);
+      if (current.has(optionId)) current.delete(optionId);
+      else current.add(optionId);
+      return { ...prev, [groupId]: current };
+    });
   };
 
-  const openItemModal = (item: any) => {
+  const handleAddToCart = () => {
+    if (!selectedItem) return;
+    let finalNotes = notes;
+    for (const group of modifierGroups) {
+      const selected = selectedModifiers[group.loyverseId];
+      if (!selected || selected.size === 0) continue;
+      const labels = group.options
+        .filter(o => selected.has(o.id))
+        .map(o => o.name)
+        .join(", ");
+      finalNotes = finalNotes ? `${finalNotes}\n${group.name}: ${labels}` : `${group.name}: ${labels}`;
+    }
+    addItem(selectedItem, quantity, finalNotes);
+    setSelectedItem(null);
+    setQuantity(1);
+    setNotes("");
+    setModifierGroups([]);
+    setSelectedModifiers({});
+  };
+
+  const openItemModal = async (item: any) => {
     setSelectedItem(item);
     setQuantity(1);
     setNotes("");
+    setModifierGroups([]);
+    setSelectedModifiers({});
+    setLoadingModifiers(true);
+    try {
+      const res = await fetch(`/api/menu/items/${item.id}/modifiers`);
+      if (res.ok) {
+        const mods: ModifierGroup[] = await res.json();
+        setModifierGroups(mods);
+      }
+    } catch {
+      // silently ignore, modifiers are optional
+    } finally {
+      setLoadingModifiers(false);
+    }
   };
 
   const allCategories = [{ id: null, name: "All" }, ...(categories?.sort((a, b) => a.sortOrder - b.sortOrder) ?? [])];
@@ -172,7 +237,6 @@ export default function Home() {
                   className="flex items-start gap-4 py-5 group cursor-pointer hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors"
                   onClick={() => openItemModal(item)}
                 >
-                  {/* Thumbnail */}
                   <div className="w-20 h-20 shrink-0 rounded-lg bg-muted overflow-hidden">
                     {item.imageUrl ? (
                       <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -182,37 +246,20 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-
-                  {/* Details */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4 mb-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm">{item.name}</span>
-                        {item.popular && (
-                          <span className="text-[10px] font-bold bg-secondary/15 text-secondary-foreground px-1.5 py-0.5 rounded uppercase tracking-wide">
-                            Popular
-                          </span>
-                        )}
-                        {item.spicy && (
-                          <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded uppercase tracking-wide">
-                            Spicy
-                          </span>
-                        )}
-                        {item.vegetarian && (
-                          <span className="text-[10px] font-bold bg-accent/15 text-accent px-1.5 py-0.5 rounded uppercase tracking-wide">
-                            Veg
-                          </span>
-                        )}
+                        {item.popular && <span className="text-[10px] font-bold bg-secondary/15 text-secondary-foreground px-1.5 py-0.5 rounded uppercase tracking-wide">Popular</span>}
+                        {item.spicy && <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded uppercase tracking-wide">Spicy</span>}
+                        {item.vegetarian && <span className="text-[10px] font-bold bg-accent/15 text-accent px-1.5 py-0.5 rounded uppercase tracking-wide">Veg</span>}
                       </div>
                       <span className="text-sm font-semibold shrink-0">${item.price.toFixed(2)}</span>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.description}</p>
                     <button
                       className="mt-2 text-xs font-semibold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity border border-border rounded-full px-3 py-1 hover:bg-foreground hover:text-background hover:border-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openItemModal(item);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); openItemModal(item); }}
                     >
                       <Plus className="w-3 h-3" /> Add
                     </button>
@@ -227,8 +274,9 @@ export default function Home() {
       {/* Item dialog */}
       <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
         {selectedItem && (
-          <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
-            <div className="aspect-video w-full bg-muted overflow-hidden">
+          <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0 max-h-[90vh] flex flex-col">
+            {/* Image */}
+            <div className="aspect-video w-full bg-muted overflow-hidden shrink-0">
               {selectedItem.imageUrl ? (
                 <img src={selectedItem.imageUrl} alt={selectedItem.name} className="w-full h-full object-cover" />
               ) : (
@@ -237,47 +285,96 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <div className="p-6 space-y-5">
-              <div>
-                <div className="flex items-start justify-between gap-3 mb-1.5">
-                  <DialogTitle className="text-xl font-bold leading-tight">{selectedItem.name}</DialogTitle>
-                  <span className="text-xl font-bold shrink-0">${selectedItem.price.toFixed(2)}</span>
-                </div>
-                <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
-                  {selectedItem.description}
-                </DialogDescription>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="text-sm font-medium">Special instructions</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="No onions, extra sauce..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="resize-none h-16 text-sm"
-                />
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="flex items-center border border-border rounded-full h-10 shrink-0">
-                  <button
-                    className="w-10 h-full flex items-center justify-center hover:bg-muted rounded-l-full transition-colors"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="w-8 text-center text-sm font-semibold">{quantity}</span>
-                  <button
-                    className="w-10 h-full flex items-center justify-center hover:bg-muted rounded-r-full transition-colors"
-                    onClick={() => setQuantity(quantity + 1)}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1">
+              <div className="p-6 space-y-5">
+                <div>
+                  <div className="flex items-start justify-between gap-3 mb-1.5">
+                    <DialogTitle className="text-xl font-bold leading-tight">{selectedItem.name}</DialogTitle>
+                    <span className="text-xl font-bold shrink-0">${(selectedItem.price + extraPrice).toFixed(2)}</span>
+                  </div>
+                  <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+                    {selectedItem.description}
+                  </DialogDescription>
                 </div>
-                <Button className="flex-1 h-10 font-semibold rounded-full" onClick={handleAddToCart}>
-                  Add {quantity > 1 && `${quantity} × `}${(selectedItem.price * quantity).toFixed(2)}
-                </Button>
+
+                {/* Modifiers */}
+                {loadingModifiers ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading options...
+                  </div>
+                ) : modifierGroups.length > 0 && (
+                  <div className="space-y-5">
+                    {modifierGroups.map((group) => (
+                      <div key={group.loyverseId}>
+                        <Separator className="mb-4" />
+                        <p className="text-sm font-semibold mb-3">{group.name}</p>
+                        <div className="space-y-2">
+                          {group.options.map((option) => {
+                            const isSelected = selectedModifiers[group.loyverseId]?.has(option.id) ?? false;
+                            return (
+                              <label
+                                key={option.id}
+                                className="flex items-center justify-between gap-3 cursor-pointer group/opt"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Checkbox
+                                    id={option.id}
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleModifier(group.loyverseId, option.id)}
+                                  />
+                                  <span className="text-sm group-hover/opt:text-foreground transition-colors">
+                                    {option.name}
+                                  </span>
+                                </div>
+                                {option.price > 0 && (
+                                  <span className="text-sm text-muted-foreground shrink-0">+${option.price.toFixed(2)}</span>
+                                )}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    <Separator />
+                  </div>
+                )}
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="text-sm font-medium">Special instructions</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="No onions, extra sauce..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="resize-none h-16 text-sm"
+                  />
+                </div>
+
+                {/* Quantity + Add */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center border border-border rounded-full h-10 shrink-0">
+                    <button
+                      className="w-10 h-full flex items-center justify-center hover:bg-muted rounded-l-full transition-colors"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="w-8 text-center text-sm font-semibold">{quantity}</span>
+                    <button
+                      className="w-10 h-full flex items-center justify-center hover:bg-muted rounded-r-full transition-colors"
+                      onClick={() => setQuantity(quantity + 1)}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <Button className="flex-1 h-10 font-semibold rounded-full" onClick={handleAddToCart}>
+                    Add {quantity > 1 && `${quantity} × `}— ${((selectedItem.price + extraPrice) * quantity).toFixed(2)}
+                  </Button>
+                </div>
               </div>
             </div>
           </DialogContent>

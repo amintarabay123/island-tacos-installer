@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
-import { menuCategoriesTable, menuItemsTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { menuCategoriesTable, menuItemsTable, modifiersTable } from "@workspace/db/schema";
+import { eq, inArray } from "drizzle-orm";
 
 const LOYVERSE_API = "https://api.loyverse.com/v1.0";
 const STORE_ID = "fa2b85a6-711d-11ea-8d93-0603130a05b8";
@@ -116,6 +116,26 @@ export async function syncFromLoyverse(): Promise<SyncResult> {
     ]);
 
   result.modifiers = loyverseModifiers.length;
+
+  // Upsert modifiers into the local DB
+  for (const lmod of loyverseModifiers) {
+    try {
+      const options = (lmod.modifier_options ?? [])
+        .sort((a, b) => a.position - b.position)
+        .map((o) => ({ id: o.id, name: o.name, price: o.price, position: o.position }));
+
+      const existing = await db.query.modifiersTable.findFirst({
+        where: eq(modifiersTable.loyverseId, lmod.id),
+      });
+      if (existing) {
+        await db.update(modifiersTable).set({ name: lmod.name, options }).where(eq(modifiersTable.id, existing.id));
+      } else {
+        await db.insert(modifiersTable).values({ loyverseId: lmod.id, name: lmod.name, options });
+      }
+    } catch (err) {
+      result.errors.push(`Modifier ${lmod.name}: ${err}`);
+    }
+  }
 
   // Build a map: loyverse category id → local db id
   const catIdMap = new Map<string, number>();

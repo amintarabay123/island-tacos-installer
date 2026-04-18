@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, boolean, integer, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, boolean, integer, numeric, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -35,3 +35,20 @@ export const menuItemsTable = pgTable("menu_items", {
 export const insertMenuItemSchema = createInsertSchema(menuItemsTable).omit({ id: true, createdAt: true });
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
 export type MenuItem = typeof menuItemsTable.$inferSelect;
+
+export interface ModifierOption {
+  id: string;
+  name: string;
+  price: number;
+  position: number;
+}
+
+export const modifiersTable = pgTable("modifiers", {
+  id: serial("id").primaryKey(),
+  loyverseId: text("loyverse_id").unique().notNull(),
+  name: text("name").notNull(),
+  options: jsonb("options").$type<ModifierOption[]>().notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Modifier = typeof modifiersTable.$inferSelect;
