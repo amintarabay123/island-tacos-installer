@@ -1,13 +1,9 @@
 import express, { type Express } from "express";
 import cors from "cors";
-import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import { Pool } from "pg";
+import cookieSession from "cookie-session";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
-
-const PgStore = connectPgSimple(session);
 
 const app: Express = express();
 
@@ -34,29 +30,14 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const sessionStore = process.env["DATABASE_URL"]
-  ? new PgStore({
-      pool: new Pool({
-        connectionString: process.env["DATABASE_URL"],
-        ssl: { rejectUnauthorized: false },
-      }),
-      createTableIfMissing: true,
-      ttl: 12 * 60 * 60,
-    })
-  : undefined;
-
 app.use(
-  session({
-    store: sessionStore,
+  cookieSession({
+    name: "it_session",
     secret: process.env["SESSION_SECRET"] ?? "island-tacos-dev-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: process.env["NODE_ENV"] === "production",
-      sameSite: process.env["NODE_ENV"] === "production" ? "none" : "lax",
-      maxAge: 12 * 60 * 60 * 1000,
-    },
+    httpOnly: true,
+    secure: process.env["NODE_ENV"] === "production",
+    sameSite: process.env["NODE_ENV"] === "production" ? "none" : "lax",
+    maxAge: 12 * 60 * 60 * 1000,
   }),
 );
 
