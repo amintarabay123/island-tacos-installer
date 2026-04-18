@@ -174,14 +174,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       {label}
                     </Link>
                   ))}
-                  <Separator className="my-2" />
-                  <Link
-                    href="/admin"
-                    onClick={() => setMobileOpen(false)}
-                    className="px-3 py-2.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                  >
-                    Staff Login
-                  </Link>
                 </nav>
               </SheetContent>
             </Sheet>
@@ -209,7 +201,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex gap-4 text-xs text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Menu</Link>
             <Link href="/track" className="hover:text-foreground transition-colors">Track Order</Link>
-            <Link href="/admin" className="hover:text-foreground transition-colors">Staff</Link>
           </div>
         </div>
       </footer>
