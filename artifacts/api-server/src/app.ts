@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
+import { Pool } from "pg";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -35,9 +36,12 @@ app.use(express.urlencoded({ extended: true }));
 
 const sessionStore = process.env["DATABASE_URL"]
   ? new PgStore({
-      conString: process.env["DATABASE_URL"],
+      pool: new Pool({
+        connectionString: process.env["DATABASE_URL"],
+        ssl: { rejectUnauthorized: false },
+      }),
       createTableIfMissing: true,
-      ttl: 12 * 60 * 60, // 12 hours in seconds
+      ttl: 12 * 60 * 60,
     })
   : undefined;
 
@@ -51,7 +55,7 @@ app.use(
       httpOnly: true,
       secure: process.env["NODE_ENV"] === "production",
       sameSite: process.env["NODE_ENV"] === "production" ? "none" : "lax",
-      maxAge: 12 * 60 * 60 * 1000, // 12 hours
+      maxAge: 12 * 60 * 60 * 1000,
     },
   }),
 );
