@@ -3,22 +3,21 @@ import { useListMenuCategories, useListMenuItems } from "@workspace/api-client-r
 import { useCart } from "@/lib/cart-context";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { ArrowRight, Clock, MapPin, Plus, Minus } from "lucide-react";
 
 export default function Home() {
   const { data: categories, isLoading: loadingCategories } = useListMenuCategories();
   const { data: items, isLoading: loadingItems } = useListMenuItems({ available: true });
-  
+
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
-  
+
   const { addItem } = useCart();
 
   const filteredItems = useMemo(() => {
@@ -29,7 +28,7 @@ export default function Home() {
 
   const popularItems = useMemo(() => {
     if (!items) return [];
-    return items.filter(item => item.popular).slice(0, 4);
+    return items.filter(item => item.popular).slice(0, 3);
   }, [items]);
 
   const handleAddToCart = () => {
@@ -47,229 +46,237 @@ export default function Home() {
     setNotes("");
   };
 
+  const allCategories = [{ id: null, name: "All" }, ...(categories?.sort((a, b) => a.sortOrder - b.sortOrder) ?? [])];
+
   return (
     <Layout>
-      {/* Hero Section */}
-      <section className="relative w-full h-[500px] flex items-center overflow-hidden bg-primary/10">
-        <div className="absolute inset-0 w-full h-full z-0">
-          <img 
-            src="/images/hero.png" 
-            alt="Fresh colorful tacos" 
-            className="w-full h-full object-cover object-center brightness-[0.85] contrast-125"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent"></div>
-        </div>
-        
-        <div className="container relative z-10 px-4 md:px-8">
-          <div className="max-w-2xl space-y-6">
-            <Badge className="bg-accent text-accent-foreground hover:bg-accent/90 text-sm font-bold px-3 py-1 rounded-full border-none">
-              Authentic Puerto Rican Flavor
-            </Badge>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tight text-foreground leading-[1.1] drop-shadow-sm">
-              Bite into the <span className="text-primary">Island.</span>
-            </h1>
-            <p className="text-xl text-foreground/80 font-medium max-w-lg drop-shadow-sm">
-              Bold, colorful, and wildly fresh. Order ahead for pickup or delivery and taste the sunshine.
-            </p>
-            <div className="pt-4 flex gap-4">
-              <Button size="lg" className="h-14 px-8 text-lg rounded-full font-bold shadow-lg" onClick={() => document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth' })}>
-                Order Now
-              </Button>
+      {/* Hero */}
+      <section className="relative h-[380px] md:h-[460px] overflow-hidden bg-neutral-900">
+        <img
+          src="/images/hero.png"
+          alt="Fresh colorful tacos"
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-60"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10" />
+        <div className="relative h-full flex flex-col justify-end max-w-6xl mx-auto px-6 pb-12">
+          <p className="text-xs font-semibold tracking-widest text-white/60 uppercase flex items-center gap-1.5 mb-3">
+            <MapPin className="w-3 h-3" /> Authentic Puerto Rican Flavor
+          </p>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
+            Fresh. Bold.<br />Unforgettable.
+          </h1>
+          <div className="flex items-center gap-4">
+            <button
+              className="bg-white text-foreground font-semibold px-6 py-2.5 rounded-full text-sm hover:bg-white/90 transition flex items-center gap-1.5"
+              onClick={() => document.getElementById("menu")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Order Now <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+            <div className="flex items-center gap-1.5 text-white/70 text-sm">
+              <Clock className="w-4 h-4" />
+              Ready in 20–30 min
             </div>
           </div>
         </div>
       </section>
 
       {/* Popular Items */}
-      {popularItems.length > 0 && (
-        <section className="py-16 bg-background">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-black mb-8 tracking-tight">Crowd Favorites</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {popularItems.map((item) => (
-                <Card key={item.id} className="overflow-hidden border-border/50 shadow-sm hover:shadow-md transition-all group cursor-pointer" onClick={() => openItemModal(item)}>
-                  <div className="aspect-square bg-muted relative overflow-hidden">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                        <span className="text-4xl font-bold text-primary/30">{item.name.charAt(0)}</span>
-                      </div>
-                    )}
-                    <div className="absolute top-3 left-3 flex flex-col gap-2">
-                      <Badge className="bg-accent text-accent-foreground font-bold shadow-sm">Popular</Badge>
+      {!loadingItems && popularItems.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 py-12">
+          <h2 className="text-lg font-semibold mb-5">Best Sellers</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {popularItems.map((item) => (
+              <button
+                key={item.id}
+                className="text-left group border border-border rounded-xl overflow-hidden hover:border-foreground/20 transition-colors"
+                onClick={() => openItemModal(item)}
+              >
+                <div className="aspect-[4/3] bg-muted overflow-hidden relative">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-3xl text-muted-foreground/30 font-bold">
+                      {item.name.charAt(0)}
                     </div>
+                  )}
+                  <span className="absolute top-3 left-3 bg-secondary/90 text-secondary-foreground text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
+                    Best Seller
+                  </span>
+                </div>
+                <div className="p-4 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">{item.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.description}</p>
                   </div>
-                  <CardHeader className="p-4 pb-2">
-                    <div className="flex justify-between items-start gap-4">
-                      <CardTitle className="text-xl font-bold leading-tight">{item.name}</CardTitle>
-                      <span className="font-bold text-lg text-primary">${item.price.toFixed(2)}</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                  <span className="text-sm font-semibold shrink-0">${item.price.toFixed(2)}</span>
+                </div>
+              </button>
+            ))}
           </div>
         </section>
       )}
 
-      {/* Main Menu */}
-      <section id="menu" className="py-16 bg-muted/20 flex-1">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row gap-8">
-          
-          {/* Categories Sidebar */}
-          <div className="w-full md:w-64 shrink-0">
-            <div className="sticky top-24 space-y-1">
-              <h3 className="font-black text-xl mb-4 px-4 uppercase tracking-widest text-muted-foreground">Menu</h3>
-              <button
-                className={`w-full text-left px-4 py-3 rounded-lg font-bold text-lg transition-colors ${activeCategory === null ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-muted text-foreground/80'}`}
-                onClick={() => setActiveCategory(null)}
-              >
-                All Items
-              </button>
+      {/* Full Menu */}
+      <section id="menu" className="flex-1 border-t border-border">
+        {/* Category tab bar */}
+        <div className="sticky top-16 z-10 bg-background border-b border-border">
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="flex gap-6 overflow-x-auto scrollbar-none">
               {loadingCategories ? (
-                <div className="space-y-2 p-4">
-                  <Skeleton className="h-10 w-full rounded-lg" />
-                  <Skeleton className="h-10 w-full rounded-lg" />
-                  <Skeleton className="h-10 w-full rounded-lg" />
+                <div className="flex gap-6 py-3">
+                  {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-5 w-16" />)}
                 </div>
               ) : (
-                categories?.sort((a,b) => a.sortOrder - b.sortOrder).map((category) => (
+                allCategories.map((cat) => (
                   <button
-                    key={category.id}
-                    className={`w-full text-left px-4 py-3 rounded-lg font-bold text-lg transition-colors ${activeCategory === category.id ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-muted text-foreground/80'}`}
-                    onClick={() => setActiveCategory(category.id)}
+                    key={cat.id ?? "all"}
+                    className={`py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                      activeCategory === cat.id
+                        ? "border-foreground text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setActiveCategory(cat.id ?? null)}
                   >
-                    {category.name}
+                    {cat.name}
                   </button>
                 ))
               )}
             </div>
           </div>
+        </div>
 
-          {/* Menu Items Grid */}
-          <div className="flex-1">
-            {loadingItems ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {[1,2,3,4,5,6].map(i => (
-                  <Card key={i} className="overflow-hidden">
-                    <Skeleton className="h-48 w-full rounded-none" />
-                    <div className="p-4 space-y-3">
-                      <Skeleton className="h-6 w-2/3" />
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-4/5" />
-                      <div className="pt-4 flex justify-between">
-                        <Skeleton className="h-8 w-16" />
-                        <Skeleton className="h-8 w-24" />
+        {/* Menu items */}
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          {loadingItems ? (
+            <div className="space-y-4">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="flex gap-4 py-4 border-b border-border">
+                  <Skeleton className="w-20 h-20 rounded-lg shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-3/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="text-center py-20 text-muted-foreground">
+              <p className="font-medium">No items in this category right now.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {filteredItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-start gap-4 py-5 group cursor-pointer hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors"
+                  onClick={() => openItemModal(item)}
+                >
+                  {/* Thumbnail */}
+                  <div className="w-20 h-20 shrink-0 rounded-lg bg-muted overflow-hidden">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-2xl font-bold">
+                        {item.name.charAt(0)}
                       </div>
+                    )}
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-4 mb-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm">{item.name}</span>
+                        {item.popular && (
+                          <span className="text-[10px] font-bold bg-secondary/15 text-secondary-foreground px-1.5 py-0.5 rounded uppercase tracking-wide">
+                            Popular
+                          </span>
+                        )}
+                        {item.spicy && (
+                          <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded uppercase tracking-wide">
+                            Spicy
+                          </span>
+                        )}
+                        {item.vegetarian && (
+                          <span className="text-[10px] font-bold bg-accent/15 text-accent px-1.5 py-0.5 rounded uppercase tracking-wide">
+                            Veg
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm font-semibold shrink-0">${item.price.toFixed(2)}</span>
                     </div>
-                  </Card>
-                ))}
-              </div>
-            ) : filteredItems.length === 0 ? (
-              <div className="text-center py-20 bg-background rounded-xl border border-dashed">
-                <h3 className="text-xl font-bold text-muted-foreground mb-2">No items found</h3>
-                <p className="text-muted-foreground">Check back later or try another category.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredItems.map((item) => (
-                  <Card key={item.id} className="overflow-hidden border-border/50 flex flex-col group hover:border-primary/30 transition-colors">
-                    <div className="aspect-[4/3] bg-muted relative overflow-hidden cursor-pointer" onClick={() => openItemModal(item)}>
-                      {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                      ) : (
-                        <div className="w-full h-full bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                          <span className="text-5xl font-bold text-primary/20">{item.name.charAt(0)}</span>
-                        </div>
-                      )}
-                      <div className="absolute top-3 left-3 flex gap-2">
-                        {item.spicy && <Badge variant="destructive" className="font-bold uppercase text-[10px]">Spicy</Badge>}
-                        {item.vegetarian && <Badge className="bg-secondary text-secondary-foreground font-bold uppercase text-[10px]">Veg</Badge>}
-                      </div>
-                    </div>
-                    <CardHeader className="p-4 pb-2 flex-none cursor-pointer" onClick={() => openItemModal(item)}>
-                      <div className="flex justify-between items-start gap-4">
-                        <CardTitle className="text-lg font-bold leading-tight group-hover:text-primary transition-colors">{item.name}</CardTitle>
-                        <span className="font-black text-lg">${item.price.toFixed(2)}</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0 flex-1 cursor-pointer" onClick={() => openItemModal(item)}>
-                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{item.description}</p>
-                    </CardContent>
-                    <CardFooter className="p-4 pt-0 mt-auto">
-                      <Button variant="secondary" className="w-full font-bold" onClick={(e) => {
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.description}</p>
+                    <button
+                      className="mt-2 text-xs font-semibold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity border border-border rounded-full px-3 py-1 hover:bg-foreground hover:text-background hover:border-foreground"
+                      onClick={(e) => {
                         e.stopPropagation();
                         openItemModal(item);
-                      }}>
-                        Add to Order
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
+                      }}
+                    >
+                      <Plus className="w-3 h-3" /> Add
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Item Customization Modal */}
+      {/* Item dialog */}
       <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
         {selectedItem && (
-          <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden gap-0">
-            <div className="aspect-[16/9] w-full bg-muted relative">
+          <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
+            <div className="aspect-video w-full bg-muted overflow-hidden">
               {selectedItem.imageUrl ? (
                 <img src={selectedItem.imageUrl} alt={selectedItem.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-6xl font-bold text-primary/30">{selectedItem.name.charAt(0)}</span>
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground/20 text-6xl font-bold">
+                  {selectedItem.name.charAt(0)}
                 </div>
               )}
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-5">
               <div>
-                <div className="flex justify-between items-start mb-2">
-                  <DialogTitle className="text-2xl font-black">{selectedItem.name}</DialogTitle>
-                  <span className="text-2xl font-black text-primary">${selectedItem.price.toFixed(2)}</span>
+                <div className="flex items-start justify-between gap-3 mb-1.5">
+                  <DialogTitle className="text-xl font-bold leading-tight">{selectedItem.name}</DialogTitle>
+                  <span className="text-xl font-bold shrink-0">${selectedItem.price.toFixed(2)}</span>
                 </div>
-                <DialogDescription className="text-base text-foreground/80">
+                <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
                   {selectedItem.description}
                 </DialogDescription>
               </div>
 
-              <div className="space-y-3">
-                <Label htmlFor="notes" className="text-base font-bold">Special Instructions</Label>
-                <Textarea 
-                  id="notes" 
-                  placeholder="E.g. No onions, extra salsa..." 
+              <div className="space-y-2">
+                <Label htmlFor="notes" className="text-sm font-medium">Special instructions</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="No onions, extra sauce..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="resize-none h-20 bg-muted/50"
+                  className="resize-none h-16 text-sm"
                 />
               </div>
 
-              <div className="flex items-center gap-6 pt-4">
-                <div className="flex items-center rounded-lg border-2 border-input bg-background h-14 flex-shrink-0">
-                  <button 
-                    className="w-14 h-full flex items-center justify-center hover:bg-muted rounded-l-md transition-colors text-xl font-medium"
+              <div className="flex items-center gap-4">
+                <div className="flex items-center border border-border rounded-full h-10 shrink-0">
+                  <button
+                    className="w-10 h-full flex items-center justify-center hover:bg-muted rounded-l-full transition-colors"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   >
-                    -
+                    <Minus className="w-3.5 h-3.5" />
                   </button>
-                  <span className="w-12 text-center text-lg font-bold">{quantity}</span>
-                  <button 
-                    className="w-14 h-full flex items-center justify-center hover:bg-muted rounded-r-md transition-colors text-xl font-medium"
+                  <span className="w-8 text-center text-sm font-semibold">{quantity}</span>
+                  <button
+                    className="w-10 h-full flex items-center justify-center hover:bg-muted rounded-r-full transition-colors"
                     onClick={() => setQuantity(quantity + 1)}
                   >
-                    +
+                    <Plus className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                <Button className="flex-1 h-14 text-lg font-bold shadow-md" onClick={handleAddToCart}>
-                  Add ${(selectedItem.price * quantity).toFixed(2)}
+                <Button className="flex-1 h-10 font-semibold rounded-full" onClick={handleAddToCart}>
+                  Add {quantity > 1 && `${quantity} × `}${(selectedItem.price * quantity).toFixed(2)}
                 </Button>
               </div>
             </div>
