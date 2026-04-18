@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useCart } from "@/lib/cart-context";
 import { Layout } from "@/components/layout";
-import { AthMovilButton } from "@/components/athmovil-button";
+import { AthMovilInstructions } from "@/components/athmovil-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,8 +30,6 @@ export default function Checkout() {
   const [step, setStep] = useState<"info" | "payment" | "athmovil-pay" | "pending">("info");
   const [orderId, setOrderId] = useState<number | null>(null);
   const [confirmationCode, setConfirmationCode] = useState<string>("");
-  const [athPublicToken, setAthPublicToken] = useState<string>("");
-  const [athVerifying, setAthVerifying] = useState(false);
   const [athError, setAthError] = useState<string | null>(null);
 
   const createOrder = useCreateOrder();
@@ -97,12 +95,7 @@ export default function Checkout() {
                 onSuccess: (session) => {
                   if (session.redirectUrl) {
                     window.location.href = session.redirectUrl;
-                  } else if (
-                    session.paymentMethod === "athmovil" &&
-                    (session as { status?: string }).status === "ready" &&
-                    (session as { publicToken?: string }).publicToken
-                  ) {
-                    setAthPublicToken((session as { publicToken?: string }).publicToken ?? "");
+                  } else if (session.paymentMethod === "athmovil") {
                     setStep("athmovil-pay");
                   } else {
                     setStep("pending");
@@ -123,28 +116,33 @@ export default function Checkout() {
     );
   };
 
-  const handleAthMovilComplete = async (referenceNumber: string) => {
-    if (!orderId) return;
-    setAthVerifying(true);
+  const handlePaymentSent = async () => {
+    if (!orderId || !confirmationCode) return;
     setAthError(null);
-    try {
-      const res = await fetch("/api/payments/athmovil/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, referenceNumber }),
-      });
-      const data = await res.json() as { success?: boolean; error?: string };
-      if (data.success) {
-        clearCart();
-        setLocation(`/track?code=${confirmationCode}`);
-      } else {
-        setAthError(data.error ?? "Payment verification failed. Please contact us.");
+
+    // Poll for up to 3 minutes (36 × 5s intervals)
+    const maxAttempts = 36;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      try {
+        const res = await fetch(`/api/orders/${orderId}`);
+        if (res.ok) {
+          const order = await res.json() as { paymentStatus?: string };
+          if (order.paymentStatus === "paid") {
+            clearCart();
+            setLocation(`/track?code=${confirmationCode}`);
+            return;
+          }
+        }
+      } catch {
+        // keep polling
       }
-    } catch {
-      setAthError("Could not connect to verify payment. Please contact us.");
-    } finally {
-      setAthVerifying(false);
     }
+
+    setAthError(
+      "We haven't received your payment yet. If you've already sent it, please show this screen to staff — your order code is " +
+      confirmationCode
+    );
   };
 
   if (step === "athmovil-pay") {
@@ -182,34 +180,15 @@ export default function Checkout() {
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
                 <XCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-red-800">Payment Issue</p>
+                  <p className="text-sm font-semibold text-red-800">Payment Not Detected</p>
                   <p className="text-sm text-red-700 mt-1">{athError}</p>
                 </div>
               </div>
-            ) : athVerifying ? (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex gap-3">
-                <CheckCircle className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
-                <p className="text-sm text-green-800">Verifying your payment...</p>
-              </div>
             ) : (
-              <AthMovilButton
-                publicToken={athPublicToken}
+              <AthMovilInstructions
                 total={total}
-                subtotal={subtotal}
-                tax={tax}
-                orderId={orderId!}
-                items={items.map((i) => ({
-                  name: i.menuItem.name,
-                  quantity: i.quantity,
-                  price: i.menuItem.price,
-                }))}
-                onCompleted={handleAthMovilComplete}
-                onCancelled={() => {
-                  setAthError("Payment was cancelled. You can try again or choose another method.");
-                }}
-                onExpired={() => {
-                  setAthError("Payment timed out. Please go back and try again.");
-                }}
+                confirmationCode={confirmationCode ?? ""}
+                onPaymentSent={handlePaymentSent}
               />
             )}
 

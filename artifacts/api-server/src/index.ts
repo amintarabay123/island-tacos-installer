@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { registerAthMovilWebhook } from "./lib/athmovil-webhook-register";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,12 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Register ATH Móvil webhook URL (non-blocking)
+  const host =
+    process.env["NODE_ENV"] === "production"
+      ? "https://order-direct-connect.replit.app"
+      : `http://localhost:${port}`;
+
+  registerAthMovilWebhook(`${host}/api/webhooks/athmovil`).catch(() => {});
 });
