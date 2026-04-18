@@ -5,6 +5,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw, Monitor, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
+import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -39,7 +40,7 @@ export default function Admin() {
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    navigate("/staff-login");
+    navigate(adminRoutes.login);
   };
   const { data: stats } = useGetAdminStats();
   const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 });
@@ -101,13 +102,13 @@ export default function Admin() {
               <RefreshCw className={`h-4 w-4 mr-2 ${syncLoyverse.isPending ? "animate-spin" : ""}`} />
               {syncLoyverse.isPending ? "Syncing..." : "Sync from Loyverse"}
             </Button>
-            <Link href="/kitchen">
+            <Link href={adminRoutes.kitchen}>
               <Button variant="outline" size="sm">
                 <Monitor className="h-4 w-4 mr-2" />
                 Kitchen Display
               </Button>
             </Link>
-            <Link href="/admin/menu">
+            <Link href={adminRoutes.menu}>
               <Button variant="outline" size="sm">
                 <Settings className="h-4 w-4 mr-2" />
                 Menu Manager

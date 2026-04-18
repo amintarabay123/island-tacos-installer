@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { adminRoutes } from "@/lib/admin-path";
 
 type Props = { children: React.ReactNode };
 
@@ -15,12 +16,12 @@ export default function ProtectedRoute({ children }: Props) {
           setStatus("authed");
         } else {
           setStatus("unauthed");
-          navigate("/staff-login");
+          navigate(adminRoutes.login);
         }
       })
       .catch(() => {
         setStatus("unauthed");
-        navigate("/staff-login");
+        navigate(adminRoutes.login);
       });
   }, [navigate]);
 

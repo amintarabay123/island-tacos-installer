@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { adminRoutes } from "@/lib/admin-path";
 import {
   useListMenuCategories,
   useListMenuItems,
@@ -130,7 +131,7 @@ export default function AdminMenu() {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <Link href="/admin">
+            <Link href={adminRoutes.dashboard}>
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard

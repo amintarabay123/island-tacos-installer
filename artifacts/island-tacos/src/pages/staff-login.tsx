@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { adminRoutes } from "@/lib/admin-path";
 
 export default function StaffLogin() {
   const [pin, setPin] = useState("");
@@ -26,7 +27,7 @@ export default function StaffLogin() {
         body: JSON.stringify({ pin }),
       });
       if (res.ok) {
-        navigate("/admin");
+        navigate(adminRoutes.dashboard);
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? "Incorrect PIN");
@@ -54,15 +55,12 @@ export default function StaffLogin() {
           <div
             key={i}
             className={`w-4 h-4 rounded-full border-2 transition-all ${
-              i < pin.length
-                ? "bg-white border-white"
-                : "bg-transparent border-zinc-600"
+              i < pin.length ? "bg-white border-white" : "bg-transparent border-zinc-600"
             }`}
           />
         ))}
       </div>
 
-      {/* Error */}
       {error && (
         <div className="text-red-400 text-sm font-medium text-center">{error}</div>
       )}
@@ -94,7 +92,6 @@ export default function StaffLogin() {
         })}
       </div>
 
-      {/* Submit */}
       <button
         onClick={handleSubmit}
         disabled={pin.length === 0 || loading}

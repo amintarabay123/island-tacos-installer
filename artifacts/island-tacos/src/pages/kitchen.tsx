@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
+import { adminRoutes } from "@/lib/admin-path";
 
 type OrderItem = {
   id: number;
@@ -96,7 +97,7 @@ export default function Kitchen() {
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-    navigate("/staff-login");
+    navigate(adminRoutes.login);
   };
 
   const playChime = useCallback(() => {
