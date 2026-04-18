@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useCart } from "@/lib/cart-context";
 import { Layout } from "@/components/layout";
+import { AthMovilButton } from "@/components/athmovil-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useCreateOrder, useInitiatePayment } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, MapPin, ShoppingBag, Info } from "lucide-react";
+import { CreditCard, MapPin, ShoppingBag, Info, CheckCircle, XCircle } from "lucide-react";
 
 export default function Checkout() {
   const { items, subtotal, tax, deliveryFee, total, clearCart } = useCart();
@@ -23,12 +24,15 @@ export default function Checkout() {
     customerPhone: "",
     orderType: "pickup" as "pickup" | "delivery",
     deliveryAddress: "",
-    paymentMethod: "card" as "card" | "athmovil" | "cash",
+    paymentMethod: "athmovil" as "card" | "athmovil" | "cash",
     notes: "",
   });
-  const [step, setStep] = useState<"info" | "payment" | "pending">("info");
+  const [step, setStep] = useState<"info" | "payment" | "athmovil-pay" | "pending">("info");
   const [orderId, setOrderId] = useState<number | null>(null);
   const [confirmationCode, setConfirmationCode] = useState<string>("");
+  const [athPublicToken, setAthPublicToken] = useState<string>("");
+  const [athVerifying, setAthVerifying] = useState(false);
+  const [athError, setAthError] = useState<string | null>(null);
 
   const createOrder = useCreateOrder();
   const initiatePayment = useInitiatePayment();
@@ -93,6 +97,13 @@ export default function Checkout() {
                 onSuccess: (session) => {
                   if (session.redirectUrl) {
                     window.location.href = session.redirectUrl;
+                  } else if (
+                    session.paymentMethod === "athmovil" &&
+                    (session as { status?: string }).status === "ready" &&
+                    (session as { publicToken?: string }).publicToken
+                  ) {
+                    setAthPublicToken((session as { publicToken?: string }).publicToken ?? "");
+                    setStep("athmovil-pay");
                   } else {
                     setStep("pending");
                   }
@@ -112,6 +123,112 @@ export default function Checkout() {
     );
   };
 
+  const handleAthMovilComplete = async (referenceNumber: string) => {
+    if (!orderId) return;
+    setAthVerifying(true);
+    setAthError(null);
+    try {
+      const res = await fetch("/api/payments/athmovil/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, referenceNumber }),
+      });
+      const data = await res.json() as { success?: boolean; error?: string };
+      if (data.success) {
+        clearCart();
+        setLocation(`/track?code=${confirmationCode}`);
+      } else {
+        setAthError(data.error ?? "Payment verification failed. Please contact us.");
+      }
+    } catch {
+      setAthError("Could not connect to verify payment. Please contact us.");
+    } finally {
+      setAthVerifying(false);
+    }
+  };
+
+  if (step === "athmovil-pay") {
+    return (
+      <Layout>
+        <div className="flex-1 flex items-center justify-center py-20">
+          <div className="max-w-md w-full mx-auto px-4 space-y-6">
+            <div className="text-center space-y-2">
+              <div className="mx-auto w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
+                <div className="w-9 h-6 bg-red-600 rounded flex items-center justify-center">
+                  <span className="text-white text-[11px] font-black">ATH</span>
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold">Pay with ATH Movil</h2>
+              <p className="text-muted-foreground text-sm">
+                Order <span className="font-mono font-bold text-foreground">{confirmationCode}</span>
+              </p>
+            </div>
+
+            <div className="bg-muted/30 border rounded-xl p-4 space-y-2 text-sm">
+              {items.map((item) => (
+                <div key={item.menuItem.id} className="flex justify-between">
+                  <span className="text-muted-foreground">{item.quantity}x {item.menuItem.name}</span>
+                  <span>${(item.menuItem.price * item.quantity).toFixed(2)}</span>
+                </div>
+              ))}
+              <Separator />
+              <div className="flex justify-between font-bold">
+                <span>Total</span>
+                <span>${total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {athError ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
+                <XCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-800">Payment Issue</p>
+                  <p className="text-sm text-red-700 mt-1">{athError}</p>
+                </div>
+              </div>
+            ) : athVerifying ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex gap-3">
+                <CheckCircle className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-green-800">Verifying your payment...</p>
+              </div>
+            ) : (
+              <AthMovilButton
+                publicToken={athPublicToken}
+                total={total}
+                subtotal={subtotal}
+                tax={tax}
+                orderId={orderId!}
+                items={items.map((i) => ({
+                  name: i.menuItem.name,
+                  quantity: i.quantity,
+                  price: i.menuItem.price,
+                }))}
+                onCompleted={handleAthMovilComplete}
+                onCancelled={() => {
+                  setAthError("Payment was cancelled. You can try again or choose another method.");
+                }}
+                onExpired={() => {
+                  setAthError("Payment timed out. Please go back and try again.");
+                }}
+              />
+            )}
+
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => {
+                clearCart();
+                setLocation("/");
+              }}
+            >
+              Cancel order and return to menu
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   if (step === "pending") {
     return (
       <Layout>
@@ -121,9 +238,7 @@ export default function Checkout() {
               <CreditCard className="h-8 w-8 text-primary" />
             </div>
             <h2 className="text-2xl font-bold">Order Placed!</h2>
-            <p className="text-muted-foreground">
-              Your order confirmation code is:
-            </p>
+            <p className="text-muted-foreground">Your order confirmation code is:</p>
             <div className="bg-muted rounded-xl px-8 py-4">
               <span className="text-3xl font-mono font-black tracking-widest text-primary">{confirmationCode}</span>
             </div>
@@ -133,22 +248,14 @@ export default function Checkout() {
               <div>
                 <p className="text-sm font-semibold text-amber-800">Payment Gateway Pending Setup</p>
                 <p className="text-sm text-amber-700 mt-1">
-                  {form.paymentMethod === "athmovil"
-                    ? "ATH Móvil Business payment is not yet configured. Please pay at pickup or contact us to arrange payment."
-                    : "Card payment gateway is not yet configured. Please pay at pickup or contact us to arrange payment."}
-                </p>
-                <p className="text-xs text-amber-600 mt-2">
-                  Once merchant credentials are connected, this will redirect you to pay securely online.
+                  Card payment gateway is not yet configured. Please pay at pickup or contact us to arrange payment.
                 </p>
               </div>
             </div>
 
             <div className="flex flex-col gap-3">
               <Button
-                onClick={() => {
-                  clearCart();
-                  setLocation(`/track?code=${confirmationCode}`);
-                }}
+                onClick={() => { clearCart(); setLocation(`/track?code=${confirmationCode}`); }}
                 className="w-full"
               >
                 Track My Order
@@ -259,22 +366,9 @@ export default function Checkout() {
                 <h2 className="text-xl font-bold">Payment Method</h2>
                 <RadioGroup
                   value={form.paymentMethod}
-                  onValueChange={(v) => setForm((f) => ({ ...f, paymentMethod: v as "card" | "athmovil" }))}
+                  onValueChange={(v) => setForm((f) => ({ ...f, paymentMethod: v as "card" | "athmovil" | "cash" }))}
                   className="space-y-3"
                 >
-                  <label
-                    htmlFor="card"
-                    className={`flex items-center gap-4 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
-                      form.paymentMethod === "card" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-                    }`}
-                  >
-                    <RadioGroupItem value="card" id="card" />
-                    <CreditCard className="h-5 w-5" />
-                    <div>
-                      <p className="font-semibold">Credit / Debit Card</p>
-                      <p className="text-sm text-muted-foreground">Visa, Mastercard, Apple Pay</p>
-                    </div>
-                  </label>
                   <label
                     htmlFor="athmovil"
                     className={`flex items-center gap-4 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
@@ -282,12 +376,25 @@ export default function Checkout() {
                     }`}
                   >
                     <RadioGroupItem value="athmovil" id="athmovil" />
-                    <div className="w-8 h-5 bg-red-600 rounded flex items-center justify-center">
-                      <span className="text-white text-[9px] font-black">ATH</span>
+                    <div className="w-9 h-6 bg-red-600 rounded flex items-center justify-center shrink-0">
+                      <span className="text-white text-[10px] font-black">ATH</span>
                     </div>
                     <div>
                       <p className="font-semibold">ATH Movil</p>
-                      <p className="text-sm text-muted-foreground">Pay via ATH Movil app</p>
+                      <p className="text-sm text-muted-foreground">Pay instantly with ATH Movil app</p>
+                    </div>
+                  </label>
+                  <label
+                    htmlFor="card"
+                    className={`flex items-center gap-4 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
+                      form.paymentMethod === "card" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                    }`}
+                  >
+                    <RadioGroupItem value="card" id="card" />
+                    <CreditCard className="h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="font-semibold">Credit / Debit Card</p>
+                      <p className="text-sm text-muted-foreground">Visa, Mastercard, Apple Pay — coming soon</p>
                     </div>
                   </label>
                   <label
@@ -297,7 +404,7 @@ export default function Checkout() {
                     }`}
                   >
                     <RadioGroupItem value="cash" id="cash" />
-                    <div className="h-5 w-8 flex items-center justify-center text-green-700 font-black text-sm">$</div>
+                    <div className="h-5 w-8 flex items-center justify-center text-green-700 font-black text-sm shrink-0">$</div>
                     <div>
                       <p className="font-semibold">Pay at Pickup</p>
                       <p className="text-sm text-muted-foreground">Cash or card at the restaurant</p>
