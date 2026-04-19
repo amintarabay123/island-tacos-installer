@@ -1533,7 +1533,7 @@ function SplitPaymentModal({
 export default function POS() {
   const [, navigate] = useLocation();
 
-  useEffect(() => { setPageMeta("🖥️ POS — Island Tacos", "🖥️", "/manifest-pos.json"); }, []);
+  useEffect(() => { setPageMeta("🖥️ POS — Island Tacos", "🖥️"); }, []);
 
   // Auth guard
   useEffect(() => {

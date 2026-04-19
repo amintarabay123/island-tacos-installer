@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import healthRouter from "./health";
+import manifestRouter from "./manifest";
 import menuRouter from "./menu";
 import ordersRouter from "./orders";
 import paymentsRouter from "./payments";
@@ -20,6 +21,7 @@ router.use(authRouter);
 
 // Public routes (upload requires staff auth; /uploads static serving is public)
 router.use(healthRouter);
+router.use(manifestRouter);
 router.use(menuRouter);
 router.use(ordersRouter);
 router.use(paymentsRouter);
