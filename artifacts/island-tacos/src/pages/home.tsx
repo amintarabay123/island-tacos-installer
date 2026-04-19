@@ -158,7 +158,7 @@ export default function Home() {
       {!loadingItems && popularItems.length > 0 && (
         <section className="max-w-6xl mx-auto px-6 py-12">
           <h2 className="text-lg font-semibold mb-5">Best Sellers</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
             {popularItems.map((item) => (
               <button
                 key={item.id}
@@ -239,14 +239,14 @@ export default function Home() {
               <p className="font-medium">No items in this category right now.</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:gap-x-8 divide-border">
               {filteredItems.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-start gap-4 py-5 group cursor-pointer hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors"
+                  className="flex items-start gap-4 py-4 md:py-5 group cursor-pointer hover:bg-muted/30 -mx-2 px-2 md:-mx-3 md:px-3 rounded-lg transition-colors border-b md:border-b border-border"
                   onClick={() => openItemModal(item)}
                 >
-                  <div className="w-20 h-20 shrink-0 rounded-lg bg-muted overflow-hidden">
+                  <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-lg bg-muted overflow-hidden">
                     {item.imageUrl ? (
                       <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     ) : (
@@ -256,7 +256,7 @@ export default function Home() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4 mb-1">
+                    <div className="flex items-start justify-between gap-3 mb-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm">{item.name}</span>
                         {item.popular && <span className="text-[10px] font-bold bg-secondary/15 text-secondary-foreground px-1.5 py-0.5 rounded uppercase tracking-wide">Popular</span>}
@@ -267,7 +267,7 @@ export default function Home() {
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.description}</p>
                     <button
-                      className="mt-2 text-xs font-semibold flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity border border-border rounded-full px-3 py-1 hover:bg-foreground hover:text-background hover:border-foreground"
+                      className="mt-2 text-xs font-semibold flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity border border-border rounded-full px-3 py-1 hover:bg-foreground hover:text-background hover:border-foreground"
                       onClick={(e) => { e.stopPropagation(); openItemModal(item); }}
                     >
                       <Plus className="w-3 h-3" /> Add

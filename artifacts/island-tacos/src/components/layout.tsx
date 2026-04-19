@@ -23,7 +23,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const navLinks = [
     { href: "/", label: "Menu" },
     { href: "/track", label: "Track Order" },
-    { href: "/account", label: "My Account" },
   ];
 
   return (

@@ -507,7 +507,7 @@ function NoCodeView() {
 
   return (
     <div className="min-h-screen bg-white px-4 py-10 flex flex-col items-center gap-8">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-sm sm:max-w-md">
         {/* Header */}
         <div className="text-center mb-6">
           <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Island Tacos</div>

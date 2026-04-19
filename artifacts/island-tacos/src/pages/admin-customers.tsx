@@ -107,9 +107,9 @@ function CustomerDrawer({ customerId, onClose }: { customerId: number; onClose: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-start sm:justify-end bg-black/40" onClick={onClose}>
       <div
-        className="h-full w-full max-w-md bg-background shadow-2xl flex flex-col overflow-hidden"
+        className="h-[92vh] sm:h-full w-full sm:max-w-md bg-background shadow-2xl flex flex-col overflow-hidden rounded-t-2xl sm:rounded-none"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b">
@@ -277,7 +277,7 @@ export default function AdminCustomers() {
 
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           {[
             { label: "Total Customers", value: customers.length, icon: Users, color: "text-blue-600" },
             { label: "Total Orders", value: totalOrders, icon: ShoppingBag, color: "text-orange-600" },

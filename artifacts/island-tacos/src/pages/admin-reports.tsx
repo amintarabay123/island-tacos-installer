@@ -100,21 +100,21 @@ export default function AdminReports() {
 
       {/* Header */}
       <div className="no-print bg-white border-b sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate(adminRoutes.dashboard)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <button onClick={() => navigate(adminRoutes.dashboard)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors shrink-0">
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
-            <h1 className="text-xl font-bold text-gray-900">Sales Reports</h1>
+            <h1 className="text-lg md:text-xl font-bold text-gray-900 truncate">Sales Reports</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button onClick={() => setShowPrinterSettings(s => !s)}
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <Printer className="w-4 h-4" /> Printer
+              <Printer className="w-4 h-4" /> <span className="hidden sm:inline">Printer</span>
             </button>
             <button onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors">
-              <Download className="w-4 h-4" /> Export PDF
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors">
+              <Download className="w-4 h-4" /> <span className="hidden sm:inline">Export PDF</span>
             </button>
           </div>
         </div>

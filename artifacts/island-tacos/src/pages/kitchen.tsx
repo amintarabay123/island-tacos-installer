@@ -333,6 +333,8 @@ export default function Kitchen() {
     }
   };
 
+  const [mobileTab, setMobileTab] = useState<"new" | "preparing" | "ready">("new");
+
   const byCol: Record<string, Order[]> = { new: [], preparing: [], ready: [] };
   for (const o of orders) {
     if (o.status === "confirmed") byCol.new.push(o);
@@ -344,47 +346,49 @@ export default function Kitchen() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col select-none overflow-hidden">
-      <header className="flex items-center justify-between px-5 py-3 bg-zinc-900 border-b border-zinc-800 shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="text-lg font-bold">Island Tacos</span>
-          <span className="text-zinc-500 text-sm">· Kitchen Display</span>
+      <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-zinc-900 border-b border-zinc-800 shrink-0 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-base sm:text-lg font-bold truncate">Island Tacos</span>
+          <span className="text-zinc-500 text-sm hidden sm:inline">· Kitchen Display</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {error ? (
-            <span className="text-red-400 text-sm font-medium">{error}</span>
+            <span className="text-red-400 text-xs font-medium hidden sm:block">{error}</span>
           ) : lastFetch ? (
-            <span className="text-zinc-600 text-xs">Refreshes every 10s · {lastFetch.toLocaleTimeString()}</span>
+            <span className="text-zinc-600 text-xs hidden lg:block">Refreshes every 10s · {lastFetch.toLocaleTimeString()}</span>
           ) : null}
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${error ? "bg-red-500" : "bg-green-400 animate-pulse"}`} />
-            <span className={`text-xs font-medium ${error ? "text-red-400" : "text-green-400"}`}>
+            <span className={`text-xs font-medium hidden sm:inline ${error ? "text-red-400" : "text-green-400"}`}>
               {error ? "Offline" : "Live"}
             </span>
           </div>
           {notifPerm === "granted" ? (
-            <span className="text-green-600 text-xs font-medium">🔔 Alerts on</span>
+            <span className="text-green-600 text-xs font-medium hidden sm:block">🔔</span>
           ) : notifPerm === "denied" ? (
-            <span className="text-red-500 text-xs font-medium" title="Enable notifications in your browser/device settings">🔕 Alerts off</span>
+            <span className="text-red-500 text-xs font-medium hidden sm:block" title="Enable in browser settings">🔕</span>
           ) : (
             <button
               onClick={requestNotifPermission}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-amber-950 text-xs font-bold transition-colors animate-pulse"
+              className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-amber-950 text-xs font-bold transition-colors animate-pulse"
             >
-              🔔 Allow alerts
+              🔔 <span className="hidden sm:inline">Alerts</span>
             </button>
           )}
           <button
             onClick={logout}
             className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors px-2 py-1 rounded"
           >
-            Sign out
+            <span className="hidden sm:inline">Sign out</span>
+            <span className="sm:hidden">✕</span>
           </button>
         </div>
       </header>
 
       {hasOrders ? (
         <>
-          <div className="grid grid-cols-3 gap-3 px-4 pt-4 pb-2 shrink-0">
+          {/* Desktop column headers */}
+          <div className="hidden sm:grid grid-cols-3 gap-3 px-4 pt-4 pb-2 shrink-0">
             {COL_CONFIG.map(({ key, label, badge }) => (
               <div key={key} className="flex items-center gap-2">
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${badge}`}>
@@ -397,9 +401,32 @@ export default function Kitchen() {
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-3 px-4 pb-4 flex-1 overflow-y-auto items-start">
+          {/* Mobile tabs */}
+          <div className="sm:hidden flex border-b border-zinc-800 shrink-0">
+            {COL_CONFIG.map(({ key, label, badge }) => (
+              <button
+                key={key}
+                onClick={() => setMobileTab(key as "new" | "preparing" | "ready")}
+                className={`flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border-b-2 ${
+                  mobileTab === key
+                    ? "border-current text-white"
+                    : "border-transparent text-zinc-500"
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${badge.includes("blue") ? "bg-blue-400" : badge.includes("orange") ? "bg-orange-400" : "bg-green-400"}`} />
+                {label.split(" ")[0]}
+                {byCol[key].length > 0 && (
+                  <span className="bg-zinc-700 text-zinc-300 rounded-full text-[10px] w-4 h-4 flex items-center justify-center">
+                    {byCol[key].length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="sm:grid sm:grid-cols-3 gap-3 px-3 sm:px-4 py-3 sm:pb-4 flex-1 overflow-y-auto items-start">
             {COL_CONFIG.map(({ key }) => (
-              <div key={key} className="flex flex-col gap-3">
+              <div key={key} className={`flex flex-col gap-3 ${key === mobileTab ? "flex" : "hidden sm:flex"}`}>
                 {byCol[key].length === 0 && (
                   <div className="border border-dashed border-zinc-800 rounded-xl flex items-center justify-center h-28">
                     <span className="text-zinc-700 text-sm">No orders</span>

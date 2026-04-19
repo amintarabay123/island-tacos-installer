@@ -183,67 +183,70 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-3">
-            <span className="text-xl font-black text-primary">ISLAND TACOS</span>
-            <span className="text-muted-foreground">— Admin</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 mr-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-muted-foreground font-medium">Live · 5s</span>
+        <div className="container mx-auto px-4">
+          <div className="flex h-14 md:h-16 items-center justify-between gap-4">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-base md:text-xl font-black text-primary">ISLAND TACOS</span>
+              <span className="text-muted-foreground hidden sm:inline">— Admin</span>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => syncLoyverse.mutate()}
-              disabled={syncLoyverse.isPending}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${syncLoyverse.isPending ? "animate-spin" : ""}`} />
-              {syncLoyverse.isPending ? "Syncing..." : "Sync from Loyverse"}
-            </Button>
-            <Link href={adminRoutes.pos}>
-              <Button size="sm" className="bg-[#F5A623] hover:bg-[#E09520] text-black font-bold">
-                🧾 Point of Sale
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 justify-end">
+              <div className="flex items-center gap-1 mr-1 shrink-0">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Live</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => syncLoyverse.mutate()}
+                disabled={syncLoyverse.isPending}
+                className="shrink-0 hidden lg:flex"
+              >
+                <RefreshCw className={`h-4 w-4 mr-1 ${syncLoyverse.isPending ? "animate-spin" : ""}`} />
+                <span className="hidden xl:inline">{syncLoyverse.isPending ? "Syncing…" : "Sync"}</span>
               </Button>
-            </Link>
-            <Link href={adminRoutes.kitchen}>
-              <Button variant="outline" size="sm">
-                <Monitor className="h-4 w-4 mr-2" />
-                Kitchen Display
+              <Link href={adminRoutes.pos}>
+                <Button size="sm" className="bg-[#F5A623] hover:bg-[#E09520] text-black font-bold shrink-0">
+                  🧾 <span className="hidden sm:inline ml-1">POS</span>
+                </Button>
+              </Link>
+              <Link href={adminRoutes.kitchen}>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <Monitor className="h-4 w-4" />
+                  <span className="hidden md:inline ml-1.5">Kitchen</span>
+                </Button>
+              </Link>
+              <Link href={adminRoutes.menu}>
+                <Button variant="outline" size="sm" className="shrink-0 hidden sm:flex">
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden lg:inline ml-1.5">Menu</span>
+                </Button>
+              </Link>
+              <Link href={adminRoutes.modifiers}>
+                <Button variant="outline" size="sm" className="shrink-0 hidden md:flex">
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden lg:inline ml-1.5">Modifiers</span>
+                </Button>
+              </Link>
+              <Link href={adminRoutes.reports}>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="hidden md:inline ml-1.5">Reports</span>
+                </Button>
+              </Link>
+              <Link href={adminRoutes.customers}>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <Users className="h-4 w-4" />
+                  <span className="hidden md:inline ml-1.5">Customers</span>
+                </Button>
+              </Link>
+              <Link href="/">
+                <Button variant="ghost" size="sm" className="shrink-0 hidden sm:flex">Store</Button>
+              </Link>
+              <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground shrink-0">
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline ml-1.5">Sign out</span>
               </Button>
-            </Link>
-            <Link href={adminRoutes.menu}>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Menu Manager
-              </Button>
-            </Link>
-            <Link href={adminRoutes.modifiers}>
-              <Button variant="outline" size="sm">
-                <Settings className="h-4 w-4 mr-2" />
-                Modifiers
-              </Button>
-            </Link>
-            <Link href={adminRoutes.reports}>
-              <Button variant="outline" size="sm">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Reports
-              </Button>
-            </Link>
-            <Link href={adminRoutes.customers}>
-              <Button variant="outline" size="sm">
-                <Users className="h-4 w-4 mr-2" />
-                Customers
-              </Button>
-            </Link>
-            <Link href="/">
-              <Button variant="ghost" size="sm">View Store</Button>
-            </Link>
-            <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign out
-            </Button>
+            </div>
           </div>
         </div>
       </header>
