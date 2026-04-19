@@ -5,7 +5,7 @@ import ordersRouter from "./orders";
 import paymentsRouter from "./payments";
 import adminRouter from "./admin";
 import loyverseRouter from "./loyverse";
-import authRouter, { requireStaffAuth } from "./auth";
+import authRouter, { requireStaffAuth, requireAdminAuth } from "./auth";
 import webhooksRouter from "./webhooks";
 
 const router: IRouter = Router();
@@ -20,9 +20,9 @@ router.use(ordersRouter);
 router.use(paymentsRouter);
 router.use(webhooksRouter);
 
-// Protect admin + loyverse paths
+// Admin + Loyverse: owner only
 router.use(/^\/(admin|loyverse)/, (req: Request, res: Response, next: NextFunction) => {
-  requireStaffAuth(req, res, next);
+  requireAdminAuth(req, res, next);
 });
 
 router.use(adminRouter);

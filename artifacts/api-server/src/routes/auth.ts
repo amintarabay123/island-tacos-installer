@@ -9,23 +9,31 @@ import {
 const router: IRouter = Router();
 
 const STAFF_PIN = process.env["STAFF_PIN"];
+const ADMIN_PIN = process.env["ADMIN_PIN"];
 
 router.post("/auth/login", (req: Request, res: Response): void => {
   const { pin } = req.body as { pin?: string };
 
-  if (!STAFF_PIN) {
-    res.status(503).json({ error: "STAFF_PIN not configured on the server." });
+  if (!pin) {
+    res.status(401).json({ error: "PIN required" });
     return;
   }
 
-  if (!pin || pin !== STAFF_PIN) {
-    res.status(401).json({ error: "Incorrect PIN" });
+  if (ADMIN_PIN && pin === ADMIN_PIN) {
+    const token = createToken("admin");
+    res.setHeader("Set-Cookie", makeSetCookieHeader(token));
+    res.json({ ok: true, role: "admin" });
     return;
   }
 
-  const token = createToken();
-  res.setHeader("Set-Cookie", makeSetCookieHeader(token));
-  res.json({ ok: true });
+  if (STAFF_PIN && pin === STAFF_PIN) {
+    const token = createToken("staff");
+    res.setHeader("Set-Cookie", makeSetCookieHeader(token));
+    res.json({ ok: true, role: "staff" });
+    return;
+  }
+
+  res.status(401).json({ error: "Incorrect PIN" });
 });
 
 router.post("/auth/logout", (req: Request, res: Response): void => {
@@ -35,13 +43,26 @@ router.post("/auth/logout", (req: Request, res: Response): void => {
 
 router.get("/auth/me", (req: Request, res: Response): void => {
   const data = getTokenFromRequest(req.headers.cookie);
-  res.json({ authed: data?.staffAuthed === true });
+  if (!data?.staffAuthed) {
+    res.json({ authed: false, role: null });
+    return;
+  }
+  res.json({ authed: true, role: data.role ?? "staff" });
 });
 
 export function requireStaffAuth(req: Request, res: Response, next: () => void): void {
   const data = getTokenFromRequest(req.headers.cookie);
   if (data?.staffAuthed !== true) {
     res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+  next();
+}
+
+export function requireAdminAuth(req: Request, res: Response, next: () => void): void {
+  const data = getTokenFromRequest(req.headers.cookie);
+  if (data?.staffAuthed !== true || data.role !== "admin") {
+    res.status(403).json({ error: "Admin access required" });
     return;
   }
   next();

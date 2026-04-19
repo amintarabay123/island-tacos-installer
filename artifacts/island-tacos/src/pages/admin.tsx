@@ -45,6 +45,17 @@ export default function Admin() {
   const prevOrderIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
 
+  // Role guard — staff can only access kitchen
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.authed) navigate(adminRoutes.login);
+        else if (d.role !== "admin") navigate(adminRoutes.kitchen);
+      })
+      .catch(() => navigate(adminRoutes.login));
+  }, [navigate]);
+
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     navigate(adminRoutes.login);

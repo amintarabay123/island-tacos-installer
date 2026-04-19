@@ -5,8 +5,11 @@ const COOKIE_NAME = "it_auth";
 const MAX_AGE_MS = 12 * 60 * 60 * 1000; // 12 hours
 const MAX_AGE_S = 12 * 60 * 60;
 
+export type AuthRole = "admin" | "staff";
+
 interface TokenPayload {
   staffAuthed: boolean;
+  role: AuthRole;
   exp: number;
 }
 
@@ -14,8 +17,8 @@ function sign(payload: string): string {
   return createHmac("sha256", SECRET).update(payload).digest("base64url");
 }
 
-export function createToken(): string {
-  const data: TokenPayload = { staffAuthed: true, exp: Date.now() + MAX_AGE_MS };
+export function createToken(role: AuthRole): string {
+  const data: TokenPayload = { staffAuthed: true, role, exp: Date.now() + MAX_AGE_MS };
   const payload = Buffer.from(JSON.stringify(data)).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }

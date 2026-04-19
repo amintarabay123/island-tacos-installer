@@ -27,7 +27,8 @@ export default function StaffLogin() {
         body: JSON.stringify({ pin }),
       });
       if (res.ok) {
-        navigate(adminRoutes.dashboard);
+        const data = await res.json().catch(() => ({}));
+        navigate(data.role === "staff" ? adminRoutes.kitchen : adminRoutes.dashboard);
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? "Incorrect PIN");
