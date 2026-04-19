@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
+import { authHeaders, clearAuthToken } from "@/lib/auth";
 import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdminStatsQueryKey, getGetRecentOrdersQueryKey, type UpdateOrderStatusBodyStatus } from "@workspace/api-client-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ export default function Admin() {
 
   // Role guard — staff can only access kitchen
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
+    fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => {
         if (!d.authed) navigate(adminRoutes.login);
@@ -57,7 +58,8 @@ export default function Admin() {
   }, [navigate]);
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    clearAuthToken();
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include", headers: authHeaders() });
     navigate(adminRoutes.login);
   };
 

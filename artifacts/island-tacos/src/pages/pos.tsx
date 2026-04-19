@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
+import { authHeaders, clearAuthToken } from "@/lib/auth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -505,7 +506,7 @@ export default function POS() {
 
   // Auth guard
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
+    fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then(r => r.json())
       .then(d => { if (!d.authed) navigate(adminRoutes.login); })
       .catch(() => navigate(adminRoutes.login));

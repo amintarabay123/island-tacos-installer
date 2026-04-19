@@ -74,8 +74,18 @@ router.get("/auth/me", (req: Request, res: Response): void => {
   res.json({ authed: true, role: data.role ?? "staff" });
 });
 
+function getAuthData(req: Request) {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    const data = token ? verifyTokenFromString(token) : null;
+    if (data) return data;
+  }
+  return getTokenFromRequest(req.headers.cookie);
+}
+
 export function requireStaffAuth(req: Request, res: Response, next: () => void): void {
-  const data = getTokenFromRequest(req.headers.cookie);
+  const data = getAuthData(req);
   if (data?.staffAuthed !== true) {
     res.status(401).json({ error: "Not authenticated" });
     return;
@@ -84,7 +94,7 @@ export function requireStaffAuth(req: Request, res: Response, next: () => void):
 }
 
 export function requireAdminAuth(req: Request, res: Response, next: () => void): void {
-  const data = getTokenFromRequest(req.headers.cookie);
+  const data = getAuthData(req);
   if (data?.staffAuthed !== true || data.role !== "admin") {
     res.status(403).json({ error: "Admin access required" });
     return;

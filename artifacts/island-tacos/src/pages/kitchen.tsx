@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
+import { authHeaders, clearAuthToken } from "@/lib/auth";
 
 type OrderItem = {
   id: number;
@@ -125,7 +126,8 @@ export default function Kitchen() {
   const [, navigate] = useLocation();
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    clearAuthToken();
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include", headers: authHeaders() });
     navigate(adminRoutes.login);
   };
 
