@@ -728,7 +728,7 @@ function TicketsDrawer({ onResume, onClose }: {
                       )}
                       {o.status === "confirmed" && <button onClick={() => updateStatus(o.id, "preparing")} className="flex-1 h-8 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition-colors">Start Cooking</button>}
                       {o.status === "preparing" && <button onClick={() => updateStatus(o.id, "ready")} className="flex-1 h-8 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold transition-colors">Mark Ready</button>}
-                      {o.status === "ready" && (
+                      {o.paymentStatus === "pending" && (
                         <button onClick={() => setChargeOrder(o)} className="flex-1 h-8 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-xs font-bold transition-colors">
                           Charge {fmt(o.total)}
                         </button>
