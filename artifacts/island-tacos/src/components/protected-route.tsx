@@ -9,7 +9,7 @@ export default function ProtectedRoute({ children }: Props) {
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
+    fetch("/api/auth/me", { credentials: "include", cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         if (d.authed) {

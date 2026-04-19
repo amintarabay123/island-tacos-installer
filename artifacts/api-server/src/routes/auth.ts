@@ -51,6 +51,8 @@ router.post("/auth/logout", (req: Request, res: Response): void => {
 });
 
 router.get("/auth/me", (req: Request, res: Response): void => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
   const data = getTokenFromRequest(req.headers.cookie);
   if (!data?.staffAuthed) {
     res.json({ authed: false, role: null });
