@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import {
@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 
 type MenuItemForm = {
   categoryId: number;
@@ -58,9 +58,65 @@ export default function AdminMenu() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
-  const filteredItems = items?.filter((i) =>
+  // ── Reorder state ──────────────────────────────────────────────────────────
+  // orderedIds tracks the display order as an array of item IDs.
+  // It's initialized from the API (sorted by sortOrder then id) and updated
+  // optimistically whenever the user clicks ↑ / ↓.
+  const [orderedIds, setOrderedIds] = useState<number[]>([]);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!items) return;
+    // Sync once on first load; after that orderedIds is the source of truth
+    // until the page is refreshed.
+    if (!initializedRef.current) {
+      setOrderedIds(items.map((i) => i.id));
+      initializedRef.current = true;
+    } else {
+      // Merge in any newly added items (they won't be in orderedIds yet)
+      setOrderedIds((prev) => {
+        const existing = new Set(prev);
+        const newIds = items.filter((i) => !existing.has(i.id)).map((i) => i.id);
+        // Also remove IDs that no longer exist
+        const currentIds = new Set(items.map((i) => i.id));
+        const pruned = prev.filter((id) => currentIds.has(id));
+        return [...pruned, ...newIds];
+      });
+    }
+  }, [items]);
+
+  // Build ordered + filtered item list from orderedIds
+  const orderedItems = orderedIds
+    .map((id) => items?.find((i) => i.id === id))
+    .filter(Boolean) as NonNullable<typeof items>[number][];
+
+  const filteredItems = orderedItems.filter((i) =>
     activeCategory === null ? true : i.categoryId === activeCategory
-  ) ?? [];
+  );
+
+  // Move an item up or down within the filtered view.
+  // We swap positions in orderedIds and persist new sortOrders to the API.
+  const moveItem = (itemId: number, direction: "up" | "down") => {
+    const idx = filteredItems.findIndex((i) => i.id === itemId);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= filteredItems.length) return;
+
+    const itemA = filteredItems[idx];
+    const itemB = filteredItems[swapIdx];
+
+    setOrderedIds((prev) => {
+      const next = [...prev];
+      const posA = next.indexOf(itemA.id);
+      const posB = next.indexOf(itemB.id);
+      [next[posA], next[posB]] = [next[posB], next[posA]];
+
+      // Persist after computing the new positions
+      updateItem.mutate({ id: itemA.id, data: { sortOrder: posB * 10 } });
+      updateItem.mutate({ id: itemB.id, data: { sortOrder: posA * 10 } });
+
+      return next;
+    });
+  };
 
   const allSelected = filteredItems.length > 0 && filteredItems.every((i) => selectedIds.has(i.id));
   const someSelected = filteredItems.some((i) => selectedIds.has(i.id));
@@ -248,6 +304,7 @@ export default function AdminMenu() {
                   <th className="text-left p-3 font-semibold hidden sm:table-cell">Category</th>
                   <th className="text-right p-3 font-semibold">Price</th>
                   <th className="text-center p-3 font-semibold">Available</th>
+                  <th className="text-center p-3 font-semibold w-24">Order</th>
                   <th className="text-center p-3 font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -286,6 +343,30 @@ export default function AdminMenu() {
                           checked={item.available}
                           onCheckedChange={(v) => handleToggleAvailable(item.id, v)}
                         />
+                      </td>
+                      <td className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={idx === 0}
+                            onClick={() => moveItem(item.id, "up")}
+                            title="Move up"
+                            className="h-7 w-7 p-0 text-muted-foreground disabled:opacity-20"
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={idx === filteredItems.length - 1}
+                            onClick={() => moveItem(item.id, "down")}
+                            title="Move down"
+                            className="h-7 w-7 p-0 text-muted-foreground disabled:opacity-20"
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                       <td className="p-3 text-center">
                         <div className="flex items-center justify-center gap-1">

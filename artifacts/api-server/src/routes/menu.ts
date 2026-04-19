@@ -102,7 +102,7 @@ router.get("/menu/items", async (req, res): Promise<void> => {
     res.status(400).json({ error: queryParsed.error.message });
     return;
   }
-  let query = db.select().from(menuItemsTable).$dynamic();
+  let query = db.select().from(menuItemsTable).orderBy(menuItemsTable.sortOrder, menuItemsTable.id).$dynamic();
   if (queryParsed.data.categoryId !== undefined) {
     query = query.where(eq(menuItemsTable.categoryId, queryParsed.data.categoryId));
   }
@@ -202,6 +202,7 @@ router.patch("/menu/items/:id", async (req, res): Promise<void> => {
   if (parsed.data.popular !== undefined) updates.popular = parsed.data.popular;
   if (parsed.data.spicy !== undefined) updates.spicy = parsed.data.spicy;
   if (parsed.data.vegetarian !== undefined) updates.vegetarian = parsed.data.vegetarian;
+  if (parsed.data.sortOrder !== undefined) updates.sortOrder = parsed.data.sortOrder;
 
   const [item] = await db
     .update(menuItemsTable)
