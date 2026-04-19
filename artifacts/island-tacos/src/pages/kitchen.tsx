@@ -29,12 +29,14 @@ const NEXT_STATUS: Record<string, string> = {
   pending: "confirmed",
   confirmed: "preparing",
   preparing: "ready",
+  ready: "completed",
 };
 
 const NEXT_LABEL: Record<string, string> = {
   pending: "Accept Order",
   confirmed: "Start Cooking",
   preparing: "Mark Ready",
+  ready: "Done — Handed Off",
 };
 
 const STATUS_CARD: Record<string, { border: string; bg: string }> = {
@@ -48,6 +50,7 @@ const STATUS_BTN: Record<string, string> = {
   pending: "bg-yellow-400 hover:bg-yellow-300 text-yellow-950 active:bg-yellow-200",
   confirmed: "bg-blue-400 hover:bg-blue-300 text-blue-950 active:bg-blue-200",
   preparing: "bg-green-400 hover:bg-green-300 text-green-950 active:bg-green-200",
+  ready: "bg-white hover:bg-zinc-100 text-zinc-950 active:bg-zinc-200",
 };
 
 const REJECTION_OPTIONS = [
