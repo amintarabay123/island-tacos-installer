@@ -11,10 +11,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useCreateOrder, useInitiatePayment } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, MapPin, ShoppingBag, Info, CheckCircle, XCircle } from "lucide-react";
+import { CreditCard, ShoppingBag, Info, CheckCircle, XCircle } from "lucide-react";
 
 export default function Checkout() {
-  const { items, subtotal, tax, deliveryFee, total, clearCart } = useCart();
+  const { items, total, clearCart } = useCart();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
@@ -22,8 +22,6 @@ export default function Checkout() {
     customerName: "",
     customerEmail: "",
     customerPhone: "",
-    orderType: "pickup" as "pickup" | "delivery",
-    deliveryAddress: "",
     paymentMethod: "athmovil" as "card" | "athmovil" | "cash",
     notes: "",
   });
@@ -58,19 +56,14 @@ export default function Checkout() {
       toast({ title: "Please fill in all required fields", variant: "destructive" });
       return;
     }
-    if (form.orderType === "delivery" && !form.deliveryAddress) {
-      toast({ title: "Please enter a delivery address", variant: "destructive" });
-      return;
-    }
-
     createOrder.mutate(
       {
         data: {
           customerName: form.customerName,
           customerEmail: form.customerEmail,
           customerPhone: form.customerPhone,
-          orderType: form.orderType,
-          deliveryAddress: form.orderType === "delivery" ? form.deliveryAddress : null,
+          orderType: "pickup",
+          deliveryAddress: null,
           paymentMethod: form.paymentMethod,
           notes: form.notes || null,
           items: items.map((i) => ({
@@ -299,48 +292,6 @@ export default function Checkout() {
 
               <Separator />
 
-              {/* Order type */}
-              <section className="space-y-4">
-                <h2 className="text-xl font-bold">Order Type</h2>
-                <RadioGroup
-                  value={form.orderType}
-                  onValueChange={(v) => setForm((f) => ({ ...f, orderType: v as "pickup" | "delivery" }))}
-                  className="grid grid-cols-2 gap-4"
-                >
-                  {(["pickup", "delivery"] as const).map((type) => (
-                    <label
-                      key={type}
-                      htmlFor={type}
-                      className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
-                        form.orderType === type ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-                      }`}
-                    >
-                      <RadioGroupItem value={type} id={type} className="sr-only" />
-                      <MapPin className={`h-6 w-6 ${form.orderType === type ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className="font-semibold capitalize">{type}</span>
-                      <span className="text-xs text-muted-foreground text-center">
-                        {type === "pickup" ? "Ready in ~20 min" : "Delivery +$3.00"}
-                      </span>
-                    </label>
-                  ))}
-                </RadioGroup>
-
-                {form.orderType === "delivery" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Delivery Address *</Label>
-                    <Input
-                      id="address"
-                      placeholder="Street address, San Juan, PR"
-                      value={form.deliveryAddress}
-                      onChange={(e) => setForm((f) => ({ ...f, deliveryAddress: e.target.value }))}
-                      required
-                    />
-                  </div>
-                )}
-              </section>
-
-              <Separator />
-
               {/* Payment method */}
               <section className="space-y-4">
                 <h2 className="text-xl font-bold">Payment Method</h2>
@@ -430,17 +381,6 @@ export default function Checkout() {
                     <span>${((item.menuItem.price + (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
-                <Separator />
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
-                </div>
-                {form.orderType === "delivery" && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Delivery fee</span>
-                    <span>{deliveryFee === 0 ? "FREE" : `$${deliveryFee.toFixed(2)}`}</span>
-                  </div>
-                )}
                 <Separator />
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>

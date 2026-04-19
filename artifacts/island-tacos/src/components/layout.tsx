@@ -133,7 +133,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 {items.length > 0 && (
                   <div className="border-t px-6 py-5 space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Estimated total</span>
+                      <span className="text-sm text-muted-foreground">Total</span>
                       <span className="font-semibold">${total.toFixed(2)}</span>
                     </div>
                     <Button

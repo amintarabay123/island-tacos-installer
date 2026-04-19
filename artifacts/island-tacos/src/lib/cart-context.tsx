@@ -80,7 +80,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return sum + (item.menuItem.price + modExtra) * item.quantity;
   }, 0);
   const tax = 0;
-  const deliveryFee = items.length === 0 ? 0 : subtotal > 25 ? 0 : 3.0;
+  const deliveryFee = 0;
   const total = subtotal + tax + deliveryFee;
 
   return (

@@ -14,8 +14,6 @@ import { pushOrderToLoyverse } from "../lib/loyverse";
 const router: IRouter = Router();
 
 const TAX_RATE = 0;
-const DELIVERY_FEE = 3.0;
-const FREE_DELIVERY_THRESHOLD = 25.0;
 
 function generateConfirmationCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -126,10 +124,7 @@ router.post("/orders", async (req, res): Promise<void> => {
   }
 
   const tax = Math.round(subtotal * TAX_RATE * 100) / 100;
-  const deliveryFee =
-    parsed.data.orderType === "delivery" && subtotal < FREE_DELIVERY_THRESHOLD
-      ? DELIVERY_FEE
-      : 0;
+  const deliveryFee = 0;
   const total = Math.round((subtotal + tax + deliveryFee) * 100) / 100;
 
   const confirmationCode = generateConfirmationCode();
