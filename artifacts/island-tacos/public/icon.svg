@@ -1,0 +1,81 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- App icon background -->
+  <rect width="512" height="512" rx="114" fill="#1A0C00"/>
+
+  <!-- Warm gradient overlay -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#2E1800"/>
+      <stop offset="100%" stop-color="#110800"/>
+    </radialGradient>
+    <clipPath id="shell-clip">
+      <ellipse cx="256" cy="318" rx="192" ry="148"/>
+    </clipPath>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#bg)"/>
+
+  <!-- ── Taco shell body (golden dome) ── -->
+  <ellipse cx="256" cy="318" rx="192" ry="148" fill="#C8860A"/>
+
+  <!-- Shell highlight / lighter face -->
+  <ellipse cx="256" cy="300" rx="168" ry="118" fill="#F5A623"/>
+
+  <!-- Shell inner shadow band at top -->
+  <ellipse cx="256" cy="230" rx="155" ry="55" fill="#D4880E" clip-path="url(#shell-clip)"/>
+
+  <!-- Filling layer — peek above the shell opening -->
+  <!-- Lettuce / green -->
+  <ellipse cx="180" cy="228" rx="52" ry="30" fill="#4A9B3B" clip-path="url(#shell-clip)"/>
+  <ellipse cx="196" cy="222" rx="42" ry="22" fill="#5BBF47"/>
+
+  <!-- Meat / dark -->
+  <ellipse cx="260" cy="218" rx="56" ry="28" fill="#7A3B10" clip-path="url(#shell-clip)"/>
+  <ellipse cx="264" cy="213" rx="44" ry="20" fill="#9B4A14"/>
+
+  <!-- Cheese / yellow -->
+  <ellipse cx="332" cy="228" rx="50" ry="28" fill="#F0C030" clip-path="url(#shell-clip)"/>
+  <ellipse cx="330" cy="222" rx="40" ry="20" fill="#FFD740"/>
+
+  <!-- Pico / red tomato dots -->
+  <circle cx="238" cy="220" r="10" fill="#E53935" clip-path="url(#shell-clip)"/>
+  <circle cx="276" cy="216" r="8"  fill="#EF5350" clip-path="url(#shell-clip)"/>
+  <circle cx="306" cy="222" r="10" fill="#E53935" clip-path="url(#shell-clip)"/>
+
+  <!-- ── Hard taco shell top spikes ── -->
+  <g fill="#F5A623">
+    <!-- Spike 1 (far left) -->
+    <polygon points="94,258  74,182  134,238"/>
+    <!-- Spike 2 -->
+    <polygon points="160,228 148,148 204,218"/>
+    <!-- Spike 3 (center) -->
+    <polygon points="238,218 234,130 278,218"/>
+    <!-- Spike 4 -->
+    <polygon points="314,222 360,146 368,232"/>
+    <!-- Spike 5 (far right) -->
+    <polygon points="382,240 436,178 430,260"/>
+  </g>
+
+  <!-- Spike outlines to add depth -->
+  <g fill="none" stroke="#C8860A" stroke-width="3" opacity="0.6">
+    <polygon points="94,258  74,182  134,238"/>
+    <polygon points="160,228 148,148 204,218"/>
+    <polygon points="238,218 234,130 278,218"/>
+    <polygon points="314,222 360,146 368,232"/>
+    <polygon points="382,240 436,178 430,260"/>
+  </g>
+
+  <!-- ── Shell bottom edge highlight ── -->
+  <ellipse cx="256" cy="466" rx="190" ry="42" fill="#A86C08"/>
+  <ellipse cx="256" cy="460" rx="178" ry="30" fill="#C8860A"/>
+
+  <!-- Decorative shell texture dots (from the logo style) -->
+  <g fill="#D4880E" opacity="0.5">
+    <circle cx="156" cy="360" r="6"/>
+    <circle cx="180" cy="390" r="5"/>
+    <circle cx="210" cy="410" r="6"/>
+    <circle cx="256" cy="420" r="6"/>
+    <circle cx="302" cy="410" r="6"/>
+    <circle cx="334" cy="390" r="5"/>
+    <circle cx="358" cy="360" r="6"/>
+  </g>
+</svg>
