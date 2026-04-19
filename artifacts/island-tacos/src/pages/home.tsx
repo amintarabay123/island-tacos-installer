@@ -279,9 +279,9 @@ export default function Home() {
         {selectedItem && (
           <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0 max-h-[90vh] flex flex-col">
             {/* Image */}
-            <div className="aspect-video w-full bg-muted overflow-hidden shrink-0">
+            <div className="w-full bg-muted overflow-hidden shrink-0 flex items-center justify-center" style={{ maxHeight: "260px", minHeight: "160px" }}>
               {selectedItem.imageUrl ? (
-                <img src={selectedItem.imageUrl} alt={selectedItem.name} className="w-full h-full object-cover" />
+                <img src={selectedItem.imageUrl} alt={selectedItem.name} className="w-full h-full object-contain" style={{ maxHeight: "260px" }} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground/20 text-6xl font-bold">
                   {selectedItem.name.charAt(0)}
