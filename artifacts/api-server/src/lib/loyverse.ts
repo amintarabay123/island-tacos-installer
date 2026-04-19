@@ -320,25 +320,27 @@ export interface OrderForReceipt {
 
 export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<string> {
   const lineItems: Record<string, unknown>[] = [];
+  // Collect per-item modifier summaries for the order-level note.
+  // Loyverse overrides item_name with the catalog name when variant_id is present,
+  // so item_name customisation is impossible. The order note IS visible on receipts.
+  const modifierNoteLines: string[] = [];
 
   for (const item of order.items) {
     const mods = item.modifierSelections ?? [];
-    // Roll modifier prices into the unit price — Loyverse's POST /receipts API silently
-    // ignores the `modifiers` array, so we must bake everything into price + item_name.
+    // Roll modifier prices into the unit price (Loyverse ignores the modifiers array on POST)
     const modTotal = mods.reduce((s, m) => s + m.price, 0);
     const unitPrice = Math.round((item.price + modTotal) * 100) / 100;
     const lineTotal = Math.round(unitPrice * item.quantity * 100) / 100;
 
-    // Append modifier names to item_name — the only field Loyverse reliably displays
-    // on the receipt UI (notes and the modifiers array are both ignored on API receipts).
-    const modLabel = mods
-      .filter((m) => m.name)
-      .map((m) => `+${m.name}`)
-      .join(", ");
-    const displayName = modLabel ? `${item.name} (${modLabel})` : item.name;
+    // Build a per-item modifier line for the order note, e.g.:
+    // "Rice Bowl Steak 🥩: +Extra Cheese 🧀, +No Guacamole 🥑"
+    if (mods.length > 0) {
+      const modLabel = mods.map((m) => `+${m.name}`).join(", ");
+      modifierNoteLines.push(`${item.name}: ${modLabel}`);
+    }
 
     const base: Record<string, unknown> = {
-      item_name: displayName,
+      item_name: item.name,
       quantity: item.quantity,
       price: unitPrice,
       gross_total_money: lineTotal,
@@ -367,7 +369,10 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
     employee_id: EMPLOYEE_ID,
     receipt_type: "SALE",
     receipt_date: new Date().toISOString(),
-    note: `#${order.confirmationCode} — ${order.customerName} · ${order.customerPhone}${order.notes ? ` | ${order.notes}` : ""}`,
+    note: [
+      `#${order.confirmationCode} — ${order.customerName} · ${order.customerPhone}${order.notes ? ` | ${order.notes}` : ""}`,
+      ...modifierNoteLines,
+    ].join("\n"),
     line_items: lineItems,
     payments,
   };
