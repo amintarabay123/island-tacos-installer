@@ -6,4 +6,5 @@ export const adminRoutes = {
   dashboard: ADMIN_PATH,
   menu: `${ADMIN_PATH}/menu`,
   kitchen: `${ADMIN_PATH}/kitchen`,
+  pos: `${ADMIN_PATH}/pos`,
 };

@@ -9,7 +9,6 @@ import {
   TrackOrderParams,
   ListOrdersQueryParams,
 } from "@workspace/api-zod";
-import { pushOrderToLoyverse } from "../lib/loyverse";
 
 const router: IRouter = Router();
 
@@ -32,6 +31,7 @@ function formatOrder(order: Record<string, unknown>, items: Record<string, unkno
   return {
     ...order,
     subtotal: parseDecimal(order.subtotal),
+    discountAmount: parseDecimal(order.discountAmount ?? "0"),
     tax: parseDecimal(order.tax),
     deliveryFee: parseDecimal(order.deliveryFee),
     total: parseDecimal(order.total),
@@ -82,7 +82,6 @@ router.post("/orders", async (req, res): Promise<void> => {
     return;
   }
 
-  // Fetch menu items to validate and compute prices
   const menuItemIds = parsed.data.items.map((i) => i.menuItemId);
   const menuItems = await db
     .select()
@@ -123,9 +122,11 @@ router.post("/orders", async (req, res): Promise<void> => {
     });
   }
 
-  const tax = Math.round(subtotal * TAX_RATE * 100) / 100;
+  const discountAmount = Math.round((parsed.data.discountAmount ?? 0) * 100) / 100;
+  const subtotalAfterDiscount = Math.max(0, subtotal - discountAmount);
+  const tax = Math.round(subtotalAfterDiscount * TAX_RATE * 100) / 100;
   const deliveryFee = 0;
-  const total = Math.round((subtotal + tax + deliveryFee) * 100) / 100;
+  const total = Math.round((subtotalAfterDiscount + tax + deliveryFee) * 100) / 100;
 
   const confirmationCode = generateConfirmationCode();
 
@@ -134,14 +135,16 @@ router.post("/orders", async (req, res): Promise<void> => {
     .values({
       confirmationCode,
       customerName: parsed.data.customerName,
-      customerEmail: parsed.data.customerEmail,
-      customerPhone: parsed.data.customerPhone,
-      orderType: parsed.data.orderType,
+      customerEmail: parsed.data.customerEmail ?? "",
+      customerPhone: parsed.data.customerPhone ?? "",
+      orderType: parsed.data.orderType ?? "pickup",
       deliveryAddress: parsed.data.deliveryAddress ?? null,
       status: "pending",
-      paymentStatus: "pending",
+      paymentStatus: parsed.data.paymentStatus ?? "pending",
       paymentMethod: parsed.data.paymentMethod,
+      source: parsed.data.source ?? "online",
       subtotal: String(subtotal),
+      discountAmount: String(discountAmount),
       tax: String(tax),
       deliveryFee: String(deliveryFee),
       total: String(total),
@@ -231,6 +234,14 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
   if (parsed.data.actualPaymentMethod) {
     updates.paymentMethod = parsed.data.actualPaymentMethod;
   }
+  if (parsed.data.paymentStatus) {
+    updates.paymentStatus = parsed.data.paymentStatus;
+  }
+  // Auto-mark as paid when completed from POS
+  if (parsed.data.status === "completed" && !parsed.data.paymentStatus) {
+    updates.paymentStatus = "paid";
+  }
+
   const [order] = await db
     .update(ordersTable)
     .set(updates)
@@ -241,49 +252,9 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     return;
   }
   const items = await db
-    .select({
-      id: orderItemsTable.id,
-      orderId: orderItemsTable.orderId,
-      menuItemId: orderItemsTable.menuItemId,
-      menuItemName: orderItemsTable.menuItemName,
-      menuItemPrice: orderItemsTable.menuItemPrice,
-      quantity: orderItemsTable.quantity,
-      notes: orderItemsTable.notes,
-      modifierSelections: orderItemsTable.modifierSelections,
-      subtotal: orderItemsTable.subtotal,
-      loyverseItemId: menuItemsTable.loyverseItemId,
-      loyverseVariantId: menuItemsTable.loyverseVariantId,
-    })
+    .select()
     .from(orderItemsTable)
-    .leftJoin(menuItemsTable, eq(orderItemsTable.menuItemId, menuItemsTable.id))
     .where(eq(orderItemsTable.orderId, order.id));
-
-  // Push to Loyverse when staff completes the order (payment collected at counter)
-  if (parsed.data.status === "completed" && process.env.LOYVERSE_API_TOKEN) {
-    const effectivePaymentMethod = parsed.data.actualPaymentMethod || order.paymentMethod;
-    pushOrderToLoyverse({
-      id: order.id,
-      customerName: order.customerName,
-      customerPhone: order.customerPhone,
-      confirmationCode: order.confirmationCode,
-      notes: order.notes,
-      total: parseDecimal(order.total),
-      paymentMethod: effectivePaymentMethod,
-      items: items.map((i) => ({
-        name: i.menuItemName,
-        quantity: i.quantity,
-        price: parseDecimal(i.menuItemPrice),
-        notes: i.notes ?? null,
-        modifierSelections: (i.modifierSelections as { modifierId: string; optionId: string; name: string; price: number }[] | null) ?? null,
-        loyverseItemId: i.loyverseItemId ?? null,
-        loyverseVariantId: i.loyverseVariantId ?? null,
-      })),
-    }).then((receiptNum) => {
-      console.log(`[Loyverse] Order ${order.confirmationCode} → receipt ${receiptNum} (${effectivePaymentMethod})`);
-    }).catch((err) => {
-      console.error(`[Loyverse] Failed to push order ${order.confirmationCode}:`, err);
-    });
-  }
 
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });

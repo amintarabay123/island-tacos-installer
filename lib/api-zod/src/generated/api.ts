@@ -227,11 +227,14 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
  */
 export const CreateOrderBody = zod.object({
   customerName: zod.string(),
-  customerEmail: zod.string(),
-  customerPhone: zod.string(),
-  orderType: zod.enum(["pickup", "delivery"]),
+  customerEmail: zod.string().optional().default(""),
+  customerPhone: zod.string().optional().default(""),
+  orderType: zod.enum(["pickup", "delivery"]).optional().default("pickup"),
   deliveryAddress: zod.string().nullish(),
-  paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  paymentMethod: zod.enum(["card", "athmovil", "cash", "split"]),
+  paymentStatus: zod.enum(["pending", "paid"]).optional().default("pending"),
+  source: zod.enum(["online", "pos"]).optional().default("online"),
+  discountAmount: zod.number().optional().default(0),
   notes: zod.string().nullish(),
   items: zod.array(
     zod.object({
@@ -310,10 +313,12 @@ export const UpdateOrderStatusBody = zod.object({
     "ready",
     "completed",
     "cancelled",
+    "open_ticket",
   ]),
   estimatedReadyAt: zod.coerce.date().nullish(),
   cancellationReason: zod.string().nullish(),
   actualPaymentMethod: zod.string().nullish(),
+  paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
 });
 
 export const UpdateOrderStatusResponse = zod.object({

@@ -200,6 +200,11 @@ export default function Admin() {
               <RefreshCw className={`h-4 w-4 mr-2 ${syncLoyverse.isPending ? "animate-spin" : ""}`} />
               {syncLoyverse.isPending ? "Syncing..." : "Sync from Loyverse"}
             </Button>
+            <Link href={adminRoutes.pos}>
+              <Button size="sm" className="bg-[#F5A623] hover:bg-[#E09520] text-black font-bold">
+                🧾 Point of Sale
+              </Button>
+            </Link>
             <Link href={adminRoutes.kitchen}>
               <Button variant="outline" size="sm">
                 <Monitor className="h-4 w-4 mr-2" />

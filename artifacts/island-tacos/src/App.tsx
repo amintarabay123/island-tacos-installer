@@ -11,6 +11,7 @@ import TrackOrder from "@/pages/track";
 import Admin from "@/pages/admin";
 import AdminMenu from "@/pages/admin-menu";
 import Kitchen from "@/pages/kitchen";
+import POS from "@/pages/pos";
 import StaffLogin from "@/pages/staff-login";
 import NotFound from "@/pages/not-found";
 import InstallPrompt from "@/components/install-prompt";
@@ -42,6 +43,9 @@ function Router() {
       </Route>
       <Route path={adminRoutes.kitchen}>
         <ProtectedRoute><Kitchen /></ProtectedRoute>
+      </Route>
+      <Route path={adminRoutes.pos}>
+        <ProtectedRoute><POS /></ProtectedRoute>
       </Route>
 
       {/* Catch-all: redirect old /admin paths to 404 so they're invisible */}
