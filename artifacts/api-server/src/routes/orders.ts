@@ -268,6 +268,7 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     pushOrderToLoyverse({
       id: order.id,
       customerName: order.customerName,
+      customerPhone: order.customerPhone,
       confirmationCode: order.confirmationCode,
       notes: order.notes,
       total: parseDecimal(order.total),

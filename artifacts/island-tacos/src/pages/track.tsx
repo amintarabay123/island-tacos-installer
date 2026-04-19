@@ -93,7 +93,18 @@ export default function TrackOrder() {
         code={confirmationCode}
         orderSummary={{ items: items ?? [], total }}
         progress={status}
-        action={<TrackLink label="Track order" code={code} />}
+        action={
+          (isReady || isDone) ? (
+            <div className="flex flex-col items-center gap-3 w-full">
+              <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
+                Order Again <ArrowRight className="h-4 w-4" />
+              </Link>
+              <TrackLink label="Track order" code={code} />
+            </div>
+          ) : (
+            <TrackLink label="Track order" code={code} />
+          )
+        }
       />
     );
   }

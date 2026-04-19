@@ -302,6 +302,7 @@ export interface ModifierSelection {
 export interface OrderForReceipt {
   id: number;
   customerName: string;
+  customerPhone: string;
   confirmationCode: string;
   notes: string | null;
   total: number;
@@ -318,29 +319,33 @@ export interface OrderForReceipt {
 }
 
 export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<string> {
-  const lineItems = order.items.map((item) => {
-    const modifierExtra = (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0);
-    const effectivePrice = item.price + modifierExtra;
+  const lineItems: Record<string, unknown>[] = [];
+
+  for (const item of order.items) {
+    // Base item line — keep the base price, modifiers added as separate lines below
     const base: Record<string, unknown> = {
       item_name: item.name,
       quantity: item.quantity,
-      price: effectivePrice,
-      gross_total_money: effectivePrice * item.quantity,
-      total_money: effectivePrice * item.quantity,
+      price: item.price,
+      gross_total_money: item.price * item.quantity,
+      total_money: item.price * item.quantity,
     };
     if (item.loyverseItemId) base.item_id = item.loyverseItemId;
     if (item.loyverseVariantId) base.variant_id = item.loyverseVariantId;
     if (item.notes) base.note = item.notes;
-    if (item.modifierSelections && item.modifierSelections.length > 0) {
-      base.modifiers = item.modifierSelections.map((m) => ({
-        modifier_id: m.modifierId,
-        modifier_option_id: m.optionId,
-        name: m.name,
-        price: m.price,
-      }));
+    lineItems.push(base);
+
+    // Each modifier becomes its own visible line item so it renders in Loyverse
+    for (const mod of item.modifierSelections ?? []) {
+      lineItems.push({
+        item_name: `  + ${mod.name}`,
+        quantity: item.quantity,
+        price: mod.price,
+        gross_total_money: mod.price * item.quantity,
+        total_money: mod.price * item.quantity,
+      });
     }
-    return base;
-  });
+  }
 
   const paymentTypeId = await resolvePaymentTypeId(order.paymentMethod);
 
@@ -353,7 +358,7 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
     employee_id: EMPLOYEE_ID,
     receipt_type: "SALE",
     receipt_date: new Date().toISOString(),
-    note: `#${order.confirmationCode} — ${order.customerName}${order.notes ? ` | ${order.notes}` : ""}`,
+    note: `#${order.confirmationCode} — ${order.customerName} · ${order.customerPhone}${order.notes ? ` | ${order.notes}` : ""}`,
     line_items: lineItems,
     payments,
   };
