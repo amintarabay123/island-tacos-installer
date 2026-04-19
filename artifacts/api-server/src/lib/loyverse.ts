@@ -349,8 +349,13 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
 
   const paymentTypeId = await resolvePaymentTypeId(order.paymentMethod);
 
+  // Use sum of line items as payment amount — guarantees Loyverse won't reject due to mismatch
+  const lineItemsTotal = Math.round(
+    lineItems.reduce((s, li) => s + (li.total_money as number), 0) * 100
+  ) / 100;
+
   const payments = paymentTypeId
-    ? [{ payment_type_id: paymentTypeId, money_amount: order.total }]
+    ? [{ payment_type_id: paymentTypeId, money_amount: lineItemsTotal }]
     : [];
 
   const body: Record<string, unknown> = {

@@ -111,7 +111,8 @@ router.post("/orders", async (req, res): Promise<void> => {
       return;
     }
     const price = parseFloat(menuItem.price as unknown as string);
-    const itemSubtotal = price * item.quantity;
+    const modifierTotal = (item.modifierSelections ?? []).reduce((s: number, m: { price?: number }) => s + (m.price ?? 0), 0);
+    const itemSubtotal = (price + modifierTotal) * item.quantity;
     subtotal += itemSubtotal;
     orderItemsData.push({
       menuItemId: item.menuItemId,

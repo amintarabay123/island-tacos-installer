@@ -124,7 +124,7 @@ export default function TrackOrder() {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-type Item = { id: number; menuItemName: string; quantity: number; subtotal: number };
+type Item = { id: number; menuItemName: string; quantity: number; subtotal: number; notes?: string | null };
 
 function FullScreenState({
   icon,
@@ -175,9 +175,14 @@ function FullScreenState({
         {orderSummary && orderSummary.items.length > 0 && (
           <div className="w-full rounded-xl border bg-card text-left p-4 space-y-2 text-sm">
             {orderSummary.items.map((item) => (
-              <div key={item.id} className="flex justify-between text-muted-foreground">
-                <span><span className="font-semibold text-foreground">{item.quantity}×</span> {item.menuItemName}</span>
-                <span>${item.subtotal.toFixed(2)}</span>
+              <div key={item.id} className="space-y-0.5">
+                <div className="flex justify-between text-muted-foreground">
+                  <span><span className="font-semibold text-foreground">{item.quantity}×</span> {item.menuItemName}</span>
+                  <span>${item.subtotal.toFixed(2)}</span>
+                </div>
+                {item.notes && (
+                  <p className="text-xs text-muted-foreground/70 italic pl-5">{item.notes}</p>
+                )}
               </div>
             ))}
             <div className="border-t pt-2 flex justify-between font-bold text-base">

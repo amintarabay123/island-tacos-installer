@@ -135,7 +135,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10" />
         <div className="relative h-full flex flex-col justify-end max-w-6xl mx-auto px-6 pb-12">
           <p className="text-xs font-semibold tracking-widest text-white/60 uppercase flex items-center gap-1.5 mb-3">
-            <MapPin className="w-3 h-3" /> Authentic Puerto Rican Flavor
+            <MapPin className="w-3 h-3" /> Mexican Food · Road Town, BVI
           </p>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
             Fresh. Bold.<br />Unforgettable.

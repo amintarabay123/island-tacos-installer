@@ -190,13 +190,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <p className="font-bold text-sm">Island Tacos</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Authentic Puerto Rican flavors. Made fresh, every day.
+              Mexican food. Made fresh, every day.
             </p>
+            <p className="text-xs text-muted-foreground">284-544-8088</p>
           </div>
           <div className="flex flex-wrap gap-6 text-xs text-muted-foreground">
-            <span>Caguas, Puerto Rico</span>
+            <span>Wickhams Cay 1, Road Town, BVI</span>
             <span>Open 11am – 10pm daily</span>
-            <span>ATH Movil · Card · Apple Pay</span>
+            <span>ATH Móvil · Card · Apple Pay</span>
           </div>
           <div className="flex gap-4 text-xs text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Menu</Link>

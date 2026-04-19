@@ -401,7 +401,14 @@ export default function Admin() {
                         <div className="text-muted-foreground text-xs">{new Date(order.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
                       </td>
                       <td className="p-3 hidden md:table-cell text-muted-foreground">
-                        {order.items?.map((i) => `${i.quantity}x ${i.menuItemName}`).join(", ")}
+                        <div className="space-y-0.5">
+                          {order.items?.map((i: { id: number; quantity: number; menuItemName: string; notes?: string }) => (
+                            <div key={i.id}>
+                              <span>{i.quantity}x {i.menuItemName}</span>
+                              {i.notes && <span className="block text-xs pl-2 text-muted-foreground/70 italic">{i.notes}</span>}
+                            </div>
+                          ))}
+                        </div>
                       </td>
                       <td className="p-3 text-right font-bold">${order.total.toFixed(2)}</td>
                       <td className="p-3">
