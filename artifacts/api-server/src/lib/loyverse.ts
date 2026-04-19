@@ -243,11 +243,53 @@ export async function syncFromLoyverse(): Promise<SyncResult> {
   return result;
 }
 
+export interface LoyversePaymentType {
+  id: string;
+  name: string;
+  type: string;
+}
+
+let _paymentTypesCache: LoyversePaymentType[] | null = null;
+
+async function getPaymentTypes(): Promise<LoyversePaymentType[]> {
+  if (_paymentTypesCache) return _paymentTypesCache;
+  const data = await loyverseFetch<{ payment_types: LoyversePaymentType[] }>("/payment_types");
+  _paymentTypesCache = data.payment_types ?? [];
+  return _paymentTypesCache;
+}
+
+async function resolvePaymentTypeId(paymentMethod: string): Promise<string | null> {
+  try {
+    const types = await getPaymentTypes();
+    if (!types.length) return null;
+
+    const method = paymentMethod.toLowerCase();
+    const keywords: Record<string, string[]> = {
+      card: ["credit", "card", "visa", "master"],
+      card_bppr: ["credit", "card", "visa", "master"],
+      athmovil: ["ath", "móvil", "movil"],
+      cash: ["cash", "efectivo"],
+    };
+
+    const candidates = keywords[method] ?? [method];
+    for (const kw of candidates) {
+      const match = types.find((t) => t.name.toLowerCase().includes(kw));
+      if (match) return match.id;
+    }
+
+    return types[0].id;
+  } catch {
+    return null;
+  }
+}
+
 export interface OrderForReceipt {
   id: number;
   customerName: string;
   confirmationCode: string;
   notes: string | null;
+  total: number;
+  paymentMethod: string;
   items: {
     name: string;
     quantity: number;
@@ -270,14 +312,20 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
     return base;
   });
 
-  const body = {
+  const paymentTypeId = await resolvePaymentTypeId(order.paymentMethod);
+
+  const payments = paymentTypeId
+    ? [{ payment_type_id: paymentTypeId, money_amount: order.total }]
+    : [];
+
+  const body: Record<string, unknown> = {
     store_id: STORE_ID,
     employee_id: EMPLOYEE_ID,
     receipt_type: "SALE",
     receipt_date: new Date().toISOString(),
-    order: `#${order.confirmationCode} — ${order.customerName}`,
-    note: order.notes ?? undefined,
+    note: `#${order.confirmationCode} — ${order.customerName}${order.notes ? ` | ${order.notes}` : ""}`,
     line_items: lineItems,
+    payments,
   };
 
   const data = await loyverseFetch<{ receipt_number: string }>("/receipts", {

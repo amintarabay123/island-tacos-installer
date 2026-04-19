@@ -263,6 +263,8 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
       customerName: order.customerName,
       confirmationCode: order.confirmationCode,
       notes: order.notes,
+      total: parseDecimal(order.total),
+      paymentMethod: order.paymentMethod,
       items: items.map((i) => ({
         name: i.menuItemName,
         quantity: i.quantity,
@@ -271,9 +273,9 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
         loyverseVariantId: i.loyverseVariantId ?? null,
       })),
     }).then((receiptNum) => {
-      console.log(`Order ${order.confirmationCode} pushed to Loyverse: ${receiptNum}`);
+      console.log(`[Loyverse] Order ${order.confirmationCode} → receipt ${receiptNum}`);
     }).catch((err) => {
-      console.error(`Failed to push order ${order.confirmationCode} to Loyverse:`, err);
+      console.error(`[Loyverse] Failed to push order ${order.confirmationCode}:`, err);
     });
   }
 

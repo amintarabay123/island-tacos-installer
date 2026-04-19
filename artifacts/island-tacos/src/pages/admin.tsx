@@ -306,13 +306,29 @@ export default function Admin() {
                       </Button>
                     </div>
                     {rejectState?.orderId === order.id && (
-                      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
-                        <p className="text-sm font-medium text-destructive">Cancel this order?</p>
+                      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-3">
+                        <p className="text-sm font-medium text-destructive">What's the reason?</p>
+                        <div className="flex flex-wrap gap-2">
+                          {["Out of chicken", "Out of steak", "Out of shrimp", "Out of salmon", "Out of burger"].map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => setRejectState({ ...rejectState, reason: rejectState.reason === opt ? "" : opt })}
+                              className={`rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${
+                                rejectState.reason === opt
+                                  ? "bg-destructive text-destructive-foreground border-destructive"
+                                  : "border-destructive/40 text-destructive hover:bg-destructive/10"
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
                         <Textarea
-                          placeholder="Reason for cancellation (optional — e.g. out of stock, closed early)"
-                          value={rejectState.reason}
+                          placeholder="Other reason (optional)"
+                          value={["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].includes(rejectState.reason) ? "" : rejectState.reason}
                           onChange={(e) => setRejectState({ ...rejectState, reason: e.target.value })}
-                          rows={2}
+                          rows={1}
                           className="text-sm resize-none"
                         />
                         <Button
