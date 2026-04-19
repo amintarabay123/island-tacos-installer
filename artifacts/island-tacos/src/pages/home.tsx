@@ -74,14 +74,11 @@ export default function Home() {
 
   const handleAddToCart = () => {
     if (!selectedItem) return;
-    let finalNotes = notes;
     const modifierSelections: ModifierSelection[] = [];
     for (const group of modifierGroups) {
       const selected = selectedModifiers[group.loyverseId];
       if (!selected || selected.size === 0) continue;
       const selectedOptions = group.options.filter(o => selected.has(o.id));
-      const labels = selectedOptions.map(o => o.name).join(", ");
-      finalNotes = finalNotes ? `${finalNotes}\n${group.name}: ${labels}` : `${group.name}: ${labels}`;
       for (const option of selectedOptions) {
         modifierSelections.push({
           modifierId: group.loyverseId,
@@ -91,7 +88,9 @@ export default function Home() {
         });
       }
     }
-    addItem(selectedItem, quantity, finalNotes || undefined, modifierSelections.length > 0 ? modifierSelections : undefined);
+    // notes carries only the customer's free-text special instructions.
+    // Modifier details are fully captured in modifierSelections — no need to duplicate them.
+    addItem(selectedItem, quantity, notes || undefined, modifierSelections.length > 0 ? modifierSelections : undefined);
     setSelectedItem(null);
     setQuantity(1);
     setNotes("");

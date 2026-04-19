@@ -184,7 +184,9 @@ function FullScreenState({
                 {(item.modifierSelections ?? []).map((m, i) => (
                   <p key={i} className="text-xs text-muted-foreground/70 italic pl-5">+ {m.name}</p>
                 ))}
-                {item.notes && (
+                {/* Only show free-text notes when there are no structured modifiers to avoid
+                    duplicating info for older orders that stored modifier labels in notes */}
+                {item.notes && (item.modifierSelections ?? []).length === 0 && (
                   <p className="text-xs text-muted-foreground/70 italic pl-5">{item.notes}</p>
                 )}
               </div>
