@@ -1,231 +1,256 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { Layout } from "@/components/layout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { useEffect, useRef } from "react";
+import { Link } from "wouter";
 import { useTrackOrder, getTrackOrderQueryKey } from "@workspace/api-client-react";
-import { CheckCircle2, Clock, ChefHat, Package, XCircle, Search } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Clock, ChefHat, Package, XCircle, ArrowRight, Loader2 } from "lucide-react";
 
-const STATUS_STEPS = ["pending", "confirmed", "preparing", "ready", "completed"];
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: "Order Received",
-  confirmed: "Confirmed",
-  preparing: "Preparing",
-  ready: "Ready for Pickup",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
-
-const STATUS_ICONS: Record<string, React.ElementType> = {
-  pending: Clock,
-  confirmed: CheckCircle2,
-  preparing: ChefHat,
-  ready: Package,
-  completed: CheckCircle2,
-  cancelled: XCircle,
-};
-
-function StatusBadge({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-800",
-    confirmed: "bg-blue-100 text-blue-800",
-    preparing: "bg-orange-100 text-orange-800",
-    ready: "bg-green-100 text-green-800",
-    completed: "bg-gray-100 text-gray-800",
-    cancelled: "bg-red-100 text-red-800",
-  };
-  return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${colorMap[status] ?? "bg-gray-100 text-gray-800"}`}>
-      {STATUS_LABELS[status] ?? status}
-    </span>
-  );
+function getCode(): string {
+  return new URLSearchParams(window.location.search).get("code") ?? "";
 }
 
 export default function TrackOrder() {
-  const [location] = useLocation();
-  const searchParams = new URLSearchParams(location.includes("?") ? location.split("?")[1] : "");
-  const urlCode = searchParams.get("code") ?? "";
-
-  const [code, setCode] = useState(urlCode);
-  const [submitted, setSubmitted] = useState(!!urlCode);
-
+  const code = getCode().toUpperCase();
   const queryClient = useQueryClient();
-  const trackCode = submitted ? code.toUpperCase() : "";
+
   const { data: order, isLoading, error } = useTrackOrder(
-    trackCode,
-    { query: { enabled: submitted && !!code, queryKey: getTrackOrderQueryKey(trackCode) } }
+    code,
+    { query: { enabled: !!code, queryKey: getTrackOrderQueryKey(code) } }
   );
 
-  // Auto-refresh every 30s for active orders
+  // Poll every 8s until terminal
   useEffect(() => {
-    if (!submitted || !code) return;
+    if (!code) return;
     const terminal = ["completed", "cancelled"];
     if (order && terminal.includes(order.status)) return;
-    const interval = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: getTrackOrderQueryKey(code.toUpperCase()) });
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [submitted, code, order, queryClient]);
+    const id = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: getTrackOrderQueryKey(code) });
+    }, 8_000);
+    return () => clearInterval(id);
+  }, [code, order, queryClient]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!code.trim()) return;
-    setSubmitted(true);
-  };
+  // No code in URL — show search prompt
+  if (!code) {
+    return <NoCodeView />;
+  }
 
-  const currentStepIndex = order ? STATUS_STEPS.indexOf(order.status) : -1;
+  if (isLoading) {
+    return <FullScreenState icon={<Loader2 className="h-14 w-14 text-primary animate-spin" />} title="Looking up your order…" />;
+  }
 
+  if (error || !order) {
+    return (
+      <FullScreenState
+        icon={<XCircle className="h-14 w-14 text-red-500" />}
+        title="Order not found"
+        subtitle="Double-check your confirmation code."
+        action={<TrackLink label="Try again" />}
+      />
+    );
+  }
+
+  const { status, confirmationCode, customerName, cancellationReason, items, total } = order;
+
+  if (status === "cancelled") {
+    return (
+      <FullScreenState
+        icon={<XCircle className="h-14 w-14 text-red-500" />}
+        title="Order not accepted"
+        subtitle={cancellationReason ? `Reason: ${cancellationReason}` : "We couldn't accept your order at this time. Sorry for the inconvenience."}
+        code={confirmationCode}
+        action={
+          <div className="flex flex-col items-center gap-3">
+            <Link href="/" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800 transition-colors">
+              Back to Menu <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        }
+      />
+    );
+  }
+
+  if (status === "confirmed" || status === "preparing" || status === "ready" || status === "completed") {
+    const isReady = status === "ready";
+    const isDone = status === "completed";
+    return (
+      <FullScreenState
+        icon={
+          isReady || isDone
+            ? <Package className={`h-14 w-14 ${isDone ? "text-gray-500" : "text-green-500"}`} />
+            : <CheckCircle2 className="h-14 w-14 text-green-500" />
+        }
+        title={
+          isDone ? "Order complete — enjoy!" :
+          isReady ? "Your order is ready for pickup!" :
+          status === "preparing" ? "We're making your food!" :
+          "Order confirmed!"
+        }
+        subtitle={
+          isDone ? undefined :
+          isReady ? "Head to the counter to pick up your order." :
+          status === "preparing" ? `Hang tight, ${customerName.split(" ")[0]}. It'll be ready soon.` :
+          `We've got your order, ${customerName.split(" ")[0]}. The kitchen is on it!`
+        }
+        code={confirmationCode}
+        orderSummary={{ items: items ?? [], total }}
+        progress={status}
+        action={<TrackLink label="Track order" code={code} />}
+      />
+    );
+  }
+
+  // Pending — waiting for staff to accept
   return (
-    <Layout>
-      <div className="flex-1 py-8 md:py-12">
-        <div className="container mx-auto px-4 max-w-2xl">
-          <h1 className="text-3xl font-black mb-2">Track Your Order</h1>
-          <p className="text-muted-foreground mb-8">Enter your confirmation code to see your order status.</p>
+    <FullScreenState
+      icon={<Clock className="h-14 w-14 text-amber-500 animate-pulse" />}
+      title="Waiting for confirmation…"
+      subtitle="Your order is being reviewed. This usually takes just a minute."
+      code={confirmationCode}
+      orderSummary={{ items: items ?? [], total }}
+      action={<TrackLink label="Refresh status" code={code} />}
+    />
+  );
+}
 
-          <form onSubmit={handleSubmit} className="flex gap-3 mb-8">
-            <div className="flex-1 space-y-1">
-              <Label htmlFor="code" className="sr-only">Confirmation Code</Label>
-              <Input
-                id="code"
-                placeholder="e.g. ITAB1234"
-                value={code}
-                onChange={(e) => { setCode(e.target.value.toUpperCase()); setSubmitted(false); }}
-                className="font-mono text-lg h-12"
-                maxLength={10}
-              />
-            </div>
-            <Button type="submit" className="h-12 px-6" disabled={!code.trim()}>
-              <Search className="h-4 w-4 mr-2" />
-              Track
-            </Button>
-          </form>
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
-          {isLoading && (
-            <div className="text-center py-12 text-muted-foreground">Looking up your order...</div>
-          )}
+type Item = { id: number; menuItemName: string; quantity: number; subtotal: number };
 
-          {error && submitted && (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center">
-              <XCircle className="h-10 w-10 text-destructive mx-auto mb-3" />
-              <p className="font-semibold">Order not found</p>
-              <p className="text-sm text-muted-foreground mt-1">Double-check your confirmation code and try again.</p>
-            </div>
-          )}
+function FullScreenState({
+  icon,
+  title,
+  subtitle,
+  code,
+  orderSummary,
+  progress,
+  action,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  code?: string;
+  orderSummary?: { items: Item[]; total: number };
+  progress?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12 text-center">
+      <div className="w-full max-w-sm flex flex-col items-center gap-6">
+        {/* Logo */}
+        <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Island Tacos</div>
 
-          {order && (
-            <div className="space-y-6">
-              <div className="rounded-xl border bg-card p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Confirmation code</p>
-                    <p className="text-2xl font-mono font-black text-primary">{order.confirmationCode}</p>
-                  </div>
-                  <StatusBadge status={order.status} />
-                </div>
-
-                {order.status !== "cancelled" && order.status !== "completed" && (
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between relative">
-                      {STATUS_STEPS.slice(0, 4).map((step, idx) => {
-                        const Icon = STATUS_ICONS[step];
-                        const isActive = STATUS_STEPS.indexOf(order.status) >= idx;
-                        return (
-                          <div key={step} className="flex flex-col items-center gap-2 z-10">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
-                              isActive ? "bg-primary border-primary text-primary-foreground" : "bg-muted border-border text-muted-foreground"
-                            }`}>
-                              <Icon className="h-4 w-4" />
-                            </div>
-                            <span className={`text-[11px] font-medium text-center max-w-[60px] leading-tight ${isActive ? "text-primary" : "text-muted-foreground"}`}>
-                              {STATUS_LABELS[step]}
-                            </span>
-                          </div>
-                        );
-                      })}
-                      <div className="absolute top-5 left-5 right-5 h-0.5 bg-border -z-0">
-                        <div
-                          className="h-full bg-primary transition-all duration-500"
-                          style={{ width: `${Math.max(0, (currentStepIndex / 3) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {order.estimatedReadyAt && (
-                  <div className="mt-6 bg-primary/5 rounded-lg p-3 text-center">
-                    <p className="text-sm text-muted-foreground">Estimated ready at</p>
-                    <p className="font-bold text-primary">
-                      {new Date(order.estimatedReadyAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-xl border bg-card p-6 space-y-4">
-                <h3 className="font-bold text-lg">Order Details</h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Name</p>
-                    <p className="font-medium">{order.customerName}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Type</p>
-                    <p className="font-medium capitalize">{order.orderType}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Payment</p>
-                    <p className="font-medium capitalize">{order.paymentMethod} — {order.paymentStatus}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Ordered</p>
-                    <p className="font-medium">{new Date(order.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  {order.items?.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{item.quantity}x {item.menuItemName}</span>
-                      <span>${item.subtotal.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <Separator />
-
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>${order.subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax</span>
-                    <span>${order.tax.toFixed(2)}</span>
-                  </div>
-                  {order.deliveryFee > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Delivery</span>
-                      <span>${order.deliveryFee.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-base pt-1">
-                    <span>Total</span>
-                    <span>${order.total.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+        {/* Icon */}
+        <div className="flex items-center justify-center w-24 h-24 rounded-full bg-muted">
+          {icon}
         </div>
+
+        {/* Text */}
+        <div className="space-y-2">
+          <h1 className="text-2xl font-black leading-tight">{title}</h1>
+          {subtitle && <p className="text-muted-foreground text-sm leading-relaxed">{subtitle}</p>}
+        </div>
+
+        {/* Confirmation code */}
+        {code && (
+          <div className="bg-muted rounded-xl px-5 py-3 w-full">
+            <p className="text-xs text-muted-foreground mb-0.5">Confirmation code</p>
+            <p className="text-2xl font-mono font-black text-primary tracking-widest">{code}</p>
+          </div>
+        )}
+
+        {/* Progress bar */}
+        {progress && <ProgressSteps status={progress} />}
+
+        {/* Order summary */}
+        {orderSummary && orderSummary.items.length > 0 && (
+          <div className="w-full rounded-xl border bg-card text-left p-4 space-y-2 text-sm">
+            {orderSummary.items.map((item) => (
+              <div key={item.id} className="flex justify-between text-muted-foreground">
+                <span><span className="font-semibold text-foreground">{item.quantity}×</span> {item.menuItemName}</span>
+                <span>${item.subtotal.toFixed(2)}</span>
+              </div>
+            ))}
+            <div className="border-t pt-2 flex justify-between font-bold text-base">
+              <span>Total</span>
+              <span>${orderSummary.total.toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Action */}
+        {action && <div className="w-full">{action}</div>}
       </div>
-    </Layout>
+    </div>
+  );
+}
+
+const STEPS = [
+  { key: "confirmed", label: "Confirmed", icon: CheckCircle2 },
+  { key: "preparing", label: "Preparing", icon: ChefHat },
+  { key: "ready",     label: "Ready",     icon: Package },
+];
+const STEP_ORDER = ["confirmed", "preparing", "ready", "completed"];
+
+function ProgressSteps({ status }: { status: string }) {
+  const currentIdx = STEP_ORDER.indexOf(status);
+  return (
+    <div className="w-full flex items-center justify-between relative px-1">
+      {/* track line */}
+      <div className="absolute top-4 left-6 right-6 h-0.5 bg-muted z-0" />
+      {STEPS.map((step, i) => {
+        const done = currentIdx >= STEP_ORDER.indexOf(step.key);
+        const Icon = step.icon;
+        return (
+          <div key={step.key} className="flex flex-col items-center gap-1.5 z-10">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
+              done ? "bg-primary border-primary text-primary-foreground" : "bg-white border-muted text-muted-foreground"
+            }`}>
+              <Icon className="h-3.5 w-3.5" />
+            </div>
+            <span className={`text-[10px] font-semibold ${done ? "text-primary" : "text-muted-foreground"}`}>{step.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function TrackLink({ label, code }: { label: string; code?: string }) {
+  const href = code ? `/track?code=${code}` : "/track";
+  return (
+    <a
+      href={href}
+      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border text-sm font-semibold hover:bg-muted transition-colors"
+    >
+      {label} <ArrowRight className="h-4 w-4" />
+    </a>
+  );
+}
+
+function NoCodeView() {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const handleTrack = () => {
+    const val = inputRef.current?.value.trim().toUpperCase();
+    if (val) window.location.href = `/track?code=${val}`;
+  };
+  return (
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 text-center gap-6">
+      <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">Island Tacos</div>
+      <h1 className="text-2xl font-black">Track Your Order</h1>
+      <p className="text-muted-foreground text-sm">Enter your confirmation code to see your order status.</p>
+      <div className="flex gap-2 w-full max-w-xs">
+        <input
+          ref={inputRef}
+          placeholder="e.g. ITAB1234"
+          className="flex-1 border rounded-xl px-4 py-2.5 font-mono text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary"
+          onKeyDown={(e) => e.key === "Enter" && handleTrack()}
+        />
+        <button
+          onClick={handleTrack}
+          className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90"
+        >
+          Track
+        </button>
+      </div>
+    </div>
   );
 }

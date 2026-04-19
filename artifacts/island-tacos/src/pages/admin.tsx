@@ -87,8 +87,18 @@ export default function Admin() {
     } catch {}
   }, []);
 
-  const { data: stats } = useGetAdminStats({ query: { refetchInterval: 15_000 } });
-  const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 }, { query: { refetchInterval: 15_000 } });
+  const { data: stats } = useGetAdminStats({ query: { refetchInterval: 5_000 } });
+  const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 }, { query: { refetchInterval: 5_000 } });
+
+  // Refresh immediately when KDS changes an order
+  useEffect(() => {
+    const handler = () => {
+      queryClient.invalidateQueries({ queryKey: getGetAdminStatsQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetRecentOrdersQueryKey() });
+    };
+    window.addEventListener("kds:order-updated", handler);
+    return () => window.removeEventListener("kds:order-updated", handler);
+  }, [queryClient]);
   const updateStatus = useUpdateOrderStatus();
 
   useEffect(() => {

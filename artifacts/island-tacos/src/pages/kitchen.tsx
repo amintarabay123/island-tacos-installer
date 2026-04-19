@@ -183,6 +183,7 @@ export default function Kitchen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: next }),
       });
+      window.dispatchEvent(new CustomEvent("kds:order-updated"));
       await fetchOrders();
     } finally {
       setAdvancing((s) => { const ns = new Set(s); ns.delete(order.id); return ns; });
@@ -197,6 +198,7 @@ export default function Kitchen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "cancelled", cancellationReason: reason || null }),
       });
+      window.dispatchEvent(new CustomEvent("kds:order-updated"));
       setRejectState(null);
       await fetchOrders();
     } finally {
