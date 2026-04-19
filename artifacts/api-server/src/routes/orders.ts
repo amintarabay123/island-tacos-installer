@@ -139,7 +139,9 @@ router.post("/orders", async (req, res): Promise<void> => {
       customerPhone: parsed.data.customerPhone ?? "",
       orderType: parsed.data.orderType ?? "pickup",
       deliveryAddress: parsed.data.deliveryAddress ?? null,
-      status: "pending",
+      // POS orders are auto-confirmed so they hit the KDS immediately.
+      // Online orders stay "pending" until KDS staff accept or reject them.
+      status: (parsed.data.source === "pos") ? "confirmed" : "pending",
       paymentStatus: parsed.data.paymentStatus ?? "pending",
       paymentMethod: parsed.data.paymentMethod,
       source: parsed.data.source ?? "online",
