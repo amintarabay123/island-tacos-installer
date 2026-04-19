@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useUser, useClerk } from "@clerk/react";
+import { useUser } from "@clerk/react";
 import { useCart } from "@/lib/cart-context";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useCreateOrder } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, LogIn, Apple, Chrome } from "lucide-react";
+import { ShoppingBag, LogIn } from "lucide-react";
 import { saveLastOrder } from "@/lib/customer-account";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -20,7 +20,7 @@ export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, isLoaded } = useUser();
-  const { openSignIn } = useClerk();
+
 
   const [customerPhone, setCustomerPhone] = useState("");
   const [notes, setNotes] = useState("");
@@ -70,10 +70,10 @@ export default function Checkout() {
             <div className="space-y-3">
               <Button
                 className="w-full h-12 font-semibold bg-stone-900 hover:bg-stone-800 text-white border border-stone-700"
-                onClick={() => openSignIn({ redirectUrl: `${basePath}/checkout` })}
+                onClick={() => setLocation(`${basePath}/sign-in`)}
               >
                 <LogIn className="h-4 w-4 mr-2" />
-                Continue with Google or Apple
+                Sign in with Email
               </Button>
               <p className="text-xs text-muted-foreground">
                 Your cart is saved — signing in won't lose your items.
@@ -173,7 +173,7 @@ export default function Checkout() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => openSignIn({ redirectUrl: `${basePath}/checkout` })}
+                    onClick={() => setLocation(`${basePath}/sign-in`)}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-2 shrink-0"
                   >
                     Switch

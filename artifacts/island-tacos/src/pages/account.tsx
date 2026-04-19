@@ -36,7 +36,7 @@ function statusColor(s: string) {
 
 export default function AccountPage() {
   const { user, isLoaded } = useUser();
-  const { openSignIn, signOut } = useClerk();
+  const { signOut } = useClerk();
   const [, setLocation] = useLocation();
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -73,7 +73,7 @@ export default function AccountPage() {
             <h1 className="text-2xl font-bold">My Account</h1>
             <p className="text-muted-foreground text-sm">Sign in to see your order history and saved info.</p>
           </div>
-          <Button className="w-full h-12" onClick={() => openSignIn({ redirectUrl: `${basePath}/account` })}>
+          <Button className="w-full h-12" onClick={() => setLocation(`${basePath}/sign-in`)}>
             <LogIn className="h-4 w-4 mr-2" /> Sign In
           </Button>
         </div>
