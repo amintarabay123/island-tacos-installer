@@ -147,7 +147,7 @@ router.post("/orders", async (req, res): Promise<void> => {
 
   // Calculate estimated pickup time: count orders currently in active states
   const MINS_PER_ORDER = 5;  // each queued order adds 5 min
-  const BASE_MINS = 3;       // minimum 3 min regardless
+  const BASE_MINS = 10;      // minimum 10 min regardless
   const [{ value: activeOrderCount }] = await db
     .select({ value: count() })
     .from(ordersTable)
