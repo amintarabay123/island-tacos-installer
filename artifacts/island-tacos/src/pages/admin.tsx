@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdminStatsQueryKey, getGetRecentOrdersQueryKey, type UpdateOrderStatusBodyStatus } from "@workspace/api-client-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw, Monitor, LogOut } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw, Monitor, LogOut, XCircle } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -33,18 +34,69 @@ const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
   ready: "completed",
 };
 
+type RejectState = { orderId: number; reason: string } | null;
+
 export default function Admin() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const [rejectState, setRejectState] = useState<RejectState>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const prevOrderIdsRef = useRef<Set<number>>(new Set());
+  const isFirstFetchRef = useRef(true);
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     navigate(adminRoutes.login);
   };
-  const { data: stats } = useGetAdminStats();
-  const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 });
+
+  const playChime = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      const ctx = audioCtxRef.current;
+      const notes = [
+        { freq: 523.25, t: 0 },
+        { freq: 659.25, t: 0.15 },
+        { freq: 783.99, t: 0.30 },
+        { freq: 1046.5, t: 0.45 },
+      ];
+      notes.forEach(({ freq, t }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, ctx.currentTime + t);
+        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + t + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.55);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + 0.6);
+      });
+    } catch {}
+  }, []);
+
+  const { data: stats } = useGetAdminStats({ query: { refetchInterval: 15_000 } });
+  const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 }, { query: { refetchInterval: 15_000 } });
   const updateStatus = useUpdateOrderStatus();
+
+  useEffect(() => {
+    if (!orders) return;
+    const activeIds = new Set(
+      orders.filter((o) => ["pending", "confirmed", "preparing", "ready"].includes(o.status)).map((o) => o.id)
+    );
+    if (isFirstFetchRef.current) {
+      isFirstFetchRef.current = false;
+      prevOrderIdsRef.current = activeIds;
+      return;
+    }
+    const hasNew = [...activeIds].some((id) => !prevOrderIdsRef.current.has(id));
+    if (hasNew) {
+      playChime();
+      toast({ title: "New order received!", description: "Check active orders below." });
+    }
+    prevOrderIdsRef.current = activeIds;
+  }, [orders, playChime, toast]);
 
   const syncLoyverse = useMutation({
     mutationFn: async () => {
@@ -65,16 +117,29 @@ export default function Admin() {
     },
   });
 
-  const handleStatusChange = (orderId: number, status: UpdateOrderStatusBodyStatus) => {
+  const handleStatusChange = (orderId: number, status: UpdateOrderStatusBodyStatus, cancellationReason?: string) => {
     updateStatus.mutate(
-      { id: orderId, data: { status } },
+      { id: orderId, data: { status, cancellationReason: cancellationReason ?? null } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetAdminStatsQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetRecentOrdersQueryKey() });
+          setRejectState(null);
         },
       }
     );
+  };
+
+  const handleCancelClick = (orderId: number) => {
+    if (rejectState?.orderId === orderId) {
+      setRejectState(null);
+    } else {
+      setRejectState({ orderId, reason: "" });
+    }
+  };
+
+  const confirmCancellation = (orderId: number) => {
+    handleStatusChange(orderId, "cancelled", rejectState?.reason || undefined);
   };
 
   const activeOrders = orders?.filter((o) =>
@@ -93,6 +158,10 @@ export default function Admin() {
             <span className="text-muted-foreground">— Admin</span>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 mr-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs text-muted-foreground font-medium">Live · 15s</span>
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -215,24 +284,47 @@ export default function Admin() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3 pt-1">
-                    {NEXT_STATUS[order.status] && (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center gap-3">
+                      {NEXT_STATUS[order.status] && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleStatusChange(order.id, NEXT_STATUS[order.status])}
+                          disabled={updateStatus.isPending}
+                        >
+                          Mark as {STATUS_LABELS[NEXT_STATUS[order.status]]}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        onClick={() => handleStatusChange(order.id, NEXT_STATUS[order.status])}
+                        variant={rejectState?.orderId === order.id ? "outline" : "destructive"}
+                        onClick={() => handleCancelClick(order.id)}
                         disabled={updateStatus.isPending}
                       >
-                        Mark as {STATUS_LABELS[NEXT_STATUS[order.status]]}
+                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                        {rejectState?.orderId === order.id ? "Never mind" : "Cancel Order"}
                       </Button>
+                    </div>
+                    {rejectState?.orderId === order.id && (
+                      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+                        <p className="text-sm font-medium text-destructive">Cancel this order?</p>
+                        <Textarea
+                          placeholder="Reason for cancellation (optional — e.g. out of stock, closed early)"
+                          value={rejectState.reason}
+                          onChange={(e) => setRejectState({ ...rejectState, reason: e.target.value })}
+                          rows={2}
+                          className="text-sm resize-none"
+                        />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => confirmCancellation(order.id)}
+                          disabled={updateStatus.isPending}
+                        >
+                          {updateStatus.isPending ? "Cancelling..." : "Confirm Cancellation"}
+                        </Button>
+                      </div>
                     )}
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleStatusChange(order.id, "cancelled")}
-                      disabled={updateStatus.isPending}
-                    >
-                      Cancel
-                    </Button>
                   </div>
                 </div>
               ))}

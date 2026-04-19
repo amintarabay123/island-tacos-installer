@@ -227,6 +227,9 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
   if (parsed.data.estimatedReadyAt !== undefined) {
     updates.estimatedReadyAt = parsed.data.estimatedReadyAt;
   }
+  if (parsed.data.cancellationReason !== undefined) {
+    updates.cancellationReason = parsed.data.cancellationReason ?? null;
+  }
   const [order] = await db
     .update(ordersTable)
     .set(updates)

@@ -306,6 +306,7 @@ export const UpdateOrderStatusBody = zod.object({
     "cancelled",
   ]),
   estimatedReadyAt: zod.coerce.date().nullish(),
+  cancellationReason: zod.string().nullish(),
 });
 
 export const UpdateOrderStatusResponse = zod.object({

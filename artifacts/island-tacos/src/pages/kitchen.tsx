@@ -85,9 +85,13 @@ const COL_CONFIG = [
   },
 ];
 
+type RejectState = { orderId: number; reason: string } | null;
+
 export default function Kitchen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [advancing, setAdvancing] = useState<Set<number>>(new Set());
+  const [rejecting, setRejecting] = useState<Set<number>>(new Set());
+  const [rejectState, setRejectState] = useState<RejectState>(null);
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const prevIdsRef = useRef<Set<number>>(new Set());
@@ -104,19 +108,24 @@ export default function Kitchen() {
     try {
       if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
       const ctx = audioCtxRef.current;
-      const times = [0, 0.2, 0.4];
-      const freqs = [880, 1100, 1320];
-      times.forEach((t, i) => {
+      const notes = [
+        { freq: 523.25, t: 0 },
+        { freq: 659.25, t: 0.15 },
+        { freq: 783.99, t: 0.30 },
+        { freq: 1046.5, t: 0.45 },
+      ];
+      notes.forEach(({ freq, t }) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.type = "sine";
-        osc.frequency.value = freqs[i];
-        gain.gain.setValueAtTime(0.35, ctx.currentTime + t);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.35);
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, ctx.currentTime + t);
+        gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + t + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.65);
         osc.start(ctx.currentTime + t);
-        osc.stop(ctx.currentTime + t + 0.35);
+        osc.stop(ctx.currentTime + t + 0.7);
       });
     } catch {}
   }, []);
@@ -161,6 +170,25 @@ export default function Kitchen() {
       setAdvancing((s) => {
         const ns = new Set(s);
         ns.delete(order.id);
+        return ns;
+      });
+    }
+  };
+
+  const rejectOrder = async (orderId: number, reason: string) => {
+    setRejecting((s) => new Set(s).add(orderId));
+    try {
+      await fetch(`/api/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled", cancellationReason: reason || null }),
+      });
+      setRejectState(null);
+      await fetchOrders();
+    } finally {
+      setRejecting((s) => {
+        const ns = new Set(s);
+        ns.delete(orderId);
         return ns;
       });
     }
@@ -284,6 +312,43 @@ export default function Kitchen() {
                           className={`w-full rounded-lg py-3 text-sm font-bold transition-all active:scale-95 ${btn} disabled:opacity-40 disabled:cursor-not-allowed`}
                         >
                           {isAdvancing ? "Updating…" : nextLabel(order.status)}
+                        </button>
+                      )}
+
+                      {/* Reject */}
+                      {rejectState?.orderId === order.id ? (
+                        <div className="rounded-lg border border-red-500/40 bg-red-950/40 p-3 space-y-2">
+                          <p className="text-red-300 text-xs font-semibold uppercase tracking-wide">Reject order?</p>
+                          <textarea
+                            placeholder="Reason (optional)"
+                            value={rejectState.reason}
+                            onChange={(e) => setRejectState({ ...rejectState, reason: e.target.value })}
+                            rows={2}
+                            className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 resize-none focus:outline-none focus:border-red-500"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => rejectOrder(order.id, rejectState.reason)}
+                              disabled={rejecting.has(order.id)}
+                              className="flex-1 rounded-lg py-2 text-sm font-bold bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-40"
+                            >
+                              {rejecting.has(order.id) ? "Rejecting…" : "Confirm Reject"}
+                            </button>
+                            <button
+                              onClick={() => setRejectState(null)}
+                              className="px-4 rounded-lg py-2 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
+                            >
+                              Back
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setRejectState({ orderId: order.id, reason: "" })}
+                          disabled={isAdvancing || rejecting.has(order.id)}
+                          className="w-full rounded-lg py-2 text-xs font-semibold border border-red-800/60 text-red-400 hover:bg-red-950/50 hover:border-red-600 transition-colors disabled:opacity-30"
+                        >
+                          Reject Order
                         </button>
                       )}
                     </div>
