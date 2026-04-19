@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, and, inArray } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable, menuItemsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable } from "@workspace/db";
 import {
   CreateOrderBody,
   GetOrderParams,
@@ -275,4 +275,26 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
 
+router.post("/orders/:id/refund", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const { amount, reason, refundMethod = "cash" } = req.body as { amount: number; reason?: string; refundMethod?: string };
+  if (!amount || amount <= 0) { res.status(400).json({ error: "amount required" }); return; }
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+  const [refund] = await db.insert(refundsTable).values({
+    orderId: id,
+    amount: String(amount),
+    reason: reason ?? null,
+    refundMethod,
+  }).returning();
+  res.status(201).json({ ...refund, amount: parseFloat(refund.amount) });
+});
+
+router.get("/orders/:id/refunds", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const refunds = await db.select().from(refundsTable).where(eq(refundsTable.orderId, id));
+  res.json(refunds.map(r => ({ ...r, amount: parseFloat(r.amount) })));
+});
+
 export default router;
+

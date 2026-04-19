@@ -27,11 +27,95 @@ type Order = {
   items: { id: number; menuItemName: string; quantity: number; menuItemPrice: number; subtotal: number; modifierSelections?: CartModifier[] | null; notes?: string | null }[];
 };
 
+type Shift = {
+  id: number; openedAt: string; closedAt: string | null;
+  openingFloat: number; closingFloat: number | null; notes: string | null;
+};
+type CashTxn = { id: number; shiftId: number | null; type: string; amount: number; note: string | null; createdAt: string };
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 const now = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 const uid = () => Math.random().toString(36).slice(2, 9);
+const PAY_LABEL: Record<string, string> = { cash: "Cash", card: "Card", athmovil: "ATH Móvil", complimentary: "Comp", split: "Split" };
+
+type PrinterConfig = { type: "browser" | "network"; ip?: string; port?: number };
+function getPrinterConfig(): PrinterConfig {
+  try { return JSON.parse(localStorage.getItem("printerConfig") ?? "{}"); } catch { return { type: "browser" }; }
+}
+
+async function printReceiptLines(
+  lines: { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean }[],
+  config?: PrinterConfig
+): Promise<{ ok: boolean; error?: string }> {
+  const cfg = config ?? getPrinterConfig();
+  if (cfg.type === "network" && cfg.ip) {
+    try {
+      const r = await fetch("/api/print/network", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ ip: cfg.ip, port: cfg.port ?? 9100, lines }),
+      });
+      const data = await r.json();
+      return data;
+    } catch (e) { return { ok: false, error: String(e) }; }
+  }
+  // Browser print fallback
+  const html = `<html><head><title>Receipt</title><style>
+    body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:8px}
+    .center{text-align:center}.bold{font-weight:bold}.large{font-size:16px}
+    .small{font-size:10px}.divider{border-top:1px dashed #000;margin:6px 0}
+  </style></head><body>
+    ${lines.map(l => {
+      if (l.divider) return '<div class="divider"></div>';
+      const cls = [l.center ? "center" : "", l.bold ? "bold" : "", l.size === "large" ? "large" : l.size === "small" ? "small" : ""].filter(Boolean).join(" ");
+      return `<div class="${cls}">${l.text || "&nbsp;"}</div>`;
+    }).join("")}
+  </body></html>`;
+  const win = window.open("", "_blank", "width=320,height=600");
+  if (!win) return { ok: false, error: "Popup blocked" };
+  win.document.write(html);
+  win.document.close(); win.focus(); win.print(); win.close();
+  return { ok: true };
+}
+
+function buildReceiptLines(order: Order, tendered?: number): { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean }[] {
+  const lines: { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean }[] = [];
+  lines.push({ text: "ISLAND TACOS", bold: true, center: true, size: "large" });
+  lines.push({ text: "Wickhams Cay 1, Road Town, BVI", center: true });
+  lines.push({ text: "Tel: +1 (284) 000-0000", center: true });
+  lines.push({ divider: true, text: "" });
+  lines.push({ text: `#${order.confirmationCode}  ${new Date(order.createdAt).toLocaleString()}` });
+  lines.push({ text: `Customer: ${order.customerName || "Walk-in"}` });
+  lines.push({ text: `Payment: ${PAY_LABEL[order.paymentMethod] ?? order.paymentMethod}` });
+  lines.push({ divider: true, text: "" });
+  for (const item of order.items) {
+    lines.push({ text: `${item.quantity}x ${item.menuItemName}`, bold: true });
+    if (item.modifierSelections?.length) {
+      for (const m of item.modifierSelections) {
+        lines.push({ text: `  + ${m.name}${m.price > 0 ? ` $${m.price.toFixed(2)}` : ""}` });
+      }
+    }
+    if (item.notes) lines.push({ text: `  Note: ${item.notes}` });
+    lines.push({ text: `$${item.subtotal.toFixed(2)}`, bold: false });
+  }
+  lines.push({ divider: true, text: "" });
+  lines.push({ text: `Subtotal: ${fmt(order.subtotal)}` });
+  if (order.discountAmount > 0) lines.push({ text: `Discount: -${fmt(order.discountAmount)}` });
+  if (order.tax > 0) lines.push({ text: `Tax: ${fmt(order.tax)}` });
+  lines.push({ text: `TOTAL: ${fmt(order.total)}`, bold: true, size: "large" });
+  if (tendered != null) {
+    lines.push({ text: `Tendered: ${fmt(tendered)}` });
+    lines.push({ text: `Change: ${fmt(Math.max(0, tendered - order.total))}` });
+  }
+  lines.push({ divider: true, text: "" });
+  lines.push({ text: "Thank you for your visit!", center: true });
+  lines.push({ text: "islandtacos.com", center: true });
+  lines.push({ text: "", center: true });
+  return lines;
+}
+
 
 // ─── Numpad ──────────────────────────────────────────────────────────────────
 
@@ -611,15 +695,19 @@ function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
 
 // ─── Receipts Drawer ─────────────────────────────────────────────────────────
 
-const PAY_LABEL: Record<string, string> = {
-  cash: "Cash", card: "Card", athmovil: "ATH Móvil", complimentary: "Comp", split: "Split",
-};
-
 function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"today" | "all">("today");
   const [selected, setSelected] = useState<Order | null>(null);
+  const [printing, setPrinting] = useState(false);
+  const [printError, setPrintError] = useState<string | null>(null);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [refundMethod, setRefundMethod] = useState("cash");
+  const [refundSubmitting, setRefundSubmitting] = useState(false);
+  const [refundSuccess, setRefundSuccess] = useState(false);
 
   useEffect(() => {
     fetch("/api/orders", { credentials: "include" })
@@ -690,34 +778,66 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
             <div className="border-t border-dashed border-zinc-600 my-3"/>
             <div className="text-center text-zinc-500 text-xs">Thank you!</div>
           </div>
-          <div className="p-4 border-t border-[#1E2130]">
-            <button
-              onClick={() => {
-                const win = window.open("", "_blank", "width=320,height=600");
-                if (!win) return;
-                win.document.write(`<html><head><title>Receipt</title><style>body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:8px}.center{text-align:center}.bold{font-weight:bold}.line{border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between;margin:2px 0}</style></head><body>
-                  <div class="center bold">ISLAND TACOS</div>
-                  <div class="center">Wickhams Cay 1, Road Town, BVI</div>
-                  <div class="line"></div>
-                  <div class="row"><span>#${selected.confirmationCode}</span><span>${new Date(selected.createdAt).toLocaleString()}</span></div>
-                  <div>Customer: ${selected.customerName || "Walk-in"}</div>
-                  <div>Payment: ${PAY_LABEL[selected.paymentMethod] ?? selected.paymentMethod}</div>
-                  <div class="line"></div>
-                  ${selected.items.map(item => `<div class="row"><span>${item.quantity}× ${item.menuItemName}</span><span>$${item.subtotal.toFixed(2)}</span></div>${(item.modifierSelections ?? []).map(m => `<div style="padding-left:12px">+ ${m.name}${m.price > 0 ? ` +$${m.price.toFixed(2)}` : ""}</div>`).join("")}${item.notes ? `<div style="padding-left:12px;color:#888">Note: ${item.notes}</div>` : ""}`).join("")}
-                  <div class="line"></div>
-                  <div class="row"><span>Subtotal</span><span>$${selected.subtotal.toFixed(2)}</span></div>
-                  ${selected.discountAmount > 0 ? `<div class="row"><span>Discount</span><span>-$${selected.discountAmount.toFixed(2)}</span></div>` : ""}
-                  ${selected.tax > 0 ? `<div class="row"><span>Tax</span><span>$${selected.tax.toFixed(2)}</span></div>` : ""}
-                  <div class="row bold"><span>TOTAL</span><span>$${selected.total.toFixed(2)}</span></div>
-                  <div class="line"></div>
-                  <div class="center">Thank you!</div>
-                </body></html>`);
-                win.document.close(); win.focus(); win.print(); win.close();
-              }}
-              className="w-full h-11 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-bold transition-colors"
-            >
-              🖨 Print Receipt
-            </button>
+          <div className="p-4 border-t border-[#1E2130] space-y-2">
+            {printError && <p className="text-red-400 text-xs text-center">{printError}</p>}
+            {refundSuccess && <p className="text-green-400 text-xs text-center">✓ Refund recorded</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  setPrinting(true); setPrintError(null);
+                  const result = await printReceiptLines(buildReceiptLines(selected));
+                  if (!result.ok) setPrintError(result.error ?? "Print failed");
+                  setPrinting(false);
+                }}
+                disabled={printing}
+                className="flex-1 h-11 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-bold transition-colors disabled:opacity-50"
+              >
+                {printing ? "Printing…" : "🖨 Print"}
+              </button>
+              <button
+                onClick={() => { setRefundOpen(o => !o); setRefundAmount(selected.total.toFixed(2)); }}
+                className="flex-1 h-11 rounded-xl bg-red-900/60 hover:bg-red-800/60 border border-red-700/50 text-red-300 font-bold transition-colors"
+              >
+                ↩ Refund
+              </button>
+            </div>
+            {refundOpen && (
+              <div className="bg-[#0A0B0F] rounded-xl p-4 space-y-3 border border-red-900/40">
+                <p className="text-red-300 text-sm font-semibold">Issue Refund</p>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="text-zinc-400 text-xs mb-1 block">Amount</label>
+                    <input type="number" step="0.01" value={refundAmount} onChange={e => setRefundAmount(e.target.value)}
+                      className="w-full bg-[#1E2130] border border-[#2A2F45] rounded-lg px-3 py-2 text-white text-sm outline-none" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-zinc-400 text-xs mb-1 block">Method</label>
+                    <select value={refundMethod} onChange={e => setRefundMethod(e.target.value)}
+                      className="w-full bg-[#1E2130] border border-[#2A2F45] rounded-lg px-3 py-2 text-white text-sm outline-none">
+                      <option value="cash">Cash</option>
+                      <option value="card">Card</option>
+                      <option value="athmovil">ATH Móvil</option>
+                    </select>
+                  </div>
+                </div>
+                <input type="text" placeholder="Reason (optional)" value={refundReason} onChange={e => setRefundReason(e.target.value)}
+                  className="w-full bg-[#1E2130] border border-[#2A2F45] rounded-lg px-3 py-2 text-white text-sm outline-none" />
+                <button disabled={refundSubmitting || !refundAmount}
+                  onClick={async () => {
+                    setRefundSubmitting(true);
+                    await fetch(`/api/orders/${selected.id}/refund`, {
+                      method: "POST", credentials: "include",
+                      headers: { "Content-Type": "application/json", ...authHeaders() },
+                      body: JSON.stringify({ amount: parseFloat(refundAmount), reason: refundReason, refundMethod }),
+                    });
+                    setRefundOpen(false); setRefundSuccess(true); setRefundSubmitting(false);
+                    setTimeout(() => setRefundSuccess(false), 3000);
+                  }}
+                  className="w-full h-10 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition-colors disabled:opacity-50">
+                  {refundSubmitting ? "Processing…" : `Confirm Refund ${refundAmount ? fmt(parseFloat(refundAmount)) : ""}`}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -787,6 +907,280 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ─── Open Shift Modal ────────────────────────────────────────────────────────
+
+function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
+  const [float, setFloat] = useState("0");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleOpen = async () => {
+    setSubmitting(true); setError(null);
+    try {
+      const r = await fetch("/api/shifts", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ openingFloat: parseFloat(float) || 0, notes: notes || undefined }),
+      });
+      if (!r.ok) { const d = await r.json(); setError(d.error ?? "Failed to open shift"); setSubmitting(false); return; }
+      const shift = await r.json();
+      onOpen(shift);
+    } catch { setError("Network error"); setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#13151C] rounded-2xl w-full max-w-sm shadow-2xl p-6">
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">🏪</div>
+          <h2 className="text-white text-xl font-bold">Open Shift</h2>
+          <p className="text-zinc-400 text-sm mt-1">Count your starting cash before opening</p>
+        </div>
+        <div className="mb-4">
+          <label className="text-zinc-400 text-xs font-medium mb-2 block">Starting Cash Float</label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-lg font-bold">$</span>
+            <input type="number" step="0.01" min="0" value={float} onChange={e => setFloat(e.target.value)}
+              className="w-full bg-[#0A0B0F] border border-[#2A2F45] focus:border-[#F5A623] rounded-xl pl-8 pr-4 py-3 text-white text-xl font-mono font-bold outline-none" />
+          </div>
+        </div>
+        <div className="mb-5">
+          <label className="text-zinc-400 text-xs font-medium mb-2 block">Notes (optional)</label>
+          <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. regular Tuesday shift"
+            className="w-full bg-[#0A0B0F] border border-[#2A2F45] focus:border-[#F5A623] rounded-xl px-4 py-2.5 text-white text-sm outline-none placeholder-zinc-600" />
+        </div>
+        {error && <p className="text-red-400 text-sm text-center mb-3">{error}</p>}
+        <div className="flex gap-2">
+          <button onClick={handleOpen} disabled={submitting}
+            className="flex-1 h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-bold transition-colors disabled:opacity-50">
+            {submitting ? "Opening…" : "Open Shift"}
+          </button>
+          <button onClick={() => onOpen({ id: 0, openedAt: new Date().toISOString(), closedAt: null, openingFloat: 0, closingFloat: null, notes: null })}
+            className="px-4 h-12 rounded-xl bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-400 text-sm transition-colors">
+            Skip
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Close Shift Modal ────────────────────────────────────────────────────────
+
+function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void }) {
+  type Summary = { totalOrders: number; totalSales: number; byMethod: { cash: number; card: number; athmovil: number }; refundTotal: number; netSales: number; payIns: number; payOuts: number; expectedCash: number; cashTransactions: CashTxn[] };
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [closingFloat, setClosingFloat] = useState("");
+  const [closing, setClosing] = useState(false);
+  const [closed, setClosed] = useState(false);
+  const [printingZ, setPrintingZ] = useState(false);
+
+  useEffect(() => {
+    if (shift.id === 0) return;
+    fetch(`/api/shifts/${shift.id}/summary`, { credentials: "include", headers: authHeaders() })
+      .then(r => r.json()).then(d => { setSummary(d); }).catch(() => {});
+  }, [shift.id]);
+
+  const handleClose = async () => {
+    setClosing(true);
+    await fetch(`/api/shifts/${shift.id}/close`, {
+      method: "PATCH", credentials: "include",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ closingFloat: closingFloat ? parseFloat(closingFloat) : undefined }),
+    });
+    setClosed(true); setClosing(false);
+  };
+
+  const printZReport = async () => {
+    if (!summary) return;
+    setPrintingZ(true);
+    const lines: Parameters<typeof printReceiptLines>[0] = [
+      { text: "ISLAND TACOS", bold: true, center: true, size: "large" },
+      { text: "Wickhams Cay 1, Road Town, BVI", center: true },
+      { divider: true, text: "" },
+      { text: "Z-REPORT — END OF SHIFT", bold: true, center: true },
+      { text: new Date().toLocaleString(), center: true },
+      { divider: true, text: "" },
+      { text: `Opened: ${new Date(shift.openedAt).toLocaleString()}` },
+      { text: `Closed: ${new Date().toLocaleString()}` },
+      { divider: true, text: "" },
+      { text: `Total Orders: ${summary.totalOrders}`, bold: true },
+      { text: `Gross Sales: ${fmt(summary.totalSales)}`, bold: true },
+      { text: `Cash Sales: ${fmt(summary.byMethod.cash)}` },
+      { text: `Card Sales: ${fmt(summary.byMethod.card)}` },
+      { text: `ATH Movil: ${fmt(summary.byMethod.athmovil)}` },
+      { divider: true, text: "" },
+      { text: `Refunds: -${fmt(summary.refundTotal)}` },
+      { text: `Net Sales: ${fmt(summary.netSales)}`, bold: true, size: "large" },
+      { divider: true, text: "" },
+      { text: `Opening Float: ${fmt(shift.openingFloat)}` },
+      { text: `Pay Ins: +${fmt(summary.payIns)}` },
+      { text: `Pay Outs: -${fmt(summary.payOuts)}` },
+      { text: `Expected Cash: ${fmt(summary.expectedCash)}`, bold: true },
+      ...(closingFloat ? [{ text: `Actual Cash: ${fmt(parseFloat(closingFloat))}` }, { text: `Difference: ${fmt(parseFloat(closingFloat) - summary.expectedCash)}` }] : []),
+      { divider: true, text: "" },
+      { text: "Thank you!", center: true },
+    ];
+    await printReceiptLines(lines);
+    setPrintingZ(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={closed ? onClose : undefined}>
+      <div className="bg-[#13151C] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="p-5 border-b border-[#1E2130] flex items-center justify-between">
+          <h2 className="text-white text-lg font-bold">{closed ? "Shift Closed" : "Close Shift"}</h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white text-2xl leading-none">×</button>
+        </div>
+        <div className="p-5 max-h-[70vh] overflow-y-auto">
+          {summary ? (
+            <div className="space-y-3 font-mono text-sm">
+              <div className="bg-[#0A0B0F] rounded-xl p-4 space-y-1.5">
+                <div className="flex justify-between"><span className="text-zinc-400">Total Orders</span><span className="text-white">{summary.totalOrders}</span></div>
+                <div className="flex justify-between"><span className="text-zinc-400">Cash Sales</span><span className="text-white">{fmt(summary.byMethod.cash)}</span></div>
+                <div className="flex justify-between"><span className="text-zinc-400">Card Sales</span><span className="text-white">{fmt(summary.byMethod.card)}</span></div>
+                <div className="flex justify-between"><span className="text-zinc-400">ATH Móvil</span><span className="text-white">{fmt(summary.byMethod.athmovil)}</span></div>
+                <div className="flex justify-between"><span className="text-zinc-400">Refunds</span><span className="text-red-400">-{fmt(summary.refundTotal)}</span></div>
+                <div className="flex justify-between border-t border-[#2A2F45] pt-1.5 mt-1"><span className="text-white font-bold">Net Sales</span><span className="text-[#F5A623] font-bold text-base">{fmt(summary.netSales)}</span></div>
+              </div>
+              <div className="bg-[#0A0B0F] rounded-xl p-4 space-y-1.5">
+                <div className="flex justify-between"><span className="text-zinc-400">Opening Float</span><span className="text-white">{fmt(shift.openingFloat)}</span></div>
+                <div className="flex justify-between"><span className="text-zinc-400">Pay Ins</span><span className="text-green-400">+{fmt(summary.payIns)}</span></div>
+                <div className="flex justify-between"><span className="text-zinc-400">Pay Outs</span><span className="text-red-400">-{fmt(summary.payOuts)}</span></div>
+                <div className="flex justify-between border-t border-[#2A2F45] pt-1.5"><span className="text-zinc-300">Expected Cash</span><span className="text-white font-bold">{fmt(summary.expectedCash)}</span></div>
+              </div>
+              {!closed && (
+                <div>
+                  <label className="text-zinc-400 text-xs mb-1 block">Actual cash in drawer (optional)</label>
+                  <input type="number" step="0.01" value={closingFloat} onChange={e => setClosingFloat(e.target.value)}
+                    placeholder={fmt(summary.expectedCash)}
+                    className="w-full bg-[#0A0B0F] border border-[#2A2F45] rounded-xl px-3 py-2 text-white text-sm font-mono outline-none" />
+                  {closingFloat && <p className={`text-xs mt-1 ${parseFloat(closingFloat) - summary.expectedCash >= 0 ? "text-green-400" : "text-red-400"}`}>
+                    Difference: {parseFloat(closingFloat) - summary.expectedCash >= 0 ? "+" : ""}{fmt(parseFloat(closingFloat) - summary.expectedCash)}
+                  </p>}
+                </div>
+              )}
+              {closed && <div className="text-center text-green-400 font-bold text-lg py-2">✓ Shift Closed</div>}
+            </div>
+          ) : (
+            <p className="text-zinc-500 text-center py-8">Loading summary…</p>
+          )}
+        </div>
+        <div className="p-4 border-t border-[#1E2130] flex gap-2">
+          <button onClick={printZReport} disabled={printingZ || !summary}
+            className="flex-1 h-11 rounded-xl bg-[#1E2130] hover:bg-[#2A2F45] text-white text-sm font-semibold transition-colors disabled:opacity-50">
+            {printingZ ? "Printing…" : "🖨 Print Z-Report"}
+          </button>
+          {!closed && (
+            <button onClick={handleClose} disabled={closing}
+              className="flex-1 h-11 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition-colors disabled:opacity-50">
+              {closing ? "Closing…" : "Close Shift"}
+            </button>
+          )}
+          {closed && (
+            <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-bold transition-colors">
+              Done
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Pay In / Out Modal ────────────────────────────────────────────────────────
+
+function PayInOutModal({ shiftId, onClose }: { shiftId: number | null; onClose: () => void }) {
+  const [type, setType] = useState<"pay_in" | "pay_out">("pay_in");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [transactions, setTransactions] = useState<CashTxn[]>([]);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = shiftId ? `/api/cash-transactions?shiftId=${shiftId}` : "/api/cash-transactions";
+    fetch(url, { credentials: "include", headers: authHeaders() })
+      .then(r => r.json()).then(setTransactions).catch(() => {});
+  }, [shiftId]);
+
+  const submit = async () => {
+    if (!amount || parseFloat(amount) <= 0) return;
+    setSubmitting(true);
+    await fetch("/api/cash-transactions", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ shiftId, type, amount: parseFloat(amount), note: note || undefined }),
+    });
+    const msg = `${type === "pay_in" ? "Pay In" : "Pay Out"} ${fmt(parseFloat(amount))} recorded`;
+    setSuccess(msg); setAmount(""); setNote(""); setSubmitting(false);
+    const url = shiftId ? `/api/cash-transactions?shiftId=${shiftId}` : "/api/cash-transactions";
+    fetch(url, { credentials: "include", headers: authHeaders() })
+      .then(r => r.json()).then(setTransactions).catch(() => {});
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-[#13151C] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="p-5 border-b border-[#1E2130] flex items-center justify-between">
+          <h2 className="text-white text-lg font-bold">Cash Management</h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white text-2xl leading-none">×</button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="flex gap-2">
+            {(["pay_in", "pay_out"] as const).map(t => (
+              <button key={t} onClick={() => setType(t)}
+                className={`flex-1 h-10 rounded-xl text-sm font-bold transition-colors ${type === t ? (t === "pay_in" ? "bg-green-600 text-white" : "bg-red-600 text-white") : "bg-[#1E2130] text-zinc-400 hover:text-white"}`}>
+                {t === "pay_in" ? "💵 Pay In" : "💸 Pay Out"}
+              </button>
+            ))}
+          </div>
+          <div>
+            <label className="text-zinc-400 text-xs mb-1 block">Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-bold">$</span>
+              <input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)}
+                className="w-full bg-[#0A0B0F] border border-[#2A2F45] focus:border-[#F5A623] rounded-xl pl-8 pr-4 py-3 text-white text-xl font-mono font-bold outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="text-zinc-400 text-xs mb-1 block">Note (optional)</label>
+            <input type="text" value={note} onChange={e => setNote(e.target.value)}
+              placeholder="e.g. change for $100 bill, vendor payment…"
+              className="w-full bg-[#0A0B0F] border border-[#2A2F45] focus:border-[#F5A623] rounded-xl px-4 py-2.5 text-white text-sm outline-none placeholder-zinc-600" />
+          </div>
+          {success && <p className="text-green-400 text-sm text-center">{success}</p>}
+          <button onClick={submit} disabled={submitting || !amount}
+            className={`w-full h-12 rounded-xl font-bold transition-colors disabled:opacity-50 ${type === "pay_in" ? "bg-green-600 hover:bg-green-500 text-white" : "bg-red-600 hover:bg-red-500 text-white"}`}>
+            {submitting ? "Recording…" : `Record ${type === "pay_in" ? "Pay In" : "Pay Out"}`}
+          </button>
+
+          {transactions.filter(t => t.type === "pay_in" || t.type === "pay_out").length > 0 && (
+            <div>
+              <p className="text-zinc-500 text-xs mb-2">Today's Cash Movements</p>
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                {transactions.filter(t => t.type === "pay_in" || t.type === "pay_out").map(t => (
+                  <div key={t.id} className="flex justify-between items-center py-1.5 px-3 bg-[#0A0B0F] rounded-lg">
+                    <div>
+                      <span className={`text-xs font-bold ${t.type === "pay_in" ? "text-green-400" : "text-red-400"}`}>{t.type === "pay_in" ? "IN" : "OUT"}</span>
+                      {t.note && <span className="text-zinc-500 text-xs ml-2">{t.note}</span>}
+                    </div>
+                    <span className={`text-sm font-bold ${t.type === "pay_in" ? "text-green-400" : "text-red-400"}`}>
+                      {t.type === "pay_in" ? "+" : "-"}{fmt(t.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main POS Component ────────────────────────────────────────────────────────
 
 export default function POS() {
@@ -827,6 +1221,23 @@ export default function POS() {
   const [search, setSearch] = useState("");
   const [time, setTime] = useState(now());
   const [ticketCount, setTicketCount] = useState(0);
+
+  // Shift state
+  const [currentShift, setCurrentShift] = useState<Shift | null>(null);
+  const [shiftLoading, setShiftLoading] = useState(true);
+  const [openShiftModal, setOpenShiftModal] = useState(false);
+  const [closeShiftModal, setCloseShiftModal] = useState(false);
+  const [cashMgmtOpen, setCashMgmtOpen] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/shifts/current", { credentials: "include", headers: authHeaders() })
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.id) { setCurrentShift(d); setShiftLoading(false); }
+        else { setShiftLoading(false); setOpenShiftModal(true); }
+      })
+      .catch(() => setShiftLoading(false));
+  }, []);
 
   // Modals
   const [modifierModal, setModifierModal] = useState<{ item: MenuItem; mods: Modifier[] } | null>(null);
@@ -1142,6 +1553,22 @@ export default function POS() {
                 {incomingOrders.length}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => currentShift && currentShift.id !== 0 ? setCloseShiftModal(true) : setOpenShiftModal(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              currentShift && currentShift.id !== 0
+                ? "bg-green-900/50 text-green-400 hover:bg-green-900/70 border border-green-800/40"
+                : "bg-red-900/50 text-red-400 hover:bg-red-900/70 border border-red-800/40"
+            }`}
+          >
+            ⏱ <span className="hidden sm:inline">{currentShift && currentShift.id !== 0 ? "Shift Open" : "No Shift"}</span>
+          </button>
+          <button
+            onClick={() => setCashMgmtOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-300 text-sm font-medium transition-colors"
+          >
+            💵 <span className="hidden sm:inline">Cash</span>
           </button>
           <button onClick={() => setReceiptsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-300 text-sm font-medium transition-colors">
             🧾 <span className="hidden sm:inline">Receipts</span>
@@ -1480,6 +1907,23 @@ export default function POS() {
             <button onClick={() => setOrderNoteModal(false)} className="mt-3 w-full h-11 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-bold transition-colors">Done</button>
           </div>
         </div>
+      )}
+
+      {/* Shift modals */}
+      {!shiftLoading && openShiftModal && (
+        <OpenShiftModal onOpen={(shift) => { setCurrentShift(shift); setOpenShiftModal(false); }} />
+      )}
+      {closeShiftModal && currentShift && (
+        <CloseShiftModal
+          shift={currentShift}
+          onClose={() => { setCloseShiftModal(false); setCurrentShift(null); setOpenShiftModal(true); }}
+        />
+      )}
+      {cashMgmtOpen && (
+        <PayInOutModal
+          shiftId={currentShift && currentShift.id !== 0 ? currentShift.id : null}
+          onClose={() => setCashMgmtOpen(false)}
+        />
       )}
     </div>
   );

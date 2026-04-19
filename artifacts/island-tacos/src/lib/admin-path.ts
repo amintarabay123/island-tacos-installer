@@ -8,4 +8,5 @@ export const adminRoutes = {
   modifiers: `${ADMIN_PATH}/modifiers`,
   kitchen: `${ADMIN_PATH}/kitchen`,
   pos: `${ADMIN_PATH}/pos`,
+  reports: `${ADMIN_PATH}/reports`,
 };

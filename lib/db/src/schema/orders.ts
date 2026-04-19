@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, numeric, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, numeric, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { menuItemsTable } from "./menu";
@@ -51,3 +51,34 @@ export const orderItemsTable = pgTable("order_items", {
 export const insertOrderItemSchema = createInsertSchema(orderItemsTable).omit({ id: true });
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 export type OrderItem = typeof orderItemsTable.$inferSelect;
+
+export const shiftsTable = pgTable("shifts", {
+  id: serial("id").primaryKey(),
+  openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
+  closedAt: timestamp("closed_at", { withTimezone: true }),
+  openingFloat: numeric("opening_float", { precision: 10, scale: 2 }).notNull().default("0"),
+  closingFloat: numeric("closing_float", { precision: 10, scale: 2 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type Shift = typeof shiftsTable.$inferSelect;
+
+export const cashTransactionsTable = pgTable("cash_transactions", {
+  id: serial("id").primaryKey(),
+  shiftId: integer("shift_id").references(() => shiftsTable.id),
+  type: text("type").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type CashTransaction = typeof cashTransactionsTable.$inferSelect;
+
+export const refundsTable = pgTable("refunds", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => ordersTable.id),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  reason: text("reason"),
+  refundMethod: text("refund_method").notNull().default("cash"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type Refund = typeof refundsTable.$inferSelect;

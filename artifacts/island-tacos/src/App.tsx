@@ -11,6 +11,7 @@ import TrackOrder from "@/pages/track";
 import Admin from "@/pages/admin";
 import AdminMenu from "@/pages/admin-menu";
 import AdminModifiers from "@/pages/admin-modifiers";
+import AdminReports from "@/pages/admin-reports";
 import Kitchen from "@/pages/kitchen";
 import POS from "@/pages/pos";
 import StaffLogin from "@/pages/staff-login";
@@ -44,6 +45,9 @@ function Router() {
       </Route>
       <Route path={adminRoutes.modifiers}>
         <ProtectedRoute><AdminModifiers /></ProtectedRoute>
+      </Route>
+      <Route path={adminRoutes.reports}>
+        <ProtectedRoute><AdminReports /></ProtectedRoute>
       </Route>
       <Route path={adminRoutes.kitchen}>
         <ProtectedRoute><Kitchen /></ProtectedRoute>
