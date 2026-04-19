@@ -162,6 +162,12 @@ export default function Admin() {
                   <span className="hidden md:inline ml-1.5">Kitchen</span>
                 </Button>
               </Link>
+              <a href={adminRoutes.display} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <Monitor className="h-4 w-4 text-blue-500" />
+                  <span className="hidden md:inline ml-1.5">Display</span>
+                </Button>
+              </a>
               <Link href={adminRoutes.menu}>
                 <Button variant="outline" size="sm" className="shrink-0 hidden sm:flex">
                   <Settings className="h-4 w-4" />
