@@ -716,11 +716,14 @@ function TicketsDrawer({ onResume, onClose }: {
                       }).join(" • ")}
                     </p>
                     <div className="flex gap-2 mt-3">
-                      {o.status === "pending" && (
+                      {o.status === "pending" && o.source === "online" && (
                         <>
                           <button onClick={() => updateStatus(o.id, "confirmed")} className="flex-1 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors">Accept</button>
                           <button onClick={() => updateStatus(o.id, "cancelled")} className="h-8 px-3 rounded-lg bg-red-900/50 hover:bg-red-800 text-red-300 text-xs font-semibold transition-colors">Reject</button>
                         </>
+                      )}
+                      {o.status === "pending" && o.source === "pos" && (
+                        <button onClick={() => updateStatus(o.id, "confirmed")} className="flex-1 h-8 rounded-lg bg-purple-700 hover:bg-purple-600 text-white text-xs font-semibold transition-colors">Start</button>
                       )}
                       {o.status === "confirmed" && <button onClick={() => updateStatus(o.id, "preparing")} className="flex-1 h-8 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition-colors">Start Cooking</button>}
                       {o.status === "preparing" && <button onClick={() => updateStatus(o.id, "ready")} className="flex-1 h-8 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold transition-colors">Mark Ready</button>}

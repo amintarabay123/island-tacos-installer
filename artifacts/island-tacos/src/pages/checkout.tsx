@@ -2,16 +2,14 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useCart } from "@/lib/cart-context";
 import { Layout } from "@/components/layout";
-import { AthMovilInstructions } from "@/components/athmovil-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { useCreateOrder, useInitiatePayment } from "@workspace/api-client-react";
+import { useCreateOrder } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, ShoppingBag, Info, CheckCircle, XCircle, UserCircle } from "lucide-react";
+import { ShoppingBag, UserCircle } from "lucide-react";
 import { getCustomer, saveCustomer, saveLastOrder } from "@/lib/customer-account";
 
 export default function Checkout() {
@@ -24,18 +22,12 @@ export default function Checkout() {
     customerName: savedCustomer?.name ?? "",
     customerEmail: savedCustomer?.email ?? "",
     customerPhone: savedCustomer?.phone ?? "",
-    paymentMethod: "athmovil" as "card" | "athmovil" | "cash",
     notes: "",
   });
-  const [step, setStep] = useState<"info" | "payment" | "athmovil-pay" | "pending">("info");
-  const [orderId, setOrderId] = useState<number | null>(null);
-  const [confirmationCode, setConfirmationCode] = useState<string>("");
-  const [athError, setAthError] = useState<string | null>(null);
 
   const createOrder = useCreateOrder();
-  const initiatePayment = useInitiatePayment();
 
-  if (items.length === 0 && step === "info") {
+  if (items.length === 0) {
     return (
       <Layout>
         <div className="flex-1 flex items-center justify-center py-20">
@@ -66,7 +58,7 @@ export default function Checkout() {
           customerPhone: form.customerPhone,
           orderType: "pickup",
           deliveryAddress: null,
-          paymentMethod: form.paymentMethod,
+          paymentMethod: "cash",
           notes: form.notes || null,
           items: items.map((i) => ({
             menuItemId: i.menuItem.id,
@@ -78,34 +70,10 @@ export default function Checkout() {
       },
       {
         onSuccess: (order) => {
-          setOrderId(order.id);
-          setConfirmationCode(order.confirmationCode);
-          // Persist customer profile and last order for account/history features
           saveCustomer({ name: form.customerName, phone: form.customerPhone, email: form.customerEmail });
           saveLastOrder(order.confirmationCode);
-          if (form.paymentMethod === "cash") {
-            clearCart();
-            setLocation(`/track?code=${order.confirmationCode}`);
-          } else {
-            setStep("payment");
-            initiatePayment.mutate(
-              { data: { orderId: order.id, paymentMethod: form.paymentMethod } },
-              {
-                onSuccess: (session) => {
-                  if (session.redirectUrl) {
-                    window.location.href = session.redirectUrl;
-                  } else if (session.paymentMethod === "athmovil") {
-                    setStep("athmovil-pay");
-                  } else {
-                    setStep("pending");
-                  }
-                },
-                onError: () => {
-                  setStep("pending");
-                },
-              }
-            );
-          }
+          clearCart();
+          setLocation(`/track?code=${order.confirmationCode}`);
         },
         onError: (err: unknown) => {
           const msg = (err as { data?: { error?: string } })?.data?.error ?? "Failed to place order. Please try again.";
@@ -114,139 +82,6 @@ export default function Checkout() {
       }
     );
   };
-
-  const handlePaymentSent = async () => {
-    if (!orderId || !confirmationCode) return;
-    setAthError(null);
-
-    // Poll for up to 3 minutes (36 × 5s intervals)
-    const maxAttempts = 36;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      await new Promise((r) => setTimeout(r, 5000));
-      try {
-        const res = await fetch(`/api/orders/${orderId}`);
-        if (res.ok) {
-          const order = await res.json() as { paymentStatus?: string };
-          if (order.paymentStatus === "paid") {
-            clearCart();
-            setLocation(`/track?code=${confirmationCode}`);
-            return;
-          }
-        }
-      } catch {
-        // keep polling
-      }
-    }
-
-    setAthError(
-      "We haven't received your payment yet. If you've already sent it, please show this screen to staff — your order code is " +
-      confirmationCode
-    );
-  };
-
-  if (step === "athmovil-pay") {
-    return (
-      <Layout>
-        <div className="flex-1 flex items-center justify-center py-20">
-          <div className="max-w-md w-full mx-auto px-4 space-y-6">
-            <div className="text-center space-y-2">
-              <div className="mx-auto w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
-                <div className="w-9 h-6 bg-red-600 rounded flex items-center justify-center">
-                  <span className="text-white text-[11px] font-black">ATH</span>
-                </div>
-              </div>
-              <h2 className="text-2xl font-bold">Pay with ATH Movil</h2>
-              <p className="text-muted-foreground text-sm">
-                Order <span className="font-mono font-bold text-foreground">{confirmationCode}</span>
-              </p>
-            </div>
-
-            <div className="bg-muted/30 border rounded-xl p-4 space-y-2 text-sm">
-              {items.map((item) => (
-                <div key={item.menuItem.id} className="flex justify-between">
-                  <span className="text-muted-foreground">{item.quantity}x {item.menuItem.name}</span>
-                  <span>${((item.menuItem.price + (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * item.quantity).toFixed(2)}</span>
-                </div>
-              ))}
-              <Separator />
-              <div className="flex justify-between font-bold">
-                <span>Total</span>
-                <span>${total.toFixed(2)}</span>
-              </div>
-            </div>
-
-            {athError ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3">
-                <XCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-red-800">Payment Not Detected</p>
-                  <p className="text-sm text-red-700 mt-1">{athError}</p>
-                </div>
-              </div>
-            ) : (
-              <AthMovilInstructions
-                total={total}
-                confirmationCode={confirmationCode ?? ""}
-                onPaymentSent={handlePaymentSent}
-              />
-            )}
-
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => {
-                clearCart();
-                setLocation("/");
-              }}
-            >
-              Cancel order and return to menu
-            </Button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (step === "pending") {
-    return (
-      <Layout>
-        <div className="flex-1 flex items-center justify-center py-20">
-          <div className="max-w-md w-full mx-auto px-4 text-center space-y-6">
-            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <CreditCard className="h-8 w-8 text-primary" />
-            </div>
-            <h2 className="text-2xl font-bold">Order Placed!</h2>
-            <p className="text-muted-foreground">Your order confirmation code is:</p>
-            <div className="bg-muted rounded-xl px-8 py-4">
-              <span className="text-3xl font-mono font-black tracking-widest text-primary">{confirmationCode}</span>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left flex gap-3">
-              <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-amber-800">Payment Gateway Pending Setup</p>
-                <p className="text-sm text-amber-700 mt-1">
-                  Card payment gateway is not yet configured. Please pay at pickup or contact us to arrange payment.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <Button
-                onClick={() => { clearCart(); setLocation(`/track?code=${confirmationCode}`); }}
-                className="w-full"
-              >
-                Track My Order
-              </Button>
-              <Button variant="outline" onClick={() => { clearCart(); setLocation("/"); }} className="w-full">
-                Back to Menu
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout>
@@ -313,56 +148,18 @@ export default function Checkout() {
 
               <Separator />
 
-              {/* Payment method */}
-              <section className="space-y-4">
-                <h2 className="text-xl font-bold">Payment Method</h2>
-                <RadioGroup
-                  value={form.paymentMethod}
-                  onValueChange={(v) => setForm((f) => ({ ...f, paymentMethod: v as "card" | "athmovil" | "cash" }))}
-                  className="space-y-3"
-                >
-                  <label
-                    htmlFor="athmovil"
-                    className={`flex items-center gap-4 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
-                      form.paymentMethod === "athmovil" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-                    }`}
-                  >
-                    <RadioGroupItem value="athmovil" id="athmovil" />
-                    <div className="w-9 h-6 bg-red-600 rounded flex items-center justify-center shrink-0">
-                      <span className="text-white text-[10px] font-black">ATH</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold">ATH Movil</p>
-                      <p className="text-sm text-muted-foreground">Pay instantly with ATH Movil app</p>
-                    </div>
-                  </label>
-                  <label
-                    htmlFor="card"
-                    className={`flex items-center gap-4 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
-                      form.paymentMethod === "card" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-                    }`}
-                  >
-                    <RadioGroupItem value="card" id="card" />
-                    <CreditCard className="h-5 w-5 shrink-0" />
-                    <div>
-                      <p className="font-semibold">Credit / Debit Card</p>
-                      <p className="text-sm text-muted-foreground">Visa, Mastercard, Apple Pay — coming soon</p>
-                    </div>
-                  </label>
-                  <label
-                    htmlFor="cash"
-                    className={`flex items-center gap-4 rounded-xl border-2 p-4 cursor-pointer transition-colors ${
-                      form.paymentMethod === "cash" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-                    }`}
-                  >
-                    <RadioGroupItem value="cash" id="cash" />
-                    <div className="h-5 w-8 flex items-center justify-center text-green-700 font-black text-sm shrink-0">$</div>
-                    <div>
-                      <p className="font-semibold">Pay at Pickup</p>
-                      <p className="text-sm text-muted-foreground">Cash or card at the restaurant</p>
-                    </div>
-                  </label>
-                </RadioGroup>
+              {/* Payment */}
+              <section className="space-y-3">
+                <h2 className="text-xl font-bold">Payment</h2>
+                <div className="flex items-center gap-4 rounded-xl border-2 border-primary bg-primary/5 p-4">
+                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="text-primary font-black text-lg">$</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">Pay at Counter</p>
+                    <p className="text-sm text-muted-foreground">Cash or card — pay when you pick up your order</p>
+                  </div>
+                </div>
               </section>
 
               <Separator />
@@ -382,11 +179,9 @@ export default function Checkout() {
               <Button
                 type="submit"
                 className="w-full h-14 text-lg font-bold"
-                disabled={createOrder.isPending || initiatePayment.isPending}
+                disabled={createOrder.isPending}
               >
-                {createOrder.isPending || initiatePayment.isPending
-                  ? "Placing Order..."
-                  : `Place Order — $${total.toFixed(2)}`}
+                {createOrder.isPending ? "Placing Order..." : `Place Order — $${total.toFixed(2)}`}
               </Button>
             </form>
 
