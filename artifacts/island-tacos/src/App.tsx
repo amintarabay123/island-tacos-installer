@@ -13,6 +13,7 @@ import AdminMenu from "@/pages/admin-menu";
 import Kitchen from "@/pages/kitchen";
 import StaffLogin from "@/pages/staff-login";
 import NotFound from "@/pages/not-found";
+import InstallPrompt from "@/components/install-prompt";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,6 +67,7 @@ function App() {
             <Router />
           </WouterRouter>
           <Toaster />
+          <InstallPrompt />
         </CartProvider>
       </TooltipProvider>
     </QueryClientProvider>
