@@ -64,6 +64,7 @@ router.patch("/menu/categories/:id", async (req, res): Promise<void> => {
   if (parsed.data.name !== undefined) updates.name = parsed.data.name;
   if (parsed.data.description !== undefined) updates.description = parsed.data.description;
   if (parsed.data.sortOrder !== undefined) updates.sortOrder = parsed.data.sortOrder;
+  if (parsed.data.sendToKds !== undefined) updates.sendToKds = parsed.data.sendToKds;
 
   const [updated] = await db
     .update(menuCategoriesTable)

@@ -19,6 +19,7 @@ export interface MenuCategory {
   /** @nullable */
   description?: string | null;
   sortOrder: number;
+  sendToKds: boolean;
   createdAt: string;
 }
 
@@ -27,6 +28,7 @@ export interface CreateMenuCategoryBody {
   /** @nullable */
   description?: string | null;
   sortOrder?: number;
+  sendToKds?: boolean;
 }
 
 export interface UpdateMenuCategoryBody {
@@ -34,6 +36,7 @@ export interface UpdateMenuCategoryBody {
   /** @nullable */
   description?: string | null;
   sortOrder?: number;
+  sendToKds?: boolean;
 }
 
 export interface MenuItem {
@@ -208,10 +211,6 @@ export interface UpdateOrderStatusBody {
   status: UpdateOrderStatusBodyStatus;
   /** @nullable */
   estimatedReadyAt?: string | null;
-  /** @nullable */
-  cancellationReason?: string | null;
-  /** @nullable */
-  actualPaymentMethod?: string | null;
 }
 
 export type InitiatePaymentBodyPaymentMethod =

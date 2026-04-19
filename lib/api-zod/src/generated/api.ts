@@ -22,6 +22,7 @@ export const ListMenuCategoriesResponseItem = zod.object({
   name: zod.string(),
   description: zod.string().nullish(),
   sortOrder: zod.number(),
+  sendToKds: zod.boolean(),
   createdAt: zod.coerce.date(),
 });
 export const ListMenuCategoriesResponse = zod.array(
@@ -35,6 +36,7 @@ export const CreateMenuCategoryBody = zod.object({
   name: zod.string(),
   description: zod.string().nullish(),
   sortOrder: zod.number().optional(),
+  sendToKds: zod.boolean().optional(),
 });
 
 /**
@@ -48,6 +50,7 @@ export const UpdateMenuCategoryBody = zod.object({
   name: zod.string().optional(),
   description: zod.string().nullish(),
   sortOrder: zod.number().optional(),
+  sendToKds: zod.boolean().optional(),
 });
 
 export const UpdateMenuCategoryResponse = zod.object({
@@ -55,6 +58,7 @@ export const UpdateMenuCategoryResponse = zod.object({
   name: zod.string(),
   description: zod.string().nullish(),
   sortOrder: zod.number(),
+  sendToKds: zod.boolean(),
   createdAt: zod.coerce.date(),
 });
 
@@ -141,8 +145,6 @@ export const UpdateMenuItemBody = zod.object({
   popular: zod.boolean().optional(),
   spicy: zod.boolean().optional(),
   vegetarian: zod.boolean().optional(),
-  sortOrder: zod.number().optional(),
-  loyverseModifierIds: zod.array(zod.string()).nullish(),
 });
 
 export const UpdateMenuItemResponse = zod.object({
@@ -229,26 +231,17 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
  */
 export const CreateOrderBody = zod.object({
   customerName: zod.string(),
-  customerEmail: zod.string().optional().default(""),
-  customerPhone: zod.string().optional().default(""),
-  orderType: zod.enum(["pickup", "delivery"]).optional().default("pickup"),
+  customerEmail: zod.string(),
+  customerPhone: zod.string(),
+  orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
-  paymentMethod: zod.enum(["card", "athmovil", "cash", "split"]),
-  paymentStatus: zod.enum(["pending", "paid"]).optional().default("pending"),
-  source: zod.enum(["online", "pos"]).optional().default("online"),
-  discountAmount: zod.number().optional().default(0),
+  paymentMethod: zod.enum(["card", "athmovil", "cash"]),
   notes: zod.string().nullish(),
   items: zod.array(
     zod.object({
       menuItemId: zod.number(),
       quantity: zod.number(),
       notes: zod.string().nullish(),
-      modifierSelections: zod.array(zod.object({
-        modifierId: zod.string(),
-        optionId: zod.string(),
-        name: zod.string(),
-        price: zod.number(),
-      })).optional(),
     }),
   ),
 });
@@ -315,12 +308,8 @@ export const UpdateOrderStatusBody = zod.object({
     "ready",
     "completed",
     "cancelled",
-    "open_ticket",
   ]),
   estimatedReadyAt: zod.coerce.date().nullish(),
-  cancellationReason: zod.string().nullish(),
-  actualPaymentMethod: zod.string().nullish(),
-  paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
 });
 
 export const UpdateOrderStatusResponse = zod.object({

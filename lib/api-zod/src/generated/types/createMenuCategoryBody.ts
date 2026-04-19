@@ -11,4 +11,5 @@ export interface CreateMenuCategoryBody {
   /** @nullable */
   description?: string | null;
   sortOrder?: number;
+  sendToKds?: boolean;
 }

@@ -472,6 +472,8 @@ components:
           type: ["string", "null"]
         sortOrder:
           type: integer
+        sendToKds:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -479,6 +481,7 @@ components:
         - id
         - name
         - sortOrder
+        - sendToKds
         - createdAt
 
     CreateMenuCategoryBody:
@@ -490,6 +493,8 @@ components:
           type: ["string", "null"]
         sortOrder:
           type: integer
+        sendToKds:
+          type: boolean
       required:
         - name
 
@@ -502,6 +507,8 @@ components:
           type: ["string", "null"]
         sortOrder:
           type: integer
+        sendToKds:
+          type: boolean
 
     MenuItem:
       type: object

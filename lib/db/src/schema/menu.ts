@@ -7,6 +7,7 @@ export const menuCategoriesTable = pgTable("menu_categories", {
   name: text("name").notNull(),
   description: text("description"),
   sortOrder: integer("sort_order").notNull().default(0),
+  sendToKds: boolean("send_to_kds").notNull().default(true),
   loyverseId: text("loyverse_id").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

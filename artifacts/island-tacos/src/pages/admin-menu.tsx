@@ -7,6 +7,7 @@ import {
   useCreateMenuItem,
   useUpdateMenuItem,
   useDeleteMenuItem,
+  useUpdateMenuCategory,
   getListMenuItemsQueryKey,
   getListMenuCategoriesQueryKey,
 } from "@workspace/api-client-react";
@@ -18,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Sliders } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Sliders, GripVertical, ChefHat } from "lucide-react";
 
 type ModifierOption = { id: string; name: string; price: number; position: number };
 type Modifier = { id: number; loyverseId: string; name: string; options: ModifierOption[] };
@@ -56,6 +57,7 @@ export default function AdminMenu() {
   const createItem = useCreateMenuItem();
   const updateItem = useUpdateMenuItem();
   const deleteItem = useDeleteMenuItem();
+  const updateCategory = useUpdateMenuCategory();
 
   const [dialog, setDialog] = useState<null | { mode: "create" | "edit"; id?: number }>(null);
   const [form, setForm] = useState<MenuItemForm>(emptyForm);
@@ -70,25 +72,18 @@ export default function AdminMenu() {
   }, []);
 
   // ── Reorder state ──────────────────────────────────────────────────────────
-  // orderedIds tracks the display order as an array of item IDs.
-  // It's initialized from the API (sorted by sortOrder then id) and updated
-  // optimistically whenever the user clicks ↑ / ↓.
   const [orderedIds, setOrderedIds] = useState<number[]>([]);
   const initializedRef = useRef(false);
 
   useEffect(() => {
     if (!items) return;
-    // Sync once on first load; after that orderedIds is the source of truth
-    // until the page is refreshed.
     if (!initializedRef.current) {
       setOrderedIds(items.map((i) => i.id));
       initializedRef.current = true;
     } else {
-      // Merge in any newly added items (they won't be in orderedIds yet)
       setOrderedIds((prev) => {
         const existing = new Set(prev);
         const newIds = items.filter((i) => !existing.has(i.id)).map((i) => i.id);
-        // Also remove IDs that no longer exist
         const currentIds = new Set(items.map((i) => i.id));
         const pruned = prev.filter((id) => currentIds.has(id));
         return [...pruned, ...newIds];
@@ -96,7 +91,6 @@ export default function AdminMenu() {
     }
   }, [items]);
 
-  // Build ordered + filtered item list from orderedIds
   const orderedItems = orderedIds
     .map((id) => items?.find((i) => i.id === id))
     .filter(Boolean) as NonNullable<typeof items>[number][];
@@ -105,57 +99,82 @@ export default function AdminMenu() {
     activeCategory === null ? true : i.categoryId === activeCategory
   );
 
-  // Move an item up or down within the filtered view.
-  // We swap positions in orderedIds and persist new sortOrders to the API.
-  const moveItem = (itemId: number, direction: "up" | "down") => {
-    const idx = filteredItems.findIndex((i) => i.id === itemId);
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= filteredItems.length) return;
+  // ── Drag-and-drop ──────────────────────────────────────────────────────────
+  const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
 
-    const itemA = filteredItems[idx];
-    const itemB = filteredItems[swapIdx];
+  const handleDragStart = (id: number) => {
+    setDraggingId(id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: number) => {
+    e.preventDefault();
+    if (id !== draggingId) setDragOverId(id);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: number) => {
+    e.preventDefault();
+    if (!draggingId || draggingId === targetId) {
+      setDraggingId(null);
+      setDragOverId(null);
+      return;
+    }
 
     setOrderedIds((prev) => {
       const next = [...prev];
-      const posA = next.indexOf(itemA.id);
-      const posB = next.indexOf(itemB.id);
-      [next[posA], next[posB]] = [next[posB], next[posA]];
+      const fromIdx = next.indexOf(draggingId);
+      const toIdx = next.indexOf(targetId);
+      next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, draggingId);
 
-      // Persist after computing the new positions
-      updateItem.mutate({ id: itemA.id, data: { sortOrder: posB * 10 } });
-      updateItem.mutate({ id: itemB.id, data: { sortOrder: posA * 10 } });
+      // Persist new sortOrders for all items in the filtered view
+      // We recompute positions within filteredItems after the move
+      const newFilteredOrder = next
+        .map((id) => items?.find((i) => i.id === id))
+        .filter(Boolean) as NonNullable<typeof items>[number][];
+
+      const inFilter = newFilteredOrder.filter((i) =>
+        activeCategory === null ? true : i.categoryId === activeCategory
+      );
+      inFilter.forEach((item, pos) => {
+        updateItem.mutate({ id: item.id, data: { sortOrder: pos * 10 } });
+      });
 
       return next;
     });
+
+    setDraggingId(null);
+    setDragOverId(null);
   };
 
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    setDragOverId(null);
+  };
+
+  // ── KDS category toggle ────────────────────────────────────────────────────
+  const handleToggleKds = (catId: number, sendToKds: boolean) => {
+    updateCategory.mutate(
+      { id: catId, data: { sendToKds } },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() }) }
+    );
+  };
+
+  // ── Bulk select ────────────────────────────────────────────────────────────
   const allSelected = filteredItems.length > 0 && filteredItems.every((i) => selectedIds.has(i.id));
   const someSelected = filteredItems.some((i) => selectedIds.has(i.id));
   const selectedCount = filteredItems.filter((i) => selectedIds.has(i.id)).length;
 
   const toggleSelectAll = () => {
     if (allSelected) {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        filteredItems.forEach((i) => next.delete(i.id));
-        return next;
-      });
+      setSelectedIds((prev) => { const next = new Set(prev); filteredItems.forEach((i) => next.delete(i.id)); return next; });
     } else {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        filteredItems.forEach((i) => next.add(i.id));
-        return next;
-      });
+      setSelectedIds((prev) => { const next = new Set(prev); filteredItems.forEach((i) => next.add(i.id)); return next; });
     }
   };
 
   const toggleSelect = (id: number) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setSelectedIds((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   };
 
   const invalidateItems = () => {
@@ -213,10 +232,7 @@ export default function AdminMenu() {
   };
 
   const handleToggleAvailable = (id: number, available: boolean) => {
-    updateItem.mutate(
-      { id, data: { available } },
-      { onSuccess: invalidateItems }
-    );
+    updateItem.mutate({ id, data: { available } }, { onSuccess: invalidateItems });
   };
 
   const handleDelete = (id: number) => {
@@ -268,6 +284,31 @@ export default function AdminMenu() {
       </header>
 
       <div className="container mx-auto px-4 py-8">
+
+        {/* ── KDS Category settings ─────────────────────────────────────── */}
+        {categories && categories.length > 0 && (
+          <div className="rounded-xl border bg-card p-4 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <ChefHat className="h-4 w-4 text-muted-foreground" />
+              <span className="font-semibold text-sm">Kitchen Display (KDS) per Category</span>
+              <span className="text-xs text-muted-foreground ml-1">— toggle off to hide a category from the kitchen screen</span>
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-3">
+              {categories.map((cat) => (
+                <div key={cat.id} className="flex items-center gap-2.5 min-w-[140px]">
+                  <Switch
+                    checked={cat.sendToKds}
+                    onCheckedChange={(v) => handleToggleKds(cat.id, v)}
+                  />
+                  <span className={`text-sm font-medium ${cat.sendToKds ? "" : "text-muted-foreground line-through"}`}>
+                    {cat.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Category filter */}
         <div className="flex gap-2 flex-wrap mb-6">
           <button
@@ -280,9 +321,12 @@ export default function AdminMenu() {
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${activeCategory === cat.id ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors flex items-center gap-1.5 ${activeCategory === cat.id ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
             >
               {cat.name}
+              {!cat.sendToKds && (
+                <span className="text-[10px] opacity-60 font-normal">no KDS</span>
+              )}
             </button>
           ))}
         </div>
@@ -293,12 +337,7 @@ export default function AdminMenu() {
             <span className="text-sm font-semibold text-destructive">
               {selectedCount} item{selectedCount > 1 ? "s" : ""} selected
             </span>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleBulkDelete}
-              disabled={bulkDeleting}
-            >
+            <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={bulkDeleting}>
               <Trash2 className="h-4 w-4 mr-1.5" />
               {bulkDeleting ? "Deleting…" : `Delete ${selectedCount}`}
             </Button>
@@ -312,6 +351,7 @@ export default function AdminMenu() {
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr>
+                  <th className="p-3 w-8"></th>
                   <th className="p-3 w-10">
                     <input
                       type="checkbox"
@@ -325,7 +365,6 @@ export default function AdminMenu() {
                   <th className="text-left p-3 font-semibold hidden sm:table-cell">Category</th>
                   <th className="text-right p-3 font-semibold">Price</th>
                   <th className="text-center p-3 font-semibold">Available</th>
-                  <th className="text-center p-3 font-semibold w-24">Order</th>
                   <th className="text-center p-3 font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -333,11 +372,27 @@ export default function AdminMenu() {
                 {filteredItems.map((item, idx) => {
                   const cat = categories?.find((c) => c.id === item.categoryId);
                   const isSelected = selectedIds.has(item.id);
+                  const isDragging = draggingId === item.id;
+                  const isDragOver = dragOverId === item.id;
                   return (
                     <tr
                       key={item.id}
-                      className={`${isSelected ? "bg-destructive/5" : !item.available ? "opacity-50" : idx % 2 === 0 ? "" : "bg-muted/20"}`}
+                      draggable
+                      onDragStart={() => handleDragStart(item.id)}
+                      onDragOver={(e) => handleDragOver(e, item.id)}
+                      onDrop={(e) => handleDrop(e, item.id)}
+                      onDragEnd={handleDragEnd}
+                      className={`transition-colors ${
+                        isDragging ? "opacity-40 bg-muted/60" :
+                        isDragOver ? "bg-primary/8 border-t-2 border-primary" :
+                        isSelected ? "bg-destructive/5" :
+                        !item.available ? "opacity-50" :
+                        idx % 2 === 0 ? "" : "bg-muted/20"
+                      }`}
                     >
+                      <td className="p-3 w-8 cursor-grab active:cursor-grabbing">
+                        <GripVertical className="h-4 w-4 text-muted-foreground/50 mx-auto" />
+                      </td>
                       <td className="p-3 w-10">
                         <input
                           type="checkbox"
@@ -366,30 +421,6 @@ export default function AdminMenu() {
                         />
                       </td>
                       <td className="p-3 text-center">
-                        <div className="flex items-center justify-center gap-0.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={idx === 0}
-                            onClick={() => moveItem(item.id, "up")}
-                            title="Move up"
-                            className="h-7 w-7 p-0 text-muted-foreground disabled:opacity-20"
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={idx === filteredItems.length - 1}
-                            onClick={() => moveItem(item.id, "down")}
-                            title="Move down"
-                            className="h-7 w-7 p-0 text-muted-foreground disabled:opacity-20"
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                      <td className="p-3 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Button variant="ghost" size="sm" onClick={() => openEdit(item.id)}>
                             <Pencil className="h-4 w-4" />
@@ -410,6 +441,9 @@ export default function AdminMenu() {
               </div>
             )}
           </div>
+        )}
+        {filteredItems.length > 1 && (
+          <p className="text-xs text-muted-foreground mt-2 text-center">Drag the <GripVertical className="inline h-3 w-3" /> handle to reorder items</p>
         )}
       </div>
 

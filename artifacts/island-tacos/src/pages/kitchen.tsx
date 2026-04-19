@@ -5,12 +5,16 @@ import { authHeaders, clearAuthToken } from "@/lib/auth";
 
 type OrderItem = {
   id: number;
+  menuItemId?: number | null;
   menuItemName: string;
   quantity: number;
   notes?: string | null;
   subtotal: number;
   modifierSelections?: { name: string; price: number }[] | null;
 };
+
+type KitchenCategory = { id: number; name: string; sendToKds: boolean };
+type KitchenMenuItem = { id: number; categoryId: number };
 
 type Order = {
   id: number;
@@ -111,6 +115,36 @@ export default function Kitchen() {
   const chimeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const now = useNow();
   const [, navigate] = useLocation();
+
+  // KDS category filtering
+  const [kdsCategories, setKdsCategories] = useState<KitchenCategory[]>([]);
+  const [menuItemCategoryMap, setMenuItemCategoryMap] = useState<Map<number, number>>(new Map());
+
+  useEffect(() => {
+    // Fetch categories to know which have sendToKds = false
+    fetch("/api/menu/categories", { headers: authHeaders() })
+      .then(r => r.json())
+      .then((cats: KitchenCategory[]) => setKdsCategories(cats))
+      .catch(() => {});
+    // Fetch menu items to build menuItemId -> categoryId map
+    fetch("/api/menu/items", { headers: authHeaders() })
+      .then(r => r.json())
+      .then((menuItems: KitchenMenuItem[]) => {
+        const map = new Map<number, number>();
+        for (const mi of menuItems) map.set(mi.id, mi.categoryId);
+        setMenuItemCategoryMap(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Returns true if an item should appear on the KDS (based on its category's sendToKds flag)
+  const isKdsItem = (item: OrderItem): boolean => {
+    if (!item.menuItemId) return true; // unknown item — show it to be safe
+    const categoryId = menuItemCategoryMap.get(item.menuItemId);
+    if (categoryId === undefined) return true; // no category info — show it
+    const cat = kdsCategories.find(c => c.id === categoryId);
+    return cat ? cat.sendToKds : true; // default to showing
+  };
 
   // Uncollected order tracking: orderId → timestamp when we first saw it as "ready"
   const readyTimestampsRef = useRef<Map<number, number>>(new Map());
@@ -335,8 +369,11 @@ export default function Kitchen() {
 
   const [mobileTab, setMobileTab] = useState<"new" | "preparing" | "ready">("new");
 
+  // Filter out orders where ALL items are in non-KDS categories
+  const kdsOrders = orders.filter(o => o.items.some(item => isKdsItem(item)));
+
   const byCol: Record<string, Order[]> = { new: [], preparing: [], ready: [] };
-  for (const o of orders) {
+  for (const o of kdsOrders) {
     if (o.status === "confirmed") byCol.new.push(o);
     else if (o.status === "preparing") byCol.preparing.push(o);
     else if (o.status === "ready") byCol.ready.push(o);
@@ -482,7 +519,7 @@ export default function Kitchen() {
                       </div>
 
                       <div className="flex flex-col gap-1.5">
-                        {order.items.map((item) => (
+                        {order.items.filter(isKdsItem).map((item) => (
                           <div key={item.id} className="bg-black/40 rounded-lg px-3 py-2.5">
                             <div className="flex items-baseline gap-2">
                               <span className="text-xl font-black text-white leading-none">{item.quantity}×</span>

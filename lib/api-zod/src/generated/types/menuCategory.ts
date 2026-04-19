@@ -12,5 +12,6 @@ export interface MenuCategory {
   /** @nullable */
   description?: string | null;
   sortOrder: number;
+  sendToKds: boolean;
   createdAt: Date;
 }

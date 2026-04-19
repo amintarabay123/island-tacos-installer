@@ -11,4 +11,5 @@ export interface UpdateMenuCategoryBody {
   /** @nullable */
   description?: string | null;
   sortOrder?: number;
+  sendToKds?: boolean;
 }
