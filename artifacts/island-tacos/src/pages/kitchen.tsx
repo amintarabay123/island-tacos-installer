@@ -119,6 +119,7 @@ export default function Kitchen() {
   const prevIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const chimeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const now = useNow();
   const [, navigate] = useLocation();
 
@@ -145,6 +146,8 @@ export default function Kitchen() {
         { freq: 659.25, t: 0.15 },
         { freq: 783.99, t: 0.30 },
         { freq: 1046.5, t: 0.45 },
+        { freq: 783.99, t: 0.65 },
+        { freq: 1046.5, t: 0.80 },
       ];
       notes.forEach(({ freq, t }) => {
         const osc = ctx.createOscillator();
@@ -154,7 +157,7 @@ export default function Kitchen() {
         osc.type = "sine";
         osc.frequency.value = freq;
         gain.gain.setValueAtTime(0, ctx.currentTime + t);
-        gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + t + 0.04);
+        gain.gain.linearRampToValueAtTime(0.9, ctx.currentTime + t + 0.04);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.65);
         osc.start(ctx.currentTime + t);
         osc.stop(ctx.currentTime + t + 0.7);
@@ -194,6 +197,27 @@ export default function Kitchen() {
     const id = setInterval(fetchOrders, 10_000);
     return () => clearInterval(id);
   }, [fetchOrders]);
+
+  // Repeat chime every 4s while there are unactioned pending orders
+  useEffect(() => {
+    const hasPending = orders.some((o) => o.status === "pending");
+    if (hasPending && audioUnlocked) {
+      if (!chimeIntervalRef.current) {
+        chimeIntervalRef.current = setInterval(playChime, 4_000);
+      }
+    } else {
+      if (chimeIntervalRef.current) {
+        clearInterval(chimeIntervalRef.current);
+        chimeIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (chimeIntervalRef.current) {
+        clearInterval(chimeIntervalRef.current);
+        chimeIntervalRef.current = null;
+      }
+    };
+  }, [orders, audioUnlocked, playChime]);
 
   const broadcastUpdate = () => {
     try {
