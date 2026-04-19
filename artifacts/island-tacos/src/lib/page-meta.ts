@@ -1,4 +1,4 @@
-export function setPageMeta(title: string, emoji: string) {
+export function setPageMeta(title: string, emoji: string, manifestHref?: string) {
   document.title = title;
 
   const canvas = document.createElement("canvas");
@@ -11,12 +11,22 @@ export function setPageMeta(title: string, emoji: string) {
   ctx.textBaseline = "middle";
   ctx.fillText(emoji, 32, 36);
 
-  let link = document.querySelector<HTMLLinkElement>('link[rel="icon"][data-dynamic]');
-  if (!link) {
-    link = document.createElement("link");
-    link.rel = "icon";
-    link.setAttribute("data-dynamic", "1");
-    document.head.appendChild(link);
+  let iconLink = document.querySelector<HTMLLinkElement>('link[rel="icon"][data-dynamic]');
+  if (!iconLink) {
+    iconLink = document.createElement("link");
+    iconLink.rel = "icon";
+    iconLink.setAttribute("data-dynamic", "1");
+    document.head.appendChild(iconLink);
   }
-  link.href = canvas.toDataURL("image/png");
+  iconLink.href = canvas.toDataURL("image/png");
+
+  if (manifestHref) {
+    let manifestLink = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
+    if (!manifestLink) {
+      manifestLink = document.createElement("link");
+      manifestLink.rel = "manifest";
+      document.head.appendChild(manifestLink);
+    }
+    manifestLink.href = manifestHref;
+  }
 }

@@ -1,5 +1,5 @@
-const CACHE = "island-tacos-v1";
-const SHELL = ["/", "/site.webmanifest", "/logo.png", "/icon.svg"];
+const CACHE = "island-tacos-v2";
+const SHELL = ["/", "/site.webmanifest", "/manifest-pos.json", "/manifest-kds.json", "/logo.png", "/icon.svg"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));

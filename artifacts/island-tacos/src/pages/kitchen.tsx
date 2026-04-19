@@ -103,7 +103,7 @@ function isOverdue(createdAt: string, now: number): boolean {
 }
 
 export default function Kitchen() {
-  useEffect(() => { setPageMeta("🍳 Kitchen — Island Tacos", "🍳"); }, []);
+  useEffect(() => { setPageMeta("🍳 Kitchen — Island Tacos", "🍳", "/manifest-kds.json"); }, []);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [advancing, setAdvancing] = useState<Set<number>>(new Set());
