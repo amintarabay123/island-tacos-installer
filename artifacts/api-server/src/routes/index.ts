@@ -14,6 +14,7 @@ import printRouter from "./print";
 import customersRouter from "./customers";
 import uploadRouter from "./upload";
 import displayRouter from "./display";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
@@ -29,6 +30,7 @@ router.use(paymentsRouter);
 router.use(webhooksRouter);
 router.use(uploadRouter);
 router.use(displayRouter);
+router.use(settingsRouter); // GET is public; PATCH is guarded below
 
 // Customer lookup: /customers/lookup is public (for online account page)
 // /customers search is staff-accessible (POS autocomplete), /customers/:id notes patch is admin-checked in handler
@@ -45,9 +47,13 @@ router.use(/^\/(shifts|cash-transactions|print)/, (req: Request, res: Response, 
 router.use(shiftsRouter);
 router.use(printRouter);
 
-// Admin + Loyverse: owner only
+// Admin + Loyverse + Settings PATCH: owner only
 router.use(/^\/(admin|loyverse|reports)/, (req: Request, res: Response, next: NextFunction) => {
   requireAdminAuth(req, res, next);
+});
+router.use("/settings", (req: Request, res: Response, next: NextFunction) => {
+  if (req.method === "PATCH") return requireAdminAuth(req, res, next);
+  next();
 });
 
 router.use(adminRouter);

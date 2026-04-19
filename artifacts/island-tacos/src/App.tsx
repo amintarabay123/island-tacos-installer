@@ -15,6 +15,7 @@ import AdminMenu from "@/pages/admin-menu";
 import AdminModifiers from "@/pages/admin-modifiers";
 import AdminReports from "@/pages/admin-reports";
 import AdminCustomers from "@/pages/admin-customers";
+import AdminSettings from "@/pages/admin-settings";
 import AccountPage from "@/pages/account";
 import Kitchen from "@/pages/kitchen";
 import POS from "@/pages/pos";
@@ -90,6 +91,9 @@ function Router() {
       </Route>
       <Route path={adminRoutes.reports}>
         <ProtectedRoute><AdminReports /></ProtectedRoute>
+      </Route>
+      <Route path={adminRoutes.settings}>
+        <ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>
       </Route>
       <Route path={adminRoutes.customers}>
         <ProtectedRoute><AdminCustomers /></ProtectedRoute>

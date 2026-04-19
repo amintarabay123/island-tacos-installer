@@ -192,6 +192,12 @@ export default function Admin() {
                   <span className="hidden md:inline ml-1.5">Customers</span>
                 </Button>
               </Link>
+              <Link href={adminRoutes.settings}>
+                <Button variant="outline" size="sm" className="shrink-0 hidden sm:flex">
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                  <span className="hidden lg:inline ml-1.5">Store</span>
+                </Button>
+              </Link>
               <Link href="/">
                 <Button variant="ghost" size="sm" className="shrink-0 hidden sm:flex">Store</Button>
               </Link>

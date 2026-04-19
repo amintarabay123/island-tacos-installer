@@ -5,8 +5,29 @@ import { ShoppingBag, Menu, X, Plus, Minus, Trash2, UserCircle } from "lucide-re
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/react";
+
+const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+type StoreSettings = { hours: string; phone: string; address: string; payment_methods: string };
+const SETTING_DEFAULTS: StoreSettings = {
+  hours: "11am – 10pm daily",
+  phone: "284-544-8088",
+  address: "Wickhams Cay 1, Road Town, BVI",
+  payment_methods: "ATH Móvil · Card · Apple Pay",
+};
+
+function useStoreSettings() {
+  const [settings, setSettings] = useState<StoreSettings>(SETTING_DEFAULTS);
+  useEffect(() => {
+    fetch(`${API}/api/settings`)
+      .then(r => r.json())
+      .then(data => setSettings({ ...SETTING_DEFAULTS, ...data }))
+      .catch(() => {});
+  }, []);
+  return settings;
+}
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -14,6 +35,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useUser();
   const hasAccount = !!user;
+  const settings = useStoreSettings();
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -219,12 +241,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <p className="text-xs text-muted-foreground mt-1">
               Mexican food. Made fresh, every day.
             </p>
-            <p className="text-xs text-muted-foreground">284-544-8088</p>
+            <p className="text-xs text-muted-foreground">{settings.phone}</p>
           </div>
           <div className="flex flex-wrap gap-6 text-xs text-muted-foreground">
-            <span>Wickhams Cay 1, Road Town, BVI</span>
-            <span>Open 11am – 10pm daily</span>
-            <span>ATH Móvil · Card · Apple Pay</span>
+            <span>{settings.address}</span>
+            <span>Open {settings.hours}</span>
+            <span>{settings.payment_methods}</span>
           </div>
           <div className="flex gap-4 text-xs text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Menu</Link>

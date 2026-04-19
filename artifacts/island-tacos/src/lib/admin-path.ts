@@ -13,4 +13,5 @@ export const adminRoutes = {
   reports: `${ADMIN_PATH}/reports`,
   customers: `${ADMIN_PATH}/customers`,
   display: `${base}/display`,
+  settings: `${ADMIN_PATH}/settings`,
 };
