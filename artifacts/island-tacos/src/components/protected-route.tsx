@@ -7,7 +7,7 @@ type Props = { children: React.ReactNode };
 
 export default function ProtectedRoute({ children }: Props) {
   const [status, setStatus] = useState<"loading" | "authed" | "unauthed">("loading");
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
@@ -17,14 +17,14 @@ export default function ProtectedRoute({ children }: Props) {
           setStatus("authed");
         } else {
           setStatus("unauthed");
-          navigate(adminRoutes.login);
+          navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(location)}`);
         }
       })
       .catch(() => {
         setStatus("unauthed");
-        navigate(adminRoutes.login);
+        navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(location)}`);
       });
-  }, [navigate]);
+  }, [navigate, location]);
 
   if (status === "loading") {
     return (

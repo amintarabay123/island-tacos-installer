@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { saveAuthToken } from "@/lib/auth";
 
@@ -8,6 +8,8 @@ export default function StaffLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [, navigate] = useLocation();
+  const search = useSearch();
+  const redirectTo = new URLSearchParams(search).get("redirect");
 
   const handleKey = (digit: string) => {
     if (pin.length < 6) setPin((p) => p + digit);
@@ -30,7 +32,14 @@ export default function StaffLogin() {
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
         if (data.token) saveAuthToken(data.token);
-        navigate(data.role === "staff" ? adminRoutes.kitchen : adminRoutes.dashboard);
+        const staffRoutes = [adminRoutes.kitchen, adminRoutes.pos];
+        if (data.role === "staff") {
+          // Honor the redirect only if it's a valid staff destination
+          navigate(redirectTo && staffRoutes.includes(redirectTo) ? redirectTo : adminRoutes.kitchen);
+        } else {
+          // Admin can go anywhere, or default to dashboard
+          navigate(redirectTo ?? adminRoutes.dashboard);
+        }
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? "Incorrect PIN");
