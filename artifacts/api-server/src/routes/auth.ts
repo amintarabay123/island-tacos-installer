@@ -8,9 +8,6 @@ import {
 
 const router: IRouter = Router();
 
-const STAFF_PIN = process.env["STAFF_PIN"];
-const ADMIN_PIN = process.env["ADMIN_PIN"];
-
 router.post("/auth/login", (req: Request, res: Response): void => {
   const { pin } = req.body as { pin?: string };
 
@@ -19,17 +16,26 @@ router.post("/auth/login", (req: Request, res: Response): void => {
     return;
   }
 
-  // If ADMIN_PIN is configured, it grants full admin access
-  if (ADMIN_PIN && pin === ADMIN_PIN) {
+  // Read at request time so secrets are always current
+  const staffPin = process.env["STAFF_PIN"];
+  const adminPin = process.env["ADMIN_PIN"];
+
+  if (!staffPin && !adminPin) {
+    res.status(503).json({ error: "No PIN configured on server." });
+    return;
+  }
+
+  // ADMIN_PIN (if set) grants owner access
+  if (adminPin && pin === adminPin) {
     const token = createToken("admin");
     res.setHeader("Set-Cookie", makeSetCookieHeader(token));
     res.json({ ok: true, role: "admin" });
     return;
   }
 
-  if (STAFF_PIN && pin === STAFF_PIN) {
-    // If no separate ADMIN_PIN is set, STAFF_PIN grants admin (backwards-compatible)
-    const role = ADMIN_PIN ? "staff" : "admin";
+  // STAFF_PIN: if no ADMIN_PIN set, it grants admin (backwards-compatible)
+  if (staffPin && pin === staffPin) {
+    const role = adminPin ? "staff" : "admin";
     const token = createToken(role);
     res.setHeader("Set-Cookie", makeSetCookieHeader(token));
     res.json({ ok: true, role });
