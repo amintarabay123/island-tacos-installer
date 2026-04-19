@@ -790,7 +790,8 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
               <span>#{selected.confirmationCode}</span>
               <span>{new Date(selected.createdAt).toLocaleString()}</span>
             </div>
-            <div className="text-xs text-zinc-400 mb-1">Customer: {selected.customerName || "Walk-in"}</div>
+            <div className="text-xs text-zinc-400 mb-0.5">Customer: {selected.customerName || "Walk-in"}</div>
+            {selected.customerPhone && <div className="text-xs text-zinc-400 mb-0.5">Phone: {selected.customerPhone}</div>}
             <div className="text-xs text-zinc-400 mb-2">Payment: {PAY_LABEL[selected.paymentMethod] ?? selected.paymentMethod}</div>
             <div className="border-t border-dashed border-zinc-600 my-2"/>
             {selected.items.map((item, i) => (
@@ -843,6 +844,24 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                 ↩ Refund
               </button>
             </div>
+            {selected.customerPhone && (
+              <div className="flex gap-2">
+                <a
+                  href={`tel:${selected.customerPhone}`}
+                  className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-blue-900/50 hover:bg-blue-800/60 border border-blue-700/40 text-blue-300 text-sm font-bold transition-colors"
+                >
+                  📞 Call
+                </a>
+                <a
+                  href={`https://wa.me/${selected.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${selected.customerName}, your Island Tacos order #${selected.confirmationCode} is ready for pickup! 🌮`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-green-900/50 hover:bg-green-800/60 border border-green-700/40 text-green-300 text-sm font-bold transition-colors"
+                >
+                  💬 WhatsApp
+                </a>
+              </div>
+            )}
             {refundOpen && (
               <div className="bg-[#0A0B0F] rounded-xl p-4 space-y-3 border border-red-900/40">
                 <p className="text-red-300 text-sm font-semibold">Issue Refund</p>
@@ -1254,11 +1273,28 @@ export default function POS() {
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
   const [discount, setDiscount] = useState(0);
   const [resumedOrderId, setResumedOrderId] = useState<number | null>(null);
 
+  // Customer autocomplete in cart
+  const [customerSuggestions, setCustomerSuggestions] = useState<CustomerSuggestion[]>([]);
+  const [customerSuggestionsOpen, setCustomerSuggestionsOpen] = useState(false);
+  const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+  useEffect(() => {
+    if (customerName.trim().length < 2) { setCustomerSuggestions([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`${API}/api/customers?q=${encodeURIComponent(customerName.trim())}&limit=6`, { headers: authHeaders() });
+        if (r.ok) { const d = await r.json(); setCustomerSuggestions(d); setCustomerSuggestionsOpen(true); }
+      } catch {}
+    }, 250);
+    return () => clearTimeout(t);
+  }, [customerName, API]);
+
   // UI state
+  const [mobileView, setMobileView] = useState<"menu" | "cart">("menu");
   const [selectedCat, setSelectedCat] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [time, setTime] = useState(now());
@@ -1471,6 +1507,8 @@ export default function POS() {
     } else {
       setCart([...cart, { key: uid(), menuItemId: item.id, name: item.name, price: item.price, quantity: 1, notes: "", modifierSelections: sels }]);
     }
+    // Auto-switch to cart panel on mobile
+    if (window.innerWidth < 640) setMobileView("cart");
   };
 
   const removeItem = (key: string) => setCart(cart.filter(c => c.key !== key));
@@ -1480,7 +1518,8 @@ export default function POS() {
   const setItemNote = (key: string, note: string) => setCart(cart.map(c => c.key === key ? { ...c, notes: note } : c));
 
   const clearCart = () => {
-    setCart([]); setCustomerName(""); setOrderNotes(""); setDiscount(0); setResumedOrderId(null);
+    setCart([]); setCustomerName(""); setCustomerPhone(""); setOrderNotes(""); setDiscount(0); setResumedOrderId(null);
+    setCustomerSuggestions([]); setCustomerSuggestionsOpen(false);
   };
 
   // Place order
@@ -1537,7 +1576,7 @@ export default function POS() {
 
   const handlePay = async (method: string, tendered?: number) => {
     setPaymentModal(false);
-    await placeOrder(method, "paid", tendered);
+    await placeOrder(method, "paid", tendered, undefined, customerPhone || undefined);
   };
 
   const handleHold = () => {
@@ -1626,10 +1665,10 @@ export default function POS() {
       </header>
 
       {/* ── Main content ── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
 
         {/* ── Left: Menu ── */}
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden border-r border-[#1E2130]">
+        <div className={`flex-col flex-1 min-w-0 overflow-hidden border-r border-[#1E2130] ${mobileView === "menu" ? "flex" : "hidden"} sm:flex`}>
 
           {/* Search */}
           <div className="px-3 pt-3 pb-2 flex-shrink-0">
@@ -1671,7 +1710,7 @@ export default function POS() {
         </div>
 
         {/* ── Right: Cart ── */}
-        <div className="w-80 xl:w-96 flex flex-col bg-[#0F1117] flex-shrink-0">
+        <div className={`flex-col bg-[#0F1117] flex-shrink-0 w-full sm:w-80 xl:w-96 ${mobileView === "cart" ? "flex" : "hidden"} sm:flex`}>
 
           {/* Cart header */}
           <div className="px-4 py-3 border-b border-[#1E2130] flex-shrink-0">
@@ -1681,9 +1720,38 @@ export default function POS() {
                 <button onClick={clearCart} className="text-zinc-500 hover:text-red-400 text-xs font-semibold transition-colors">Clear</button>
               )}
             </div>
-            <input value={customerName} onChange={e => setCustomerName(e.target.value)}
-              placeholder="Customer name (optional)"
-              className="w-full bg-[#13151C] border border-[#1E2130] focus:border-[#F5A623] rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors placeholder-zinc-600"/>
+            {/* Customer name with autocomplete */}
+            <div className="relative mb-2">
+              <input
+                value={customerName}
+                onChange={e => { setCustomerName(e.target.value); setCustomerSuggestionsOpen(true); }}
+                onBlur={() => setTimeout(() => setCustomerSuggestionsOpen(false), 150)}
+                onFocus={() => customerSuggestions.length > 0 && setCustomerSuggestionsOpen(true)}
+                placeholder="Customer name (optional)"
+                className="w-full bg-[#13151C] border border-[#1E2130] focus:border-[#F5A623] rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors placeholder-zinc-600"
+              />
+              {customerSuggestionsOpen && customerSuggestions.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-[#1A1D28] border border-[#2A2F45] rounded-xl shadow-2xl z-20 overflow-hidden">
+                  {customerSuggestions.map(c => (
+                    <button
+                      key={c.id}
+                      onMouseDown={() => { setCustomerName(c.name); setCustomerPhone(c.phone ?? ""); setCustomerSuggestions([]); setCustomerSuggestionsOpen(false); }}
+                      className="w-full text-left px-4 py-2.5 hover:bg-[#2A2F45] transition-colors border-b border-[#2A2F45] last:border-b-0"
+                    >
+                      <p className="text-white text-sm font-semibold">{c.name}</p>
+                      {(c.phone || c.email) && <p className="text-zinc-400 text-xs">{c.phone ?? c.email}</p>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <input
+              value={customerPhone}
+              onChange={e => setCustomerPhone(e.target.value)}
+              placeholder="Phone (optional)"
+              type="tel"
+              className="w-full bg-[#13151C] border border-[#1E2130] focus:border-[#F5A623] rounded-lg px-3 py-2 text-white text-sm outline-none transition-colors placeholder-zinc-600"
+            />
           </div>
 
           {/* Cart items */}
@@ -1762,6 +1830,29 @@ export default function POS() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Mobile bottom tab bar ── */}
+      <div className="sm:hidden flex border-t border-[#1E2130] bg-[#0F1117] flex-shrink-0">
+        <button
+          onClick={() => setMobileView("menu")}
+          className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 transition-colors ${mobileView === "menu" ? "text-[#F5A623]" : "text-zinc-500"}`}
+        >
+          <span className="text-xl">🍽</span>
+          <span className="text-[10px] font-semibold">Menu</span>
+        </button>
+        <button
+          onClick={() => setMobileView("cart")}
+          className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 relative transition-colors ${mobileView === "cart" ? "text-[#F5A623]" : "text-zinc-500"}`}
+        >
+          <span className="text-xl">🛒</span>
+          <span className="text-[10px] font-semibold">Cart</span>
+          {cart.length > 0 && (
+            <span className="absolute top-1.5 right-[calc(50%-12px)] bg-[#F5A623] text-black text-[9px] font-black min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center">
+              {cart.reduce((s, i) => s + i.quantity, 0)}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* ── Modals ── */}
