@@ -219,6 +219,12 @@ export default function Admin() {
                 Menu Manager
               </Button>
             </Link>
+            <Link href={adminRoutes.modifiers}>
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Modifiers
+              </Button>
+            </Link>
             <Link href="/">
               <Button variant="ghost" size="sm">View Store</Button>
             </Link>

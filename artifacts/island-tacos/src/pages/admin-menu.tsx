@@ -18,7 +18,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Sliders } from "lucide-react";
+
+type ModifierOption = { id: string; name: string; price: number; position: number };
+type Modifier = { id: number; loyverseId: string; name: string; options: ModifierOption[] };
 
 type MenuItemForm = {
   categoryId: number;
@@ -30,6 +33,7 @@ type MenuItemForm = {
   popular: boolean;
   spicy: boolean;
   vegetarian: boolean;
+  selectedModifierIds: string[];
 };
 
 const emptyForm: MenuItemForm = {
@@ -42,6 +46,7 @@ const emptyForm: MenuItemForm = {
   popular: false,
   spicy: false,
   vegetarian: false,
+  selectedModifierIds: [],
 };
 
 export default function AdminMenu() {
@@ -57,6 +62,12 @@ export default function AdminMenu() {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  // All modifiers loaded from API for the item dialog toggles
+  const [allModifiers, setAllModifiers] = useState<Modifier[]>([]);
+  useEffect(() => {
+    fetch("/api/menu/modifiers").then((r) => r.json()).then((d) => setAllModifiers(d as Modifier[])).catch(() => {});
+  }, []);
 
   // ── Reorder state ──────────────────────────────────────────────────────────
   // orderedIds tracks the display order as an array of item IDs.
@@ -153,7 +164,7 @@ export default function AdminMenu() {
   };
 
   const openCreate = () => {
-    setForm({ ...emptyForm, categoryId: activeCategory ?? (categories?.[0]?.id ?? 0) });
+    setForm({ ...emptyForm, categoryId: activeCategory ?? (categories?.[0]?.id ?? 0), selectedModifierIds: [] });
     setDialog({ mode: "create" });
   };
 
@@ -170,6 +181,7 @@ export default function AdminMenu() {
       popular: item.popular,
       spicy: item.spicy,
       vegetarian: item.vegetarian,
+      selectedModifierIds: (item as { loyverseModifierIds?: string[] }).loyverseModifierIds ?? [],
     });
     setDialog({ mode: "edit", id });
   };
@@ -188,6 +200,7 @@ export default function AdminMenu() {
       popular: form.popular,
       spicy: form.spicy,
       vegetarian: form.vegetarian,
+      loyverseModifierIds: form.selectedModifierIds.length > 0 ? form.selectedModifierIds : null,
     };
 
     const done = () => { invalidateItems(); setDialog(null); };
@@ -239,10 +252,18 @@ export default function AdminMenu() {
             </Link>
             <span className="font-black text-primary">Menu Manager</span>
           </div>
-          <Button onClick={openCreate} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Item
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href={adminRoutes.modifiers}>
+              <Button variant="outline" size="sm">
+                <Sliders className="h-4 w-4 mr-2" />
+                Modifiers
+              </Button>
+            </Link>
+            <Button onClick={openCreate} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Item
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -393,7 +414,7 @@ export default function AdminMenu() {
       </div>
 
       <Dialog open={!!dialog} onOpenChange={(o) => !o && setDialog(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{dialog?.mode === "create" ? "Add Menu Item" : "Edit Menu Item"}</DialogTitle>
           </DialogHeader>
@@ -447,6 +468,63 @@ export default function AdminMenu() {
                   />
                 </div>
               ))}
+            </div>
+
+            {/* Modifier toggles */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5">
+                  <Sliders className="h-3.5 w-3.5" /> Modifiers
+                </Label>
+                <Link href={adminRoutes.modifiers} className="text-xs text-primary hover:underline">
+                  Manage modifiers →
+                </Link>
+              </div>
+              {allModifiers.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  No modifiers yet. <Link href={adminRoutes.modifiers} className="text-primary hover:underline">Create some first.</Link>
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 gap-2">
+                  {allModifiers.map((mod) => {
+                    const isOn = form.selectedModifierIds.includes(mod.loyverseId);
+                    return (
+                      <div
+                        key={mod.id}
+                        onClick={() => setForm((f) => ({
+                          ...f,
+                          selectedModifierIds: isOn
+                            ? f.selectedModifierIds.filter((id) => id !== mod.loyverseId)
+                            : [...f.selectedModifierIds, mod.loyverseId],
+                        }))}
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
+                          isOn ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                        }`}
+                      >
+                        <div>
+                          <p className="text-sm font-medium">{mod.name}</p>
+                          {mod.options.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {mod.options.slice(0, 3).map((o) => o.name).join(", ")}
+                              {mod.options.length > 3 ? ` +${mod.options.length - 3} more` : ""}
+                            </p>
+                          )}
+                        </div>
+                        <Switch
+                          checked={isOn}
+                          onCheckedChange={(v) => setForm((f) => ({
+                            ...f,
+                            selectedModifierIds: v
+                              ? [...f.selectedModifierIds, mod.loyverseId]
+                              : f.selectedModifierIds.filter((id) => id !== mod.loyverseId),
+                          }))}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

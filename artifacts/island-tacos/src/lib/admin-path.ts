@@ -5,6 +5,7 @@ export const adminRoutes = {
   login: `${ADMIN_PATH}/login`,
   dashboard: ADMIN_PATH,
   menu: `${ADMIN_PATH}/menu`,
+  modifiers: `${ADMIN_PATH}/modifiers`,
   kitchen: `${ADMIN_PATH}/kitchen`,
   pos: `${ADMIN_PATH}/pos`,
 };

@@ -203,6 +203,7 @@ router.patch("/menu/items/:id", async (req, res): Promise<void> => {
   if (parsed.data.spicy !== undefined) updates.spicy = parsed.data.spicy;
   if (parsed.data.vegetarian !== undefined) updates.vegetarian = parsed.data.vegetarian;
   if (parsed.data.sortOrder !== undefined) updates.sortOrder = parsed.data.sortOrder;
+  if (parsed.data.loyverseModifierIds !== undefined) updates.loyverseModifierIds = parsed.data.loyverseModifierIds ?? null;
 
   const [item] = await db
     .update(menuItemsTable)
@@ -230,6 +231,58 @@ router.delete("/menu/items/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Item not found" });
     return;
   }
+  res.sendStatus(204);
+});
+
+// ---- Modifiers CRUD ----
+
+router.get("/menu/modifiers", async (_req, res): Promise<void> => {
+  const modifiers = await db
+    .select()
+    .from(modifiersTable)
+    .orderBy(modifiersTable.name);
+  res.json(modifiers);
+});
+
+router.post("/menu/modifiers", async (req, res): Promise<void> => {
+  const { name, options } = req.body as { name?: string; options?: unknown[] };
+  if (!name || typeof name !== "string" || !name.trim()) {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
+  const loyverseId = `manual_${crypto.randomUUID()}`;
+  const [modifier] = await db
+    .insert(modifiersTable)
+    .values({ loyverseId, name: name.trim(), options: (options ?? []) as import("@workspace/db").ModifierOption[] })
+    .returning();
+  res.status(201).json(modifier);
+});
+
+router.patch("/menu/modifiers/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { name, options } = req.body as { name?: string; options?: unknown[] };
+  const updates: Record<string, unknown> = {};
+  if (name !== undefined) updates.name = String(name).trim();
+  if (options !== undefined) updates.options = options;
+  if (!Object.keys(updates).length) { res.status(400).json({ error: "Nothing to update" }); return; }
+  const [modifier] = await db
+    .update(modifiersTable)
+    .set(updates)
+    .where(eq(modifiersTable.id, id))
+    .returning();
+  if (!modifier) { res.status(404).json({ error: "Modifier not found" }); return; }
+  res.json(modifier);
+});
+
+router.delete("/menu/modifiers/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [deleted] = await db
+    .delete(modifiersTable)
+    .where(eq(modifiersTable.id, id))
+    .returning();
+  if (!deleted) { res.status(404).json({ error: "Modifier not found" }); return; }
   res.sendStatus(204);
 });
 

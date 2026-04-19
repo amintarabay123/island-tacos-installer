@@ -141,6 +141,8 @@ export const UpdateMenuItemBody = zod.object({
   popular: zod.boolean().optional(),
   spicy: zod.boolean().optional(),
   vegetarian: zod.boolean().optional(),
+  sortOrder: zod.number().optional(),
+  loyverseModifierIds: zod.array(zod.string()).nullish(),
 });
 
 export const UpdateMenuItemResponse = zod.object({
