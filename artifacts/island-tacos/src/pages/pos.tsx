@@ -339,6 +339,7 @@ function DiscountModal({ subtotal, onApply, onClose }: { subtotal: number; onApp
 function QueueDrawer({ onClose }: { onClose: () => void }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -359,56 +360,88 @@ function QueueDrawer({ onClose }: { onClose: () => void }) {
     load();
   };
 
+  const completeWithPayment = async (method: string, tendered?: number) => {
+    if (!chargeOrder) return;
+    await fetch(`/api/orders/${chargeOrder.id}`, {
+      method: "PATCH", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "completed",
+        actualPaymentMethod: method,
+        paymentStatus: "paid",
+      }),
+    });
+    setChargeOrder(null);
+    load();
+  };
+
   const STATUS_COLOR: Record<string, string> = {
     pending: "text-yellow-400", confirmed: "text-blue-400",
     preparing: "text-orange-400", ready: "text-green-400",
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex justify-end z-50" onClick={onClose}>
-      <div className="bg-[#13151C] w-full max-w-md h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="p-5 border-b border-[#1E2130] flex items-center justify-between">
-          <h2 className="text-white text-xl font-bold">Live Orders</h2>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white text-2xl">×</button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {loading && <p className="text-zinc-500 text-center py-8">Loading…</p>}
-          {!loading && orders.length === 0 && <p className="text-zinc-500 text-center py-8">No active orders</p>}
-          {orders.map(o => (
-            <div key={o.id} className="bg-[#1E2130] rounded-xl p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <span className="text-white font-bold">#{o.confirmationCode}</span>
-                  <span className={`ml-2 text-sm font-semibold capitalize ${STATUS_COLOR[o.status] ?? "text-zinc-400"}`}>{o.status}</span>
+    <>
+      <div className="fixed inset-0 bg-black/70 flex justify-end z-50" onClick={onClose}>
+        <div className="bg-[#13151C] w-full max-w-md h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="p-5 border-b border-[#1E2130] flex items-center justify-between">
+            <h2 className="text-white text-xl font-bold">Live Orders</h2>
+            <button onClick={onClose} className="text-zinc-400 hover:text-white text-2xl">×</button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {loading && <p className="text-zinc-500 text-center py-8">Loading…</p>}
+            {!loading && orders.length === 0 && <p className="text-zinc-500 text-center py-8">No active orders</p>}
+            {orders.map(o => (
+              <div key={o.id} className="bg-[#1E2130] rounded-xl p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <span className="text-white font-bold">#{o.confirmationCode}</span>
+                    <span className={`ml-2 text-sm font-semibold capitalize ${STATUS_COLOR[o.status] ?? "text-zinc-400"}`}>{o.status}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[#F5A623] font-bold">{fmt(o.total)}</span>
+                    <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-900/50 text-purple-300" : "bg-blue-900/50 text-blue-300"}`}>{o.source === "pos" ? "POS" : "Online"}</span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-[#F5A623] font-bold">{fmt(o.total)}</span>
-                  <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-900/50 text-purple-300" : "bg-blue-900/50 text-blue-300"}`}>{o.source === "pos" ? "POS" : "Online"}</span>
+                <p className="text-zinc-300 text-sm">{o.customerName}</p>
+                <p className="text-zinc-500 text-xs mt-1">
+                  {o.items.map(i => {
+                    const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
+                    return `${i.quantity}× ${i.menuItemName}${mods}`;
+                  }).join(" • ")}
+                </p>
+                <div className="flex gap-2 mt-3">
+                  {o.status === "pending" && (
+                    <>
+                      <button onClick={() => update(o.id, "confirmed")} className="flex-1 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors">Accept</button>
+                      <button onClick={() => update(o.id, "cancelled")} className="h-8 px-3 rounded-lg bg-red-900/50 hover:bg-red-800 text-red-300 text-xs font-semibold transition-colors">Reject</button>
+                    </>
+                  )}
+                  {o.status === "confirmed" && <button onClick={() => update(o.id, "preparing")} className="flex-1 h-8 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition-colors">Start Cooking</button>}
+                  {o.status === "preparing" && <button onClick={() => update(o.id, "ready")} className="flex-1 h-8 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold transition-colors">Mark Ready</button>}
+                  {o.status === "ready" && (
+                    <button
+                      onClick={() => setChargeOrder(o)}
+                      className="flex-1 h-8 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-xs font-bold transition-colors"
+                    >
+                      Charge & Complete
+                    </button>
+                  )}
                 </div>
               </div>
-              <p className="text-zinc-300 text-sm">{o.customerName}</p>
-              <p className="text-zinc-500 text-xs mt-1">
-                {o.items.map(i => {
-                  const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
-                  return `${i.quantity}× ${i.menuItemName}${mods}`;
-                }).join(" • ")}
-              </p>
-              <div className="flex gap-2 mt-3">
-                {o.status === "pending" && (
-                  <>
-                    <button onClick={() => update(o.id, "confirmed")} className="flex-1 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors">Accept</button>
-                    <button onClick={() => update(o.id, "cancelled")} className="h-8 px-3 rounded-lg bg-red-900/50 hover:bg-red-800 text-red-300 text-xs font-semibold transition-colors">Reject</button>
-                  </>
-                )}
-                {o.status === "confirmed" && <button onClick={() => update(o.id, "preparing")} className="flex-1 h-8 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition-colors">Start Cooking</button>}
-                {o.status === "preparing" && <button onClick={() => update(o.id, "ready")} className="flex-1 h-8 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold transition-colors">Mark Ready</button>}
-                {o.status === "ready" && <button onClick={() => update(o.id, "completed")} className="flex-1 h-8 rounded-lg bg-zinc-600 hover:bg-zinc-500 text-white text-xs font-semibold transition-colors">Complete</button>}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+
+      {chargeOrder && (
+        <PaymentModal
+          total={chargeOrder.total}
+          onPay={completeWithPayment}
+          onClose={() => setChargeOrder(null)}
+        />
+      )}
+    </>
   );
 }
 
