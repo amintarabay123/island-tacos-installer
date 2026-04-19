@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, count, or } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable } from "@workspace/db";
 import { upsertCustomer } from "./customers";
 import {
@@ -145,6 +145,22 @@ router.post("/orders", async (req, res): Promise<void> => {
 
   const confirmationCode = generateConfirmationCode();
 
+  // Calculate estimated pickup time: count orders currently in active states
+  const MINS_PER_ORDER = 5;  // each queued order adds 5 min
+  const BASE_MINS = 3;       // minimum 3 min regardless
+  const [{ value: activeOrderCount }] = await db
+    .select({ value: count() })
+    .from(ordersTable)
+    .where(
+      or(
+        eq(ordersTable.status, "pending"),
+        eq(ordersTable.status, "confirmed"),
+        eq(ordersTable.status, "preparing")
+      )
+    );
+  const estimatedMinutes = BASE_MINS + (Number(activeOrderCount) * MINS_PER_ORDER);
+  const estimatedReadyAt = new Date(Date.now() + estimatedMinutes * 60 * 1000);
+
   const [order] = await db
     .insert(ordersTable)
     .values({
@@ -166,6 +182,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       deliveryFee: String(deliveryFee),
       total: String(total),
       notes: parsed.data.notes ?? null,
+      estimatedReadyAt,
     })
     .returning();
 

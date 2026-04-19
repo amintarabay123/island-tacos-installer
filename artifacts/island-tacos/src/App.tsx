@@ -16,6 +16,7 @@ import AdminCustomers from "@/pages/admin-customers";
 import AccountPage from "@/pages/account";
 import Kitchen from "@/pages/kitchen";
 import POS from "@/pages/pos";
+import CustomerDisplay from "@/pages/display";
 import StaffLogin from "@/pages/staff-login";
 import NotFound from "@/pages/not-found";
 import InstallPrompt from "@/components/install-prompt";
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/checkout" component={Checkout} />
       <Route path="/track" component={TrackOrder} />
       <Route path="/account" component={AccountPage} />
+      <Route path="/display" component={CustomerDisplay} />
 
       {/* Secret staff routes — more specific paths must come before less specific ones */}
       <Route path={adminRoutes.login} component={StaffLogin} />

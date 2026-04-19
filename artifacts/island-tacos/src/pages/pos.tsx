@@ -24,7 +24,7 @@ type Order = {
   paymentStatus: string; paymentMethod: string; source: string;
   subtotal: number; discountAmount: number; tax: number; total: number;
   notes?: string | null; createdAt: string; customerPhone?: string | null;
-  orderType?: string;
+  orderType?: string; estimatedReadyAt?: string | null;
   items: { id: number; menuItemName: string; quantity: number; menuItemPrice: number; subtotal: number; modifierSelections?: CartModifier[] | null; notes?: string | null }[];
 };
 
@@ -1785,6 +1785,33 @@ export default function POS() {
   const subtotal = cart.reduce((s, i) => s + (i.price + i.modifierSelections.reduce((ms, m) => ms + m.price, 0)) * i.quantity, 0);
   const total = Math.max(0, subtotal - discount);
 
+  // Broadcast cart state to customer display tablet (debounced 400ms)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const body = cart.length > 0
+        ? {
+            status: "active",
+            items: cart.map(c => ({
+              name: c.name,
+              quantity: c.quantity,
+              unitPrice: c.price + c.modifierSelections.reduce((s, m) => s + m.price, 0),
+              modifiers: c.modifierSelections.map(m => m.name),
+            })),
+            subtotal,
+            tax: 0,
+            total,
+            discountAmount: discount > 0 ? discount : undefined,
+          }
+        : { status: "idle", items: [], subtotal: 0, tax: 0, total: 0 };
+      fetch("/api/display", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }).catch(() => {});
+    }, 400);
+    return () => clearTimeout(t);
+  }, [cart, subtotal, total, discount]);
+
   // Add item to cart
   const addItem = async (item: MenuItem) => {
     // Check for modifiers
@@ -1867,6 +1894,21 @@ export default function POS() {
       }
       const order: Order = await r.json();
       if (!order?.items) throw new Error("Order response missing items");
+      // Push "completed" state to customer display
+      fetch("/api/display", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "completed",
+          items: [],
+          subtotal: 0,
+          tax: 0,
+          total: order.total,
+          paymentMethod: method,
+          orderCode: order.confirmationCode,
+          estimatedReadyAt: order.estimatedReadyAt,
+        }),
+      }).catch(() => {});
       clearCart();
       setReceiptModal({ order, tendered });
       setTicketCount(tc => tc + (paymentStatus === "pending" ? 1 : 0));

@@ -49,7 +49,21 @@ export default function TrackOrder() {
     );
   }
 
-  const { status, confirmationCode, customerName, cancellationReason, items, total } = order;
+  const { status, confirmationCode, customerName, cancellationReason, items, total, estimatedReadyAt } = order;
+
+  function formatPickupTime(eta: Date | string | null | undefined): string | null {
+    if (!eta) return null;
+    const d = new Date(eta);
+    if (isNaN(d.getTime())) return null;
+    const diffMs = d.getTime() - Date.now();
+    const diffMin = Math.round(diffMs / 60000);
+    if (diffMin <= 1) return "Just a moment";
+    const timeStr = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    if (diffMin < 60) return `About ${diffMin} min — ready around ${timeStr}`;
+    return `Ready around ${timeStr}`;
+  }
+
+  const pickupTimeLabel = formatPickupTime(estimatedReadyAt);
 
   if (status === "cancelled") {
     return (
@@ -121,6 +135,7 @@ export default function TrackOrder() {
           status === "preparing" ? `Hang tight, ${customerName.split(" ")[0]}. It'll be ready soon.` :
           `We've got your order, ${customerName.split(" ")[0]}. The kitchen is on it!`
         }
+        pickupTime={(!isReady && !isDone) ? pickupTimeLabel : null}
         code={confirmationCode}
         orderSummary={{ items: items ?? [], total }}
         progress={status}
@@ -146,6 +161,7 @@ export default function TrackOrder() {
       icon={<Clock className="h-14 w-14 text-amber-500 animate-pulse" />}
       title="Waiting for confirmation…"
       subtitle="Your order is being reviewed. This usually takes just a minute."
+      pickupTime={pickupTimeLabel}
       code={confirmationCode}
       orderSummary={{ items: items ?? [], total }}
       action={<TrackLink label="Refresh status" code={code} />}
@@ -166,6 +182,7 @@ function FullScreenState({
   orderSummary,
   progress,
   action,
+  pickupTime,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -174,6 +191,7 @@ function FullScreenState({
   orderSummary?: { items: Item[]; total: number };
   progress?: string;
   action?: React.ReactNode;
+  pickupTime?: string | null;
 }) {
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12 text-center">
@@ -191,6 +209,14 @@ function FullScreenState({
           <h1 className="text-2xl font-black leading-tight">{title}</h1>
           {subtitle && <p className="text-muted-foreground text-sm leading-relaxed">{subtitle}</p>}
         </div>
+
+        {/* Estimated pickup time badge */}
+        {pickupTime && (
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-full px-4 py-2">
+            <Clock className="h-4 w-4 text-amber-500 shrink-0" />
+            <span className="text-sm font-semibold text-amber-800">{pickupTime}</span>
+          </div>
+        )}
 
         {/* Confirmation code */}
         {code && (

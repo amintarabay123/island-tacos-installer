@@ -13,6 +13,7 @@ import reportsRouter from "./reports";
 import printRouter from "./print";
 import customersRouter from "./customers";
 import uploadRouter from "./upload";
+import displayRouter from "./display";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,7 @@ router.use(ordersRouter);
 router.use(paymentsRouter);
 router.use(webhooksRouter);
 router.use(uploadRouter);
+router.use(displayRouter);
 
 // Customer lookup: /customers/lookup is public (for online account page)
 // /customers search is staff-accessible (POS autocomplete), /customers/:id notes patch is admin-checked in handler
