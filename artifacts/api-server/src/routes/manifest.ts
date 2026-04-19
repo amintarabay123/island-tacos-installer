@@ -4,17 +4,21 @@ const router = Router();
 
 const ADMIN_PATH = process.env["ADMIN_PATH"] ?? "it-dav7dwn8";
 
-const baseManifest = {
-  background_color: "#0D0F17",
-  display: "standalone",
-  orientation: "landscape",
-  categories: ["business", "productivity"],
-  icons: [
-    { src: "/logo.png", sizes: "192x192", type: "image/png", purpose: "any" },
-    { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
-    { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-  ],
-};
+const storeIcons = [
+  { src: "/logo.png", sizes: "192x192", type: "image/png", purpose: "any" },
+  { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+  { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+];
+
+const posIcons = [
+  { src: "/icon-pos.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+  { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+];
+
+const kdsIcons = [
+  { src: "/icon-kds.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+  { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+];
 
 router.get("/manifest.webmanifest", (req, res) => {
   const referer = req.headers["referer"] ?? req.headers["referrer"] ?? "";
@@ -25,23 +29,31 @@ router.get("/manifest.webmanifest", (req, res) => {
 
   if (pathname.startsWith(`/${ADMIN_PATH}/pos`) || pathname.includes("/pos")) {
     manifest = {
-      ...baseManifest,
       name: "Island Tacos — POS",
       short_name: "IT POS",
       description: "Island Tacos point-of-sale terminal",
       start_url: `/${ADMIN_PATH}/pos`,
       scope: `/${ADMIN_PATH}/`,
+      display: "standalone",
+      background_color: "#0D0F17",
       theme_color: "#F59E0B",
+      orientation: "landscape",
+      categories: ["business", "productivity"],
+      icons: posIcons,
     };
   } else if (pathname.startsWith(`/${ADMIN_PATH}/kitchen`) || pathname.includes("/kitchen")) {
     manifest = {
-      ...baseManifest,
       name: "Island Tacos — Kitchen",
       short_name: "IT Kitchen",
       description: "Island Tacos kitchen display system",
       start_url: `/${ADMIN_PATH}/kitchen`,
       scope: `/${ADMIN_PATH}/`,
+      display: "standalone",
+      background_color: "#0D0F17",
       theme_color: "#22C55E",
+      orientation: "landscape",
+      categories: ["business", "productivity"],
+      icons: kdsIcons,
     };
   } else {
     manifest = {
@@ -55,7 +67,7 @@ router.get("/manifest.webmanifest", (req, res) => {
       theme_color: "#F5A623",
       orientation: "any",
       categories: ["food", "restaurants"],
-      icons: baseManifest.icons,
+      icons: storeIcons,
       shortcuts: [
         {
           name: "Order Now",
