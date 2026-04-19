@@ -322,22 +322,34 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
   const lineItems: Record<string, unknown>[] = [];
 
   for (const item of order.items) {
-    // Roll modifier prices into the item price — Loyverse requires variant_id on every line item,
-    // and modifiers are not catalog items so they have no variant_id. Instead, modifier names
-    // appear in the note field which Loyverse displays on the receipt.
-    const modTotal = (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0);
-    const linePrice = Math.round((item.price + modTotal) * 100) / 100;
+    const mods = item.modifierSelections ?? [];
+    const modTotal = mods.reduce((s, m) => s + m.price, 0);
+    // Total money for this line = (base price + modifier prices) × quantity
+    const lineTotal = Math.round((item.price + modTotal) * item.quantity * 100) / 100;
 
     const base: Record<string, unknown> = {
       item_name: item.name,
       quantity: item.quantity,
-      price: linePrice,
-      gross_total_money: Math.round(linePrice * item.quantity * 100) / 100,
-      total_money: Math.round(linePrice * item.quantity * 100) / 100,
+      price: item.price,
+      gross_total_money: lineTotal,
+      total_money: lineTotal,
     };
+
     // variant_id links the line item to the Loyverse catalog (required for catalog items)
     if (item.loyverseVariantId) base.variant_id = item.loyverseVariantId;
-    if (item.notes) base.note = item.notes;
+
+    // Send modifiers as a proper Loyverse modifiers array so they render natively
+    // on the receipt UI. modifierId = Loyverse modifier group UUID,
+    // optionId = Loyverse modifier option UUID (both are synced from Loyverse).
+    if (mods.length > 0) {
+      base.modifiers = mods.map((m) => ({
+        modifier_id: m.modifierId,
+        modifier_option_id: m.optionId,
+        option_name: m.name,
+        price: m.price,
+      }));
+    }
+
     lineItems.push(base);
   }
 
