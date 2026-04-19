@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
+import { setPageMeta } from "@/lib/page-meta";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1532,6 +1533,8 @@ function SplitPaymentModal({
 export default function POS() {
   const [, navigate] = useLocation();
 
+  useEffect(() => { setPageMeta("🖥️ POS — Island Tacos", "🖥️"); }, []);
+
   // Auth guard
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
@@ -1616,7 +1619,10 @@ export default function POS() {
   const [submitting, setSubmitting] = useState(false);
 
   // Incoming online orders (pending + source:online)
+  // incomingOrders = all currently-pending online orders (used for bell badge count)
+  // popupOrders    = only orders that arrived DURING this session (trigger the full-screen popup)
   const [incomingOrders, setIncomingOrders] = useState<Order[]>([]);
+  const [popupOrders, setPopupOrders] = useState<Order[]>([]);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
@@ -1683,8 +1689,11 @@ export default function POS() {
         const data: Order[] = await r.json();
         const pending = data.filter(o => o.source === "online" && o.status === "pending");
         if (isFirstOnlineFetchRef.current) {
+          // First fetch: seed seenIds and show bell count, but don't pop up the blocker
           isFirstOnlineFetchRef.current = false;
           pending.forEach(o => seenOnlineIdsRef.current.add(o.id));
+          setIncomingOrders(pending);
+          // Do NOT populate popupOrders — pre-existing orders shouldn't block the screen
         } else {
           const newOrders = pending.filter(o => !seenOnlineIdsRef.current.has(o.id));
           if (newOrders.length > 0) {
@@ -1693,10 +1702,14 @@ export default function POS() {
               `🔔 New Online Order${newOrders.length > 1 ? "s" : ""}!`,
               `${newOrders.length} order${newOrders.length > 1 ? "s" : ""} waiting for approval`
             );
+            setPopupOrders(prev => {
+              const existingIds = new Set(prev.map(o => o.id));
+              return [...prev, ...newOrders.filter(o => !existingIds.has(o.id))];
+            });
           }
           pending.forEach(o => seenOnlineIdsRef.current.add(o.id));
+          setIncomingOrders(pending);
         }
-        setIncomingOrders(pending);
       } catch {}
     };
     poll();
@@ -1704,15 +1717,15 @@ export default function POS() {
     return () => clearInterval(t);
   }, [playChime, sendNotification]);
 
-  // Repeat chime every 5s while there are pending incoming orders
+  // Repeat chime every 5s while there are new orders in the popup
   useEffect(() => {
-    if (incomingOrders.length > 0) {
+    if (popupOrders.length > 0) {
       if (!chimeIntervalRef.current) chimeIntervalRef.current = setInterval(playChime, 5000);
     } else {
       if (chimeIntervalRef.current) { clearInterval(chimeIntervalRef.current); chimeIntervalRef.current = null; }
     }
     return () => { if (chimeIntervalRef.current) { clearInterval(chimeIntervalRef.current); chimeIntervalRef.current = null; } };
-  }, [incomingOrders, playChime]);
+  }, [popupOrders, playChime]);
 
   const acceptOnline = async (id: number) => {
     await fetch(`/api/orders/${id}`, {
@@ -1722,6 +1735,7 @@ export default function POS() {
     });
     seenOnlineIdsRef.current.delete(id);
     setIncomingOrders(prev => prev.filter(o => o.id !== id));
+    setPopupOrders(prev => prev.filter(o => o.id !== id));
     setShowRejectInput(false); setRejectReason("");
   };
 
@@ -1733,6 +1747,7 @@ export default function POS() {
     });
     seenOnlineIdsRef.current.delete(id);
     setIncomingOrders(prev => prev.filter(o => o.id !== id));
+    setPopupOrders(prev => prev.filter(o => o.id !== id));
     setShowRejectInput(false); setRejectReason("");
   };
 
@@ -2207,8 +2222,8 @@ export default function POS() {
       )}
 
       {/* ── Incoming Online Order Modal ── */}
-      {incomingOrders.length > 0 && (() => {
-        const order = incomingOrders[0];
+      {popupOrders.length > 0 && (() => {
+        const order = popupOrders[0];
         const subtotal = order.items.reduce((s, i) => s + i.menuItemPrice * i.quantity, 0);
         return (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
@@ -2218,9 +2233,9 @@ export default function POS() {
                   <span className="text-xl">🔔</span>
                   <span className="text-white font-bold text-lg">New Online Order</span>
                 </div>
-                {incomingOrders.length > 1 && (
+                {popupOrders.length > 1 && (
                   <span className="bg-orange-800 text-orange-100 text-xs font-bold px-2 py-0.5 rounded-full">
-                    +{incomingOrders.length - 1} more
+                    +{popupOrders.length - 1} more
                   </span>
                 )}
               </div>
@@ -2302,20 +2317,28 @@ export default function POS() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex gap-3">
+                  <>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => acceptOnline(order.id)}
+                        className="flex-1 h-12 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-base transition-colors active:scale-95"
+                      >
+                        ✓ Accept
+                      </button>
+                      <button
+                        onClick={() => setShowRejectInput(true)}
+                        className="px-5 h-12 rounded-xl border border-red-700/60 text-red-400 hover:bg-red-950/50 hover:border-red-500 font-semibold transition-colors"
+                      >
+                        ✕ Reject
+                      </button>
+                    </div>
                     <button
-                      onClick={() => acceptOnline(order.id)}
-                      className="flex-1 h-12 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-base transition-colors active:scale-95"
+                      onClick={() => setPopupOrders(prev => prev.filter((o) => o.id !== order.id))}
+                      className="w-full h-9 rounded-xl text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
                     >
-                      ✓ Accept
+                      Handle Later
                     </button>
-                    <button
-                      onClick={() => setShowRejectInput(true)}
-                      className="px-5 h-12 rounded-xl border border-red-700/60 text-red-400 hover:bg-red-950/50 hover:border-red-500 font-semibold transition-colors"
-                    >
-                      ✕ Reject
-                    </button>
-                  </div>
+                  </>
                 )}
               </div>
             </div>

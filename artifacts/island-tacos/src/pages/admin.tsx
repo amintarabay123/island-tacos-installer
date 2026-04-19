@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
+import { setPageMeta } from "@/lib/page-meta";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
 import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdminStatsQueryKey, getGetRecentOrdersQueryKey, type UpdateOrderStatusBodyStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,6 +39,8 @@ const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
 type RejectState = { orderId: number; reason: string } | null;
 
 export default function Admin() {
+  useEffect(() => { setPageMeta("⚙️ Admin — Island Tacos", "⚙️"); }, []);
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, navigate] = useLocation();

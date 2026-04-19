@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
+import { setPageMeta } from "@/lib/page-meta";
 
 type OrderItem = {
   id: number;
@@ -102,6 +103,8 @@ function isOverdue(createdAt: string, now: number): boolean {
 }
 
 export default function Kitchen() {
+  useEffect(() => { setPageMeta("🍳 Kitchen — Island Tacos", "🍳"); }, []);
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [advancing, setAdvancing] = useState<Set<number>>(new Set());
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
