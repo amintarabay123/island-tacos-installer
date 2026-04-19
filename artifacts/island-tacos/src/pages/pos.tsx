@@ -844,18 +844,38 @@ export default function POS() {
   const [incomingOrders, setIncomingOrders] = useState<Order[]>([]);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectInput, setShowRejectInput] = useState(false);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
+    typeof Notification !== "undefined" ? Notification.permission : "denied"
+  );
   const seenOnlineIdsRef = useRef<Set<number>>(new Set());
   const isFirstOnlineFetchRef = useRef(true);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const chimeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const unlockAudio = () => {
-    try {
-      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-      audioCtxRef.current.resume().then(() => setAudioUnlocked(true));
-    } catch {}
+  // Silently unlock AudioContext on the first click anywhere — no action needed from staff
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+        audioCtxRef.current.resume();
+      } catch {}
+      document.removeEventListener("click", unlock);
+    };
+    document.addEventListener("click", unlock, { passive: true });
+    return () => document.removeEventListener("click", unlock);
+  }, []);
+
+  const requestNotifPermission = async () => {
+    if (typeof Notification === "undefined") return;
+    const perm = await Notification.requestPermission();
+    setNotifPerm(perm);
   };
+
+  const sendNotification = useCallback((title: string, body: string) => {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification(title, { body, icon: "/icon-192.png" });
+    }
+  }, []);
 
   const playChime = useCallback(() => {
     try {
@@ -891,8 +911,14 @@ export default function POS() {
           isFirstOnlineFetchRef.current = false;
           pending.forEach(o => seenOnlineIdsRef.current.add(o.id));
         } else {
-          const hasNew = pending.some(o => !seenOnlineIdsRef.current.has(o.id));
-          if (hasNew && audioUnlocked) playChime();
+          const newOrders = pending.filter(o => !seenOnlineIdsRef.current.has(o.id));
+          if (newOrders.length > 0) {
+            playChime();
+            sendNotification(
+              `🔔 New Online Order${newOrders.length > 1 ? "s" : ""}!`,
+              `${newOrders.length} order${newOrders.length > 1 ? "s" : ""} waiting for approval`
+            );
+          }
           pending.forEach(o => seenOnlineIdsRef.current.add(o.id));
         }
         setIncomingOrders(pending);
@@ -901,17 +927,17 @@ export default function POS() {
     poll();
     const t = setInterval(poll, 8000);
     return () => clearInterval(t);
-  }, [audioUnlocked, playChime]);
+  }, [playChime, sendNotification]);
 
   // Repeat chime every 5s while there are pending incoming orders
   useEffect(() => {
-    if (incomingOrders.length > 0 && audioUnlocked) {
+    if (incomingOrders.length > 0) {
       if (!chimeIntervalRef.current) chimeIntervalRef.current = setInterval(playChime, 5000);
     } else {
       if (chimeIntervalRef.current) { clearInterval(chimeIntervalRef.current); chimeIntervalRef.current = null; }
     }
     return () => { if (chimeIntervalRef.current) { clearInterval(chimeIntervalRef.current); chimeIntervalRef.current = null; } };
-  }, [incomingOrders, audioUnlocked, playChime]);
+  }, [incomingOrders, playChime]);
 
   const acceptOnline = async (id: number) => {
     await fetch(`/api/orders/${id}`, {
@@ -1089,17 +1115,28 @@ export default function POS() {
         <div className="text-zinc-400 text-sm font-mono">{time}</div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { unlockAudio(); }}
+            onClick={notifPerm === "granted" ? undefined : requestNotifPermission}
+            title={notifPerm === "denied" ? "Enable notifications in your browser/device settings" : undefined}
             className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               incomingOrders.length > 0
                 ? "bg-orange-600 hover:bg-orange-500 text-white animate-pulse"
-                : audioUnlocked
-                  ? "bg-[#1E2130] text-green-400 hover:bg-[#2A2F45]"
-                  : "bg-[#1E2130] text-zinc-400 hover:bg-[#2A2F45]"
+                : notifPerm === "granted"
+                  ? "bg-[#1E2130] text-green-400"
+                  : notifPerm === "denied"
+                    ? "bg-[#1E2130] text-red-400 cursor-not-allowed"
+                    : "bg-[#1E2130] text-yellow-400 hover:bg-[#2A2F45]"
             }`}
           >
-            {incomingOrders.length > 0 ? "🔔" : audioUnlocked ? "🔊" : "🔇"}
-            <span className="hidden sm:inline">{incomingOrders.length > 0 ? `${incomingOrders.length} Online` : "Sound"}</span>
+            {incomingOrders.length > 0 ? "🔔" : notifPerm === "granted" ? "🔔" : notifPerm === "denied" ? "🔕" : "🔔"}
+            <span className="hidden sm:inline">
+              {incomingOrders.length > 0
+                ? `${incomingOrders.length} Online`
+                : notifPerm === "granted"
+                  ? "Alerts On"
+                  : notifPerm === "denied"
+                    ? "Alerts Off"
+                    : "Allow Alerts"}
+            </span>
             {incomingOrders.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
                 {incomingOrders.length}

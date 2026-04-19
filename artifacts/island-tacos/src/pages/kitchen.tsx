@@ -99,7 +99,9 @@ export default function Kitchen() {
   const [advancing, setAdvancing] = useState<Set<number>>(new Set());
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
+    typeof Notification !== "undefined" ? Notification.permission : "denied"
+  );
   const prevIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -113,19 +115,36 @@ export default function Kitchen() {
     navigate(adminRoutes.login);
   };
 
-  // Must be called from a user-gesture to unlock the AudioContext
-  const unlockAudio = useCallback(() => {
-    try {
-      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-      audioCtxRef.current.resume().then(() => setAudioUnlocked(true));
-    } catch {}
+  // Silently unlock AudioContext on the first click anywhere
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+        audioCtxRef.current.resume();
+      } catch {}
+      document.removeEventListener("click", unlock);
+    };
+    document.addEventListener("click", unlock, { passive: true });
+    return () => document.removeEventListener("click", unlock);
+  }, []);
+
+  const requestNotifPermission = async () => {
+    if (typeof Notification === "undefined") return;
+    const perm = await Notification.requestPermission();
+    setNotifPerm(perm);
+  };
+
+  const sendNotification = useCallback((title: string, body: string) => {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification(title, { body, icon: "/icon-192.png" });
+    }
   }, []);
 
   const playChime = useCallback(() => {
     try {
-      if (!audioCtxRef.current) return; // not unlocked yet
+      if (!audioCtxRef.current) return;
       const ctx = audioCtxRef.current;
-      ctx.resume(); // ensure not suspended
+      ctx.resume();
       const notes = [
         { freq: 523.25, t: 0 },
         { freq: 659.25, t: 0.15 },
@@ -162,9 +181,13 @@ export default function Kitchen() {
         isFirstFetchRef.current = false;
         prevIdsRef.current = new Set(active.map((o) => o.id));
       } else {
-        const newConfirmed = active.filter((o) => o.status === "confirmed");
-        if (newConfirmed.some((o) => !prevIdsRef.current.has(o.id))) {
+        const newConfirmed = active.filter((o) => o.status === "confirmed" && !prevIdsRef.current.has(o.id));
+        if (newConfirmed.length > 0) {
           playChime();
+          sendNotification(
+            `👨‍🍳 New Order${newConfirmed.length > 1 ? "s" : ""} to Cook!`,
+            `${newConfirmed.length} order${newConfirmed.length > 1 ? "s" : ""} need${newConfirmed.length === 1 ? "s" : ""} to be started`
+          );
         }
         prevIdsRef.current = new Set(active.map((o) => o.id));
       }
@@ -183,10 +206,10 @@ export default function Kitchen() {
     return () => clearInterval(id);
   }, [fetchOrders]);
 
-  // Repeat chime every 4s while there are new confirmed orders (not yet cooking)
+  // Repeat chime every 4s while there are confirmed orders waiting to be cooked
   useEffect(() => {
     const hasPending = orders.some((o) => o.status === "confirmed");
-    if (hasPending && audioUnlocked) {
+    if (hasPending) {
       if (!chimeIntervalRef.current) {
         chimeIntervalRef.current = setInterval(playChime, 4_000);
       }
@@ -202,7 +225,7 @@ export default function Kitchen() {
         chimeIntervalRef.current = null;
       }
     };
-  }, [orders, audioUnlocked, playChime]);
+  }, [orders, playChime]);
 
   const broadcastUpdate = () => {
     try {
@@ -258,15 +281,17 @@ export default function Kitchen() {
               {error ? "Offline" : "Live"}
             </span>
           </div>
-          {!audioUnlocked ? (
+          {notifPerm === "granted" ? (
+            <span className="text-green-600 text-xs font-medium">🔔 Alerts on</span>
+          ) : notifPerm === "denied" ? (
+            <span className="text-red-500 text-xs font-medium" title="Enable notifications in your browser/device settings">🔕 Alerts off</span>
+          ) : (
             <button
-              onClick={unlockAudio}
+              onClick={requestNotifPermission}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-amber-950 text-xs font-bold transition-colors animate-pulse"
             >
-              🔔 Tap to enable sound
+              🔔 Allow alerts
             </button>
-          ) : (
-            <span className="text-zinc-600 text-xs">🔔 Sound on</span>
           )}
           <button
             onClick={logout}
