@@ -195,6 +195,15 @@ export default function Kitchen() {
     return () => clearInterval(id);
   }, [fetchOrders]);
 
+  const broadcastUpdate = () => {
+    try {
+      const bc = new BroadcastChannel("island_tacos_kds");
+      bc.postMessage({ type: "kds:order-updated" });
+      bc.close();
+    } catch {}
+    window.dispatchEvent(new CustomEvent("kds:order-updated"));
+  };
+
   const advance = async (order: Order) => {
     const next = NEXT_STATUS[order.status];
     if (!next) return;
@@ -205,7 +214,7 @@ export default function Kitchen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: next }),
       });
-      window.dispatchEvent(new CustomEvent("kds:order-updated"));
+      broadcastUpdate();
       await fetchOrders();
     } finally {
       setAdvancing((s) => { const ns = new Set(s); ns.delete(order.id); return ns; });
@@ -220,7 +229,7 @@ export default function Kitchen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "cancelled", cancellationReason: reason || null }),
       });
-      window.dispatchEvent(new CustomEvent("kds:order-updated"));
+      broadcastUpdate();
       setRejectState(null);
       await fetchOrders();
     } finally {

@@ -90,14 +90,22 @@ export default function Admin() {
   const { data: stats } = useGetAdminStats({ query: { refetchInterval: 5_000 } });
   const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 }, { query: { refetchInterval: 5_000 } });
 
-  // Refresh immediately when KDS changes an order
+  // Refresh immediately when KDS changes an order (same tab or other tab via BroadcastChannel)
   useEffect(() => {
-    const handler = () => {
+    const refresh = () => {
       queryClient.invalidateQueries({ queryKey: getGetAdminStatsQueryKey() });
       queryClient.invalidateQueries({ queryKey: getGetRecentOrdersQueryKey() });
     };
-    window.addEventListener("kds:order-updated", handler);
-    return () => window.removeEventListener("kds:order-updated", handler);
+    window.addEventListener("kds:order-updated", refresh);
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("island_tacos_kds");
+      bc.onmessage = (e) => { if (e.data?.type === "kds:order-updated") refresh(); };
+    } catch {}
+    return () => {
+      window.removeEventListener("kds:order-updated", refresh);
+      bc?.close();
+    };
   }, [queryClient]);
   const updateStatus = useUpdateOrderStatus();
 
@@ -181,7 +189,7 @@ export default function Admin() {
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 mr-2">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs text-muted-foreground font-medium">Live · 15s</span>
+              <span className="text-xs text-muted-foreground font-medium">Live · 5s</span>
             </div>
             <Button
               variant="outline"
