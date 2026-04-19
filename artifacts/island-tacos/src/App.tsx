@@ -12,6 +12,8 @@ import Admin from "@/pages/admin";
 import AdminMenu from "@/pages/admin-menu";
 import AdminModifiers from "@/pages/admin-modifiers";
 import AdminReports from "@/pages/admin-reports";
+import AdminCustomers from "@/pages/admin-customers";
+import AccountPage from "@/pages/account";
 import Kitchen from "@/pages/kitchen";
 import POS from "@/pages/pos";
 import StaffLogin from "@/pages/staff-login";
@@ -34,6 +36,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/track" component={TrackOrder} />
+      <Route path="/account" component={AccountPage} />
 
       {/* Secret staff routes — more specific paths must come before less specific ones */}
       <Route path={adminRoutes.login} component={StaffLogin} />
@@ -48,6 +51,9 @@ function Router() {
       </Route>
       <Route path={adminRoutes.reports}>
         <ProtectedRoute><AdminReports /></ProtectedRoute>
+      </Route>
+      <Route path={adminRoutes.customers}>
+        <ProtectedRoute><AdminCustomers /></ProtectedRoute>
       </Route>
       <Route path={adminRoutes.kitchen}>
         <ProtectedRoute><Kitchen /></ProtectedRoute>

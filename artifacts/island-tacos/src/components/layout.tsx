@@ -23,6 +23,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const navLinks = [
     { href: "/", label: "Menu" },
     { href: "/track", label: "Track Order" },
+    { href: "/account", label: "My Account" },
   ];
 
   return (
@@ -57,15 +58,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {/* Cart + mobile menu */}
           <div className="flex items-center gap-2">
             {/* Account button */}
-            <Link href="/track">
+            <Link href="/account">
               <button
                 className={`relative flex items-center gap-2 border border-border rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   hasAccount ? "border-primary/40 text-primary hover:bg-primary/5" : "hover:bg-muted"
                 }`}
-                title={hasAccount ? "My Account" : "Create Account"}
+                title={hasAccount ? "My Account" : "My Account"}
               >
                 <UserCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">{hasAccount ? "My Account" : "Sign In"}</span>
+                <span className="hidden sm:inline">My Account</span>
               </button>
             </Link>
 
@@ -194,12 +195,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </Link>
                   ))}
                   <Link
-                    href="/track"
+                    href="/account"
                     onClick={() => setMobileOpen(false)}
-                    className="px-3 py-2.5 rounded-md text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/60 flex items-center gap-2"
+                    className={`px-3 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                      location === "/account" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    }`}
                   >
                     <UserCircle className="w-4 h-4" />
-                    {hasAccount ? "My Account" : "Sign In / Create Account"}
+                    My Account
                   </Link>
                 </nav>
               </SheetContent>

@@ -82,3 +82,16 @@ export const refundsTable = pgTable("refunds", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 export type Refund = typeof refundsTable.$inferSelect;
+
+export const customersTable = pgTable("customers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  notes: text("notes"),
+  visitCount: integer("visit_count").notNull().default(1),
+  totalSpent: numeric("total_spent", { precision: 10, scale: 2 }).notNull().default("0"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type Customer = typeof customersTable.$inferSelect;

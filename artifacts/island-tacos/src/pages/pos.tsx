@@ -387,6 +387,8 @@ function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: n
 
 // ─── Hold Modal ───────────────────────────────────────────────────────────────
 
+interface CustomerSuggestion { id: number; name: string; phone: string | null; email: string | null; }
+
 function HoldModal({ initialName, initialNote, onHold, onClose }: {
   initialName: string; initialNote: string;
   onHold: (name: string, phone: string, note: string) => void;
@@ -395,6 +397,27 @@ function HoldModal({ initialName, initialNote, onHold, onClose }: {
   const [name, setName] = useState(initialName);
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState(initialNote);
+  const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  useEffect(() => {
+    if (name.trim().length < 2) { setSuggestions([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`${API}/api/customers?q=${encodeURIComponent(name.trim())}&limit=6`, { headers: authHeaders() });
+        if (r.ok) { const d = await r.json(); setSuggestions(d); setShowSuggestions(true); }
+      } catch {}
+    }, 250);
+    return () => clearTimeout(t);
+  }, [name, API]);
+
+  const fillCustomer = (c: CustomerSuggestion) => {
+    setName(c.name);
+    setPhone(c.phone ?? "");
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -404,13 +427,32 @@ function HoldModal({ initialName, initialNote, onHold, onClose }: {
           <p className="text-zinc-400 text-sm mt-1">Save this order to resume and charge later.</p>
         </div>
         <div className="p-5 space-y-3">
-          <div>
+          <div className="relative">
             <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-1">Customer Name</label>
             <input
-              value={name} onChange={e => setName(e.target.value)}
+              value={name}
+              onChange={e => { setName(e.target.value); setShowSuggestions(true); }}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
               placeholder="e.g. Maria"
               className="w-full bg-[#0A0B0F] border border-[#2A2F45] focus:border-[#F5A623] rounded-xl px-4 py-2.5 text-white text-sm outline-none placeholder-zinc-600"
             />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-[#1A1D28] border border-[#2A2F45] rounded-xl shadow-2xl z-10 overflow-hidden">
+                {suggestions.map(c => (
+                  <button
+                    key={c.id}
+                    onMouseDown={() => fillCustomer(c)}
+                    className="w-full text-left px-4 py-3 hover:bg-[#2A2F45] transition-colors border-b border-[#2A2F45] last:border-b-0"
+                  >
+                    <p className="text-white text-sm font-semibold">{c.name}</p>
+                    {(c.phone || c.email) && (
+                      <p className="text-zinc-400 text-xs mt-0.5">{c.phone ?? c.email}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div>
             <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-1">Phone (optional)</label>

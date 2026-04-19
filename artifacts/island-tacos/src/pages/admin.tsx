@@ -5,7 +5,7 @@ import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdmin
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw, Monitor, LogOut, XCircle, BarChart3 } from "lucide-react";
+import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw, Monitor, LogOut, XCircle, BarChart3, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -229,6 +229,12 @@ export default function Admin() {
               <Button variant="outline" size="sm">
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Reports
+              </Button>
+            </Link>
+            <Link href={adminRoutes.customers}>
+              <Button variant="outline" size="sm">
+                <Users className="h-4 w-4 mr-2" />
+                Customers
               </Button>
             </Link>
             <Link href="/">

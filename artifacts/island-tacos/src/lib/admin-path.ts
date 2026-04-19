@@ -9,4 +9,5 @@ export const adminRoutes = {
   kitchen: `${ADMIN_PATH}/kitchen`,
   pos: `${ADMIN_PATH}/pos`,
   reports: `${ADMIN_PATH}/reports`,
+  customers: `${ADMIN_PATH}/customers`,
 };

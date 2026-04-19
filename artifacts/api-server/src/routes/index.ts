@@ -10,6 +10,7 @@ import webhooksRouter from "./webhooks";
 import shiftsRouter from "./shifts";
 import reportsRouter from "./reports";
 import printRouter from "./print";
+import customersRouter from "./customers";
 
 const router: IRouter = Router();
 
@@ -22,6 +23,14 @@ router.use(menuRouter);
 router.use(ordersRouter);
 router.use(paymentsRouter);
 router.use(webhooksRouter);
+
+// Customer lookup: /customers/lookup is public (for online account page)
+// /customers search is staff-accessible (POS autocomplete), /customers/:id notes patch is admin-checked in handler
+router.use("/customers/lookup", customersRouter);
+router.use(/^\/customers(?!\/(lookup))/, (req: Request, res: Response, next: NextFunction) => {
+  requireStaffAuth(req, res, next);
+});
+router.use(customersRouter);
 
 // Staff-auth required routes (shifts, cash, print)
 router.use(/^\/(shifts|cash-transactions|print)/, (req: Request, res: Response, next: NextFunction) => {

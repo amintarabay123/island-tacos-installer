@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable } from "@workspace/db";
+import { upsertCustomer } from "./customers";
 import {
   CreateOrderBody,
   GetOrderParams,
@@ -183,6 +184,14 @@ router.post("/orders", async (req, res): Promise<void> => {
       }))
     )
     .returning();
+
+  // Auto-save/update customer record
+  upsertCustomer(
+    parsed.data.customerName,
+    parsed.data.customerEmail ?? "",
+    parsed.data.customerPhone ?? "",
+    total,
+  ).catch(() => {});
 
   res.status(201).json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
