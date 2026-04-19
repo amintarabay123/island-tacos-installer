@@ -6,6 +6,7 @@ export const menuCategoriesTable = pgTable("menu_categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
+  icon: text("icon"),
   sortOrder: integer("sort_order").notNull().default(0),
   sendToKds: boolean("send_to_kds").notNull().default(true),
   loyverseId: text("loyverse_id").unique(),

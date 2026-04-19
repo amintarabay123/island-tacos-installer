@@ -10,6 +10,8 @@ export interface UpdateMenuCategoryBody {
   name?: string;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  icon?: string | null;
   sortOrder?: number;
   sendToKds?: boolean;
 }

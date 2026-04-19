@@ -2,10 +2,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
 import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdminStatsQueryKey, getGetRecentOrdersQueryKey, type UpdateOrderStatusBodyStatus } from "@workspace/api-client-react";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, RefreshCw, Monitor, LogOut, XCircle, BarChart3, Users } from "lucide-react";
+import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, Monitor, LogOut, XCircle, BarChart3, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -129,25 +129,6 @@ export default function Admin() {
     prevOrderIdsRef.current = activeIds;
   }, [orders, playChime, toast]);
 
-  const syncLoyverse = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/loyverse/sync", { method: "POST" });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["listMenuCategories"] });
-      queryClient.invalidateQueries({ queryKey: ["listMenuItems"] });
-      toast({
-        title: "Loyverse sync complete",
-        description: `${data.itemsUpserted} items and ${data.categoriesUpserted} categories updated.${data.errors?.length ? ` ${data.errors.length} error(s).` : ""}`,
-      });
-    },
-    onError: (err) => {
-      toast({ title: "Sync failed", description: String(err), variant: "destructive" });
-    },
-  });
-
   const handleStatusChange = (orderId: number, status: UpdateOrderStatusBodyStatus, cancellationReason?: string) => {
     updateStatus.mutate(
       { id: orderId, data: { status, cancellationReason: cancellationReason ?? null } },
@@ -194,16 +175,6 @@ export default function Admin() {
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Live</span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => syncLoyverse.mutate()}
-                disabled={syncLoyverse.isPending}
-                className="shrink-0 hidden lg:flex"
-              >
-                <RefreshCw className={`h-4 w-4 mr-1 ${syncLoyverse.isPending ? "animate-spin" : ""}`} />
-                <span className="hidden xl:inline">{syncLoyverse.isPending ? "Syncing…" : "Sync"}</span>
-              </Button>
               <Link href={adminRoutes.pos}>
                 <Button size="sm" className="bg-[#F5A623] hover:bg-[#E09520] text-black font-bold shrink-0">
                   🧾 <span className="hidden sm:inline ml-1">POS</span>

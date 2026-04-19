@@ -18,6 +18,8 @@ export interface MenuCategory {
   name: string;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  icon?: string | null;
   sortOrder: number;
   sendToKds: boolean;
   createdAt: string;
@@ -27,6 +29,8 @@ export interface CreateMenuCategoryBody {
   name: string;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  icon?: string | null;
   sortOrder?: number;
   sendToKds?: boolean;
 }
@@ -35,6 +39,8 @@ export interface UpdateMenuCategoryBody {
   name?: string;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  icon?: string | null;
   sortOrder?: number;
   sendToKds?: boolean;
 }

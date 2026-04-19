@@ -11,18 +11,20 @@ import shiftsRouter from "./shifts";
 import reportsRouter from "./reports";
 import printRouter from "./print";
 import customersRouter from "./customers";
+import uploadRouter from "./upload";
 
 const router: IRouter = Router();
 
 // Auth routes (public)
 router.use(authRouter);
 
-// Public routes
+// Public routes (upload requires staff auth; /uploads static serving is public)
 router.use(healthRouter);
 router.use(menuRouter);
 router.use(ordersRouter);
 router.use(paymentsRouter);
 router.use(webhooksRouter);
+router.use(uploadRouter);
 
 // Customer lookup: /customers/lookup is public (for online account page)
 // /customers search is staff-accessible (POS autocomplete), /customers/:id notes patch is admin-checked in handler

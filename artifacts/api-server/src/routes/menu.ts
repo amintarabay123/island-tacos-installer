@@ -43,6 +43,7 @@ router.post("/menu/categories", async (req, res): Promise<void> => {
     .values({
       name: parsed.data.name,
       description: parsed.data.description ?? null,
+      icon: parsed.data.icon ?? null,
       sortOrder: parsed.data.sortOrder ?? 0,
     })
     .returning();
@@ -65,6 +66,7 @@ router.patch("/menu/categories/:id", async (req, res): Promise<void> => {
   if (parsed.data.description !== undefined) updates.description = parsed.data.description;
   if (parsed.data.sortOrder !== undefined) updates.sortOrder = parsed.data.sortOrder;
   if (parsed.data.sendToKds !== undefined) updates.sendToKds = parsed.data.sendToKds;
+  if (parsed.data.icon !== undefined) updates.icon = parsed.data.icon ?? null;
 
   const [updated] = await db
     .update(menuCategoriesTable)

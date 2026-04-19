@@ -8,6 +8,8 @@ import {
   useUpdateMenuItem,
   useDeleteMenuItem,
   useUpdateMenuCategory,
+  useCreateMenuCategory,
+  useDeleteMenuCategory,
   getListMenuItemsQueryKey,
   getListMenuCategoriesQueryKey,
 } from "@workspace/api-client-react";
@@ -19,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Pencil, Trash2, Sliders, GripVertical, ChefHat } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Sliders, GripVertical, ChefHat, Upload, X } from "lucide-react";
 
 type ModifierOption = { id: string; name: string; price: number; position: number };
 type Modifier = { id: number; loyverseId: string; name: string; options: ModifierOption[] };
@@ -58,8 +60,17 @@ export default function AdminMenu() {
   const updateItem = useUpdateMenuItem();
   const deleteItem = useDeleteMenuItem();
   const updateCategory = useUpdateMenuCategory();
+  const createCategory = useCreateMenuCategory();
+  const deleteCategory = useDeleteMenuCategory();
 
   const [dialog, setDialog] = useState<null | { mode: "create" | "edit"; id?: number }>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Category management
+  type CatForm = { name: string; icon: string };
+  const [catDialog, setCatDialog] = useState<null | { mode: "create" | "edit"; id?: number }>(null);
+  const [catForm, setCatForm] = useState<CatForm>({ name: "", icon: "" });
   const [form, setForm] = useState<MenuItemForm>(emptyForm);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -235,6 +246,40 @@ export default function AdminMenu() {
     updateItem.mutate({ id, data: { available } }, { onSuccess: invalidateItems });
   };
 
+  const handleImageUpload = async (file: File) => {
+    setImageUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const r = await fetch("/api/upload", { method: "POST", credentials: "include", body });
+      if (!r.ok) throw new Error("Upload failed");
+      const { url } = await r.json() as { url: string };
+      setForm((f) => ({ ...f, imageUrl: url }));
+    } catch {
+      alert("Image upload failed. Try again.");
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const handleCatSave = () => {
+    if (!catForm.name.trim()) return;
+    const done = () => {
+      queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() });
+      setCatDialog(null);
+    };
+    if (catDialog?.mode === "create") {
+      createCategory.mutate({ data: { name: catForm.name, icon: catForm.icon || null } }, { onSuccess: done });
+    } else if (catDialog?.mode === "edit" && catDialog.id) {
+      updateCategory.mutate({ id: catDialog.id, data: { name: catForm.name, icon: catForm.icon || null } as Parameters<typeof updateCategory.mutate>[0]["data"] }, { onSuccess: done });
+    }
+  };
+
+  const handleCatDelete = (id: number, name: string) => {
+    if (!window.confirm(`Delete category "${name}"? Items in it will need to be reassigned.`)) return;
+    deleteCategory.mutate({ id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() }) });
+  };
+
   const handleDelete = (id: number) => {
     if (!window.confirm("Delete this item?")) return;
     deleteItem.mutate({ id }, { onSuccess: invalidateItems });
@@ -285,29 +330,50 @@ export default function AdminMenu() {
 
       <div className="container mx-auto px-4 py-8">
 
-        {/* ── KDS Category settings ─────────────────────────────────────── */}
-        {categories && categories.length > 0 && (
-          <div className="rounded-xl border bg-card p-4 mb-6">
-            <div className="flex items-center gap-2 mb-3">
+        {/* ── Category Management ───────────────────────────────────────── */}
+        <div className="rounded-xl border bg-card p-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
               <ChefHat className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold text-sm">Kitchen Display (KDS) per Category</span>
-              <span className="text-xs text-muted-foreground ml-1">— toggle off to hide a category from the kitchen screen</span>
+              <span className="font-semibold text-sm">Categories</span>
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-3">
+            <Button size="sm" variant="outline" onClick={() => { setCatForm({ name: "", icon: "" }); setCatDialog({ mode: "create" }); }}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add
+            </Button>
+          </div>
+          {categories && categories.length > 0 ? (
+            <div className="space-y-2">
               {categories.map((cat) => (
-                <div key={cat.id} className="flex items-center gap-2.5 min-w-[140px]">
+                <div key={cat.id} className="flex items-center gap-3 py-1.5">
                   <Switch
                     checked={cat.sendToKds}
                     onCheckedChange={(v) => handleToggleKds(cat.id, v)}
+                    title="Show on Kitchen Display"
                   />
-                  <span className={`text-sm font-medium ${cat.sendToKds ? "" : "text-muted-foreground line-through"}`}>
+                  <span className="text-lg w-7 text-center shrink-0">{(cat as { icon?: string | null }).icon ?? "📂"}</span>
+                  <span className={`flex-1 text-sm font-medium ${cat.sendToKds ? "" : "text-muted-foreground line-through"}`}>
                     {cat.name}
                   </span>
+                  <span className="text-xs text-muted-foreground hidden sm:block">KDS</span>
+                  <button
+                    onClick={() => { setCatForm({ name: cat.name, icon: (cat as { icon?: string | null }).icon ?? "" }); setCatDialog({ mode: "edit", id: cat.id }); }}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleCatDelete(cat.id, cat.name)}
+                    className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-muted-foreground">No categories yet. Add one to get started.</p>
+          )}
+        </div>
 
         {/* Category filter */}
         <div className="flex gap-2 flex-wrap mb-6">
@@ -323,6 +389,7 @@ export default function AdminMenu() {
               onClick={() => setActiveCategory(cat.id)}
               className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors flex items-center gap-1.5 ${activeCategory === cat.id ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
             >
+              {(cat as { icon?: string | null }).icon && <span>{(cat as { icon?: string | null }).icon}</span>}
               {cat.name}
               {!cat.sendToKds && (
                 <span className="text-[10px] opacity-60 font-normal">no KDS</span>
@@ -489,8 +556,44 @@ export default function AdminMenu() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Image URL</Label>
-              <Input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))} placeholder="https://..." />
+              <Label>Image</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={form.imageUrl}
+                  onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
+                  placeholder="https://... or upload →"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={imageUploading}
+                  onClick={() => imageInputRef.current?.click()}
+                  className="shrink-0"
+                >
+                  {imageUploading ? "Uploading…" : <><Upload className="h-4 w-4 mr-1" />Upload</>}
+                </Button>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); e.target.value = ""; }}
+                />
+              </div>
+              {form.imageUrl && (
+                <div className="relative w-24 h-24 rounded-lg overflow-hidden border bg-muted">
+                  <img src={form.imageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}
+                    className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full w-5 h-5 flex items-center justify-center transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               {(["available", "popular", "spicy", "vegetarian"] as const).map((flag) => (
@@ -565,6 +668,50 @@ export default function AdminMenu() {
             <Button variant="outline" onClick={() => setDialog(null)}>Cancel</Button>
             <Button onClick={handleSave} disabled={createItem.isPending || updateItem.isPending}>
               {dialog?.mode === "create" ? "Add Item" : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Category create/edit dialog */}
+      <Dialog open={!!catDialog} onOpenChange={(open) => { if (!open) setCatDialog(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{catDialog?.mode === "create" ? "New Category" : "Edit Category"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Name *</Label>
+              <Input
+                value={catForm.name}
+                onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Tacos"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Icon (emoji)</Label>
+              <div className="flex items-center gap-3">
+                <span className="text-3xl w-12 h-12 flex items-center justify-center border rounded-lg bg-muted">
+                  {catForm.icon || "📂"}
+                </span>
+                <Input
+                  value={catForm.icon}
+                  onChange={(e) => setCatForm((f) => ({ ...f, icon: e.target.value }))}
+                  placeholder="🌮"
+                  maxLength={4}
+                  className="flex-1"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Paste or type an emoji to represent this category.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCatDialog(null)}>Cancel</Button>
+            <Button
+              onClick={handleCatSave}
+              disabled={!catForm.name.trim() || createCategory.isPending || updateCategory.isPending}
+            >
+              {catDialog?.mode === "create" ? "Create Category" : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

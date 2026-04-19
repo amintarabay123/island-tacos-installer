@@ -470,6 +470,8 @@ components:
           type: string
         description:
           type: ["string", "null"]
+        icon:
+          type: ["string", "null"]
         sortOrder:
           type: integer
         sendToKds:
@@ -491,6 +493,8 @@ components:
           type: string
         description:
           type: ["string", "null"]
+        icon:
+          type: ["string", "null"]
         sortOrder:
           type: integer
         sendToKds:
@@ -504,6 +508,8 @@ components:
         name:
           type: string
         description:
+          type: ["string", "null"]
+        icon:
           type: ["string", "null"]
         sortOrder:
           type: integer

@@ -200,10 +200,13 @@ function ModifierModal({ item, modifiers, onConfirm, onClose }: {
 
 // ─── Payment Modal ────────────────────────────────────────────────────────────
 
-function PaymentModal({ total, onPay, onClose }: {
-  total: number; onPay: (method: string, tendered?: number) => void; onClose: () => void;
+function PaymentModal({ total, onPay, onClose, onSplit }: {
+  total: number;
+  onPay: (method: string, tendered?: number) => void;
+  onClose: () => void;
+  onSplit?: () => void;
 }) {
-  const [tab, setTab] = useState<"cash" | "card" | "athmovil">("cash");
+  const [tab, setTab] = useState<"cash" | "card" | "athmovil" | "split">("cash");
   const [tendered, setTendered] = useState(String(Math.ceil(total)));
   const change = Math.max(0, parseFloat(tendered || "0") - total);
 
@@ -213,12 +216,19 @@ function PaymentModal({ total, onPay, onClose }: {
       if (r >= total && !result.includes(r)) result.push(r);
     };
     const result: number[] = [total];
-    add(result, Math.ceil(total / 10) * 10);   // next $10
-    add(result, Math.ceil(total / 20) * 20);   // next $20
+    add(result, Math.ceil(total / 10) * 10);
+    add(result, Math.ceil(total / 20) * 20);
     add(result, 50);
     add(result, 100);
     return result;
   })();
+
+  const TABS = [
+    { key: "cash", label: "Cash" },
+    { key: "card", label: "Card" },
+    { key: "athmovil", label: "ATH Móvil" },
+    ...(onSplit ? [{ key: "split", label: "✂ Split" }] : []),
+  ] as const;
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -230,10 +240,10 @@ function PaymentModal({ total, onPay, onClose }: {
 
         {/* Method tabs */}
         <div className="flex border-b border-[#1E2130]">
-          {(["cash","card","athmovil"] as const).map(m => (
-            <button key={m} onClick={() => setTab(m)}
-              className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors ${tab === m ? "text-[#F5A623] border-b-2 border-[#F5A623]" : "text-zinc-400 hover:text-white"}`}>
-              {m === "athmovil" ? "ATH Móvil" : m.charAt(0).toUpperCase() + m.slice(1)}
+          {TABS.map(m => (
+            <button key={m.key} onClick={() => setTab(m.key as typeof tab)}
+              className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === m.key ? "text-[#F5A623] border-b-2 border-[#F5A623]" : "text-zinc-400 hover:text-white"}`}>
+              {m.label}
             </button>
           ))}
         </div>
@@ -280,16 +290,31 @@ function PaymentModal({ total, onPay, onClose }: {
               <p className="text-zinc-400 text-sm">Confirm receipt of <span className="text-[#F5A623] font-bold">{fmt(total)}</span></p>
             </div>
           )}
+          {tab === "split" && (
+            <div className="text-center py-6">
+              <div className="text-5xl mb-4">✂️</div>
+              <p className="text-white font-semibold mb-1">Split payment by item</p>
+              <p className="text-zinc-400 text-sm">Assign each item to Cash, Card, or ATH</p>
+            </div>
+          )}
         </div>
 
         <div className="p-5 border-t border-[#1E2130] flex gap-3">
           <button onClick={onClose} className="h-12 px-5 rounded-xl border border-[#2A2F45] text-zinc-300 font-semibold hover:bg-[#1E2130] transition-colors">Cancel</button>
-          <button
-            disabled={tab === "cash" && parseFloat(tendered || "0") < total}
-            onClick={() => onPay(tab, tab === "cash" ? parseFloat(tendered) : undefined)}
-            className="flex-1 h-12 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-black text-lg transition-colors">
-            Charge {fmt(total)}
-          </button>
+          {tab === "split" ? (
+            <button
+              onClick={() => { onClose(); onSplit?.(); }}
+              className="flex-1 h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-black text-base transition-colors">
+              ✂ Open Split
+            </button>
+          ) : (
+            <button
+              disabled={tab === "cash" && parseFloat(tendered || "0") < total}
+              onClick={() => onPay(tab, tab === "cash" ? parseFloat(tendered) : undefined)}
+              className="flex-1 h-12 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-black text-lg transition-colors">
+              Charge {fmt(total)}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -543,6 +568,7 @@ function TicketsDrawer({ onResume, onClose }: {
   const [liveOrders, setLiveOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
+  const [splitChargeOrder, setSplitChargeOrder] = useState<Order | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -591,6 +617,17 @@ function TicketsDrawer({ onResume, onClose }: {
       body: JSON.stringify({ status: "completed", actualPaymentMethod: method, paymentStatus: "paid" }),
     });
     setChargeOrder(null);
+    load();
+  };
+
+  const completeWithSplit = async (_groups: SplitGroup[], note: string, order: Order) => {
+    const existingNotes = order.notes ? `${order.notes}\n${note}` : note;
+    await fetch(`/api/orders/${order.id}`, {
+      method: "PATCH", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "completed", actualPaymentMethod: "split", paymentStatus: "paid", notes: existingNotes }),
+    });
+    setSplitChargeOrder(null);
     load();
   };
 
@@ -706,6 +743,26 @@ function TicketsDrawer({ onResume, onClose }: {
           total={chargeOrder.total}
           onPay={completeWithPayment}
           onClose={() => setChargeOrder(null)}
+          onSplit={() => { setSplitChargeOrder(chargeOrder); setChargeOrder(null); }}
+        />
+      )}
+
+      {splitChargeOrder && (
+        <SplitPaymentModal
+          cart={splitChargeOrder.items.map(i => ({
+            key: String(i.id),
+            menuItemId: 0,
+            name: i.menuItemName,
+            price: i.menuItemPrice,
+            quantity: i.quantity,
+            notes: i.notes ?? "",
+            modifierSelections: (i.modifierSelections ?? []) as CartModifier[],
+          }))}
+          total={splitChargeOrder.total}
+          onConfirm={async (groups, note) => {
+            await completeWithSplit(groups, note, splitChargeOrder);
+          }}
+          onClose={() => setSplitChargeOrder(null)}
         />
       )}
     </>
@@ -2053,7 +2110,7 @@ export default function POS() {
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={handleHold} disabled={submitting}
                     className="h-10 rounded-xl border border-[#2A2F45] text-zinc-300 hover:bg-[#1E2130] text-sm font-semibold transition-colors disabled:opacity-50">
-                    🎫 Hold
+                    💾 Save
                   </button>
                   <button onClick={() => setSplitModal(true)} disabled={submitting || cart.length < 2}
                     className="h-10 rounded-xl border border-[#2A2F45] text-zinc-300 hover:bg-[#1E2130] text-sm font-semibold transition-colors disabled:opacity-50">
@@ -2105,7 +2162,12 @@ export default function POS() {
       )}
 
       {paymentModal && (
-        <PaymentModal total={total} onPay={handlePay} onClose={() => setPaymentModal(false)} />
+        <PaymentModal
+          total={total}
+          onPay={handlePay}
+          onClose={() => setPaymentModal(false)}
+          onSplit={cart.length >= 2 ? () => { setPaymentModal(false); setSplitModal(true); } : undefined}
+        />
       )}
 
       {splitModal && (

@@ -21,6 +21,7 @@ export const ListMenuCategoriesResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
+  icon: zod.string().nullish(),
   sortOrder: zod.number(),
   sendToKds: zod.boolean(),
   createdAt: zod.coerce.date(),
@@ -35,6 +36,7 @@ export const ListMenuCategoriesResponse = zod.array(
 export const CreateMenuCategoryBody = zod.object({
   name: zod.string(),
   description: zod.string().nullish(),
+  icon: zod.string().nullish(),
   sortOrder: zod.number().optional(),
   sendToKds: zod.boolean().optional(),
 });
@@ -49,6 +51,7 @@ export const UpdateMenuCategoryParams = zod.object({
 export const UpdateMenuCategoryBody = zod.object({
   name: zod.string().optional(),
   description: zod.string().nullish(),
+  icon: zod.string().nullish(),
   sortOrder: zod.number().optional(),
   sendToKds: zod.boolean().optional(),
 });
@@ -57,6 +60,7 @@ export const UpdateMenuCategoryResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
+  icon: zod.string().nullish(),
   sortOrder: zod.number(),
   sendToKds: zod.boolean(),
   createdAt: zod.coerce.date(),
