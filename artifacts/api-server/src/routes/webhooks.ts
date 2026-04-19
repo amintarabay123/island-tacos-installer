@@ -31,9 +31,22 @@ async function markOrderPaid(orderId: number): Promise<boolean> {
 router.post("/webhooks/athmovil", async (req: Request, res: Response): Promise<void> => {
   const payload = req.body as AthMovilWebhookPayload;
 
+  console.log("[ATH webhook] Received event:", JSON.stringify(payload, null, 2));
+
   res.status(200).json({ received: true });
 
-  if (payload.status !== "COMPLETED") return;
+  // Allow COMPLETED or simulated test events (status may be "SIMULATED" or "TEST")
+  const isCompleted = payload.status === "COMPLETED";
+  const isTest = !payload.status || payload.status.toLowerCase().includes("test") || payload.status.toLowerCase().includes("simul");
+
+  if (!isCompleted && !isTest) {
+    console.log(`[ATH webhook] Skipping non-COMPLETED status: ${payload.status}`);
+    return;
+  }
+  if (isTest) {
+    console.log("[ATH webhook] Test/simulated event received — webhook is connected correctly!");
+    return;
+  }
 
   try {
     // 1. Try matching by orderId in metadata1 (ecommerce button flow)
