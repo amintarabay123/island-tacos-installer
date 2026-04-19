@@ -184,9 +184,12 @@ export default function AdminMenu() {
                 {filteredItems.map((item, idx) => {
                   const cat = categories?.find((c) => c.id === item.categoryId);
                   return (
-                    <tr key={item.id} className={idx % 2 === 0 ? "" : "bg-muted/20"}>
+                    <tr key={item.id} className={`${!item.available ? "opacity-50" : idx % 2 === 0 ? "" : "bg-muted/20"}`}>
                       <td className="p-3">
-                        <div className="font-medium">{item.name}</div>
+                        <div className="font-medium flex items-center gap-2">
+                          {item.name}
+                          {!item.available && <span className="text-[10px] font-semibold uppercase tracking-wide bg-muted text-muted-foreground rounded px-1.5 py-0.5">Hidden</span>}
+                        </div>
                         <div className="text-muted-foreground text-xs flex gap-2 mt-0.5">
                           {item.popular && <span>Popular</span>}
                           {item.spicy && <span>Spicy</span>}

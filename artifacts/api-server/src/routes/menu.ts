@@ -106,6 +106,9 @@ router.get("/menu/items", async (req, res): Promise<void> => {
   if (queryParsed.data.categoryId !== undefined) {
     query = query.where(eq(menuItemsTable.categoryId, queryParsed.data.categoryId));
   }
+  if (queryParsed.data.available !== undefined) {
+    query = query.where(eq(menuItemsTable.available, queryParsed.data.available));
+  }
   const items = await query;
   // Convert price from string to number
   const result = items.map((item) => ({
