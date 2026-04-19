@@ -386,7 +386,12 @@ function QueueDrawer({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
               <p className="text-zinc-300 text-sm">{o.customerName}</p>
-              <p className="text-zinc-500 text-xs mt-1">{o.items.map(i => `${i.quantity}× ${i.menuItemName}`).join(", ")}</p>
+              <p className="text-zinc-500 text-xs mt-1">
+                {o.items.map(i => {
+                  const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
+                  return `${i.quantity}× ${i.menuItemName}${mods}`;
+                }).join(" • ")}
+              </p>
               <div className="flex gap-2 mt-3">
                 {o.status === "pending" && (
                   <>
@@ -463,7 +468,12 @@ function TicketsDrawer({ onResume, onClose }: {
                 </div>
                 <span className="text-[#F5A623] font-bold text-lg">{fmt(o.total)}</span>
               </div>
-              <p className="text-zinc-400 text-xs mb-3">{o.items.map(i => `${i.quantity}× ${i.menuItemName}`).join(", ")}</p>
+              <p className="text-zinc-400 text-xs mb-3">
+                {o.items.map(i => {
+                  const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
+                  return `${i.quantity}× ${i.menuItemName}${mods}`;
+                }).join(" • ")}
+              </p>
               <div className="flex gap-2">
                 <button onClick={() => resume(o)} className="flex-1 h-9 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-sm font-bold transition-colors">Resume</button>
                 <button onClick={() => voidTicket(o.id)} className="h-9 px-3 rounded-lg bg-red-900/40 hover:bg-red-800/60 text-red-400 text-sm font-semibold transition-colors">Void</button>
@@ -496,6 +506,184 @@ function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
       </div>
       <span className="text-[#F5A623] font-bold text-sm">{fmt(item.price)}</span>
     </button>
+  );
+}
+
+// ─── Receipts Drawer ─────────────────────────────────────────────────────────
+
+const PAY_LABEL: Record<string, string> = {
+  cash: "Cash", card: "Card", athmovil: "ATH Móvil", complimentary: "Comp", split: "Split",
+};
+
+function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"today" | "all">("today");
+  const [selected, setSelected] = useState<Order | null>(null);
+
+  useEffect(() => {
+    fetch("/api/orders", { credentials: "include" })
+      .then(r => r.json())
+      .then((data: Order[]) => {
+        const done = data
+          .filter(o => o.paymentStatus === "paid" || o.status === "completed")
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setOrders(done);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const today = new Date().toDateString();
+  const visible = filter === "today"
+    ? orders.filter(o => new Date(o.createdAt).toDateString() === today)
+    : orders;
+
+  const totalRevenue = visible.reduce((s, o) => s + o.total, 0);
+
+  if (selected) {
+    return (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setSelected(null)}>
+        <div className="bg-[#13151C] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="p-5 border-b border-[#1E2130] flex items-center justify-between">
+            <button onClick={() => setSelected(null)} className="text-zinc-400 hover:text-white text-sm">← Back</button>
+            <h2 className="text-white text-lg font-bold">Receipt #{selected.confirmationCode}</h2>
+            <div/>
+          </div>
+          <div className="p-5 max-h-[70vh] overflow-y-auto font-mono text-sm">
+            <div className="text-center mb-3">
+              <div className="font-bold text-base text-white">ISLAND TACOS</div>
+              <div className="text-zinc-400 text-xs">Wickhams Cay 1, Road Town, BVI</div>
+            </div>
+            <div className="border-t border-dashed border-zinc-600 my-2"/>
+            <div className="flex justify-between text-xs text-zinc-400 mb-1">
+              <span>#{selected.confirmationCode}</span>
+              <span>{new Date(selected.createdAt).toLocaleString()}</span>
+            </div>
+            <div className="text-xs text-zinc-400 mb-1">Customer: {selected.customerName || "Walk-in"}</div>
+            <div className="text-xs text-zinc-400 mb-2">Payment: {PAY_LABEL[selected.paymentMethod] ?? selected.paymentMethod}</div>
+            <div className="border-t border-dashed border-zinc-600 my-2"/>
+            {selected.items.map((item, i) => (
+              <div key={i} className="mb-2">
+                <div className="flex justify-between text-white text-sm">
+                  <span>{item.quantity}× {item.menuItemName}</span>
+                  <span>{fmt(item.subtotal)}</span>
+                </div>
+                {item.modifierSelections?.map((m, j) => (
+                  <div key={j} className="flex justify-between text-zinc-400 text-xs pl-4">
+                    <span>+ {m.name}</span>
+                    {m.price > 0 && <span>+{fmt(m.price)}</span>}
+                  </div>
+                ))}
+                {item.notes && <div className="text-zinc-500 text-xs pl-4">Note: {item.notes}</div>}
+              </div>
+            ))}
+            <div className="border-t border-dashed border-zinc-600 my-2"/>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between text-zinc-300"><span>Subtotal</span><span>{fmt(selected.subtotal)}</span></div>
+              {selected.discountAmount > 0 && <div className="flex justify-between text-green-400"><span>Discount</span><span>-{fmt(selected.discountAmount)}</span></div>}
+              {selected.tax > 0 && <div className="flex justify-between text-zinc-300"><span>Tax</span><span>{fmt(selected.tax)}</span></div>}
+              <div className="flex justify-between text-white font-bold text-base border-t border-zinc-600 pt-1 mt-1">
+                <span>TOTAL</span><span>{fmt(selected.total)}</span>
+              </div>
+            </div>
+            <div className="border-t border-dashed border-zinc-600 my-3"/>
+            <div className="text-center text-zinc-500 text-xs">Thank you!</div>
+          </div>
+          <div className="p-4 border-t border-[#1E2130]">
+            <button
+              onClick={() => {
+                const win = window.open("", "_blank", "width=320,height=600");
+                if (!win) return;
+                win.document.write(`<html><head><title>Receipt</title><style>body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:8px}.center{text-align:center}.bold{font-weight:bold}.line{border-top:1px dashed #000;margin:6px 0}.row{display:flex;justify-content:space-between;margin:2px 0}</style></head><body>
+                  <div class="center bold">ISLAND TACOS</div>
+                  <div class="center">Wickhams Cay 1, Road Town, BVI</div>
+                  <div class="line"></div>
+                  <div class="row"><span>#${selected.confirmationCode}</span><span>${new Date(selected.createdAt).toLocaleString()}</span></div>
+                  <div>Customer: ${selected.customerName || "Walk-in"}</div>
+                  <div>Payment: ${PAY_LABEL[selected.paymentMethod] ?? selected.paymentMethod}</div>
+                  <div class="line"></div>
+                  ${selected.items.map(item => `<div class="row"><span>${item.quantity}× ${item.menuItemName}</span><span>$${item.subtotal.toFixed(2)}</span></div>${(item.modifierSelections ?? []).map(m => `<div style="padding-left:12px">+ ${m.name}${m.price > 0 ? ` +$${m.price.toFixed(2)}` : ""}</div>`).join("")}${item.notes ? `<div style="padding-left:12px;color:#888">Note: ${item.notes}</div>` : ""}`).join("")}
+                  <div class="line"></div>
+                  <div class="row"><span>Subtotal</span><span>$${selected.subtotal.toFixed(2)}</span></div>
+                  ${selected.discountAmount > 0 ? `<div class="row"><span>Discount</span><span>-$${selected.discountAmount.toFixed(2)}</span></div>` : ""}
+                  ${selected.tax > 0 ? `<div class="row"><span>Tax</span><span>$${selected.tax.toFixed(2)}</span></div>` : ""}
+                  <div class="row bold"><span>TOTAL</span><span>$${selected.total.toFixed(2)}</span></div>
+                  <div class="line"></div>
+                  <div class="center">Thank you!</div>
+                </body></html>`);
+                win.document.close(); win.focus(); win.print(); win.close();
+              }}
+              className="w-full h-11 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-bold transition-colors"
+            >
+              🖨 Print Receipt
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex justify-end z-50" onClick={onClose}>
+      <div className="bg-[#13151C] w-full max-w-sm h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="p-5 border-b border-[#1E2130] flex items-center justify-between">
+          <h2 className="text-white text-xl font-bold">Receipts</h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white text-2xl leading-none">×</button>
+        </div>
+
+        {/* Filter tabs */}
+        <div className="flex gap-2 px-4 pt-3 pb-2">
+          {(["today", "all"] as const).map(f => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`flex-1 h-8 rounded-lg text-sm font-semibold transition-colors ${filter === f ? "bg-[#F5A623] text-black" : "bg-[#1E2130] text-zinc-400 hover:text-white"}`}>
+              {f === "today" ? "Today" : "All Time"}
+            </button>
+          ))}
+        </div>
+
+        {/* Summary bar */}
+        {!loading && visible.length > 0 && (
+          <div className="mx-4 mb-2 px-4 py-2 bg-[#1E2130] rounded-xl flex justify-between text-sm">
+            <span className="text-zinc-400">{visible.length} order{visible.length !== 1 ? "s" : ""}</span>
+            <span className="text-[#F5A623] font-bold">{fmt(totalRevenue)}</span>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {loading && <p className="text-zinc-500 text-center py-8">Loading…</p>}
+          {!loading && visible.length === 0 && (
+            <p className="text-zinc-500 text-center py-8">
+              {filter === "today" ? "No completed orders today" : "No completed orders yet"}
+            </p>
+          )}
+          {visible.map(o => (
+            <button key={o.id} onClick={() => setSelected(o)}
+              className="w-full bg-[#1E2130] hover:bg-[#2A2F45] rounded-xl p-4 text-left transition-colors">
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <span className="text-white font-bold text-sm">#{o.confirmationCode}</span>
+                  <span className="ml-2 text-zinc-400 text-xs">{o.customerName || "Walk-in"}</span>
+                </div>
+                <span className="text-[#F5A623] font-bold">{fmt(o.total)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-zinc-500 text-xs">
+                  {o.items.map(i => {
+                    const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
+                    return `${i.quantity}× ${i.menuItemName}${mods}`;
+                  }).join(" • ")}
+                </p>
+              </div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-zinc-600 text-xs">{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[#0A0B0F] text-zinc-400">{PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -547,6 +735,7 @@ export default function POS() {
   const [discountModal, setDiscountModal] = useState(false);
   const [ticketsOpen, setTicketsOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
+  const [receiptsOpen, setReceiptsOpen] = useState(false);
   const [itemNoteModal, setItemNoteModal] = useState<string | null>(null); // cart item key
   const [orderNoteModal, setOrderNoteModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -699,6 +888,9 @@ export default function POS() {
         </div>
         <div className="text-zinc-400 text-sm font-mono">{time}</div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setReceiptsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-300 text-sm font-medium transition-colors">
+            🧾 <span className="hidden sm:inline">Receipts</span>
+          </button>
           <button onClick={() => setQueueOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-300 text-sm font-medium transition-colors">
             📋 <span className="hidden sm:inline">Orders</span>
           </button>
@@ -880,6 +1072,10 @@ export default function POS() {
 
       {queueOpen && (
         <QueueDrawer onClose={() => setQueueOpen(false)} />
+      )}
+
+      {receiptsOpen && (
+        <ReceiptsDrawer onClose={() => setReceiptsOpen(false)} />
       )}
 
       {/* Item note inline modal */}
