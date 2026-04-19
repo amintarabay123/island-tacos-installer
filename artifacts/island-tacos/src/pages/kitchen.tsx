@@ -27,6 +27,8 @@ type Order = {
 
 const ACTIVE_STATUSES = new Set(["confirmed", "preparing", "ready"]);
 const OVERDUE_MS = 10 * 60 * 1000;
+const UNCOLLECTED_MS = 60 * 60 * 1000; // 1 hour in "ready" state = uncollected alert
+const UNCOLLECTED_RECHIME_MS = 15 * 60 * 1000; // re-chime every 15 min
 
 const NEXT_STATUS: Record<string, string> = {
   confirmed: "preparing",
@@ -110,6 +112,13 @@ export default function Kitchen() {
   const now = useNow();
   const [, navigate] = useLocation();
 
+  // Uncollected order tracking: orderId → timestamp when we first saw it as "ready"
+  const readyTimestampsRef = useRef<Map<number, number>>(new Map());
+  // Tracks when we last chimed for each uncollected order (so we don't spam)
+  const lastUncollectedChimeRef = useRef<Map<number, number>>(new Map());
+  // Dismissed orders: orderId → timestamp after which alerts resume
+  const [dismissedUntil, setDismissedUntil] = useState<Map<number, number>>(new Map());
+
   const logout = async () => {
     clearAuthToken();
     await fetch("/api/auth/logout", { method: "POST", credentials: "include", headers: authHeaders() });
@@ -170,6 +179,36 @@ export default function Kitchen() {
     } catch {}
   }, []);
 
+  const playUrgentChime = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) return;
+      const ctx = audioCtxRef.current;
+      ctx.resume();
+      // Three descending tones — urgent / different from the "new order" chime
+      const notes = [
+        { freq: 880, t: 0 },
+        { freq: 660, t: 0.25 },
+        { freq: 440, t: 0.5 },
+        { freq: 880, t: 0.9 },
+        { freq: 660, t: 1.15 },
+        { freq: 440, t: 1.4 },
+      ];
+      notes.forEach(({ freq, t }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "square";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, ctx.currentTime + t);
+        gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + t + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.5);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + 0.55);
+      });
+    } catch {}
+  }, []);
+
   const fetchOrders = useCallback(async () => {
     try {
       const res = await fetch("/api/orders");
@@ -177,10 +216,50 @@ export default function Kitchen() {
       const data: Order[] = await res.json();
       const active = data.filter((o) => ACTIVE_STATUSES.has(o.status));
 
+      // Track when each order first enters "ready" state
+      const nowMs = Date.now();
+      active.forEach((o) => {
+        if (o.status === "ready" && !readyTimestampsRef.current.has(o.id)) {
+          readyTimestampsRef.current.set(o.id, nowMs);
+        }
+      });
+      // Clean up orders that are no longer active
+      for (const id of readyTimestampsRef.current.keys()) {
+        if (!active.find((o) => o.id === id)) {
+          readyTimestampsRef.current.delete(id);
+          lastUncollectedChimeRef.current.delete(id);
+        }
+      }
+
+      // Check for newly uncollected orders and re-chime for persistent ones
+      active.filter((o) => o.status === "ready").forEach((o) => {
+        const readySince = readyTimestampsRef.current.get(o.id);
+        if (!readySince) return;
+        const waitMs = nowMs - readySince;
+        if (waitMs < UNCOLLECTED_MS) return; // Not uncollected yet
+
+        const lastChime = lastUncollectedChimeRef.current.get(o.id) ?? 0;
+        if (nowMs - lastChime >= UNCOLLECTED_RECHIME_MS) {
+          lastUncollectedChimeRef.current.set(o.id, nowMs);
+          playUrgentChime();
+          sendNotification(
+            `⚠️ Uncollected Order!`,
+            `Order #${o.confirmationCode} (${o.customerName}) has been waiting over 1 hour — please call customer`
+          );
+        }
+      });
+
       if (isFirstFetchRef.current) {
         // Snapshot existing IDs on load — don't chime for already-present orders
         isFirstFetchRef.current = false;
         prevIdsRef.current = new Set(active.map((o) => o.id));
+        // For already-ready orders on load, assume they've been ready since now
+        // so we don't immediately false-alert on restart
+        active.filter((o) => o.status === "ready").forEach((o) => {
+          if (!readyTimestampsRef.current.has(o.id)) {
+            readyTimestampsRef.current.set(o.id, nowMs);
+          }
+        });
       } else {
         const newConfirmed = active.filter((o) => o.status === "confirmed" && !prevIdsRef.current.has(o.id));
         if (newConfirmed.length > 0) {
@@ -199,7 +278,7 @@ export default function Kitchen() {
     } catch {
       setError("Connection lost — retrying…");
     }
-  }, [playChime]);
+  }, [playChime, playUrgentChime, sendNotification]);
 
   useEffect(() => {
     fetchOrders();
@@ -334,10 +413,25 @@ export default function Kitchen() {
                   const { border, bg } = STATUS_CARD[order.status] ?? STATUS_CARD.confirmed;
                   const btnClass = STATUS_BTN[order.status];
 
+                  // Uncollected: order has been "ready" for > 1 hour (and not dismissed)
+                  const readySince = readyTimestampsRef.current.get(order.id);
+                  const dismissedTs = dismissedUntil.get(order.id) ?? 0;
+                  const isUncollected = order.status === "ready"
+                    && readySince !== undefined
+                    && (now - readySince) >= UNCOLLECTED_MS
+                    && now > dismissedTs;
+                  const uncollectedMins = readySince ? Math.floor((now - readySince) / 60000) : 0;
+
                   return (
                     <div
                       key={order.id}
-                      className={`rounded-xl border-2 ${overdue ? "border-red-500 bg-red-950/50 animate-pulse" : `${border} ${bg}`} p-4 flex flex-col gap-3 transition-colors`}
+                      className={`rounded-xl border-2 ${
+                        isUncollected
+                          ? "border-red-500 bg-red-950/60 animate-pulse"
+                          : overdue
+                            ? "border-red-500 bg-red-950/50 animate-pulse"
+                            : `${border} ${bg}`
+                      } p-4 flex flex-col gap-3 transition-colors`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -385,6 +479,34 @@ export default function Kitchen() {
                       {order.notes && (
                         <div className="bg-yellow-900/50 border border-yellow-700/40 rounded-lg px-3 py-2 text-yellow-200 text-sm leading-snug">
                           {order.notes}
+                        </div>
+                      )}
+
+                      {isUncollected && (
+                        <div className="bg-red-900/80 border border-red-500 rounded-lg px-3 py-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">⚠️</span>
+                            <div>
+                              <div className="text-red-200 text-sm font-black leading-tight">
+                                ORDER NOT COLLECTED
+                              </div>
+                              <div className="text-red-300 text-xs">
+                                Waiting {uncollectedMins >= 60
+                                  ? `${Math.floor(uncollectedMins / 60)}h ${uncollectedMins % 60}m`
+                                  : `${uncollectedMins}m`} — please call customer
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setDismissedUntil(prev => {
+                              const next = new Map(prev);
+                              next.set(order.id, Date.now() + 30 * 60 * 1000);
+                              return next;
+                            })}
+                            className="w-full text-xs py-1.5 rounded-lg bg-red-950/60 hover:bg-red-900/60 border border-red-700/40 text-red-300 font-semibold transition-colors"
+                          >
+                            Remind me again in 30 min
+                          </button>
                         </div>
                       )}
 
