@@ -654,13 +654,18 @@ export default function POS() {
           })),
         }),
       });
+      if (!r.ok) {
+        const errData = await r.json().catch(() => ({})) as { error?: string };
+        throw new Error(errData.error ?? `Order failed (${r.status})`);
+      }
       const order: Order = await r.json();
+      if (!order?.items) throw new Error("Order response missing items");
       clearCart();
       setReceiptModal({ order, tendered });
       setTicketCount(tc => tc + (paymentStatus === "pending" ? 1 : 0));
     } catch (err) {
       console.error(err);
-      alert("Failed to place order. Please try again.");
+      alert(err instanceof Error ? err.message : "Failed to place order. Please try again.");
     } finally {
       setSubmitting(false);
     }
