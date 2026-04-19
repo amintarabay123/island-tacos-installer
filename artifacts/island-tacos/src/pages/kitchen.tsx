@@ -8,6 +8,7 @@ type OrderItem = {
   quantity: number;
   notes?: string | null;
   subtotal: number;
+  modifierSelections?: { name: string; price: number }[] | null;
 };
 
 type Order = {
@@ -374,11 +375,17 @@ export default function Kitchen() {
                               <span className="text-xl font-black text-white leading-none">{item.quantity}×</span>
                               <span className="text-base font-semibold text-white leading-snug">{item.menuItemName}</span>
                             </div>
-                            {item.notes && (
+                            {(item.modifierSelections ?? []).length > 0 ? (
+                              <div className="text-yellow-300 text-sm mt-1.5 leading-snug font-medium space-y-0.5">
+                                {(item.modifierSelections ?? []).map((m, i) => (
+                                  <div key={i}>+ {m.name}</div>
+                                ))}
+                              </div>
+                            ) : item.notes ? (
                               <div className="text-yellow-300 text-sm mt-1.5 leading-snug whitespace-pre-line font-medium">
                                 {item.notes}
                               </div>
-                            )}
+                            ) : null}
                           </div>
                         ))}
                       </div>
