@@ -5,18 +5,15 @@ import { ShoppingBag, Menu, X, Plus, Minus, Trash2, UserCircle } from "lucide-re
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useState, useEffect } from "react";
-import { getCustomer } from "@/lib/customer-account";
+import { useState } from "react";
+import { useUser } from "@clerk/react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { items, total, removeItem, updateQuantity } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [hasAccount, setHasAccount] = useState(false);
-
-  useEffect(() => {
-    setHasAccount(!!getCustomer());
-  }, [location]);
+  const { user } = useUser();
+  const hasAccount = !!user;
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -62,10 +59,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 className={`relative flex items-center gap-2 border border-border rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   hasAccount ? "border-primary/40 text-primary hover:bg-primary/5" : "hover:bg-muted"
                 }`}
-                title={hasAccount ? "My Account" : "My Account"}
               >
-                <UserCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">My Account</span>
+                {user?.imageUrl
+                  ? <img src={user.imageUrl} alt="" className="w-4 h-4 rounded-full" />
+                  : <UserCircle className="w-4 h-4" />}
+                <span className="hidden sm:inline">{hasAccount ? "My Account" : "Sign In"}</span>
               </button>
             </Link>
 
