@@ -330,6 +330,8 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
       gross_total_money: item.price * item.quantity,
       total_money: item.price * item.quantity,
     };
+    // variant_id links the line item to the Loyverse catalog item (required by Loyverse for catalog items)
+    if (item.loyverseVariantId) base.variant_id = item.loyverseVariantId;
     if (item.notes) base.note = item.notes;
     lineItems.push(base);
 
@@ -366,6 +368,7 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
     payments,
   };
 
+  console.log("[Loyverse] Sending receipt payload:", JSON.stringify(body));
   const data = await loyverseFetch<{ receipt_number: string }>("/receipts", {
     method: "POST",
     body: JSON.stringify(body),

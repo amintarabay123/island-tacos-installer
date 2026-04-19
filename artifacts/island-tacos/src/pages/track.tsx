@@ -124,7 +124,8 @@ export default function TrackOrder() {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-type Item = { id: number; menuItemName: string; quantity: number; subtotal: number; notes?: string | null };
+type ModSel = { name: string; price: number };
+type Item = { id: number; menuItemName: string; quantity: number; subtotal: number; notes?: string | null; modifierSelections?: ModSel[] | null };
 
 function FullScreenState({
   icon,
@@ -180,6 +181,9 @@ function FullScreenState({
                   <span><span className="font-semibold text-foreground">{item.quantity}×</span> {item.menuItemName}</span>
                   <span>${item.subtotal.toFixed(2)}</span>
                 </div>
+                {(item.modifierSelections ?? []).map((m, i) => (
+                  <p key={i} className="text-xs text-muted-foreground/70 italic pl-5">+ {m.name}</p>
+                ))}
                 {item.notes && (
                   <p className="text-xs text-muted-foreground/70 italic pl-5">{item.notes}</p>
                 )}
