@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 
 type MenuItemForm = {
   categoryId: number;
@@ -55,10 +55,46 @@ export default function AdminMenu() {
   const [dialog, setDialog] = useState<null | { mode: "create" | "edit"; id?: number }>(null);
   const [form, setForm] = useState<MenuItemForm>(emptyForm);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const filteredItems = items?.filter((i) =>
     activeCategory === null ? true : i.categoryId === activeCategory
   ) ?? [];
+
+  const allSelected = filteredItems.length > 0 && filteredItems.every((i) => selectedIds.has(i.id));
+  const someSelected = filteredItems.some((i) => selectedIds.has(i.id));
+  const selectedCount = filteredItems.filter((i) => selectedIds.has(i.id)).length;
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        filteredItems.forEach((i) => next.delete(i.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        filteredItems.forEach((i) => next.add(i.id));
+        return next;
+      });
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const invalidateItems = () => {
+    queryClient.invalidateQueries({ queryKey: getListMenuItemsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() });
+  };
 
   const openCreate = () => {
     setForm({ ...emptyForm, categoryId: activeCategory ?? (categories?.[0]?.id ?? 0) });
@@ -98,32 +134,40 @@ export default function AdminMenu() {
       vegetarian: form.vegetarian,
     };
 
-    const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: getListMenuItemsQueryKey() });
-      queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() });
-      setDialog(null);
-    };
+    const done = () => { invalidateItems(); setDialog(null); };
 
     if (dialog?.mode === "create") {
-      createItem.mutate({ data }, { onSuccess: invalidate });
+      createItem.mutate({ data }, { onSuccess: done });
     } else if (dialog?.mode === "edit" && dialog.id) {
-      updateItem.mutate({ id: dialog.id, data }, { onSuccess: invalidate });
+      updateItem.mutate({ id: dialog.id, data }, { onSuccess: done });
     }
   };
 
   const handleToggleAvailable = (id: number, available: boolean) => {
     updateItem.mutate(
       { id, data: { available } },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMenuItemsQueryKey() }) }
+      { onSuccess: invalidateItems }
     );
   };
 
   const handleDelete = (id: number) => {
     if (!window.confirm("Delete this item?")) return;
-    deleteItem.mutate(
-      { id },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMenuItemsQueryKey() }) }
-    );
+    deleteItem.mutate({ id }, { onSuccess: invalidateItems });
+  };
+
+  const handleBulkDelete = async () => {
+    const toDelete = filteredItems.filter((i) => selectedIds.has(i.id));
+    if (!toDelete.length) return;
+    if (!window.confirm(`Delete ${toDelete.length} item${toDelete.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    for (const item of toDelete) {
+      await new Promise<void>((resolve) => {
+        deleteItem.mutate({ id: item.id }, { onSuccess: () => resolve(), onError: () => resolve() });
+      });
+    }
+    setSelectedIds(new Set());
+    invalidateItems();
+    setBulkDeleting(false);
   };
 
   return (
@@ -166,6 +210,24 @@ export default function AdminMenu() {
           ))}
         </div>
 
+        {/* Bulk action bar */}
+        {someSelected && (
+          <div className="flex items-center justify-between bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 mb-4">
+            <span className="text-sm font-semibold text-destructive">
+              {selectedCount} item{selectedCount > 1 ? "s" : ""} selected
+            </span>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              {bulkDeleting ? "Deleting…" : `Delete ${selectedCount}`}
+            </Button>
+          </div>
+        )}
+
         {isLoading ? (
           <p className="text-muted-foreground">Loading...</p>
         ) : (
@@ -173,6 +235,15 @@ export default function AdminMenu() {
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b">
                 <tr>
+                  <th className="p-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                      onChange={toggleSelectAll}
+                      className="rounded border-border cursor-pointer w-4 h-4"
+                    />
+                  </th>
                   <th className="text-left p-3 font-semibold">Item</th>
                   <th className="text-left p-3 font-semibold hidden sm:table-cell">Category</th>
                   <th className="text-right p-3 font-semibold">Price</th>
@@ -183,8 +254,20 @@ export default function AdminMenu() {
               <tbody>
                 {filteredItems.map((item, idx) => {
                   const cat = categories?.find((c) => c.id === item.categoryId);
+                  const isSelected = selectedIds.has(item.id);
                   return (
-                    <tr key={item.id} className={`${!item.available ? "opacity-50" : idx % 2 === 0 ? "" : "bg-muted/20"}`}>
+                    <tr
+                      key={item.id}
+                      className={`${isSelected ? "bg-destructive/5" : !item.available ? "opacity-50" : idx % 2 === 0 ? "" : "bg-muted/20"}`}
+                    >
+                      <td className="p-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(item.id)}
+                          className="rounded border-border cursor-pointer w-4 h-4"
+                        />
+                      </td>
                       <td className="p-3">
                         <div className="font-medium flex items-center gap-2">
                           {item.name}
@@ -210,7 +293,7 @@ export default function AdminMenu() {
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(item.id)}>
-                            Delete
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </td>
