@@ -50,3 +50,6 @@ channel = "stable-25_05"
 
 [userenv.shared]
 VITE_ADMIN_PATH = "it-dav7dwn8"
+
+[userenv.production]
+VITE_CLERK_PROXY_URL = "https://order-direct-connect.replit.app/api/__clerk"
