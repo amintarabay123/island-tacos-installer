@@ -77,6 +77,7 @@ export default function Checkout() {
             menuItemId: i.menuItem.id,
             quantity: i.quantity,
             notes: i.notes || null,
+            modifierSelections: i.modifierSelections,
           })),
         },
       },

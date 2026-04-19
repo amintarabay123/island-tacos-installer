@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, numeric, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { menuItemsTable } from "./menu";
@@ -37,6 +37,12 @@ export const orderItemsTable = pgTable("order_items", {
   menuItemPrice: numeric("menu_item_price", { precision: 10, scale: 2 }).notNull(),
   quantity: integer("quantity").notNull(),
   notes: text("notes"),
+  modifierSelections: jsonb("modifier_selections").$type<{
+    modifierId: string;
+    optionId: string;
+    name: string;
+    price: number;
+  }[]>(),
   subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
 });
 

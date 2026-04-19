@@ -119,6 +119,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       menuItemPrice: price,
       quantity: item.quantity,
       notes: item.notes ?? null,
+      modifierSelections: item.modifierSelections ?? null,
       itemSubtotal,
     });
   }
@@ -162,6 +163,7 @@ router.post("/orders", async (req, res): Promise<void> => {
         menuItemPrice: String(item.menuItemPrice),
         quantity: item.quantity,
         notes: item.notes,
+        modifierSelections: item.modifierSelections ?? null,
         subtotal: String(item.itemSubtotal),
       }))
     )
@@ -251,6 +253,7 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
       menuItemPrice: orderItemsTable.menuItemPrice,
       quantity: orderItemsTable.quantity,
       notes: orderItemsTable.notes,
+      modifierSelections: orderItemsTable.modifierSelections,
       subtotal: orderItemsTable.subtotal,
       loyverseItemId: menuItemsTable.loyverseItemId,
       loyverseVariantId: menuItemsTable.loyverseVariantId,
@@ -274,6 +277,7 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
         quantity: i.quantity,
         price: parseDecimal(i.menuItemPrice),
         notes: i.notes ?? null,
+        modifierSelections: (i.modifierSelections as { modifierId: string; optionId: string; name: string; price: number }[] | null) ?? null,
         loyverseItemId: i.loyverseItemId ?? null,
         loyverseVariantId: i.loyverseVariantId ?? null,
       })),

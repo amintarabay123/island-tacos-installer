@@ -6,9 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export interface ModifierSelection {
+  modifierId: string;
+  optionId: string;
+  name: string;
+  price: number;
+}
+
 export interface CreateOrderItemInput {
   menuItemId: number;
   quantity: number;
   /** @nullable */
   notes?: string | null;
+  modifierSelections?: ModifierSelection[];
 }

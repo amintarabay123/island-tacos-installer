@@ -1,15 +1,23 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import type { MenuItem } from "@workspace/api-client-react";
 
+export interface ModifierSelection {
+  modifierId: string;
+  optionId: string;
+  name: string;
+  price: number;
+}
+
 export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
   notes?: string;
+  modifierSelections?: ModifierSelection[];
 }
 
 interface CartContextType {
   items: CartItem[];
-  addItem: (item: MenuItem, quantity: number, notes?: string) => void;
+  addItem: (item: MenuItem, quantity: number, notes?: string, modifierSelections?: ModifierSelection[]) => void;
   removeItem: (menuItemId: number) => void;
   updateQuantity: (menuItemId: number, quantity: number) => void;
   clearCart: () => void;
@@ -35,17 +43,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("island_tacos_cart", JSON.stringify(items));
   }, [items]);
 
-  const addItem = (menuItem: MenuItem, quantity: number, notes?: string) => {
+  const addItem = (menuItem: MenuItem, quantity: number, notes?: string, modifierSelections?: ModifierSelection[]) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.menuItem.id === menuItem.id);
       if (existing) {
         return prev.map((i) =>
           i.menuItem.id === menuItem.id
-            ? { ...i, quantity: i.quantity + quantity, notes: notes || i.notes }
+            ? { ...i, quantity: i.quantity + quantity, notes: notes || i.notes, modifierSelections: modifierSelections || i.modifierSelections }
             : i
         );
       }
-      return [...prev, { menuItem, quantity, notes }];
+      return [...prev, { menuItem, quantity, notes, modifierSelections }];
     });
   };
 
@@ -67,9 +75,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = () => setItems([]);
 
-  const subtotal = items.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0);
-  const tax = subtotal * 0.115; // 11.5% PR IVU
-  const deliveryFee = items.length === 0 ? 0 : subtotal > 25 ? 0 : 3.0; // $3 or free over $25
+  const subtotal = items.reduce((sum, item) => {
+    const modExtra = (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0);
+    return sum + (item.menuItem.price + modExtra) * item.quantity;
+  }, 0);
+  const tax = subtotal * 0.115;
+  const deliveryFee = items.length === 0 ? 0 : subtotal > 25 ? 0 : 3.0;
   const total = subtotal + tax + deliveryFee;
 
   return (

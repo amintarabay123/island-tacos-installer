@@ -6,6 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export interface ModifierSelection {
+  modifierId: string;
+  optionId: string;
+  name: string;
+  price: number;
+}
+
 export interface OrderItem {
   id: number;
   orderId: number;
@@ -15,5 +22,6 @@ export interface OrderItem {
   quantity: number;
   /** @nullable */
   notes?: string | null;
+  modifierSelections?: ModifierSelection[] | null;
   subtotal: number;
 }

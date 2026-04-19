@@ -283,6 +283,13 @@ async function resolvePaymentTypeId(paymentMethod: string): Promise<string | nul
   }
 }
 
+export interface ModifierSelection {
+  modifierId: string;
+  optionId: string;
+  name: string;
+  price: number;
+}
+
 export interface OrderForReceipt {
   id: number;
   customerName: string;
@@ -295,6 +302,7 @@ export interface OrderForReceipt {
     quantity: number;
     price: number;
     notes: string | null;
+    modifierSelections: ModifierSelection[] | null;
     loyverseItemId: string | null;
     loyverseVariantId: string | null;
   }[];
@@ -302,15 +310,26 @@ export interface OrderForReceipt {
 
 export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<string> {
   const lineItems = order.items.map((item) => {
+    const modifierExtra = (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0);
+    const effectivePrice = item.price + modifierExtra;
     const base: Record<string, unknown> = {
       item_name: item.name,
       quantity: item.quantity,
-      price: item.price,
-      total_money: item.price * item.quantity,
+      price: effectivePrice,
+      gross_total_money: effectivePrice * item.quantity,
+      total_money: effectivePrice * item.quantity,
     };
     if (item.loyverseItemId) base.item_id = item.loyverseItemId;
     if (item.loyverseVariantId) base.variant_id = item.loyverseVariantId;
     if (item.notes) base.note = item.notes;
+    if (item.modifierSelections && item.modifierSelections.length > 0) {
+      base.modifiers = item.modifierSelections.map((m) => ({
+        modifier_id: m.modifierId,
+        modifier_option_id: m.optionId,
+        name: m.name,
+        price: m.price,
+      }));
+    }
     return base;
   });
 

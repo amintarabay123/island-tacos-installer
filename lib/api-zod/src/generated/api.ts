@@ -238,6 +238,12 @@ export const CreateOrderBody = zod.object({
       menuItemId: zod.number(),
       quantity: zod.number(),
       notes: zod.string().nullish(),
+      modifierSelections: zod.array(zod.object({
+        modifierId: zod.string(),
+        optionId: zod.string(),
+        name: zod.string(),
+        price: zod.number(),
+      })).optional(),
     }),
   ),
 });

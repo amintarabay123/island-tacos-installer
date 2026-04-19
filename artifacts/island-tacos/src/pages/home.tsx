@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useListMenuCategories, useListMenuItems } from "@workspace/api-client-react";
-import { useCart } from "@/lib/cart-context";
+import { useCart, type ModifierSelection } from "@/lib/cart-context";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -75,16 +75,23 @@ export default function Home() {
   const handleAddToCart = () => {
     if (!selectedItem) return;
     let finalNotes = notes;
+    const modifierSelections: ModifierSelection[] = [];
     for (const group of modifierGroups) {
       const selected = selectedModifiers[group.loyverseId];
       if (!selected || selected.size === 0) continue;
-      const labels = group.options
-        .filter(o => selected.has(o.id))
-        .map(o => o.name)
-        .join(", ");
+      const selectedOptions = group.options.filter(o => selected.has(o.id));
+      const labels = selectedOptions.map(o => o.name).join(", ");
       finalNotes = finalNotes ? `${finalNotes}\n${group.name}: ${labels}` : `${group.name}: ${labels}`;
+      for (const option of selectedOptions) {
+        modifierSelections.push({
+          modifierId: group.loyverseId,
+          optionId: option.id,
+          name: option.name,
+          price: option.price,
+        });
+      }
     }
-    addItem(selectedItem, quantity, finalNotes);
+    addItem(selectedItem, quantity, finalNotes || undefined, modifierSelections.length > 0 ? modifierSelections : undefined);
     setSelectedItem(null);
     setQuantity(1);
     setNotes("");
