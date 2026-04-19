@@ -124,14 +124,11 @@ function PaymentModal({ total, onPay, onClose }: {
   const change = Math.max(0, parseFloat(tendered || "0") - total);
 
   const QUICK = (() => {
+    const bills = [5, 10, 20, 50, 100];
     const result: number[] = [total];
-    let current = Math.ceil(total / 10) * 10;
-    let steps = 0;
-    while (steps < 3 && current < 100) {
-      if (!result.includes(current)) { result.push(current); steps++; }
-      current += 10;
+    for (const bill of bills) {
+      if (bill >= total && !result.includes(bill)) result.push(bill);
     }
-    if (total < 100 && !result.includes(100)) result.push(100);
     return result;
   })();
 
