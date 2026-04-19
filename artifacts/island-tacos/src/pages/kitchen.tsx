@@ -24,25 +24,22 @@ type Order = {
   items: OrderItem[];
 };
 
-const ACTIVE_STATUSES = new Set(["pending", "confirmed", "preparing", "ready"]);
+const ACTIVE_STATUSES = new Set(["confirmed", "preparing", "ready"]);
 const OVERDUE_MS = 10 * 60 * 1000;
 
 const NEXT_STATUS: Record<string, string> = {
-  pending: "confirmed",
   confirmed: "preparing",
   preparing: "ready",
   ready: "completed",
 };
 
 const NEXT_LABEL: Record<string, string> = {
-  pending: "Accept Order",
   confirmed: "Start Cooking",
   preparing: "Mark Ready",
   ready: "Done — Handed Off",
 };
 
 const STATUS_CARD: Record<string, { border: string; bg: string }> = {
-  pending: { border: "border-yellow-500", bg: "bg-yellow-950/40" },
   confirmed: { border: "border-blue-500", bg: "bg-blue-950/40" },
   preparing: { border: "border-orange-500", bg: "bg-orange-950/40" },
   ready: { border: "border-green-500", bg: "bg-green-950/40" },
@@ -55,39 +52,26 @@ const STATUS_BTN: Record<string, string> = {
   ready: "bg-white hover:bg-zinc-100 text-zinc-950 active:bg-zinc-200",
 };
 
-const REJECTION_OPTIONS = [
-  "Out of chicken",
-  "Out of steak",
-  "Out of shrimp",
-  "Out of salmon",
-  "Out of burger",
-];
-
 const COL_CONFIG = [
   {
     key: "new" as const,
-    statuses: ["pending", "confirmed"],
+    statuses: ["confirmed"],
     label: "New Orders",
-    badge: "bg-yellow-400 text-yellow-950",
-    showReject: true,
+    badge: "bg-blue-400 text-blue-950",
   },
   {
     key: "preparing" as const,
     statuses: ["preparing"],
     label: "Preparing",
     badge: "bg-orange-400 text-orange-950",
-    showReject: false,
   },
   {
     key: "ready" as const,
     statuses: ["ready"],
     label: "Ready",
     badge: "bg-green-400 text-green-950",
-    showReject: false,
   },
 ];
-
-type RejectState = { orderId: number; reason: string } | null;
 
 function useNow() {
   const [now, setNow] = useState(() => Date.now());
@@ -113,8 +97,6 @@ function isOverdue(createdAt: string, now: number): boolean {
 export default function Kitchen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [advancing, setAdvancing] = useState<Set<number>>(new Set());
-  const [rejecting, setRejecting] = useState<Set<number>>(new Set());
-  const [rejectState, setRejectState] = useState<RejectState>(null);
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
@@ -180,8 +162,8 @@ export default function Kitchen() {
         isFirstFetchRef.current = false;
         prevIdsRef.current = new Set(active.map((o) => o.id));
       } else {
-        const newPending = active.filter((o) => o.status === "pending");
-        if (newPending.some((o) => !prevIdsRef.current.has(o.id))) {
+        const newConfirmed = active.filter((o) => o.status === "confirmed");
+        if (newConfirmed.some((o) => !prevIdsRef.current.has(o.id))) {
           playChime();
         }
         prevIdsRef.current = new Set(active.map((o) => o.id));
@@ -201,9 +183,9 @@ export default function Kitchen() {
     return () => clearInterval(id);
   }, [fetchOrders]);
 
-  // Repeat chime every 4s while there are unactioned pending orders
+  // Repeat chime every 4s while there are new confirmed orders (not yet cooking)
   useEffect(() => {
-    const hasPending = orders.some((o) => o.status === "pending");
+    const hasPending = orders.some((o) => o.status === "confirmed");
     if (hasPending && audioUnlocked) {
       if (!chimeIntervalRef.current) {
         chimeIntervalRef.current = setInterval(playChime, 4_000);
@@ -248,25 +230,9 @@ export default function Kitchen() {
     }
   };
 
-  const rejectOrder = async (orderId: number, reason: string) => {
-    setRejecting((s) => new Set(s).add(orderId));
-    try {
-      await fetch(`/api/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled", cancellationReason: reason || null }),
-      });
-      broadcastUpdate();
-      setRejectState(null);
-      await fetchOrders();
-    } finally {
-      setRejecting((s) => { const ns = new Set(s); ns.delete(orderId); return ns; });
-    }
-  };
-
   const byCol: Record<string, Order[]> = { new: [], preparing: [], ready: [] };
   for (const o of orders) {
-    if (o.status === "pending" || o.status === "confirmed") byCol.new.push(o);
+    if (o.status === "confirmed") byCol.new.push(o);
     else if (o.status === "preparing") byCol.preparing.push(o);
     else if (o.status === "ready") byCol.ready.push(o);
   }
@@ -327,7 +293,7 @@ export default function Kitchen() {
           </div>
 
           <div className="grid grid-cols-3 gap-3 px-4 pb-4 flex-1 overflow-y-auto items-start">
-            {COL_CONFIG.map(({ key, showReject }) => (
+            {COL_CONFIG.map(({ key }) => (
               <div key={key} className="flex flex-col gap-3">
                 {byCol[key].length === 0 && (
                   <div className="border border-dashed border-zinc-800 rounded-xl flex items-center justify-center h-28">
@@ -338,11 +304,9 @@ export default function Kitchen() {
                   const overdue = isOverdue(order.createdAt, now);
                   const age = elapsed(order.createdAt, now);
                   const isAdvancing = advancing.has(order.id);
-                  const isRejecting = rejecting.has(order.id);
                   const next = NEXT_STATUS[order.status];
-                  const { border, bg } = STATUS_CARD[order.status] ?? STATUS_CARD.pending;
+                  const { border, bg } = STATUS_CARD[order.status] ?? STATUS_CARD.confirmed;
                   const btnClass = STATUS_BTN[order.status];
-                  const isRejectOpen = rejectState?.orderId === order.id;
 
                   return (
                     <div
@@ -398,7 +362,7 @@ export default function Kitchen() {
                         </div>
                       )}
 
-                      {next && !isRejectOpen && (
+                      {next && (
                         <button
                           onClick={() => advance(order)}
                           disabled={isAdvancing}
@@ -406,60 +370,6 @@ export default function Kitchen() {
                         >
                           {isAdvancing ? "Updating…" : NEXT_LABEL[order.status]}
                         </button>
-                      )}
-
-                      {showReject && (
-                        isRejectOpen ? (
-                          <div className="rounded-lg border border-red-500/40 bg-red-950/40 p-3 space-y-2">
-                            <p className="text-red-300 text-xs font-semibold uppercase tracking-wide">Why are you rejecting?</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {REJECTION_OPTIONS.map((opt) => (
-                                <button
-                                  key={opt}
-                                  type="button"
-                                  onClick={() => setRejectState({ ...rejectState!, reason: rejectState!.reason === opt ? "" : opt })}
-                                  className={`rounded-full px-2.5 py-1 text-xs font-semibold border transition-colors ${
-                                    rejectState?.reason === opt
-                                      ? "bg-red-500 text-white border-red-400"
-                                      : "border-red-700/60 text-red-300 hover:bg-red-900/50"
-                                  }`}
-                                >
-                                  {opt}
-                                </button>
-                              ))}
-                            </div>
-                            <input
-                              type="text"
-                              placeholder="Other reason (optional)"
-                              value={REJECTION_OPTIONS.includes(rejectState?.reason ?? "") ? "" : (rejectState?.reason ?? "")}
-                              onChange={(e) => setRejectState({ ...rejectState!, reason: e.target.value })}
-                              className="w-full bg-black/50 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => rejectOrder(order.id, rejectState?.reason ?? "")}
-                                disabled={isRejecting}
-                                className="flex-1 rounded-lg py-2 text-sm font-bold bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-40"
-                              >
-                                {isRejecting ? "Rejecting…" : "Confirm Reject"}
-                              </button>
-                              <button
-                                onClick={() => setRejectState(null)}
-                                className="px-4 rounded-lg py-2 text-sm font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
-                              >
-                                Back
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setRejectState({ orderId: order.id, reason: "" })}
-                            disabled={isAdvancing || isRejecting}
-                            className="w-full rounded-lg py-2 text-xs font-semibold border border-red-800/60 text-red-400 hover:bg-red-950/50 hover:border-red-600 transition-colors disabled:opacity-30"
-                          >
-                            Reject Order
-                          </button>
-                        )
                       )}
                     </div>
                   );

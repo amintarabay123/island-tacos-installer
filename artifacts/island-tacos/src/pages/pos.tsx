@@ -22,7 +22,8 @@ type Order = {
   id: number; confirmationCode: string; customerName: string; status: string;
   paymentStatus: string; paymentMethod: string; source: string;
   subtotal: number; discountAmount: number; tax: number; total: number;
-  notes?: string | null; createdAt: string;
+  notes?: string | null; createdAt: string; customerPhone?: string | null;
+  orderType?: string;
   items: { id: number; menuItemName: string; quantity: number; menuItemPrice: number; subtotal: number; modifierSelections?: CartModifier[] | null; notes?: string | null }[];
 };
 
@@ -740,6 +741,101 @@ export default function POS() {
   const [orderNoteModal, setOrderNoteModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Incoming online orders (pending + source:online)
+  const [incomingOrders, setIncomingOrders] = useState<Order[]>([]);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectInput, setShowRejectInput] = useState(false);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const seenOnlineIdsRef = useRef<Set<number>>(new Set());
+  const isFirstOnlineFetchRef = useRef(true);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const chimeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const unlockAudio = () => {
+    try {
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      audioCtxRef.current.resume().then(() => setAudioUnlocked(true));
+    } catch {}
+  };
+
+  const playChime = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) return;
+      const ctx = audioCtxRef.current;
+      ctx.resume();
+      const notes = [
+        { freq: 880, t: 0 }, { freq: 1108, t: 0.15 },
+        { freq: 1320, t: 0.30 }, { freq: 880, t: 0.50 },
+        { freq: 1320, t: 0.65 },
+      ];
+      notes.forEach(({ freq, t }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = "sine"; osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, ctx.currentTime + t);
+        gain.gain.linearRampToValueAtTime(0.7, ctx.currentTime + t + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.55);
+        osc.start(ctx.currentTime + t); osc.stop(ctx.currentTime + t + 0.6);
+      });
+    } catch {}
+  }, []);
+
+  // Poll for pending online orders every 8s
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const r = await fetch("/api/orders");
+        const data: Order[] = await r.json();
+        const pending = data.filter(o => o.source === "online" && o.status === "pending");
+        if (isFirstOnlineFetchRef.current) {
+          isFirstOnlineFetchRef.current = false;
+          pending.forEach(o => seenOnlineIdsRef.current.add(o.id));
+        } else {
+          const hasNew = pending.some(o => !seenOnlineIdsRef.current.has(o.id));
+          if (hasNew && audioUnlocked) playChime();
+          pending.forEach(o => seenOnlineIdsRef.current.add(o.id));
+        }
+        setIncomingOrders(pending);
+      } catch {}
+    };
+    poll();
+    const t = setInterval(poll, 8000);
+    return () => clearInterval(t);
+  }, [audioUnlocked, playChime]);
+
+  // Repeat chime every 5s while there are pending incoming orders
+  useEffect(() => {
+    if (incomingOrders.length > 0 && audioUnlocked) {
+      if (!chimeIntervalRef.current) chimeIntervalRef.current = setInterval(playChime, 5000);
+    } else {
+      if (chimeIntervalRef.current) { clearInterval(chimeIntervalRef.current); chimeIntervalRef.current = null; }
+    }
+    return () => { if (chimeIntervalRef.current) { clearInterval(chimeIntervalRef.current); chimeIntervalRef.current = null; } };
+  }, [incomingOrders, audioUnlocked, playChime]);
+
+  const acceptOnline = async (id: number) => {
+    await fetch(`/api/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "confirmed" }),
+    });
+    seenOnlineIdsRef.current.delete(id);
+    setIncomingOrders(prev => prev.filter(o => o.id !== id));
+    setShowRejectInput(false); setRejectReason("");
+  };
+
+  const rejectOnline = async (id: number) => {
+    await fetch(`/api/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled", cancellationReason: rejectReason || null }),
+    });
+    seenOnlineIdsRef.current.delete(id);
+    setIncomingOrders(prev => prev.filter(o => o.id !== id));
+    setShowRejectInput(false); setRejectReason("");
+  };
+
   // Clock + ticket count
   useEffect(() => {
     const t = setInterval(() => setTime(now()), 10000);
@@ -888,6 +984,24 @@ export default function POS() {
         </div>
         <div className="text-zinc-400 text-sm font-mono">{time}</div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => { unlockAudio(); }}
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              incomingOrders.length > 0
+                ? "bg-orange-600 hover:bg-orange-500 text-white animate-pulse"
+                : audioUnlocked
+                  ? "bg-[#1E2130] text-green-400 hover:bg-[#2A2F45]"
+                  : "bg-[#1E2130] text-zinc-400 hover:bg-[#2A2F45]"
+            }`}
+          >
+            {incomingOrders.length > 0 ? "🔔" : audioUnlocked ? "🔊" : "🔇"}
+            <span className="hidden sm:inline">{incomingOrders.length > 0 ? `${incomingOrders.length} Online` : "Sound"}</span>
+            {incomingOrders.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                {incomingOrders.length}
+              </span>
+            )}
+          </button>
           <button onClick={() => setReceiptsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-300 text-sm font-medium transition-colors">
             🧾 <span className="hidden sm:inline">Receipts</span>
           </button>
@@ -1069,6 +1183,107 @@ export default function POS() {
       {ticketsOpen && (
         <TicketsDrawer onResume={handleResume} onClose={() => setTicketsOpen(false)} />
       )}
+
+      {/* ── Incoming Online Order Modal ── */}
+      {incomingOrders.length > 0 && (() => {
+        const order = incomingOrders[0];
+        const subtotal = order.items.reduce((s, i) => s + i.menuItemPrice * i.quantity, 0);
+        return (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-[#13151C] rounded-2xl w-full max-w-md shadow-2xl border border-orange-500/40 overflow-hidden">
+              <div className="bg-orange-600 px-5 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🔔</span>
+                  <span className="text-white font-bold text-lg">New Online Order</span>
+                </div>
+                {incomingOrders.length > 1 && (
+                  <span className="bg-orange-800 text-orange-100 text-xs font-bold px-2 py-0.5 rounded-full">
+                    +{incomingOrders.length - 1} more
+                  </span>
+                )}
+              </div>
+              <div className="p-5 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-2xl font-black text-white tracking-tight">{order.confirmationCode}</div>
+                    <div className="text-zinc-300 font-semibold mt-0.5">{order.customerName}</div>
+                    {order.customerPhone && <div className="text-zinc-500 text-sm">{order.customerPhone}</div>}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[#F5A623] font-bold text-lg">${subtotal.toFixed(2)}</div>
+                    <div className="text-zinc-500 text-xs capitalize">{order.orderType}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  {order.items.map(item => (
+                    <div key={item.id} className="bg-black/40 rounded-lg px-3 py-2.5">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-lg font-black text-white">{item.quantity}×</span>
+                        <span className="text-base font-semibold text-white">{item.menuItemName}</span>
+                      </div>
+                      {(item.modifierSelections ?? []).length > 0 && (
+                        <div className="text-yellow-300 text-sm mt-1 space-y-0.5">
+                          {(item.modifierSelections ?? []).map((m, i) => <div key={i}>+ {m.name}</div>)}
+                        </div>
+                      )}
+                      {item.notes && <div className="text-yellow-300 text-sm mt-1">{item.notes}</div>}
+                    </div>
+                  ))}
+                </div>
+
+                {order.notes && (
+                  <div className="bg-yellow-900/40 border border-yellow-700/30 rounded-lg px-3 py-2 text-yellow-200 text-sm">
+                    {order.notes}
+                  </div>
+                )}
+
+                {showRejectInput ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={rejectReason}
+                      onChange={e => setRejectReason(e.target.value)}
+                      placeholder="Reason for rejection (optional)"
+                      className="w-full bg-black/50 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-red-500 placeholder-zinc-600"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => rejectOnline(order.id)}
+                        className="flex-1 h-11 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition-colors"
+                      >
+                        Confirm Reject
+                      </button>
+                      <button
+                        onClick={() => { setShowRejectInput(false); setRejectReason(""); }}
+                        className="px-4 h-11 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium transition-colors"
+                      >
+                        Back
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => acceptOnline(order.id)}
+                      className="flex-1 h-12 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold text-base transition-colors active:scale-95"
+                    >
+                      ✓ Accept
+                    </button>
+                    <button
+                      onClick={() => setShowRejectInput(true)}
+                      className="px-5 h-12 rounded-xl border border-red-700/60 text-red-400 hover:bg-red-950/50 hover:border-red-500 font-semibold transition-colors"
+                    >
+                      ✕ Reject
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {queueOpen && (
         <QueueDrawer onClose={() => setQueueOpen(false)} />
