@@ -98,7 +98,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                                 <p className="text-sm font-semibold truncate">{item.menuItem.name}</p>
                                 {item.notes && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{item.notes}</p>}
                               </div>
-                              <p className="text-sm font-semibold shrink-0">${(item.menuItem.price * item.quantity).toFixed(2)}</p>
+                              <p className="text-sm font-semibold shrink-0">${((item.menuItem.price + (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * item.quantity).toFixed(2)}</p>
                             </div>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-1 border border-border rounded-md">

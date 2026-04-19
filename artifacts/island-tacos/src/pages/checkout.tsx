@@ -167,7 +167,7 @@ export default function Checkout() {
               {items.map((item) => (
                 <div key={item.menuItem.id} className="flex justify-between">
                   <span className="text-muted-foreground">{item.quantity}x {item.menuItem.name}</span>
-                  <span>${(item.menuItem.price * item.quantity).toFixed(2)}</span>
+                  <span>${((item.menuItem.price + (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
               <Separator />
@@ -427,7 +427,7 @@ export default function Checkout() {
                     <span className="text-muted-foreground">
                       {item.quantity}x {item.menuItem.name}
                     </span>
-                    <span>${(item.menuItem.price * item.quantity).toFixed(2)}</span>
+                    <span>${((item.menuItem.price + (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
                 <Separator />
