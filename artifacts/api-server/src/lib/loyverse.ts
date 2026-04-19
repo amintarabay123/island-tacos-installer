@@ -322,29 +322,23 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
   const lineItems: Record<string, unknown>[] = [];
 
   for (const item of order.items) {
-    // Base item line — keep the base price, modifiers added as separate lines below
+    // Roll modifier prices into the item price — Loyverse requires variant_id on every line item,
+    // and modifiers are not catalog items so they have no variant_id. Instead, modifier names
+    // appear in the note field which Loyverse displays on the receipt.
+    const modTotal = (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0);
+    const linePrice = Math.round((item.price + modTotal) * 100) / 100;
+
     const base: Record<string, unknown> = {
       item_name: item.name,
       quantity: item.quantity,
-      price: item.price,
-      gross_total_money: item.price * item.quantity,
-      total_money: item.price * item.quantity,
+      price: linePrice,
+      gross_total_money: Math.round(linePrice * item.quantity * 100) / 100,
+      total_money: Math.round(linePrice * item.quantity * 100) / 100,
     };
-    // variant_id links the line item to the Loyverse catalog item (required by Loyverse for catalog items)
+    // variant_id links the line item to the Loyverse catalog (required for catalog items)
     if (item.loyverseVariantId) base.variant_id = item.loyverseVariantId;
     if (item.notes) base.note = item.notes;
     lineItems.push(base);
-
-    // Each modifier becomes its own visible line item so it renders in Loyverse
-    for (const mod of item.modifierSelections ?? []) {
-      lineItems.push({
-        item_name: `  + ${mod.name}`,
-        quantity: item.quantity,
-        price: mod.price,
-        gross_total_money: mod.price * item.quantity,
-        total_money: mod.price * item.quantity,
-      });
-    }
   }
 
   const paymentTypeId = await resolvePaymentTypeId(order.paymentMethod);
@@ -368,7 +362,6 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
     payments,
   };
 
-  console.log("[Loyverse] Sending receipt payload:", JSON.stringify(body));
   const data = await loyverseFetch<{ receipt_number: string }>("/receipts", {
     method: "POST",
     body: JSON.stringify(body),
