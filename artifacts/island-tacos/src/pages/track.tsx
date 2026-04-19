@@ -52,19 +52,49 @@ export default function TrackOrder() {
 
   if (status === "cancelled") {
     return (
-      <FullScreenState
-        icon={<XCircle className="h-14 w-14 text-red-500" />}
-        title="Order not accepted"
-        subtitle={cancellationReason ? `Reason: ${cancellationReason}` : "We couldn't accept your order at this time. Sorry for the inconvenience."}
-        code={confirmationCode}
-        action={
-          <div className="flex flex-col items-center gap-3">
-            <Link href="/" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800 transition-colors">
-              Back to Menu <ArrowRight className="h-4 w-4" />
-            </Link>
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12 text-center">
+        <div className="w-full max-w-sm flex flex-col items-center gap-6">
+          <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Island Tacos</div>
+
+          {/* Icon */}
+          <div className="flex items-center justify-center w-24 h-24 rounded-full bg-red-50">
+            <XCircle className="h-14 w-14 text-red-500" />
           </div>
-        }
-      />
+
+          {/* Heading */}
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black leading-tight text-gray-900">Order Not Accepted</h1>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Sorry {customerName ? customerName.split(" ")[0] + "," : ","} we couldn't accept your order at this time.
+            </p>
+          </div>
+
+          {/* Reason box — shown prominently if a reason was given */}
+          {cancellationReason && (
+            <div className="w-full rounded-2xl border-2 border-red-200 bg-red-50 px-5 py-4 text-left">
+              <p className="text-xs font-bold uppercase tracking-widest text-red-400 mb-1">Reason</p>
+              <p className="text-base font-semibold text-red-800">{cancellationReason}</p>
+            </div>
+          )}
+
+          {/* Confirmation code */}
+          <div className="bg-muted rounded-xl px-5 py-3 w-full">
+            <p className="text-xs text-muted-foreground mb-0.5">Order reference</p>
+            <p className="text-2xl font-mono font-black text-primary tracking-widest">{confirmationCode}</p>
+          </div>
+
+          {/* CTAs */}
+          <div className="flex flex-col items-center gap-3 w-full">
+            <Link
+              href="/"
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity"
+            >
+              Order Again <ArrowRight className="h-4 w-4" />
+            </Link>
+            <p className="text-xs text-muted-foreground">We apologize for the inconvenience.</p>
+          </div>
+        </div>
+      </div>
     );
   }
 

@@ -1272,13 +1272,29 @@ export default function POS() {
                 )}
 
                 {showRejectInput ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    <p className="text-red-400 text-xs font-semibold uppercase tracking-wide">Why are you rejecting?</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].map(opt => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => setRejectReason(r => r === opt ? "" : opt)}
+                          className={`rounded-full px-3 py-1.5 text-xs font-semibold border transition-colors ${
+                            rejectReason === opt
+                              ? "bg-red-500 text-white border-red-400"
+                              : "border-red-700/60 text-red-400 hover:bg-red-950/50"
+                          }`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
                     <input
                       type="text"
-                      autoFocus
-                      value={rejectReason}
+                      value={["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].includes(rejectReason) ? "" : rejectReason}
                       onChange={e => setRejectReason(e.target.value)}
-                      placeholder="Reason for rejection (optional)"
+                      placeholder="Other reason (optional)"
                       className="w-full bg-black/50 border border-zinc-700 rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-red-500 placeholder-zinc-600"
                     />
                     <div className="flex gap-2">
