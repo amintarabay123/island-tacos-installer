@@ -23,6 +23,10 @@ export function createToken(role: AuthRole): string {
   return `${payload}.${sign(payload)}`;
 }
 
+export function verifyTokenFromString(token: string): TokenPayload | null {
+  return verifyToken(token);
+}
+
 export function verifyToken(token: string): TokenPayload | null {
   const dotIdx = token.lastIndexOf(".");
   if (dotIdx === -1) return null;

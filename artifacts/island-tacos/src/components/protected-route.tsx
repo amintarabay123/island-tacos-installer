@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
+import { authHeaders } from "@/lib/auth";
 
 type Props = { children: React.ReactNode };
 
@@ -9,7 +10,7 @@ export default function ProtectedRoute({ children }: Props) {
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include", cache: "no-store" })
+    fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => {
         if (d.authed) {

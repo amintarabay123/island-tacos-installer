@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
+import { saveAuthToken } from "@/lib/auth";
 
 export default function StaffLogin() {
   const [pin, setPin] = useState("");
@@ -28,6 +29,7 @@ export default function StaffLogin() {
       });
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
+        if (data.token) saveAuthToken(data.token);
         navigate(data.role === "staff" ? adminRoutes.kitchen : adminRoutes.dashboard);
       } else {
         const data = await res.json().catch(() => ({}));

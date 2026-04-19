@@ -4,6 +4,7 @@ import {
   makeSetCookieHeader,
   makeClearCookieHeader,
   getTokenFromRequest,
+  verifyTokenFromString,
 } from "../lib/auth-token";
 
 const router: IRouter = Router();
@@ -29,7 +30,7 @@ router.post("/auth/login", (req: Request, res: Response): void => {
   if (adminPin && pin === adminPin) {
     const token = createToken("admin");
     res.setHeader("Set-Cookie", makeSetCookieHeader(token));
-    res.json({ ok: true, role: "admin" });
+    res.json({ ok: true, role: "admin", token });
     return;
   }
 
@@ -38,7 +39,7 @@ router.post("/auth/login", (req: Request, res: Response): void => {
     const role = adminPin ? "staff" : "admin";
     const token = createToken(role);
     res.setHeader("Set-Cookie", makeSetCookieHeader(token));
-    res.json({ ok: true, role });
+    res.json({ ok: true, role, token });
     return;
   }
 
@@ -53,7 +54,19 @@ router.post("/auth/logout", (req: Request, res: Response): void => {
 router.get("/auth/me", (req: Request, res: Response): void => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.setHeader("Pragma", "no-cache");
-  const data = getTokenFromRequest(req.headers.cookie);
+
+  // Accept Bearer token from Authorization header (localStorage-based auth)
+  // or fall back to cookie-based auth
+  let data = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    data = token ? verifyTokenFromString(token) : null;
+  }
+  if (!data) {
+    data = getTokenFromRequest(req.headers.cookie);
+  }
+
   if (!data?.staffAuthed) {
     res.json({ authed: false, role: null });
     return;
