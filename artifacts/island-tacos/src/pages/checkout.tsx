@@ -435,10 +435,6 @@ export default function Checkout() {
                   <span className="text-muted-foreground">Subtotal</span>
                   <span>${subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Tax (11.5% IVU)</span>
-                  <span>${tax.toFixed(2)}</span>
-                </div>
                 {form.orderType === "delivery" && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Delivery fee</span>

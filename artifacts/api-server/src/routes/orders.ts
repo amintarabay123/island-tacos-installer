@@ -13,7 +13,7 @@ import { pushOrderToLoyverse } from "../lib/loyverse";
 
 const router: IRouter = Router();
 
-const TAX_RATE = 0.115;
+const TAX_RATE = 0;
 const DELIVERY_FEE = 3.0;
 const FREE_DELIVERY_THRESHOLD = 25.0;
 

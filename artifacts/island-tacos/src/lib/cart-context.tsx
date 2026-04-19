@@ -79,7 +79,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const modExtra = (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0);
     return sum + (item.menuItem.price + modExtra) * item.quantity;
   }, 0);
-  const tax = subtotal * 0.115;
+  const tax = 0;
   const deliveryFee = items.length === 0 ? 0 : subtotal > 25 ? 0 : 3.0;
   const total = subtotal + tax + deliveryFee;
 
