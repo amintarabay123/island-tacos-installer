@@ -330,11 +330,6 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
       gross_total_money: item.price * item.quantity,
       total_money: item.price * item.quantity,
     };
-    // Loyverse requires BOTH item_id AND variant_id together — omit both if either is missing
-    if (item.loyverseItemId && item.loyverseVariantId) {
-      base.item_id = item.loyverseItemId;
-      base.variant_id = item.loyverseVariantId;
-    }
     if (item.notes) base.note = item.notes;
     lineItems.push(base);
 
