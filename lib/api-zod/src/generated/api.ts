@@ -240,12 +240,23 @@ export const CreateOrderBody = zod.object({
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
   paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  paymentStatus: zod.enum(["pending", "paid"]).optional(),
+  source: zod.enum(["online", "pos"]).optional(),
+  discountAmount: zod.number().optional(),
   notes: zod.string().nullish(),
   items: zod.array(
     zod.object({
       menuItemId: zod.number(),
       quantity: zod.number(),
       notes: zod.string().nullish(),
+      modifierSelections: zod.array(
+        zod.object({
+          modifierId: zod.string(),
+          optionId: zod.string(),
+          name: zod.string(),
+          price: zod.number(),
+        })
+      ).optional(),
     }),
   ),
 });

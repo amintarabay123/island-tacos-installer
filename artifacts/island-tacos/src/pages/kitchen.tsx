@@ -162,18 +162,34 @@ export default function Kitchen() {
     navigate(adminRoutes.login);
   };
 
-  // Silently unlock AudioContext on the first click anywhere
-  useEffect(() => {
-    const unlock = () => {
-      try {
-        if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-        audioCtxRef.current.resume();
-      } catch {}
-      document.removeEventListener("click", unlock);
-    };
-    document.addEventListener("click", unlock, { passive: true });
-    return () => document.removeEventListener("click", unlock);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+
+  // iOS requires AudioContext to be CREATED and have audio PLAYED within a user gesture.
+  // Just calling resume() is not enough — we must start an oscillator inside the handler.
+  const unlockAudio = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      const ctx = audioCtxRef.current;
+      // Play a silent blip — this is the only way to truly unlock audio on iOS Safari/PWA
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime); // near-silent
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.05);
+      ctx.resume();
+      setAudioUnlocked(true);
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    if (audioUnlocked) return;
+    const events = ["click", "touchstart", "touchend", "pointerdown"];
+    const handler = () => { unlockAudio(); events.forEach(e => document.removeEventListener(e, handler)); };
+    events.forEach(e => document.addEventListener(e, handler, { passive: true }));
+    return () => events.forEach(e => document.removeEventListener(e, handler));
+  }, [audioUnlocked, unlockAudio]);
 
   const requestNotifPermission = async () => {
     if (typeof Notification === "undefined") return;
@@ -403,6 +419,15 @@ export default function Kitchen() {
               {error ? "Offline" : "Live"}
             </span>
           </div>
+          {!audioUnlocked && (
+            <button
+              onClick={unlockAudio}
+              className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors animate-pulse"
+              title="Tap to enable chime sounds"
+            >
+              🔊 <span className="hidden sm:inline">Sound</span>
+            </button>
+          )}
           {notifPerm === "granted" ? (
             <span className="text-green-600 text-xs font-medium hidden sm:block">🔔</span>
           ) : notifPerm === "denied" ? (
