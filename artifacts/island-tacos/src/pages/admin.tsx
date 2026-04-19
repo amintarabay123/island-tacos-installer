@@ -309,7 +309,27 @@ export default function Admin() {
                         <span className="text-xs bg-muted rounded-full px-2 py-0.5 capitalize">{order.orderType}</span>
                       </div>
                       <p className="font-medium">{order.customerName}</p>
-                      <p className="text-sm text-muted-foreground">{order.customerPhone}</p>
+                      {order.customerPhone ? (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-sm text-muted-foreground">{order.customerPhone}</span>
+                          <a
+                            href={`tel:${order.customerPhone}`}
+                            className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium transition-colors"
+                          >
+                            📞 Call
+                          </a>
+                          <a
+                            href={`https://wa.me/${order.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${order.customerName}, your Island Tacos order #${order.confirmationCode} is ready for pickup! 🌮`)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 font-medium transition-colors"
+                          >
+                            💬 WhatsApp
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Walk-in</p>
+                      )}
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-xl font-black">${order.total.toFixed(2)}</p>

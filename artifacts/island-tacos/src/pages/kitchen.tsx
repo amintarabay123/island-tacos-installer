@@ -16,6 +16,7 @@ type Order = {
   id: number;
   confirmationCode: string;
   customerName: string;
+  customerPhone?: string | null;
   orderType: string;
   status: string;
   notes?: string | null;
@@ -384,6 +385,25 @@ export default function Kitchen() {
                       {order.notes && (
                         <div className="bg-yellow-900/50 border border-yellow-700/40 rounded-lg px-3 py-2 text-yellow-200 text-sm leading-snug">
                           {order.notes}
+                        </div>
+                      )}
+
+                      {order.customerPhone && (
+                        <div className="flex gap-2">
+                          <a
+                            href={`tel:${order.customerPhone}`}
+                            className="flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold bg-blue-900/60 hover:bg-blue-800/70 border border-blue-700/40 text-blue-300 transition-colors"
+                          >
+                            📞 Call
+                          </a>
+                          <a
+                            href={`https://wa.me/${order.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${order.customerName}, your Island Tacos order #${order.confirmationCode} is ready for pickup! 🌮`)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2.5 text-sm font-bold bg-green-900/60 hover:bg-green-800/70 border border-green-700/40 text-green-300 transition-colors"
+                          >
+                            💬 WhatsApp
+                          </a>
                         </div>
                       )}
 
