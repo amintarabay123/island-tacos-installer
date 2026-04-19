@@ -33,10 +33,10 @@ function Router() {
       <Route path="/checkout" component={Checkout} />
       <Route path="/track" component={TrackOrder} />
 
-      {/* Secret staff routes — only accessible at the hidden path */}
+      {/* Secret staff routes — more specific paths must come before less specific ones */}
       <Route path={adminRoutes.login} component={StaffLogin} />
-      <Route path={adminRoutes.dashboard}>
-        <ProtectedRoute><Admin /></ProtectedRoute>
+      <Route path={adminRoutes.pos}>
+        <ProtectedRoute><POS /></ProtectedRoute>
       </Route>
       <Route path={adminRoutes.menu}>
         <ProtectedRoute><AdminMenu /></ProtectedRoute>
@@ -44,8 +44,8 @@ function Router() {
       <Route path={adminRoutes.kitchen}>
         <ProtectedRoute><Kitchen /></ProtectedRoute>
       </Route>
-      <Route path={adminRoutes.pos}>
-        <ProtectedRoute><POS /></ProtectedRoute>
+      <Route path={adminRoutes.dashboard}>
+        <ProtectedRoute><Admin /></ProtectedRoute>
       </Route>
 
       {/* Catch-all: redirect old /admin paths to 404 so they're invisible */}
