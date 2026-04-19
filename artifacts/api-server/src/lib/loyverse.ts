@@ -214,25 +214,34 @@ export async function syncFromLoyverse(): Promise<SyncResult> {
         where: eq(menuItemsTable.loyverseItemId, litem.id),
       });
 
-      const itemData = {
-        name: litem.item_name,
-        description: stripHtml(litem.description),
-        price: String(price),
-        imageUrl: litem.image_url ?? null,
-        available,
-        categoryId,
-        loyverseItemId: litem.id,
-        loyverseVariantId: variant.variant_id,
-        loyverseModifierIds: litem.modifier_ids,
-      };
-
       if (existing) {
+        // Update everything except `available` — preserve the admin's visibility toggle
         await db
           .update(menuItemsTable)
-          .set(itemData)
+          .set({
+            name: litem.item_name,
+            description: stripHtml(litem.description),
+            price: String(price),
+            imageUrl: litem.image_url ?? null,
+            categoryId,
+            loyverseItemId: litem.id,
+            loyverseVariantId: variant.variant_id,
+            loyverseModifierIds: litem.modifier_ids,
+          })
           .where(eq(menuItemsTable.id, existing.id));
       } else {
-        await db.insert(menuItemsTable).values(itemData);
+        // New item — use Loyverse's available_for_sale as the initial state
+        await db.insert(menuItemsTable).values({
+          name: litem.item_name,
+          description: stripHtml(litem.description),
+          price: String(price),
+          imageUrl: litem.image_url ?? null,
+          available,
+          categoryId,
+          loyverseItemId: litem.id,
+          loyverseVariantId: variant.variant_id,
+          loyverseModifierIds: litem.modifier_ids,
+        });
       }
       result.itemsUpserted++;
     } catch (err) {
