@@ -32,7 +32,7 @@ export type Order = typeof ordersTable.$inferSelect;
 export const orderItemsTable = pgTable("order_items", {
   id: serial("id").primaryKey(),
   orderId: integer("order_id").notNull().references(() => ordersTable.id, { onDelete: "cascade" }),
-  menuItemId: integer("menu_item_id").notNull().references(() => menuItemsTable.id),
+  menuItemId: integer("menu_item_id").references(() => menuItemsTable.id, { onDelete: "set null" }),
   menuItemName: text("menu_item_name").notNull(),
   menuItemPrice: numeric("menu_item_price", { precision: 10, scale: 2 }).notNull(),
   quantity: integer("quantity").notNull(),
