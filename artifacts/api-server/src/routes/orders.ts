@@ -259,15 +259,16 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     .leftJoin(menuItemsTable, eq(orderItemsTable.menuItemId, menuItemsTable.id))
     .where(eq(orderItemsTable.orderId, order.id));
 
-  // Auto-push to Loyverse when staff confirms an order
-  if (parsed.data.status === "confirmed" && process.env.LOYVERSE_API_TOKEN) {
+  // Push to Loyverse when staff completes the order (payment collected at counter)
+  if (parsed.data.status === "completed" && process.env.LOYVERSE_API_TOKEN) {
+    const effectivePaymentMethod = parsed.data.actualPaymentMethod || order.paymentMethod;
     pushOrderToLoyverse({
       id: order.id,
       customerName: order.customerName,
       confirmationCode: order.confirmationCode,
       notes: order.notes,
       total: parseDecimal(order.total),
-      paymentMethod: order.paymentMethod,
+      paymentMethod: effectivePaymentMethod,
       items: items.map((i) => ({
         name: i.menuItemName,
         quantity: i.quantity,
@@ -276,7 +277,7 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
         loyverseVariantId: i.loyverseVariantId ?? null,
       })),
     }).then((receiptNum) => {
-      console.log(`[Loyverse] Order ${order.confirmationCode} → receipt ${receiptNum}`);
+      console.log(`[Loyverse] Order ${order.confirmationCode} → receipt ${receiptNum} (${effectivePaymentMethod})`);
     }).catch((err) => {
       console.error(`[Loyverse] Failed to push order ${order.confirmationCode}:`, err);
     });
