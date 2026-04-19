@@ -131,27 +131,18 @@ export default function AdminMenu() {
       return;
     }
 
-    setOrderedIds((prev) => {
-      const next = [...prev];
-      const fromIdx = next.indexOf(draggingId);
-      const toIdx = next.indexOf(targetId);
-      next.splice(fromIdx, 1);
-      next.splice(toIdx, 0, draggingId);
+    const next = [...orderedIds];
+    const fromIdx = next.indexOf(draggingId);
+    const toIdx = next.indexOf(targetId);
+    next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, draggingId);
+    setOrderedIds(next);
 
-      // Persist new sortOrders for all items in the filtered view
-      // We recompute positions within filteredItems after the move
-      const newFilteredOrder = next
-        .map((id) => items?.find((i) => i.id === id))
-        .filter(Boolean) as NonNullable<typeof items>[number][];
-
-      const inFilter = newFilteredOrder.filter((i) =>
-        activeCategory === null ? true : i.categoryId === activeCategory
-      );
-      inFilter.forEach((item, pos) => {
-        updateItem.mutate({ id: item.id, data: { sortOrder: pos * 10 } });
-      });
-
-      return next;
+    // Persist globally unique sortOrders across the full list so items from
+    // different categories never share the same value and collide on reload.
+    next.forEach((id, globalPos) => {
+      const item = items?.find((i) => i.id === id);
+      if (item) updateItem.mutate({ id: item.id, data: { sortOrder: globalPos * 10 } });
     });
 
     setDraggingId(null);
