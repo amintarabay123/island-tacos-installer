@@ -11,17 +11,19 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useCreateOrder, useInitiatePayment } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { CreditCard, ShoppingBag, Info, CheckCircle, XCircle } from "lucide-react";
+import { CreditCard, ShoppingBag, Info, CheckCircle, XCircle, UserCircle } from "lucide-react";
+import { getCustomer, saveCustomer, saveLastOrder } from "@/lib/customer-account";
 
 export default function Checkout() {
   const { items, total, clearCart } = useCart();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
+  const savedCustomer = getCustomer();
   const [form, setForm] = useState({
-    customerName: "",
-    customerEmail: "",
-    customerPhone: "",
+    customerName: savedCustomer?.name ?? "",
+    customerEmail: savedCustomer?.email ?? "",
+    customerPhone: savedCustomer?.phone ?? "",
     paymentMethod: "athmovil" as "card" | "athmovil" | "cash",
     notes: "",
   });
@@ -78,6 +80,9 @@ export default function Checkout() {
         onSuccess: (order) => {
           setOrderId(order.id);
           setConfirmationCode(order.confirmationCode);
+          // Persist customer profile and last order for account/history features
+          saveCustomer({ name: form.customerName, phone: form.customerPhone, email: form.customerEmail });
+          saveLastOrder(order.confirmationCode);
           if (form.paymentMethod === "cash") {
             clearCart();
             setLocation(`/track?code=${order.confirmationCode}`);
@@ -253,7 +258,23 @@ export default function Checkout() {
             <form onSubmit={handleSubmitInfo} className="md:col-span-2 space-y-8">
               {/* Contact info */}
               <section className="space-y-4">
-                <h2 className="text-xl font-bold">Contact Information</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold">Contact Information</h2>
+                  {savedCustomer && (
+                    <span className="flex items-center gap-1.5 text-xs text-primary font-semibold">
+                      <UserCircle className="h-4 w-4" /> Saved
+                    </span>
+                  )}
+                </div>
+                {savedCustomer && (
+                  <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+                    <UserCircle className="h-5 w-5 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">Welcome back, {savedCustomer.name.split(" ")[0]}!</p>
+                      <p className="text-xs text-muted-foreground truncate">Info pre-filled — edit below if needed</p>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name *</Label>

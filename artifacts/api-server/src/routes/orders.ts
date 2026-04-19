@@ -50,9 +50,23 @@ router.get("/orders", async (req, res): Promise<void> => {
     return;
   }
   let query = db.select().from(ordersTable).orderBy(desc(ordersTable.createdAt)).$dynamic();
+
+  // Build up where clauses
+  const conditions = [];
   if (queryParsed.data.status) {
-    query = query.where(eq(ordersTable.status, queryParsed.data.status));
+    conditions.push(eq(ordersTable.status, queryParsed.data.status));
   }
+  // Customer history filter (used by customer-facing order history)
+  const phoneFilter = (req.query as Record<string, string>).customerPhone;
+  if (phoneFilter) {
+    conditions.push(eq(ordersTable.customerPhone, phoneFilter));
+  }
+  if (conditions.length === 1) {
+    query = query.where(conditions[0]);
+  } else if (conditions.length > 1) {
+    query = query.where(and(...conditions));
+  }
+
   if (queryParsed.data.limit) {
     query = query.limit(queryParsed.data.limit);
   }
