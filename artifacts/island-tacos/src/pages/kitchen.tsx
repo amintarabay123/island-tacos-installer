@@ -115,7 +115,9 @@ export default function Kitchen() {
   const [rejectState, setRejectState] = useState<RejectState>(null);
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
   const prevIdsRef = useRef<Set<number>>(new Set());
+  const isFirstFetchRef = useRef(true);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const now = useNow();
   const [, navigate] = useLocation();
@@ -125,10 +127,19 @@ export default function Kitchen() {
     navigate(adminRoutes.login);
   };
 
-  const playChime = useCallback(() => {
+  // Must be called from a user-gesture to unlock the AudioContext
+  const unlockAudio = useCallback(() => {
     try {
       if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      audioCtxRef.current.resume().then(() => setAudioUnlocked(true));
+    } catch {}
+  }, []);
+
+  const playChime = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) return; // not unlocked yet
       const ctx = audioCtxRef.current;
+      ctx.resume(); // ensure not suspended
       const notes = [
         { freq: 523.25, t: 0 },
         { freq: 659.25, t: 0.15 },
@@ -157,11 +168,19 @@ export default function Kitchen() {
       if (!res.ok) throw new Error("Failed to fetch");
       const data: Order[] = await res.json();
       const active = data.filter((o) => ACTIVE_STATUSES.has(o.status));
-      const newPending = active.filter((o) => o.status === "pending");
-      if (newPending.some((o) => !prevIdsRef.current.has(o.id)) && prevIdsRef.current.size > 0) {
-        playChime();
+
+      if (isFirstFetchRef.current) {
+        // Snapshot existing IDs on load — don't chime for already-present orders
+        isFirstFetchRef.current = false;
+        prevIdsRef.current = new Set(active.map((o) => o.id));
+      } else {
+        const newPending = active.filter((o) => o.status === "pending");
+        if (newPending.some((o) => !prevIdsRef.current.has(o.id))) {
+          playChime();
+        }
+        prevIdsRef.current = new Set(active.map((o) => o.id));
       }
-      prevIdsRef.current = new Set(active.map((o) => o.id));
+
       setOrders(active);
       setLastFetch(new Date());
       setError(null);
@@ -237,6 +256,16 @@ export default function Kitchen() {
               {error ? "Offline" : "Live"}
             </span>
           </div>
+          {!audioUnlocked ? (
+            <button
+              onClick={unlockAudio}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-amber-950 text-xs font-bold transition-colors animate-pulse"
+            >
+              🔔 Tap to enable sound
+            </button>
+          ) : (
+            <span className="text-zinc-600 text-xs">🔔 Sound on</span>
+          )}
           <button
             onClick={logout}
             className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors px-2 py-1 rounded"
