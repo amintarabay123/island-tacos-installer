@@ -123,8 +123,17 @@ function PaymentModal({ total, onPay, onClose }: {
   const [tendered, setTendered] = useState(String(Math.ceil(total)));
   const change = Math.max(0, parseFloat(tendered || "0") - total);
 
-  const QUICK = [total, Math.ceil(total / 5) * 5, Math.ceil(total / 10) * 10, Math.ceil(total / 20) * 20]
-    .filter((v, i, a) => a.indexOf(v) === i).slice(0, 4);
+  const QUICK = (() => {
+    const result: number[] = [total];
+    let current = Math.ceil(total / 10) * 10;
+    let steps = 0;
+    while (steps < 3 && current < 100) {
+      if (!result.includes(current)) { result.push(current); steps++; }
+      current += 10;
+    }
+    if (total < 100 && !result.includes(100)) result.push(100);
+    return result;
+  })();
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -151,10 +160,14 @@ function PaymentModal({ total, onPay, onClose }: {
               <div className="bg-[#0A0B0F] rounded-xl p-3 text-white text-3xl font-mono font-bold text-right mb-3">
                 ${tendered}
               </div>
-              <div className="grid grid-cols-4 gap-2 mb-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 {QUICK.map(q => (
                   <button key={q} onClick={() => setTendered(String(q))}
-                    className="h-10 rounded-xl bg-[#1E2130] hover:bg-[#2A2F45] text-white text-sm font-semibold transition-colors">
+                    className={`flex-1 min-w-[56px] h-10 rounded-xl text-sm font-semibold transition-colors ${
+                      parseFloat(tendered) === q
+                        ? "bg-[#F5A623] text-black"
+                        : "bg-[#1E2130] hover:bg-[#2A2F45] text-white"
+                    }`}>
                     {fmt(q)}
                   </button>
                 ))}
