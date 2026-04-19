@@ -38,13 +38,11 @@ const UNCOLLECTED_RECHIME_MS = 15 * 60 * 1000; // re-chime every 15 min
 const NEXT_STATUS: Record<string, string> = {
   confirmed: "preparing",
   preparing: "ready",
-  ready: "completed",
 };
 
 const NEXT_LABEL: Record<string, string> = {
   confirmed: "Start Cooking",
   preparing: "Mark Ready",
-  ready: "Done — Handed Off",
 };
 
 const STATUS_CARD: Record<string, { border: string; bg: string }> = {
