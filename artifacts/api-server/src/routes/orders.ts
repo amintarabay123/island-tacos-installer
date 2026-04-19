@@ -273,6 +273,7 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
         name: i.menuItemName,
         quantity: i.quantity,
         price: parseDecimal(i.menuItemPrice),
+        notes: i.notes ?? null,
         loyverseItemId: i.loyverseItemId ?? null,
         loyverseVariantId: i.loyverseVariantId ?? null,
       })),

@@ -294,6 +294,7 @@ export interface OrderForReceipt {
     name: string;
     quantity: number;
     price: number;
+    notes: string | null;
     loyverseItemId: string | null;
     loyverseVariantId: string | null;
   }[];
@@ -309,6 +310,7 @@ export async function pushOrderToLoyverse(order: OrderForReceipt): Promise<strin
     };
     if (item.loyverseItemId) base.item_id = item.loyverseItemId;
     if (item.loyverseVariantId) base.variant_id = item.loyverseVariantId;
+    if (item.notes) base.note = item.notes;
     return base;
   });
 
