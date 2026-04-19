@@ -19,6 +19,7 @@ router.post("/auth/login", (req: Request, res: Response): void => {
     return;
   }
 
+  // If ADMIN_PIN is configured, it grants full admin access
   if (ADMIN_PIN && pin === ADMIN_PIN) {
     const token = createToken("admin");
     res.setHeader("Set-Cookie", makeSetCookieHeader(token));
@@ -27,9 +28,11 @@ router.post("/auth/login", (req: Request, res: Response): void => {
   }
 
   if (STAFF_PIN && pin === STAFF_PIN) {
-    const token = createToken("staff");
+    // If no separate ADMIN_PIN is set, STAFF_PIN grants admin (backwards-compatible)
+    const role = ADMIN_PIN ? "staff" : "admin";
+    const token = createToken(role);
     res.setHeader("Set-Cookie", makeSetCookieHeader(token));
-    res.json({ ok: true, role: "staff" });
+    res.json({ ok: true, role });
     return;
   }
 
