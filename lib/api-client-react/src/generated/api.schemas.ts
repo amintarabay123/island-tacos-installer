@@ -210,6 +210,8 @@ export interface UpdateOrderStatusBody {
   estimatedReadyAt?: string | null;
   /** @nullable */
   cancellationReason?: string | null;
+  /** @nullable */
+  actualPaymentMethod?: string | null;
 }
 
 export type InitiatePaymentBodyPaymentMethod =

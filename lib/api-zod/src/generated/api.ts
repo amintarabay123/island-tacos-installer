@@ -307,6 +307,7 @@ export const UpdateOrderStatusBody = zod.object({
   ]),
   estimatedReadyAt: zod.coerce.date().nullish(),
   cancellationReason: zod.string().nullish(),
+  actualPaymentMethod: zod.string().nullish(),
 });
 
 export const UpdateOrderStatusResponse = zod.object({

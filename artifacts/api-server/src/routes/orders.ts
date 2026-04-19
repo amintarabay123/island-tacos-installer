@@ -230,6 +230,9 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
   if (parsed.data.cancellationReason !== undefined) {
     updates.cancellationReason = parsed.data.cancellationReason ?? null;
   }
+  if (parsed.data.actualPaymentMethod) {
+    updates.paymentMethod = parsed.data.actualPaymentMethod;
+  }
   const [order] = await db
     .update(ordersTable)
     .set(updates)
