@@ -40,6 +40,8 @@ const appearance = {
     dividerLine: "bg-stone-700",
     logoBox: "flex justify-center pt-2",
     logoImage: "w-16 h-16 rounded-2xl",
+    socialButtonsRoot: "!hidden",
+    dividerRow: "!hidden",
   },
 };
 
