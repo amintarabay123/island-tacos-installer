@@ -432,7 +432,7 @@ function TicketsDrawer({ onResume, onClose }: {
 
   const resume = (o: Order) => {
     const items: CartItem[] = o.items.map(i => ({
-      key: uid(), menuItemId: i.id, name: i.menuItemName, price: i.menuItemPrice,
+      key: uid(), menuItemId: i.menuItemId, name: i.menuItemName, price: i.menuItemPrice,
       quantity: i.quantity, notes: i.notes ?? "",
       modifierSelections: (i.modifierSelections ?? []) as CartModifier[],
     }));
