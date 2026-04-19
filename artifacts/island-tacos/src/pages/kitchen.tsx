@@ -198,13 +198,16 @@ export default function Kitchen() {
   };
 
   const sendNotification = useCallback((title: string, body: string) => {
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+    // Only send browser notifications when this tab is in the background
+    if (document.visibilityState === "hidden" && typeof Notification !== "undefined" && Notification.permission === "granted") {
       new Notification(title, { body, icon: "/icon-192.png" });
     }
   }, []);
 
   const playChime = useCallback(() => {
     try {
+      // Only chime in the active foreground tab
+      if (document.visibilityState !== "visible") return;
       if (!audioCtxRef.current) return;
       const ctx = audioCtxRef.current;
       ctx.resume();
@@ -234,6 +237,8 @@ export default function Kitchen() {
 
   const playUrgentChime = useCallback(() => {
     try {
+      // Only chime in the active foreground tab
+      if (document.visibilityState !== "visible") return;
       if (!audioCtxRef.current) return;
       const ctx = audioCtxRef.current;
       ctx.resume();

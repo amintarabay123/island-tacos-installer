@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { setPageMeta } from "@/lib/page-meta";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
@@ -45,7 +45,6 @@ export default function Admin() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [rejectState, setRejectState] = useState<RejectState>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
   const prevOrderIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
 
@@ -66,31 +65,6 @@ export default function Admin() {
     navigate(adminRoutes.login);
   };
 
-  const playChime = useCallback(() => {
-    try {
-      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-      const ctx = audioCtxRef.current;
-      const notes = [
-        { freq: 523.25, t: 0 },
-        { freq: 659.25, t: 0.15 },
-        { freq: 783.99, t: 0.30 },
-        { freq: 1046.5, t: 0.45 },
-      ];
-      notes.forEach(({ freq, t }) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, ctx.currentTime + t);
-        gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + t + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.55);
-        osc.start(ctx.currentTime + t);
-        osc.stop(ctx.currentTime + t + 0.6);
-      });
-    } catch {}
-  }, []);
 
   const { data: stats } = useGetAdminStats({ query: { refetchInterval: 5_000 } });
   const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 }, { query: { refetchInterval: 5_000 } });
@@ -126,11 +100,10 @@ export default function Admin() {
     }
     const hasNew = [...activeIds].some((id) => !prevOrderIdsRef.current.has(id));
     if (hasNew) {
-      playChime();
       toast({ title: "New order received!", description: "Check active orders below." });
     }
     prevOrderIdsRef.current = activeIds;
-  }, [orders, playChime, toast]);
+  }, [orders, toast]);
 
   const handleStatusChange = (orderId: number, status: UpdateOrderStatusBodyStatus, cancellationReason?: string) => {
     updateStatus.mutate(
