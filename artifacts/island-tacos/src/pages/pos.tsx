@@ -777,21 +777,34 @@ function TicketsDrawer({ onResume, onClose }: {
 
 function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="bg-[#13151C] hover:bg-[#1E2130] active:bg-[#252940] border border-[#1E2130] hover:border-[#2A2F45] rounded-xl p-3 text-left transition-all flex flex-col gap-1 group">
-      {item.imageUrl && (
-        <div className="w-full aspect-square rounded-lg overflow-hidden mb-1 bg-[#0A0B0F]">
+    <button
+      onClick={onClick}
+      className="group relative text-left flex flex-col gap-1 rounded-2xl p-3 transition-all duration-200 ease-out
+        bg-gradient-to-b from-[#1E2235] to-[#13151C]
+        border border-white/5
+        shadow-[0_4px_16px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.06)_inset]
+        hover:-translate-y-1 hover:scale-[1.03]
+        hover:shadow-[0_12px_32px_rgba(0,0,0,0.7),0_1px_0_rgba(255,255,255,0.08)_inset,0_0_0_1px_rgba(245,166,35,0.2)]
+        active:translate-y-0 active:scale-[0.98] active:shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+    >
+      {item.imageUrl ? (
+        <div className="w-full aspect-square rounded-xl overflow-hidden mb-1 bg-[#0A0B0F] shadow-inner">
           <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
+        </div>
+      ) : (
+        <div className="w-full aspect-square rounded-xl mb-1 bg-gradient-to-br from-[#1A1D2E] to-[#0D0F18] flex items-center justify-center shadow-inner">
+          <span className="text-2xl opacity-30">🌮</span>
         </div>
       )}
       <div className="flex items-start justify-between gap-1">
         <span className="text-white text-sm font-semibold leading-tight line-clamp-2">{item.name}</span>
-        <div className="flex gap-1 flex-shrink-0">
+        <div className="flex gap-0.5 flex-shrink-0">
           {item.spicy && <span title="Spicy" className="text-xs">🌶</span>}
           {item.vegetarian && <span title="Vegetarian" className="text-xs">🥗</span>}
           {item.popular && <span title="Popular" className="text-xs">⭐</span>}
         </div>
       </div>
-      <span className="text-[#F5A623] font-bold text-sm">{fmt(item.price)}</span>
+      <span className="text-[#F5A623] font-bold text-sm drop-shadow-[0_0_6px_rgba(245,166,35,0.4)]">{fmt(item.price)}</span>
     </button>
   );
 }
