@@ -165,6 +165,69 @@ export default function AdminMenu() {
     setDragOverId(null);
   };
 
+  // ── Category reorder state ────────────────────────────────────────────────
+  const [catOrderedIds, setCatOrderedIds] = useState<number[]>([]);
+  const isCatDraggingRef = useRef(false);
+
+  useEffect(() => {
+    if (!categories || isCatDraggingRef.current) return;
+    setCatOrderedIds((prev) => {
+      const currentIds = new Set(categories.map((c) => c.id));
+      const pruned = prev.filter((id) => currentIds.has(id));
+      const pruneSet = new Set(pruned);
+      const newIds = categories.filter((c) => !pruneSet.has(c.id)).map((c) => c.id);
+      if (pruned.length === 0) return categories.map((c) => c.id);
+      return [...pruned, ...newIds];
+    });
+  }, [categories]);
+
+  const saveCatReorder = (ids: number[]) => {
+    fetch(`${API_BASE}/api/menu/categories/reorder`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    }).catch(() => {});
+  };
+
+  const orderedCategories = catOrderedIds
+    .map((id) => categories?.find((c) => c.id === id))
+    .filter(Boolean) as NonNullable<typeof categories>[number][];
+
+  const [catDraggingId, setCatDraggingId] = useState<number | null>(null);
+  const [catDragOverId, setCatDragOverId] = useState<number | null>(null);
+
+  const handleCatDragStart = (id: number) => {
+    isCatDraggingRef.current = true;
+    setCatDraggingId(id);
+  };
+
+  const handleCatDragOver = (e: React.DragEvent, id: number) => {
+    e.preventDefault();
+    if (id !== catDraggingId) setCatDragOverId(id);
+  };
+
+  const handleCatDrop = (e: React.DragEvent, targetId: number) => {
+    e.preventDefault();
+    isCatDraggingRef.current = false;
+    if (!catDraggingId || catDraggingId === targetId) {
+      setCatDraggingId(null); setCatDragOverId(null); return;
+    }
+    const next = [...catOrderedIds];
+    const fromIdx = next.indexOf(catDraggingId);
+    const toIdx = next.indexOf(targetId);
+    next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, catDraggingId);
+    setCatOrderedIds(next);
+    saveCatReorder(next);
+    setCatDraggingId(null); setCatDragOverId(null);
+  };
+
+  const handleCatDragEnd = () => {
+    isCatDraggingRef.current = false;
+    setCatDraggingId(null); setCatDragOverId(null);
+  };
+
   // ── KDS category toggle ────────────────────────────────────────────────────
   const handleToggleKds = (catId: number, sendToKds: boolean) => {
     updateCategory.mutate(
@@ -355,34 +418,48 @@ export default function AdminMenu() {
               <Plus className="h-3.5 w-3.5 mr-1" /> Add
             </Button>
           </div>
-          {categories && categories.length > 0 ? (
-            <div className="space-y-2">
-              {categories.map((cat) => (
-                <div key={cat.id} className="flex items-center gap-3 py-1.5">
-                  <Switch
-                    checked={cat.sendToKds}
-                    onCheckedChange={(v) => handleToggleKds(cat.id, v)}
-                    title="Show on Kitchen Display"
-                  />
-                  <span className="text-lg w-7 text-center shrink-0">{(cat as { icon?: string | null }).icon ?? "📂"}</span>
-                  <span className={`flex-1 text-sm font-medium ${cat.sendToKds ? "" : "text-muted-foreground line-through"}`}>
-                    {cat.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground hidden sm:block">KDS</span>
-                  <button
-                    onClick={() => { setCatForm({ name: cat.name, icon: (cat as { icon?: string | null }).icon ?? "" }); setCatDialog({ mode: "edit", id: cat.id }); }}
-                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+          {orderedCategories && orderedCategories.length > 0 ? (
+            <div className="space-y-1">
+              {orderedCategories.map((cat) => {
+                const isCatDragging = catDraggingId === cat.id;
+                const isCatDragOver = catDragOverId === cat.id;
+                return (
+                  <div
+                    key={cat.id}
+                    draggable
+                    onDragStart={() => handleCatDragStart(cat.id)}
+                    onDragOver={(e) => handleCatDragOver(e, cat.id)}
+                    onDrop={(e) => handleCatDrop(e, cat.id)}
+                    onDragEnd={handleCatDragEnd}
+                    className={`flex items-center gap-3 py-1.5 px-1 rounded-lg transition-all ${isCatDragging ? "opacity-40" : ""} ${isCatDragOver ? "bg-primary/10 border border-primary/40" : "border border-transparent"}`}
                   >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleCatDelete(cat.id, cat.name)}
-                    className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+                    <GripVertical className="h-4 w-4 text-muted-foreground/40 cursor-grab shrink-0" />
+                    <Switch
+                      checked={cat.sendToKds}
+                      onCheckedChange={(v) => handleToggleKds(cat.id, v)}
+                      title="Show on Kitchen Display"
+                    />
+                    <span className="text-lg w-7 text-center shrink-0">{(cat as { icon?: string | null }).icon ?? "📂"}</span>
+                    <span className={`flex-1 text-sm font-medium ${cat.sendToKds ? "" : "text-muted-foreground line-through"}`}>
+                      {cat.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground hidden sm:block">KDS</span>
+                    <button
+                      onClick={() => { setCatForm({ name: cat.name, icon: (cat as { icon?: string | null }).icon ?? "" }); setCatDialog({ mode: "edit", id: cat.id }); }}
+                      className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleCatDelete(cat.id, cat.name)}
+                      className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              <p className="text-xs text-muted-foreground mt-1 ml-1">Drag <GripVertical className="inline h-3 w-3" /> to reorder categories</p>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">No categories yet. Add one to get started.</p>
@@ -397,7 +474,7 @@ export default function AdminMenu() {
           >
             All
           </button>
-          {categories?.map((cat) => (
+          {orderedCategories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
