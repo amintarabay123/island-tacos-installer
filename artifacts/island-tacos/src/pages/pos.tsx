@@ -584,11 +584,12 @@ function TicketsDrawer({ onResume, onClose }: {
   useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, [load]);
 
   const resume = (o: Order) => {
+    const kitchenFinished = ["ready", "completed"].includes(o.status);
     const items: CartItem[] = o.items.map(i => ({
       key: uid(), menuItemId: i.menuItemId, name: i.menuItemName, price: i.menuItemPrice,
       quantity: i.quantity, notes: i.notes ?? "",
       modifierSelections: (i.modifierSelections ?? []) as CartModifier[],
-      alreadyMade: o.status === "completed",
+      alreadyMade: kitchenFinished || (i.alreadyMade ?? false),
     }));
     onResume(items, o.customerName, o.notes ?? "", o.discountAmount, o.id);
     onClose();
