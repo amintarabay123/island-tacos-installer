@@ -20,9 +20,10 @@ interface SalesReport {
 }
 
 interface PrinterConfig {
-  type: "browser" | "network";
+  type: "browser" | "network" | "bridge";
   ip: string;
   port: number;
+  bridgeUrl: string;
 }
 
 function fmt(n: number) { return `$${n.toFixed(2)}`; }
@@ -127,18 +128,30 @@ export default function AdminReports() {
             <h3 className="font-semibold text-amber-900 mb-3 flex items-center gap-2"><Printer className="w-4 h-4" /> Receipt Printer Settings</h3>
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="block text-xs font-medium text-amber-800 mb-1">Printer Type</label>
+                <label className="block text-xs font-medium text-amber-800 mb-1">Print Mode</label>
                 <select value={printerConfig.type ?? "browser"}
-                  onChange={e => setPrinterConfig(p => ({ ...p, type: e.target.value as "browser" | "network" }))}
+                  onChange={e => setPrinterConfig(p => ({ ...p, type: e.target.value as PrinterConfig["type"] }))}
                   className="px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white">
-                  <option value="browser">Browser Print (WiFi/USB via OS)</option>
-                  <option value="network">Network / IP Printer (ESC/POS)</option>
+                  <option value="browser">Browser Print (OS print dialog)</option>
+                  <option value="bridge">Local Bridge (WiFi receipt printer ✓)</option>
+                  <option value="network">Network ESC/POS (local server only)</option>
                 </select>
               </div>
+
+              {printerConfig.type === "bridge" && (
+                <div>
+                  <label className="block text-xs font-medium text-amber-800 mb-1">Bridge URL</label>
+                  <input type="text" placeholder="http://localhost:8765"
+                    value={printerConfig.bridgeUrl ?? "http://localhost:8765"}
+                    onChange={e => setPrinterConfig(p => ({ ...p, bridgeUrl: e.target.value }))}
+                    className="px-3 py-2 border border-amber-300 rounded-lg text-sm w-52" />
+                </div>
+              )}
+
               {printerConfig.type === "network" && (
                 <>
                   <div>
-                    <label className="block text-xs font-medium text-amber-800 mb-1">Printer IP Address</label>
+                    <label className="block text-xs font-medium text-amber-800 mb-1">Printer IP</label>
                     <input type="text" placeholder="192.168.1.100" value={printerConfig.ip ?? ""}
                       onChange={e => setPrinterConfig(p => ({ ...p, ip: e.target.value }))}
                       className="px-3 py-2 border border-amber-300 rounded-lg text-sm w-40" />
@@ -151,16 +164,29 @@ export default function AdminReports() {
                   </div>
                 </>
               )}
+
               <button onClick={savePrinterConfig}
                 className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
-                <Save className="w-4 h-4" /> {printerSaved ? "Saved!" : "Save Settings"}
+                <Save className="w-4 h-4" /> {printerSaved ? "Saved!" : "Save"}
               </button>
             </div>
-            <p className="text-xs text-amber-700 mt-2">
-              {printerConfig.type === "browser"
-                ? "Uses your operating system's printer dialog. Set your receipt printer as default in OS settings for one-click printing."
-                : "Connects directly to your thermal printer over the network using ESC/POS protocol. Most thermal printers use port 9100."}
-            </p>
+
+            {printerConfig.type === "bridge" && (
+              <div className="mt-3 p-3 bg-white border border-amber-200 rounded-lg text-xs text-amber-900 space-y-1.5">
+                <p className="font-semibold">Setup (one-time, ~2 minutes):</p>
+                <p>1. Install <strong>Node.js</strong> on any Windows/Mac computer on your restaurant WiFi (free at nodejs.org).</p>
+                <p>2. <a href="/api/print/bridge.js" download className="underline font-medium text-amber-700">Download the bridge script</a> — it's already pre-configured for your printer at <strong>192.168.8.195</strong>.</p>
+                <p>3. Open a terminal/command prompt, go to where you saved the file, and run: <code className="bg-amber-100 px-1 rounded">node island-tacos-bridge.js</code></p>
+                <p>4. Leave that window open. The bridge URL to enter above is <strong>http://localhost:8765</strong> (if running on the same computer as the POS browser).</p>
+              </div>
+            )}
+
+            {printerConfig.type === "browser" && (
+              <p className="text-xs text-amber-700 mt-2">Opens the OS print dialog. Set your receipt printer as the default printer to skip the dialog.</p>
+            )}
+            {printerConfig.type === "network" && (
+              <p className="text-xs text-amber-700 mt-2">Only works when the API server is running on the same local network as the printer (not for the cloud-hosted app).</p>
+            )}
           </div>
         </div>
       )}

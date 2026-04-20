@@ -42,7 +42,7 @@ const now = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minu
 const uid = () => Math.random().toString(36).slice(2, 9);
 const PAY_LABEL: Record<string, string> = { cash: "Cash", card: "Card", athmovil: "ATH Móvil", complimentary: "Comp", split: "Split" };
 
-type PrinterConfig = { type: "browser" | "network"; ip?: string; port?: number };
+type PrinterConfig = { type: "browser" | "network" | "bridge"; ip?: string; port?: number; bridgeUrl?: string };
 function getPrinterConfig(): PrinterConfig {
   try { return JSON.parse(localStorage.getItem("printerConfig") ?? "{}"); } catch { return { type: "browser" }; }
 }
@@ -52,6 +52,21 @@ async function printReceiptLines(
   config?: PrinterConfig
 ): Promise<{ ok: boolean; error?: string }> {
   const cfg = config ?? getPrinterConfig();
+
+  // Local bridge: browser calls the bridge directly, bridge talks to printer via TCP
+  if (cfg.type === "bridge") {
+    const url = (cfg.bridgeUrl ?? "http://localhost:8765").replace(/\/$/, "");
+    try {
+      const r = await fetch(`${url}/print`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lines }),
+      });
+      const data = await r.json();
+      return data;
+    } catch (e) { return { ok: false, error: `Bridge unreachable: ${String(e)}` }; }
+  }
+
   if (cfg.type === "network" && cfg.ip) {
     try {
       const r = await fetch("/api/print/network", {

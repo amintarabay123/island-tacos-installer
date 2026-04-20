@@ -10,7 +10,7 @@ import authRouter, { requireStaffAuth, requireAdminAuth } from "./auth";
 import webhooksRouter from "./webhooks";
 import shiftsRouter from "./shifts";
 import reportsRouter from "./reports";
-import printRouter from "./print";
+import printRouter, { bridgeScriptContent } from "./print";
 import customersRouter from "./customers";
 import uploadRouter from "./upload";
 import displayRouter from "./display";
@@ -21,6 +21,13 @@ const router: IRouter = Router();
 
 // Auth routes (public)
 router.use(authRouter);
+
+// Public download — bridge script (no auth required)
+router.get("/print/bridge.js", (_req, res): void => {
+  res.setHeader("Content-Type", "application/javascript");
+  res.setHeader("Content-Disposition", 'attachment; filename="island-tacos-bridge.js"');
+  res.send(bridgeScriptContent());
+});
 
 // Public routes (upload requires staff auth; /uploads static serving is public)
 router.use(healthRouter);
