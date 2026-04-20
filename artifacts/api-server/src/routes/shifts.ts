@@ -88,7 +88,7 @@ router.get("/shifts/:id/summary", async (req, res): Promise<void> => {
     .from(cashTransactionsTable)
     .where(eq(cashTransactionsTable.shiftId, id));
 
-  const byMethod = { cash: 0, card: 0, athmovil: 0 };
+  const byMethod = { cash: 0, card: 0, athmovil: 0, split: 0, complimentary: 0 };
   let totalSales = 0;
   for (const o of orders) {
     const amt = parseDecimal(o.total);

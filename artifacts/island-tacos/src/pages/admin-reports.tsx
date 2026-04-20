@@ -11,7 +11,7 @@ interface SalesReport {
   paidOrders: number;
   cancelledOrders: number;
   totalSales: number;
-  byMethod: { cash: number; card: number; athmovil: number };
+  byMethod: { cash: number; card: number; athmovil: number; split: number; complimentary: number };
   refundTotal: number;
   netSales: number;
   avgOrderValue: number;
@@ -260,7 +260,9 @@ export default function AdminReports() {
                     { label: "Cash", value: report.byMethod.cash, color: "bg-green-500" },
                     { label: "Card", value: report.byMethod.card, color: "bg-blue-500" },
                     { label: "ATH Móvil", value: report.byMethod.athmovil, color: "bg-purple-500" },
-                  ].map(m => (
+                    { label: "Split", value: report.byMethod.split ?? 0, color: "bg-orange-400" },
+                    { label: "Complimentary", value: report.byMethod.complimentary ?? 0, color: "bg-gray-400" },
+                  ].filter(m => m.value > 0).map(m => (
                     <div key={m.label}>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="font-medium text-gray-700">{m.label}</span>
@@ -337,15 +339,17 @@ export default function AdminReports() {
             <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
               <h2 className="font-bold text-gray-900 mb-3">Summary</h2>
               <div className="space-y-2 text-sm max-w-xs">
-                {[
+                {([
                   ["Total Orders", report.paidOrders],
                   ["Gross Sales", fmt(report.totalSales)],
                   ["Cash Sales", fmt(report.byMethod.cash)],
                   ["Card Sales", fmt(report.byMethod.card)],
                   ["ATH Móvil Sales", fmt(report.byMethod.athmovil)],
+                  ...(report.byMethod.split > 0 ? [["Split Sales", fmt(report.byMethod.split)]] : []),
+                  ...(report.byMethod.complimentary > 0 ? [["Complimentary", fmt(report.byMethod.complimentary)]] : []),
                   ["Total Refunds", `- ${fmt(report.refundTotal)}`],
                   ["Net Sales", fmt(report.netSales)],
-                ].map(([label, val]) => (
+                ] as [string, string | number][]).map(([label, val]) => (
                   <div key={label as string} className={`flex justify-between py-1 ${label === "Net Sales" ? "font-bold border-t border-gray-200 text-base" : "border-b border-gray-50 text-gray-700"}`}>
                     <span>{label}</span>
                     <span>{val}</span>

@@ -27,7 +27,7 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
     )),
   ]);
 
-  const byMethod = { cash: 0, card: 0, athmovil: 0 };
+  const byMethod = { cash: 0, card: 0, athmovil: 0, split: 0, complimentary: 0 };
   let totalSales = 0;
   for (const o of paidOrders) {
     const amt = parseDecimal(o.total);

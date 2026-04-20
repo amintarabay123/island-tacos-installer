@@ -242,7 +242,7 @@ export const CreateOrderBody = zod.object({
   customerPhone: zod.string(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
-  paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  paymentMethod: zod.enum(["card", "athmovil", "cash", "split", "complimentary"]),
   paymentStatus: zod.enum(["pending", "paid"]).optional(),
   source: zod.enum(["online", "pos"]).optional(),
   discountAmount: zod.number().optional(),

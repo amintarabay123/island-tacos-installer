@@ -24,11 +24,8 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
 
-  // Register ATH Móvil webhook URL (non-blocking)
-  const host =
-    process.env["NODE_ENV"] === "production"
-      ? "https://order-direct-connect.replit.app"
-      : `http://localhost:${port}`;
-
-  registerAthMovilWebhook(`${host}/api/webhooks/athmovil`).catch(() => {});
+  // Register ATH Móvil webhook URL in production only (non-blocking)
+  if (process.env["NODE_ENV"] === "production") {
+    registerAthMovilWebhook("https://order-direct-connect.replit.app/api/webhooks/athmovil").catch(() => {});
+  }
 });
