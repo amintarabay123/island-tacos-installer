@@ -328,6 +328,10 @@ export const UpdateOrderStatusBody = zod.object({
   ]).optional(),
   kdsCleared: zod.boolean().optional(),
   estimatedReadyAt: zod.coerce.date().nullish(),
+  actualPaymentMethod: zod.string().optional(),
+  paymentStatus: zod.enum(["pending", "paid"]).optional(),
+  cancellationReason: zod.string().nullish(),
+  notes: zod.string().nullish(),
 });
 
 export const UpdateOrderStatusResponse = zod.object({

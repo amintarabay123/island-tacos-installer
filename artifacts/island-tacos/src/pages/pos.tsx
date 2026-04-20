@@ -565,9 +565,7 @@ function TicketsDrawer({ onResume, onClose }: {
   onResume: (items: CartItem[], name: string, note: string, discount: number, orderId: number) => void;
   onClose: () => void;
 }) {
-  const [tab, setTab] = useState<"held" | "live">("held");
-  const [tickets, setTickets] = useState<Order[]>([]);
-  const [liveOrders, setLiveOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [splitChargeOrder, setSplitChargeOrder] = useState<Order | null>(null);
@@ -576,8 +574,7 @@ function TicketsDrawer({ onResume, onClose }: {
     try {
       const r = await fetch("/api/orders", { credentials: "include" });
       const data: Order[] = await r.json();
-      setTickets(data.filter(o => o.source === "pos" && o.paymentStatus === "pending" && !["completed","cancelled"].includes(o.status)));
-      setLiveOrders(data.filter(o => ["pending","confirmed","preparing","ready"].includes(o.status)));
+      setOrders(data.filter(o => !["completed", "cancelled"].includes(o.status)));
     } finally { setLoading(false); }
   }, []);
 
@@ -621,7 +618,7 @@ function TicketsDrawer({ onResume, onClose }: {
       body: JSON.stringify({ status: "completed", actualPaymentMethod: method, paymentStatus: "paid" }),
     });
     setChargeOrder(null);
-    load();
+    onClose();
   };
 
   const completeWithSplit = async (_groups: SplitGroup[], note: string, order: Order) => {
@@ -632,12 +629,15 @@ function TicketsDrawer({ onResume, onClose }: {
       body: JSON.stringify({ status: "completed", actualPaymentMethod: "split", paymentStatus: "paid", notes: existingNotes }),
     });
     setSplitChargeOrder(null);
-    load();
+    onClose();
   };
 
   const STATUS_COLOR: Record<string, string> = {
     pending: "text-yellow-400", confirmed: "text-blue-400",
     preparing: "text-orange-400", ready: "text-green-400",
+  };
+  const STATUS_LABEL: Record<string, string> = {
+    pending: "New", confirmed: "Accepted", preparing: "Cooking", ready: "Ready",
   };
 
   return (
@@ -645,106 +645,62 @@ function TicketsDrawer({ onResume, onClose }: {
       <div className="fixed inset-0 bg-black/70 flex justify-end z-50" onClick={onClose}>
         <div className="bg-[#13151C] w-full max-w-sm h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
           <div className="p-5 border-b border-[#1E2130] flex items-center justify-between">
-            <h2 className="text-white text-xl font-bold">Tickets</h2>
+            <h2 className="text-white text-xl font-bold">Orders{orders.length > 0 ? ` (${orders.length})` : ""}</h2>
             <button onClick={onClose} className="text-zinc-400 hover:text-white text-2xl">×</button>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex border-b border-[#1E2130]">
-            <button onClick={() => setTab("held")}
-              className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${tab === "held" ? "text-[#F5A623] border-b-2 border-[#F5A623]" : "text-zinc-400 hover:text-white"}`}>
-              🎫 Held{tickets.length > 0 ? ` (${tickets.length})` : ""}
-            </button>
-            <button onClick={() => setTab("live")}
-              className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${tab === "live" ? "text-[#F5A623] border-b-2 border-[#F5A623]" : "text-zinc-400 hover:text-white"}`}>
-              📋 Live Queue{liveOrders.length > 0 ? ` (${liveOrders.length})` : ""}
-            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {loading && <p className="text-zinc-500 text-center py-8">Loading…</p>}
-
-            {/* ── Held Tickets tab ── */}
-            {!loading && tab === "held" && (
-              <>
-                {tickets.length === 0 && <p className="text-zinc-500 text-center py-8">No held tickets</p>}
-                {tickets.map(o => (
-                  <div key={o.id} className="bg-[#1E2130] rounded-xl p-4">
-                    <div className="flex items-start justify-between mb-1">
-                      <div>
-                        <p className="text-white font-bold">{o.customerName || "Guest"}</p>
-                        {o.customerPhone && <p className="text-zinc-400 text-xs">{o.customerPhone}</p>}
-                        <p className="text-zinc-500 text-xs">#{o.confirmationCode}</p>
-                      </div>
-                      <span className="text-[#F5A623] font-bold text-lg">{fmt(o.total)}</span>
-                    </div>
-                    {o.notes && <p className="text-zinc-400 text-xs italic mb-1">"{o.notes}"</p>}
-                    <p className="text-zinc-400 text-xs mb-3">
-                      {o.items.map(i => {
-                        const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
-                        return `${i.quantity}× ${i.menuItemName}${mods}`;
-                      }).join(" • ")}
-                    </p>
-                    <div className="flex gap-2">
-                      <button onClick={() => resume(o)} className="flex-1 h-9 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-sm font-bold transition-colors">Resume</button>
-                      <button onClick={() => voidTicket(o.id)} className="h-9 px-3 rounded-lg bg-red-900/40 hover:bg-red-800/60 text-red-400 text-sm font-semibold transition-colors">Void</button>
+            {!loading && orders.length === 0 && <p className="text-zinc-500 text-center py-8">No active orders</p>}
+            {!loading && orders.map(o => (
+              <div key={o.id} className="bg-[#1E2130] rounded-xl p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="text-white font-bold text-base leading-tight">{o.customerName || "Walk-in"}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-zinc-500 text-xs font-mono">#{o.confirmationCode}</span>
+                      <span className={`text-xs font-semibold ${STATUS_COLOR[o.status] ?? "text-zinc-400"}`}>
+                        {STATUS_LABEL[o.status] ?? o.status}
+                      </span>
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-900/50 text-purple-300" : "bg-blue-900/50 text-blue-300"}`}>
+                        {o.source === "pos" ? "POS" : "Online"}
+                      </span>
                     </div>
                   </div>
-                ))}
-              </>
-            )}
-
-            {/* ── Live Queue tab ── */}
-            {!loading && tab === "live" && (
-              <>
-                {liveOrders.length === 0 && <p className="text-zinc-500 text-center py-8">No active orders</p>}
-                {liveOrders.map(o => (
-                  <div key={o.id} className="bg-[#1E2130] rounded-xl p-4">
-                    <div className="flex items-start justify-between mb-1">
-                      <div>
-                        <p className="text-white font-bold text-base leading-tight">{o.customerName || "Walk-in"}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-zinc-500 text-xs font-mono">#{o.confirmationCode}</span>
-                          <span className={`text-xs font-semibold capitalize ${STATUS_COLOR[o.status] ?? "text-zinc-400"}`}>{o.status}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[#F5A623] font-bold">{fmt(o.total)}</span>
-                        <div className="mt-0.5">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-900/50 text-purple-300" : "bg-blue-900/50 text-blue-300"}`}>
-                            {o.source === "pos" ? "POS" : "Online"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-zinc-500 text-xs mt-1">
-                      {o.items.map(i => {
-                        const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
-                        return `${i.quantity}× ${i.menuItemName}${mods}`;
-                      }).join(" • ")}
-                    </p>
-                    <div className="flex gap-2 mt-3">
-                      {o.status === "pending" && o.source === "online" && (
-                        <>
-                          <button onClick={() => updateStatus(o.id, "confirmed")} className="flex-1 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors">Accept</button>
-                          <button onClick={() => updateStatus(o.id, "cancelled")} className="h-8 px-3 rounded-lg bg-red-900/50 hover:bg-red-800 text-red-300 text-xs font-semibold transition-colors">Reject</button>
-                        </>
-                      )}
-                      {o.status === "pending" && o.source === "pos" && (
-                        <button onClick={() => updateStatus(o.id, "confirmed")} className="flex-1 h-8 rounded-lg bg-purple-700 hover:bg-purple-600 text-white text-xs font-semibold transition-colors">Start</button>
-                      )}
-                      {o.status === "confirmed" && <button onClick={() => updateStatus(o.id, "preparing")} className="flex-1 h-8 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition-colors">Start Cooking</button>}
-                      {o.status === "preparing" && <button onClick={() => updateStatus(o.id, "ready")} className="flex-1 h-8 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold transition-colors">Mark Ready</button>}
-                      {o.paymentStatus === "pending" && (
-                        <button onClick={() => setChargeOrder(o)} className="flex-1 h-8 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-xs font-bold transition-colors">
-                          Charge {fmt(o.total)}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
+                  <span className="text-[#F5A623] font-bold shrink-0">{fmt(o.total)}</span>
+                </div>
+                <p className="text-zinc-500 text-xs mb-2 leading-relaxed">
+                  {o.items.map(i => {
+                    const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
+                    return `${i.quantity}× ${i.menuItemName}${mods}`;
+                  }).join(" • ")}
+                </p>
+                {o.notes && <p className="text-zinc-400 text-xs italic mb-2">"{o.notes}"</p>}
+                <div className="flex flex-wrap gap-2">
+                  {o.status === "pending" && o.source === "online" && (
+                    <>
+                      <button onClick={() => updateStatus(o.id, "confirmed")} className="flex-1 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors">Accept</button>
+                      <button onClick={() => updateStatus(o.id, "cancelled")} className="h-8 px-3 rounded-lg bg-red-900/50 hover:bg-red-800 text-red-300 text-xs font-semibold transition-colors">Reject</button>
+                    </>
+                  )}
+                  {o.status === "confirmed" && (
+                    <button onClick={() => updateStatus(o.id, "preparing")} className="flex-1 h-8 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition-colors">Start Cooking</button>
+                  )}
+                  {o.status === "preparing" && (
+                    <button onClick={() => updateStatus(o.id, "ready")} className="flex-1 h-8 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold transition-colors">Mark Ready</button>
+                  )}
+                  {o.source === "pos" && o.paymentStatus === "pending" && (
+                    <button onClick={() => resume(o)} className="h-8 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-semibold transition-colors">Edit</button>
+                  )}
+                  {o.paymentStatus === "pending" && (
+                    <button onClick={() => setChargeOrder(o)} className="flex-1 h-8 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-xs font-bold transition-colors">
+                      Charge {fmt(o.total)}
+                    </button>
+                  )}
+                  <button onClick={() => voidTicket(o.id)} className="h-8 px-3 rounded-lg bg-red-900/30 hover:bg-red-900/60 text-red-400 text-xs font-semibold transition-colors">Void</button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -973,7 +929,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                       body: JSON.stringify({ amount: parseFloat(refundAmount), reason: refundReason, refundMethod }),
                     });
                     setRefundOpen(false); setRefundSuccess(true); setRefundSubmitting(false);
-                    setTimeout(() => setRefundSuccess(false), 3000);
+                    setTimeout(() => onClose(), 1500);
                   }}
                   className="w-full h-10 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition-colors disabled:opacity-50">
                   {refundSubmitting ? "Processing…" : `Confirm Refund ${refundAmount ? fmt(parseFloat(refundAmount)) : ""}`}
