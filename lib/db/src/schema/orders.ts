@@ -46,6 +46,7 @@ export const orderItemsTable = pgTable("order_items", {
     price: number;
   }[]>(),
   subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
+  alreadyMade: boolean("already_made").notNull().default(false),
 });
 
 export const insertOrderItemSchema = createInsertSchema(orderItemsTable).omit({ id: true });

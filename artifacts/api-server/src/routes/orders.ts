@@ -133,6 +133,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       quantity: item.quantity,
       notes: item.notes ?? null,
       modifierSelections: item.modifierSelections ?? null,
+      alreadyMade: item.alreadyMade ?? false,
       itemSubtotal,
     });
   }
@@ -197,6 +198,7 @@ router.post("/orders", async (req, res): Promise<void> => {
         quantity: item.quantity,
         notes: item.notes,
         modifierSelections: item.modifierSelections ?? null,
+        alreadyMade: item.alreadyMade ?? false,
         subtotal: String(item.itemSubtotal),
       }))
     )

@@ -249,6 +249,7 @@ export const CreateOrderBody = zod.object({
       menuItemId: zod.number(),
       quantity: zod.number(),
       notes: zod.string().nullish(),
+      alreadyMade: zod.boolean().optional(),
       modifierSelections: zod.array(
         zod.object({
           modifierId: zod.string(),

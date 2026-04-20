@@ -18,6 +18,7 @@ type CartModifier = { modifierId: string; optionId: string; name: string; price:
 type CartItem = {
   key: string; menuItemId: number; name: string; price: number;
   quantity: number; notes: string; modifierSelections: CartModifier[];
+  alreadyMade?: boolean;
 };
 type Order = {
   id: number; confirmationCode: string; customerName: string; status: string;
@@ -25,7 +26,7 @@ type Order = {
   subtotal: number; discountAmount: number; tax: number; total: number;
   notes?: string | null; createdAt: string; customerPhone?: string | null;
   orderType?: string; estimatedReadyAt?: string | null;
-  items: { id: number; menuItemName: string; quantity: number; menuItemPrice: number; subtotal: number; modifierSelections?: CartModifier[] | null; notes?: string | null }[];
+  items: { id: number; menuItemId: number; menuItemName: string; quantity: number; menuItemPrice: number; subtotal: number; modifierSelections?: CartModifier[] | null; notes?: string | null; alreadyMade?: boolean | null }[];
 };
 
 type Shift = {
@@ -587,6 +588,7 @@ function TicketsDrawer({ onResume, onClose }: {
       key: uid(), menuItemId: i.menuItemId, name: i.menuItemName, price: i.menuItemPrice,
       quantity: i.quantity, notes: i.notes ?? "",
       modifierSelections: (i.modifierSelections ?? []) as CartModifier[],
+      alreadyMade: o.status === "completed",
     }));
     onResume(items, o.customerName, o.notes ?? "", o.discountAmount, o.id);
     onClose();
@@ -1902,6 +1904,7 @@ export default function POS() {
             quantity: c.quantity,
             notes: c.notes || null,
             modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
+            alreadyMade: c.alreadyMade ?? false,
           })),
         }),
       });

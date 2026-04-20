@@ -12,6 +12,7 @@ type OrderItem = {
   notes?: string | null;
   subtotal: number;
   modifierSelections?: { name: string; price: number }[] | null;
+  alreadyMade?: boolean | null;
 };
 
 type KitchenCategory = { id: number; name: string; sendToKds: boolean };
@@ -586,23 +587,34 @@ export default function Kitchen() {
 
                       <div className="flex flex-col gap-1">
                         {order.items.filter(isKdsItem).map((item) => (
-                          <div key={item.id} className="bg-black/40 rounded px-2 py-1.5">
-                            <div className="flex items-baseline gap-1.5">
-                              <span className="text-base font-black text-white leading-none">{item.quantity}×</span>
-                              <span className="text-sm font-semibold text-white leading-snug">{item.menuItemName}</span>
+                          item.alreadyMade ? (
+                            <div key={item.id} className="bg-black/20 rounded px-2 py-1.5 opacity-50 flex items-center gap-2">
+                              <span className="text-green-400 text-xs font-bold shrink-0">✓</span>
+                              <div className="flex items-baseline gap-1.5 line-through decoration-zinc-500">
+                                <span className="text-sm font-semibold text-zinc-500 leading-none">{item.quantity}×</span>
+                                <span className="text-xs font-medium text-zinc-500 leading-snug">{item.menuItemName}</span>
+                              </div>
+                              <span className="text-[10px] text-zinc-600 ml-auto shrink-0">done</span>
                             </div>
-                            {(item.modifierSelections ?? []).length > 0 ? (
-                              <div className="text-yellow-300 text-xs mt-1 leading-snug font-medium space-y-0.5">
-                                {(item.modifierSelections ?? []).map((m, i) => (
-                                  <div key={i}>+ {m.name}</div>
-                                ))}
+                          ) : (
+                            <div key={item.id} className="bg-black/40 rounded px-2 py-1.5">
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-base font-black text-white leading-none">{item.quantity}×</span>
+                                <span className="text-sm font-semibold text-white leading-snug">{item.menuItemName}</span>
                               </div>
-                            ) : item.notes ? (
-                              <div className="text-yellow-300 text-xs mt-1 leading-snug whitespace-pre-line font-medium">
-                                {item.notes}
-                              </div>
-                            ) : null}
-                          </div>
+                              {(item.modifierSelections ?? []).length > 0 ? (
+                                <div className="text-yellow-300 text-xs mt-1 leading-snug font-medium space-y-0.5">
+                                  {(item.modifierSelections ?? []).map((m, i) => (
+                                    <div key={i}>+ {m.name}</div>
+                                  ))}
+                                </div>
+                              ) : item.notes ? (
+                                <div className="text-yellow-300 text-xs mt-1 leading-snug whitespace-pre-line font-medium">
+                                  {item.notes}
+                                </div>
+                              ) : null}
+                            </div>
+                          )
                         ))}
                       </div>
 
