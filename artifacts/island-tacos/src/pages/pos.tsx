@@ -697,19 +697,23 @@ function TicketsDrawer({ onResume, onClose }: {
                 {liveOrders.length === 0 && <p className="text-zinc-500 text-center py-8">No active orders</p>}
                 {liveOrders.map(o => (
                   <div key={o.id} className="bg-[#1E2130] rounded-xl p-4">
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-start justify-between mb-1">
                       <div>
-                        <span className="text-white font-bold">#{o.confirmationCode}</span>
-                        <span className={`ml-2 text-sm font-semibold capitalize ${STATUS_COLOR[o.status] ?? "text-zinc-400"}`}>{o.status}</span>
+                        <p className="text-white font-bold text-base leading-tight">{o.customerName || "Walk-in"}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-zinc-500 text-xs font-mono">#{o.confirmationCode}</span>
+                          <span className={`text-xs font-semibold capitalize ${STATUS_COLOR[o.status] ?? "text-zinc-400"}`}>{o.status}</span>
+                        </div>
                       </div>
                       <div className="text-right">
                         <span className="text-[#F5A623] font-bold">{fmt(o.total)}</span>
-                        <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-900/50 text-purple-300" : "bg-blue-900/50 text-blue-300"}`}>
-                          {o.source === "pos" ? "POS" : "Online"}
-                        </span>
+                        <div className="mt-0.5">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-900/50 text-purple-300" : "bg-blue-900/50 text-blue-300"}`}>
+                            {o.source === "pos" ? "POS" : "Online"}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <p className="text-zinc-300 text-sm">{o.customerName}</p>
                     <p className="text-zinc-500 text-xs mt-1">
                       {o.items.map(i => {
                         const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";

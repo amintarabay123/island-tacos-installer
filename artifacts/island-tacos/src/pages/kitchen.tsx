@@ -389,6 +389,35 @@ export default function Kitchen() {
     }
   };
 
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyOrders, setHistoryOrders] = useState<Order[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [recalling, setRecalling] = useState<Set<number>>(new Set());
+
+  const openHistory = async () => {
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    try {
+      const r = await fetch("/api/orders?status=completed", { credentials: "include", headers: authHeaders() });
+      const data: Order[] = await r.json();
+      setHistoryOrders(data.slice(0, 50));
+    } catch { /* silent */ } finally { setHistoryLoading(false); }
+  };
+
+  const recallOrder = async (order: Order) => {
+    setRecalling(s => new Set(s).add(order.id));
+    try {
+      await fetch(`/api/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ready" }),
+      });
+      setHistoryOrders(prev => prev.filter(o => o.id !== order.id));
+      broadcastUpdate();
+      await fetchOrders();
+    } finally { setRecalling(s => { const n = new Set(s); n.delete(order.id); return n; }); }
+  };
+
   const [mobileTab, setMobileTab] = useState<"new" | "preparing" | "ready">("new");
 
   // Filter out orders where ALL items are in non-KDS categories
@@ -443,6 +472,12 @@ export default function Kitchen() {
               🔔 <span className="hidden sm:inline">Alerts</span>
             </button>
           )}
+          <button
+            onClick={openHistory}
+            className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-colors"
+          >
+            🕐 <span className="hidden sm:inline">History</span>
+          </button>
           <button
             onClick={logout}
             className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors px-2 py-1 rounded"
@@ -531,9 +566,9 @@ export default function Kitchen() {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="text-lg font-black tracking-tight leading-none">
-                            {order.confirmationCode}
+                            {order.customerName}
                           </div>
-                          <div className="text-zinc-200 font-semibold text-xs mt-0.5">{order.customerName}</div>
+                          <div className="text-zinc-400 font-mono text-xs mt-0.5">#{order.confirmationCode}</div>
                           {order.status === "confirmed" && (
                             <div className="text-blue-300 text-[10px] font-semibold mt-0.5 uppercase tracking-wide">Accepted</div>
                           )}
@@ -626,6 +661,45 @@ export default function Kitchen() {
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
           <div className="text-6xl font-black text-zinc-800 tracking-tight">All Clear</div>
           <div className="text-zinc-600 text-base">No active orders · refreshing every 10s</div>
+        </div>
+      )}
+
+      {/* ── History Drawer ── */}
+      {historyOpen && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex justify-end" onClick={() => setHistoryOpen(false)}>
+          <div className="bg-zinc-900 w-full max-w-sm h-full flex flex-col shadow-2xl border-l border-zinc-800" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+              <h2 className="text-white text-lg font-bold">🕐 Order History</h2>
+              <button onClick={() => setHistoryOpen(false)} className="text-zinc-500 hover:text-white text-2xl font-bold w-8 h-8 flex items-center justify-center transition-colors">×</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {historyLoading && <p className="text-zinc-500 text-center py-8">Loading…</p>}
+              {!historyLoading && historyOrders.length === 0 && (
+                <p className="text-zinc-500 text-center py-8">No completed orders</p>
+              )}
+              {!historyLoading && historyOrders.map(o => (
+                <div key={o.id} className="bg-zinc-800 rounded-xl p-4 flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-white font-bold text-base leading-tight">{o.customerName}</p>
+                      <p className="text-zinc-500 font-mono text-xs">#{o.confirmationCode}</p>
+                    </div>
+                    <span className="text-zinc-400 text-xs">{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                  </div>
+                  <div className="text-zinc-400 text-xs">
+                    {o.items.map(i => `${i.quantity}× ${i.menuItemName}`).join(" · ")}
+                  </div>
+                  <button
+                    disabled={recalling.has(o.id)}
+                    onClick={() => recallOrder(o)}
+                    className="w-full h-9 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-xs font-bold transition-colors"
+                  >
+                    {recalling.has(o.id) ? "Recalling…" : "↩ Recall to Ready"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
