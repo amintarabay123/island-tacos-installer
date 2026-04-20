@@ -32,6 +32,7 @@ type MenuItemForm = {
   description: string;
   price: string;
   imageUrl: string;
+  posImageUrl: string;
   available: boolean;
   popular: boolean;
   spicy: boolean;
@@ -45,6 +46,7 @@ const emptyForm: MenuItemForm = {
   description: "",
   price: "",
   imageUrl: "",
+  posImageUrl: "",
   available: true,
   popular: false,
   spicy: false,
@@ -66,6 +68,8 @@ export default function AdminMenu() {
   const [dialog, setDialog] = useState<null | { mode: "create" | "edit"; id?: number }>(null);
   const [imageUploading, setImageUploading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [posImageUploading, setPosImageUploading] = useState(false);
+  const posImageInputRef = useRef<HTMLInputElement>(null);
 
   // Category management
   type CatForm = { name: string; icon: string };
@@ -272,6 +276,7 @@ export default function AdminMenu() {
       description: item.description ?? "",
       price: String(item.price),
       imageUrl: item.imageUrl ?? "",
+      posImageUrl: (item as { posImageUrl?: string | null }).posImageUrl ?? "",
       available: item.available,
       popular: item.popular,
       spicy: item.spicy,
@@ -291,6 +296,7 @@ export default function AdminMenu() {
       description: form.description || null,
       price,
       imageUrl: form.imageUrl || null,
+      posImageUrl: form.posImageUrl || null,
       available: form.available,
       popular: form.popular,
       spicy: form.spicy,
@@ -336,6 +342,22 @@ export default function AdminMenu() {
       alert("Image upload failed. Try again.");
     } finally {
       setImageUploading(false);
+    }
+  };
+
+  const handlePosImageUpload = async (file: File) => {
+    setPosImageUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const r = await fetch("/api/upload", { method: "POST", credentials: "include", body });
+      if (!r.ok) throw new Error("Upload failed");
+      const { url } = await r.json() as { url: string };
+      setForm((f) => ({ ...f, posImageUrl: url }));
+    } catch {
+      alert("Image upload failed. Try again.");
+    } finally {
+      setPosImageUploading(false);
     }
   };
 
@@ -646,8 +668,10 @@ export default function AdminMenu() {
                 placeholder="0.00"
               />
             </div>
+            {/* Online ordering image */}
             <div className="space-y-2">
-              <Label>Image</Label>
+              <Label>Online Store Image</Label>
+              <p className="text-xs text-muted-foreground -mt-1">Shown on the customer ordering page.</p>
               <div className="flex gap-2">
                 <Input
                   value={form.imageUrl}
@@ -679,6 +703,49 @@ export default function AdminMenu() {
                   <button
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}
+                    className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full w-5 h-5 flex items-center justify-center transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* POS image */}
+            <div className="space-y-2">
+              <Label>POS Image <span className="font-normal text-muted-foreground">(optional)</span></Label>
+              <p className="text-xs text-muted-foreground -mt-1">Shown on the staff POS screen. Falls back to the online store image if left blank.</p>
+              <div className="flex gap-2">
+                <Input
+                  value={form.posImageUrl}
+                  onChange={(e) => setForm((f) => ({ ...f, posImageUrl: e.target.value }))}
+                  placeholder="https://... or upload →"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={posImageUploading}
+                  onClick={() => posImageInputRef.current?.click()}
+                  className="shrink-0"
+                >
+                  {posImageUploading ? "Uploading…" : <><Upload className="h-4 w-4 mr-1" />Upload</>}
+                </Button>
+                <input
+                  ref={posImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePosImageUpload(f); e.target.value = ""; }}
+                />
+              </div>
+              {form.posImageUrl && (
+                <div className="relative w-24 h-24 rounded-lg overflow-hidden border bg-muted">
+                  <img src={form.posImageUrl} alt="POS Preview" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, posImageUrl: "" }))}
                     className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full w-5 h-5 flex items-center justify-center transition-colors"
                   >
                     <X className="h-3 w-3" />

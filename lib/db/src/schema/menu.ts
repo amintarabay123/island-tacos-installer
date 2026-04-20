@@ -24,6 +24,7 @@ export const menuItemsTable = pgTable("menu_items", {
   description: text("description"),
   price: numeric("price", { precision: 10, scale: 2 }).notNull(),
   imageUrl: text("image_url"),
+  posImageUrl: text("pos_image_url"),
   available: boolean("available").notNull().default(true),
   popular: boolean("popular").notNull().default(false),
   spicy: boolean("spicy").notNull().default(false),

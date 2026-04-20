@@ -11,7 +11,7 @@ type Modifier = { id: number; loyverseId: string; name: string; options: Modifie
 type MenuCategory = { id: number; name: string; sortOrder: number };
 type MenuItem = {
   id: number; categoryId: number; name: string; description?: string | null;
-  price: number; imageUrl?: string | null; available: boolean;
+  price: number; imageUrl?: string | null; posImageUrl?: string | null; available: boolean;
   popular: boolean; spicy: boolean; vegetarian: boolean;
 };
 type CartModifier = { modifierId: string; optionId: string; name: string; price: number };
@@ -835,9 +835,9 @@ function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
         hover:shadow-[0_16px_36px_rgba(0,0,0,0.6),0_1px_0_rgba(255,255,255,0.10)_inset,0_0_0_1px_rgba(245,166,35,0.3)]
         active:translate-y-0 active:scale-[0.98] active:shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
     >
-      {item.imageUrl ? (
+      {(item.posImageUrl ?? item.imageUrl) ? (
         <div className="w-full aspect-square rounded-xl overflow-hidden mb-1 bg-[#0A0B0F] shadow-inner">
-          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
+          <img src={(item.posImageUrl ?? item.imageUrl)!} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
         </div>
       ) : (
         <div className="w-full aspect-square rounded-xl mb-1 bg-gradient-to-br from-[#1A1D2E] to-[#0D0F18] flex items-center justify-center shadow-inner">
