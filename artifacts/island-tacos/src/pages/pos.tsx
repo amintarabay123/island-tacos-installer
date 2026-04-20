@@ -780,12 +780,12 @@ function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
     <button
       onClick={onClick}
       className="group relative text-left flex flex-col gap-1 rounded-2xl p-3 transition-all duration-200 ease-out
-        bg-gradient-to-b from-[#1E2235] to-[#13151C]
-        border border-white/5
-        shadow-[0_4px_16px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.06)_inset]
-        hover:-translate-y-1 hover:scale-[1.03]
-        hover:shadow-[0_12px_32px_rgba(0,0,0,0.7),0_1px_0_rgba(255,255,255,0.08)_inset,0_0_0_1px_rgba(245,166,35,0.2)]
-        active:translate-y-0 active:scale-[0.98] active:shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
+        bg-gradient-to-b from-[#272C45] to-[#1E2138]
+        border border-white/10
+        shadow-[0_6px_20px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.08)_inset]
+        hover:-translate-y-1.5 hover:scale-[1.04]
+        hover:shadow-[0_16px_36px_rgba(0,0,0,0.6),0_1px_0_rgba(255,255,255,0.10)_inset,0_0_0_1px_rgba(245,166,35,0.3)]
+        active:translate-y-0 active:scale-[0.98] active:shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
     >
       {item.imageUrl ? (
         <div className="w-full aspect-square rounded-xl overflow-hidden mb-1 bg-[#0A0B0F] shadow-inner">
@@ -1961,10 +1961,10 @@ export default function POS() {
   // ─ Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 bg-[#0A0B0F] flex flex-col overflow-hidden" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="fixed inset-0 bg-[#191C2E] flex flex-col overflow-hidden" style={{ fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Header ── */}
-      <header className="flex items-center justify-between px-4 py-2.5 bg-[#0F1117] border-b border-[#1E2130] flex-shrink-0">
+      <header className="flex items-center justify-between px-4 py-2.5 bg-[#141728] border-b border-[#252A42] flex-shrink-0">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="Island Tacos" className="h-8 object-contain brightness-0 invert opacity-80"/>
           <span className="text-zinc-500 text-sm font-medium hidden sm:block">Point of Sale</span>
@@ -2033,7 +2033,7 @@ export default function POS() {
       <div className="flex flex-1 overflow-hidden min-h-0">
 
         {/* ── Left: Menu ── */}
-        <div className={`flex-col flex-1 min-w-0 overflow-hidden border-r border-[#1E2130] ${mobileView === "menu" ? "flex" : "hidden"} sm:flex`}>
+        <div className={`flex-col flex-1 min-w-0 overflow-hidden border-r border-[#252A42] ${mobileView === "menu" ? "flex" : "hidden"} sm:flex`}>
 
           {/* Search */}
           <div className="px-3 pt-3 pb-2 flex-shrink-0">
