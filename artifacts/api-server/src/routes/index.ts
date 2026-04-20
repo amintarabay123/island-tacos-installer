@@ -15,6 +15,7 @@ import customersRouter from "./customers";
 import uploadRouter from "./upload";
 import displayRouter from "./display";
 import settingsRouter from "./settings";
+import employeesRouter from "./employees";
 
 const router: IRouter = Router();
 
@@ -48,7 +49,7 @@ router.use(shiftsRouter);
 router.use(printRouter);
 
 // Admin + Loyverse + Settings PATCH: owner only
-router.use(/^\/(admin|loyverse|reports)/, (req: Request, res: Response, next: NextFunction) => {
+router.use(/^\/(admin|loyverse|reports|employees)/, (req: Request, res: Response, next: NextFunction) => {
   requireAdminAuth(req, res, next);
 });
 router.use("/settings", (req: Request, res: Response, next: NextFunction) => {
@@ -59,5 +60,6 @@ router.use("/settings", (req: Request, res: Response, next: NextFunction) => {
 router.use(adminRouter);
 router.use(loyverseRouter);
 router.use(reportsRouter);
+router.use(employeesRouter);
 
 export default router;

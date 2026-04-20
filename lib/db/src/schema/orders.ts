@@ -97,3 +97,14 @@ export const customersTable = pgTable("customers", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 export type Customer = typeof customersTable.$inferSelect;
+
+export const employeesTable = pgTable("employees", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default("staff"), // "owner" | "staff"
+  pinHash: text("pin_hash").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+export type Employee = typeof employeesTable.$inferSelect;

@@ -6,10 +6,11 @@ import {
   getTokenFromRequest,
   verifyTokenFromString,
 } from "../lib/auth-token";
+import { verifyPin } from "./employees";
 
 const router: IRouter = Router();
 
-router.post("/auth/login", (req: Request, res: Response): void => {
+router.post("/auth/login", async (req: Request, res: Response): Promise<void> => {
   const { pin } = req.body as { pin?: string };
 
   if (!pin) {
@@ -17,29 +18,12 @@ router.post("/auth/login", (req: Request, res: Response): void => {
     return;
   }
 
-  // Read at request time so secrets are always current
-  const staffPin = process.env["STAFF_PIN"];
-  const adminPin = process.env["ADMIN_PIN"];
-
-  if (!staffPin && !adminPin) {
-    res.status(503).json({ error: "No PIN configured on server." });
-    return;
-  }
-
-  // ADMIN_PIN (if set) grants owner access
-  if (adminPin && pin === adminPin) {
-    const token = createToken("admin");
+  // Check against employee database (seeds from env vars on first run)
+  const result = await verifyPin(pin);
+  if (result) {
+    const token = createToken(result.role);
     res.setHeader("Set-Cookie", makeSetCookieHeader(token));
-    res.json({ ok: true, role: "admin", token });
-    return;
-  }
-
-  // STAFF_PIN: if no ADMIN_PIN set, it grants admin (backwards-compatible)
-  if (staffPin && pin === staffPin) {
-    const role = adminPin ? "staff" : "admin";
-    const token = createToken(role);
-    res.setHeader("Set-Cookie", makeSetCookieHeader(token));
-    res.json({ ok: true, role, token });
+    res.json({ ok: true, role: result.role, name: result.name, token });
     return;
   }
 
