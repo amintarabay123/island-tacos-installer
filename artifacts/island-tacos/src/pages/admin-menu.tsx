@@ -84,23 +84,35 @@ export default function AdminMenu() {
 
   // ── Reorder state ──────────────────────────────────────────────────────────
   const [orderedIds, setOrderedIds] = useState<number[]>([]);
-  const initializedRef = useRef(false);
+  const isDraggingRef = useRef(false);
 
+  // Sync orderedIds from API whenever items change (API sorts by sort_order).
+  // Skip the sync while user is actively dragging to prevent mid-drag resets.
   useEffect(() => {
-    if (!items) return;
-    if (!initializedRef.current) {
-      setOrderedIds(items.map((i) => i.id));
-      initializedRef.current = true;
-    } else {
-      setOrderedIds((prev) => {
-        const existing = new Set(prev);
-        const newIds = items.filter((i) => !existing.has(i.id)).map((i) => i.id);
-        const currentIds = new Set(items.map((i) => i.id));
-        const pruned = prev.filter((id) => currentIds.has(id));
-        return [...pruned, ...newIds];
-      });
-    }
+    if (!items || isDraggingRef.current) return;
+    setOrderedIds((prev) => {
+      const currentIds = new Set(items.map((i) => i.id));
+      // Remove deleted items, keep existing order for survivors
+      const pruned = prev.filter((id) => currentIds.has(id));
+      // Append brand-new items (not yet in our local order) in API order
+      const pruneSet = new Set(pruned);
+      const newIds = items.filter((i) => !pruneSet.has(i.id)).map((i) => i.id);
+      // If this is a fresh mount (prev is empty), just take API order directly
+      if (pruned.length === 0) return items.map((i) => i.id);
+      return [...pruned, ...newIds];
+    });
   }, [items]);
+
+  // ── Save reorder to DB (single call replaces N individual mutations) ───────
+  const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const saveReorder = (ids: number[]) => {
+    fetch(`${API_BASE}/api/menu/items/reorder`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    }).catch(() => {});
+  };
 
   const orderedItems = orderedIds
     .map((id) => items?.find((i) => i.id === id))
@@ -115,6 +127,7 @@ export default function AdminMenu() {
   const [dragOverId, setDragOverId] = useState<number | null>(null);
 
   const handleDragStart = (id: number) => {
+    isDraggingRef.current = true;
     setDraggingId(id);
   };
 
@@ -125,6 +138,7 @@ export default function AdminMenu() {
 
   const handleDrop = (e: React.DragEvent, targetId: number) => {
     e.preventDefault();
+    isDraggingRef.current = false;
     if (!draggingId || draggingId === targetId) {
       setDraggingId(null);
       setDragOverId(null);
@@ -138,18 +152,15 @@ export default function AdminMenu() {
     next.splice(toIdx, 0, draggingId);
     setOrderedIds(next);
 
-    // Persist globally unique sortOrders across the full list so items from
-    // different categories never share the same value and collide on reload.
-    next.forEach((id, globalPos) => {
-      const item = items?.find((i) => i.id === id);
-      if (item) updateItem.mutate({ id: item.id, data: { sortOrder: globalPos * 10 } });
-    });
+    // Single bulk call — avoids N individual mutations and the Zod schema gap
+    saveReorder(next);
 
     setDraggingId(null);
     setDragOverId(null);
   };
 
   const handleDragEnd = () => {
+    isDraggingRef.current = false;
     setDraggingId(null);
     setDragOverId(null);
   };
@@ -234,7 +245,19 @@ export default function AdminMenu() {
   };
 
   const handleToggleAvailable = (id: number, available: boolean) => {
-    updateItem.mutate({ id, data: { available } }, { onSuccess: invalidateItems });
+    updateItem.mutate({ id, data: { available } }, {
+      onSuccess: () => {
+        if (!available) {
+          // Move hidden item to the very bottom of the ordered list, then persist
+          setOrderedIds((prev) => {
+            const next = prev.filter((x) => x !== id).concat(id);
+            saveReorder(next);
+            return next;
+          });
+        }
+        invalidateItems();
+      },
+    });
   };
 
   const handleImageUpload = async (file: File) => {

@@ -220,6 +220,24 @@ router.patch("/menu/items/:id", async (req, res): Promise<void> => {
   res.json({ ...item, price: parseFloat(item.price as unknown as string) });
 });
 
+// ---- Bulk reorder ----
+// Accepts { ids: number[] } — the full ordered list of item IDs.
+// Assigns sortOrder = index * 10, persisting the drag-drop sequence.
+router.post("/menu/items/reorder", async (req, res): Promise<void> => {
+  const { ids } = req.body as { ids?: unknown };
+  if (!Array.isArray(ids) || ids.some((v) => typeof v !== "number")) {
+    res.status(400).json({ error: "ids must be an array of numbers" });
+    return;
+  }
+  const typedIds = ids as number[];
+  await Promise.all(
+    typedIds.map((id, idx) =>
+      db.update(menuItemsTable).set({ sortOrder: idx * 10 }).where(eq(menuItemsTable.id, id))
+    )
+  );
+  res.json({ ok: true });
+});
+
 router.delete("/menu/items/:id", async (req, res): Promise<void> => {
   const params = DeleteMenuItemParams.safeParse(req.params);
   if (!params.success) {
