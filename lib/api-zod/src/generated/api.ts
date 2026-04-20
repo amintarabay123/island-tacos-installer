@@ -186,6 +186,7 @@ export const ListOrdersQueryParams = zod.object({
       "cancelled",
     ])
     .optional(),
+  kdsCleared: zod.enum(["true", "false"]).optional(),
   limit: zod.coerce.number().optional(),
 });
 
@@ -324,7 +325,8 @@ export const UpdateOrderStatusBody = zod.object({
     "ready",
     "completed",
     "cancelled",
-  ]),
+  ]).optional(),
+  kdsCleared: zod.boolean().optional(),
   estimatedReadyAt: zod.coerce.date().nullish(),
 });
 

@@ -21,6 +21,7 @@ export const ordersTable = pgTable("orders", {
   deliveryFee: numeric("delivery_fee", { precision: 10, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 10, scale: 2 }).notNull(),
   notes: text("notes"),
+  kdsCleared: boolean("kds_cleared").notNull().default(false),
   cancellationReason: text("cancellation_reason"),
   estimatedReadyAt: timestamp("estimated_ready_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

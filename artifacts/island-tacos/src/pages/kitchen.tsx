@@ -25,6 +25,7 @@ type Order = {
   customerPhone?: string | null;
   orderType: string;
   status: string;
+  kdsCleared?: boolean | null;
   notes?: string | null;
   total: number;
   createdAt: string;
@@ -39,13 +40,11 @@ const UNCOLLECTED_RECHIME_MS = 15 * 60 * 1000; // re-chime every 15 min
 const NEXT_STATUS: Record<string, string> = {
   confirmed: "preparing",
   preparing: "ready",
-  ready: "completed",
 };
 
 const NEXT_LABEL: Record<string, string> = {
   confirmed: "Start Cooking",
   preparing: "Mark Ready",
-  ready: "Done ✓",
 };
 
 const STATUS_CARD: Record<string, { border: string; bg: string }> = {
@@ -273,7 +272,7 @@ export default function Kitchen() {
       const res = await fetch("/api/orders");
       if (!res.ok) throw new Error("Failed to fetch");
       const data: Order[] = await res.json();
-      const active = data.filter((o) => ACTIVE_STATUSES.has(o.status));
+      const active = data.filter((o) => ACTIVE_STATUSES.has(o.status) && !o.kdsCleared);
 
       // Track when each order first enters "ready" state
       const nowMs = Date.now();
@@ -392,6 +391,21 @@ export default function Kitchen() {
     }
   };
 
+  const clearFromKds = async (order: Order) => {
+    setAdvancing((s) => new Set(s).add(order.id));
+    try {
+      await fetch(`/api/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kdsCleared: true }),
+      });
+      broadcastUpdate();
+      await fetchOrders();
+    } finally {
+      setAdvancing((s) => { const ns = new Set(s); ns.delete(order.id); return ns; });
+    }
+  };
+
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyOrders, setHistoryOrders] = useState<Order[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -401,9 +415,9 @@ export default function Kitchen() {
     setHistoryOpen(true);
     setHistoryLoading(true);
     try {
-      const r = await fetch("/api/orders?status=completed", { credentials: "include", headers: authHeaders() });
+      const r = await fetch("/api/orders?kdsCleared=true&limit=50", { credentials: "include", headers: authHeaders() });
       const data: Order[] = await r.json();
-      setHistoryOrders(data.slice(0, 50));
+      setHistoryOrders(data);
     } catch { /* silent */ } finally { setHistoryLoading(false); }
   };
 
@@ -413,7 +427,7 @@ export default function Kitchen() {
       await fetch(`/api/orders/${order.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "ready" }),
+        body: JSON.stringify({ kdsCleared: false }),
       });
       setHistoryOrders(prev => prev.filter(o => o.id !== order.id));
       broadcastUpdate();
@@ -662,6 +676,15 @@ export default function Kitchen() {
                           className={`w-full rounded py-2 text-xs font-bold transition-all active:scale-95 ${btnClass} disabled:opacity-40 disabled:cursor-not-allowed`}
                         >
                           {isAdvancing ? "Updating…" : NEXT_LABEL[order.status]}
+                        </button>
+                      )}
+                      {order.status === "ready" && (
+                        <button
+                          onClick={() => clearFromKds(order)}
+                          disabled={isAdvancing}
+                          className="w-full rounded py-2 text-xs font-bold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {isAdvancing ? "Clearing…" : "Done ✓ — Clear"}
                         </button>
                       )}
                     </div>

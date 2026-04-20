@@ -57,6 +57,9 @@ router.get("/orders", async (req, res): Promise<void> => {
   if (queryParsed.data.status) {
     conditions.push(eq(ordersTable.status, queryParsed.data.status));
   }
+  if (queryParsed.data.kdsCleared !== undefined) {
+    conditions.push(eq(ordersTable.kdsCleared, queryParsed.data.kdsCleared === "true"));
+  }
   // Customer history filter (used by customer-facing order history)
   const phoneFilter = (req.query as Record<string, string>).customerPhone;
   if (phoneFilter) {
@@ -268,7 +271,13 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const updates: Record<string, unknown> = { status: parsed.data.status };
+  const updates: Record<string, unknown> = {};
+  if (parsed.data.status !== undefined) {
+    updates.status = parsed.data.status;
+  }
+  if (parsed.data.kdsCleared !== undefined) {
+    updates.kdsCleared = parsed.data.kdsCleared;
+  }
   if (parsed.data.estimatedReadyAt !== undefined) {
     updates.estimatedReadyAt = parsed.data.estimatedReadyAt;
   }
@@ -281,8 +290,8 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
   if (parsed.data.paymentStatus) {
     updates.paymentStatus = parsed.data.paymentStatus;
   }
-  // Auto-mark as paid when completed from POS
-  if (parsed.data.status === "completed" && !parsed.data.paymentStatus) {
+  // Auto-mark as paid when completed from POS (not from KDS clear)
+  if (parsed.data.status === "completed" && !parsed.data.paymentStatus && !parsed.data.kdsCleared) {
     updates.paymentStatus = "paid";
   }
 
