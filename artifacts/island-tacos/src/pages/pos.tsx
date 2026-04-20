@@ -721,6 +721,15 @@ function TicketsDrawer({ onResume, onClose }: {
     onClose();
   };
 
+  const completeOrder = async (id: number) => {
+    await fetch(`/api/orders/${id}`, {
+      method: "PATCH", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "completed" }),
+    });
+    load();
+  };
+
   const completeWithSplit = async (_groups: SplitGroup[], note: string, order: Order) => {
     const existingNotes = order.notes ? `${order.notes}\n${note}` : note;
     await fetch(`/api/orders/${order.id}`, {
@@ -792,10 +801,19 @@ function TicketsDrawer({ onResume, onClose }: {
                   {o.source === "pos" && o.paymentStatus === "pending" && (
                     <button onClick={() => resume(o)} className="h-8 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-semibold transition-colors">Edit</button>
                   )}
-                  {o.paymentStatus === "pending" && (
+                  {o.paymentStatus === "pending" ? (
                     <button onClick={() => setChargeOrder(o)} className="flex-1 h-8 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-xs font-bold transition-colors">
                       Charge {fmt(o.total)}
                     </button>
+                  ) : (
+                    <>
+                      <span className="flex items-center gap-1 text-xs font-semibold text-green-400 bg-green-900/30 rounded-lg px-2 h-8">
+                        ✓ Paid · {PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}
+                      </span>
+                      <button onClick={() => completeOrder(o.id)} className="flex-1 h-8 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-semibold transition-colors">
+                        Complete → Receipts
+                      </button>
+                    </>
                   )}
                   <button onClick={() => voidTicket(o.id)} className="h-8 px-3 rounded-lg bg-red-900/30 hover:bg-red-900/60 text-red-400 text-xs font-semibold transition-colors">Void</button>
                 </div>
@@ -1892,7 +1910,13 @@ export default function POS() {
       try {
         const r = await fetch("/api/orders", { credentials: "include" });
         const data = await r.json();
-        setTicketCount(data.filter((o: Order) => o.source === "pos" && o.paymentStatus === "pending" && !["completed","cancelled"].includes(o.status)).length);
+        setTicketCount(data.filter((o: Order) =>
+          !["completed","cancelled"].includes(o.status) &&
+          (
+            (o.source === "pos" && o.paymentStatus === "pending") ||
+            o.status === "ready"
+          )
+        ).length);
       } catch {}
     };
     loadCount();
