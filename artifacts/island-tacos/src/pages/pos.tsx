@@ -787,6 +787,11 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   const [refundMethod, setRefundMethod] = useState("cash");
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [refundSuccess, setRefundSuccess] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailAddress, setEmailAddress] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<"idle" | "sent" | "error">("idle");
+  const [emailError, setEmailError] = useState("");
 
   useEffect(() => {
     fetch("/api/orders", { credentials: "include" })
@@ -861,6 +866,8 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
           <div className="p-4 border-t border-[#1E2130] space-y-2">
             {printError && <p className="text-red-400 text-xs text-center">{printError}</p>}
             {refundSuccess && <p className="text-green-400 text-xs text-center">✓ Refund recorded</p>}
+            {emailStatus === "sent" && <p className="text-green-400 text-xs text-center">✓ Receipt emailed!</p>}
+            {emailStatus === "error" && <p className="text-red-400 text-xs text-center">Email failed: {emailError}</p>}
             <div className="flex gap-2">
               <button
                 onClick={async () => {
@@ -875,12 +882,56 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                 {printing ? "Printing…" : "🖨 Print"}
               </button>
               <button
-                onClick={() => { setRefundOpen(o => !o); setRefundAmount(selected.total.toFixed(2)); }}
-                className="flex-1 h-11 rounded-xl bg-red-900/60 hover:bg-red-800/60 border border-red-700/50 text-red-300 font-bold transition-colors"
+                onClick={() => {
+                  setEmailOpen(o => !o);
+                  setEmailAddress(selected.customerEmail || "");
+                  setEmailStatus("idle");
+                }}
+                className="flex-1 h-11 rounded-xl bg-blue-900/60 hover:bg-blue-800/60 border border-blue-700/50 text-blue-300 font-bold transition-colors"
               >
-                ↩ Refund
+                ✉ Email
+              </button>
+              <button
+                onClick={() => { setRefundOpen(o => !o); setRefundAmount(selected.total.toFixed(2)); }}
+                className="h-11 px-3 rounded-xl bg-red-900/60 hover:bg-red-800/60 border border-red-700/50 text-red-300 font-bold transition-colors"
+              >
+                ↩
               </button>
             </div>
+            {emailOpen && (
+              <div className="bg-[#0A0B0F] rounded-xl p-4 space-y-2 border border-blue-900/40">
+                <p className="text-blue-300 text-sm font-semibold">Email Receipt</p>
+                <input
+                  type="email"
+                  placeholder="customer@email.com"
+                  value={emailAddress}
+                  onChange={e => setEmailAddress(e.target.value)}
+                  className="w-full bg-[#1E2130] border border-[#2A2F45] rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-blue-500"
+                />
+                <button
+                  disabled={emailSending || !emailAddress}
+                  onClick={async () => {
+                    setEmailSending(true); setEmailStatus("idle");
+                    try {
+                      const r = await fetch(`/api/orders/${selected.id}/email-receipt`, {
+                        method: "POST", credentials: "include",
+                        headers: { "Content-Type": "application/json", ...authHeaders() },
+                        body: JSON.stringify({ toEmail: emailAddress }),
+                      });
+                      const data = await r.json();
+                      if (data.ok) { setEmailStatus("sent"); setEmailOpen(false); }
+                      else { setEmailStatus("error"); setEmailError(data.error ?? "Unknown error"); }
+                    } catch (e) {
+                      setEmailStatus("error"); setEmailError(String(e));
+                    }
+                    setEmailSending(false);
+                  }}
+                  className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors disabled:opacity-50"
+                >
+                  {emailSending ? "Sending…" : `Send to ${emailAddress || "…"}`}
+                </button>
+              </div>
+            )}
             {selected.customerPhone && (
               <div className="flex gap-2">
                 <a

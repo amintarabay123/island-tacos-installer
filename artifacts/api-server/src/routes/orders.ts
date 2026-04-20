@@ -2,6 +2,17 @@ import { Router, type IRouter } from "express";
 import { eq, desc, and, inArray, count, or } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable } from "@workspace/db";
 import { upsertCustomer } from "./customers";
+import nodemailer from "nodemailer";
+
+const mailer = nodemailer.createTransport({
+  host: process.env.SMTP_HOST ?? "smtp.gmail.com",
+  port: parseInt(process.env.SMTP_PORT ?? "587"),
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD,
+  },
+});
 import {
   CreateOrderBody,
   GetOrderParams,
@@ -331,6 +342,101 @@ router.get("/orders/:id/refunds", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   const refunds = await db.select().from(refundsTable).where(eq(refundsTable.orderId, id));
   res.json(refunds.map(r => ({ ...r, amount: parseFloat(r.amount) })));
+});
+
+router.post("/orders/:id/email-receipt", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  const { toEmail } = req.body as { toEmail?: string };
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+
+  const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, id));
+
+  const recipient = toEmail || order.customerEmail;
+  if (!recipient) { res.status(400).json({ error: "No email address provided" }); return; }
+
+  const fmt = (n: unknown) => `$${parseFloat(n as string).toFixed(2)}`;
+  const PAY_LABEL: Record<string, string> = { cash: "Cash", card: "Card", athmovil: "ATH Móvil", split: "Split" };
+
+  const itemRows = items.map(i => {
+    const mods = (i.modifierSelections as { name: string; price: number }[] | null ?? []);
+    const modLines = mods.map(m => `<tr><td style="padding:1px 0 1px 16px;color:#888;font-size:13px">+ ${m.name}</td><td style="text-align:right;color:#888;font-size:13px">${m.price > 0 ? `+${fmt(m.price)}` : ""}</td></tr>`).join("");
+    return `<tr><td style="padding:4px 0;font-size:14px">${i.quantity}× ${i.menuItemName}</td><td style="text-align:right;font-size:14px;font-weight:600">${fmt(i.subtotal)}</td></tr>${modLines}`;
+  }).join("");
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Receipt #${order.confirmationCode}</title></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+        <!-- Header -->
+        <tr><td style="background:#1a1f36;padding:28px 32px;text-align:center">
+          <div style="color:#f5a623;font-size:26px;font-weight:800;letter-spacing:1px">🌮 ISLAND TACOS</div>
+          <div style="color:#aaa;font-size:13px;margin-top:4px">Wickhams Cay 1, Road Town, BVI</div>
+        </td></tr>
+        <!-- Receipt info -->
+        <tr><td style="padding:24px 32px 0">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="font-size:13px;color:#666">Order #</td>
+              <td style="text-align:right;font-size:13px;color:#666">${new Date(order.createdAt).toLocaleString("en-US",{timeZone:"America/Puerto_Rico"})}</td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding-top:4px">
+                <span style="font-size:22px;font-weight:800;color:#1a1f36">${order.confirmationCode}</span>
+              </td>
+            </tr>
+          </table>
+          <div style="margin-top:8px;font-size:14px;color:#555">Hi <strong>${order.customerName || "there"}</strong>, thank you for your order!</div>
+        </td></tr>
+        <!-- Divider -->
+        <tr><td style="padding:16px 32px"><hr style="border:none;border-top:1px dashed #ddd;margin:0"></td></tr>
+        <!-- Items -->
+        <tr><td style="padding:0 32px">
+          <table width="100%" cellpadding="0" cellspacing="0">${itemRows}</table>
+        </td></tr>
+        <!-- Divider -->
+        <tr><td style="padding:16px 32px"><hr style="border:none;border-top:1px dashed #ddd;margin:0"></td></tr>
+        <!-- Totals -->
+        <tr><td style="padding:0 32px 8px">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="font-size:13px;color:#666;padding:2px 0">Subtotal</td><td style="text-align:right;font-size:13px;color:#666">${fmt(order.subtotal)}</td></tr>
+            ${parseFloat(order.discountAmount as string) > 0 ? `<tr><td style="font-size:13px;color:#22c55e;padding:2px 0">Discount</td><td style="text-align:right;font-size:13px;color:#22c55e">-${fmt(order.discountAmount)}</td></tr>` : ""}
+            ${parseFloat(order.tax as string) > 0 ? `<tr><td style="font-size:13px;color:#666;padding:2px 0">Tax</td><td style="text-align:right;font-size:13px;color:#666">${fmt(order.tax)}</td></tr>` : ""}
+            <tr><td style="font-size:18px;font-weight:800;color:#1a1f36;padding:8px 0 4px;border-top:2px solid #1a1f36">TOTAL</td><td style="text-align:right;font-size:18px;font-weight:800;color:#f5a623;border-top:2px solid #1a1f36">${fmt(order.total)}</td></tr>
+            <tr><td style="font-size:13px;color:#888;padding:4px 0" colspan="2">Payment: ${PAY_LABEL[order.paymentMethod] ?? order.paymentMethod}</td></tr>
+          </table>
+        </td></tr>
+        <!-- Footer -->
+        <tr><td style="padding:24px 32px;text-align:center;background:#fafafa;border-top:1px solid #eee">
+          <div style="color:#888;font-size:13px">Thank you for dining with us! 🌴</div>
+          <div style="color:#bbb;font-size:12px;margin-top:4px">orders@islandtacosbvi.com</div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  try {
+    await mailer.sendMail({
+      from: process.env.SMTP_FROM ?? "Island Tacos <orders@islandtacosbvi.com>",
+      to: recipient,
+      subject: `Your Island Tacos Receipt — Order #${order.confirmationCode}`,
+      html,
+    });
+    // If a new email was provided and not already on the order, update the order
+    if (toEmail && !order.customerEmail) {
+      await db.update(ordersTable).set({ customerEmail: toEmail }).where(eq(ordersTable.id, id));
+    }
+    res.json({ ok: true, sentTo: recipient });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(502).json({ ok: false, error: msg });
+  }
 });
 
 export default router;
