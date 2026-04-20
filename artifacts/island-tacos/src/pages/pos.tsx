@@ -6,8 +6,8 @@ import { setPageMeta } from "@/lib/page-meta";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ModifierOption = { id: string; name: string; price: number; position: number };
-type Modifier = { id: number; loyverseId: string; name: string; options: ModifierOption[] };
+type ModifierOption = { id: string; name: string; price: number; position: number; allowMultiple?: boolean; maxQuantity?: number };
+type Modifier = { id: number; loyverseId: string; name: string; options: ModifierOption[]; required: boolean; minSelections: number; maxSelections: number | null };
 type MenuCategory = { id: number; name: string; sortOrder: number };
 type MenuItem = {
   id: number; categoryId: number; name: string; description?: string | null;
@@ -148,15 +148,52 @@ function ModifierModal({ item, modifiers, onConfirm, onClose }: {
   item: MenuItem; modifiers: Modifier[];
   onConfirm: (sels: CartModifier[]) => void; onClose: () => void;
 }) {
-  const [sels, setSels] = useState<CartModifier[]>([]);
-  const total = item.price + sels.reduce((s, m) => s + m.price, 0);
+  // Record<modLoyverseId, Record<optionId, quantity>>
+  const [qtys, setQtys] = useState<Record<string, Record<string, number>>>({});
 
-  const toggle = (mod: Modifier, opt: ModifierOption) => {
-    const exists = sels.find(s => s.modifierId === mod.loyverseId && s.optionId === opt.id);
-    if (exists) { setSels(sels.filter(s => !(s.modifierId === mod.loyverseId && s.optionId === opt.id))); }
-    else { setSels([...sels, { modifierId: mod.loyverseId, optionId: opt.id, name: opt.name, price: opt.price }]); }
+  const totalExtra = modifiers.reduce((sum, mod) => {
+    const sel = qtys[mod.loyverseId] ?? {};
+    return sum + mod.options.reduce((s, o) => s + (sel[o.id] ?? 0) * o.price, 0);
+  }, 0);
+  const total = item.price + totalExtra;
+
+  const totalSelForGroup = (mod: Modifier) =>
+    Object.values(qtys[mod.loyverseId] ?? {}).reduce((s, q) => s + q, 0);
+
+  const changeQty = (mod: Modifier, opt: ModifierOption, delta: number) => {
+    setQtys(prev => {
+      const current = { ...(prev[mod.loyverseId] ?? {}) };
+      const maxQty = opt.allowMultiple ? (opt.maxQuantity ?? 1) : 1;
+      const totalOther = Object.entries(current).filter(([k]) => k !== opt.id).reduce((s, [, v]) => s + v, 0);
+      const newQty = Math.max(0, Math.min(maxQty, (current[opt.id] ?? 0) + delta));
+      if (delta > 0 && mod.maxSelections !== null && totalOther + newQty > mod.maxSelections) return prev;
+      if (newQty === 0) { delete current[opt.id]; } else { current[opt.id] = newQty; }
+      return { ...prev, [mod.loyverseId]: current };
+    });
   };
-  const isSelected = (modId: string, optId: string) => sels.some(s => s.modifierId === modId && s.optionId === optId);
+
+  const validationError = modifiers.reduce<string | null>((err, mod) => {
+    if (err) return err;
+    const total = totalSelForGroup(mod);
+    if (mod.required && total === 0) return `Select "${mod.name}"`;
+    if (mod.minSelections > 0 && total < mod.minSelections) return `"${mod.name}": min ${mod.minSelections}`;
+    return null;
+  }, null);
+
+  const handleConfirm = () => {
+    if (validationError) return;
+    const sels: CartModifier[] = [];
+    for (const mod of modifiers) {
+      const sel = qtys[mod.loyverseId] ?? {};
+      for (const opt of mod.options) {
+        const qty = sel[opt.id] ?? 0;
+        for (let i = 0; i < qty; i++) {
+          sels.push({ modifierId: mod.loyverseId, optionId: opt.id, name: opt.name, price: opt.price });
+        }
+      }
+    }
+    onConfirm(sels);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -166,32 +203,80 @@ function ModifierModal({ item, modifiers, onConfirm, onClose }: {
           <p className="text-[#F5A623] text-lg font-semibold">{fmt(total)}</p>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
-          {modifiers.map(mod => (
-            <div key={mod.id}>
-              <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">{mod.name}</p>
-              <div className="space-y-2">
-                {mod.options.sort((a,b) => a.position - b.position).map(opt => {
-                  const sel = isSelected(mod.loyverseId, opt.id);
-                  return (
-                    <button key={opt.id} onClick={() => toggle(mod, opt)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${sel ? "border-[#F5A623] bg-[#F5A623]/10 text-white" : "border-[#2A2F45] bg-[#1E2130] text-zinc-300 hover:border-zinc-500"}`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${sel ? "border-[#F5A623] bg-[#F5A623]" : "border-zinc-500"}`}>
-                          {sel && <div className="w-2 h-2 rounded-full bg-white"/>}
+          {modifiers.map(mod => {
+            const groupTotal = totalSelForGroup(mod);
+            const atMax = mod.maxSelections !== null && groupTotal >= mod.maxSelections;
+            return (
+              <div key={mod.id}>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">{mod.name}</p>
+                  <div className="flex items-center gap-1.5">
+                    {mod.required && groupTotal === 0 && (
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-red-400 bg-red-950/40 px-1.5 py-0.5 rounded">Required</span>
+                    )}
+                    {mod.minSelections > 0 && (
+                      <span className="text-[11px] text-zinc-500">
+                        {mod.maxSelections === mod.minSelections ? `Pick ${mod.minSelections}` : mod.maxSelections ? `${mod.minSelections}–${mod.maxSelections}` : `Min ${mod.minSelections}`}
+                      </span>
+                    )}
+                    {mod.maxSelections !== null && mod.minSelections === 0 && (
+                      <span className="text-[11px] text-zinc-500">Up to {mod.maxSelections}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {mod.options.sort((a, b) => a.position - b.position).map(opt => {
+                    const qty = qtys[mod.loyverseId]?.[opt.id] ?? 0;
+                    const sel = qty > 0;
+                    if (opt.allowMultiple) {
+                      return (
+                        <div key={opt.id} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${sel ? "border-[#F5A623] bg-[#F5A623]/10" : "border-[#2A2F45] bg-[#1E2130]"}`}>
+                          <span className={`font-medium ${sel ? "text-white" : "text-zinc-300"}`}>{opt.name}</span>
+                          <div className="flex items-center gap-3">
+                            {opt.price > 0 && <span className="text-[#F5A623] text-sm font-semibold">+{fmt(opt.price)}</span>}
+                            <div className="flex items-center gap-2 bg-[#0D0F18] rounded-full px-2 py-1">
+                              <button
+                                className="w-6 h-6 flex items-center justify-center rounded-full text-zinc-400 hover:text-white disabled:opacity-30 transition-colors"
+                                onClick={() => changeQty(mod, opt, -1)}
+                                disabled={qty === 0}
+                              ><span className="text-lg leading-none">−</span></button>
+                              <span className="w-5 text-center text-sm font-bold text-white">{qty}</span>
+                              <button
+                                className="w-6 h-6 flex items-center justify-center rounded-full text-zinc-400 hover:text-white disabled:opacity-30 transition-colors"
+                                onClick={() => changeQty(mod, opt, 1)}
+                                disabled={atMax || qty >= (opt.maxQuantity ?? 1)}
+                              ><span className="text-lg leading-none">+</span></button>
+                            </div>
+                          </div>
                         </div>
-                        <span className="font-medium">{opt.name}</span>
-                      </div>
-                      {opt.price > 0 && <span className="text-[#F5A623] text-sm font-semibold">+{fmt(opt.price)}</span>}
-                    </button>
-                  );
-                })}
+                      );
+                    }
+                    return (
+                      <button key={opt.id} onClick={() => changeQty(mod, opt, sel ? -1 : 1)}
+                        disabled={!sel && atMax}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all disabled:opacity-40 ${sel ? "border-[#F5A623] bg-[#F5A623]/10 text-white" : "border-[#2A2F45] bg-[#1E2130] text-zinc-300 hover:border-zinc-500"}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${sel ? "border-[#F5A623] bg-[#F5A623]" : "border-zinc-500"}`}>
+                            {sel && <div className="w-2 h-2 rounded-full bg-white" />}
+                          </div>
+                          <span className="font-medium">{opt.name}</span>
+                        </div>
+                        {opt.price > 0 && <span className="text-[#F5A623] text-sm font-semibold">+{fmt(opt.price)}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+          {validationError && (
+            <p className="text-red-400 text-sm text-center">{validationError}</p>
+          )}
         </div>
         <div className="p-5 border-t border-[#1E2130] flex gap-3">
           <button onClick={onClose} className="flex-1 h-12 rounded-xl border border-[#2A2F45] text-zinc-300 font-semibold hover:bg-[#1E2130] transition-colors">Cancel</button>
-          <button onClick={() => onConfirm(sels)} className="flex-2 flex-grow h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-bold transition-colors">
+          <button onClick={handleConfirm} disabled={!!validationError}
+            className="flex-2 flex-grow h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-50 text-black font-bold transition-colors">
             Add to Order · {fmt(total)}
           </button>
         </div>

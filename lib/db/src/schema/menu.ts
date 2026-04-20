@@ -44,6 +44,8 @@ export interface ModifierOption {
   name: string;
   price: number;
   position: number;
+  allowMultiple?: boolean;
+  maxQuantity?: number;
 }
 
 export const modifiersTable = pgTable("modifiers", {
@@ -51,6 +53,9 @@ export const modifiersTable = pgTable("modifiers", {
   loyverseId: text("loyverse_id").unique().notNull(),
   name: text("name").notNull(),
   options: jsonb("options").$type<ModifierOption[]>().notNull().default([]),
+  required: boolean("required").notNull().default(false),
+  minSelections: integer("min_selections").notNull().default(0),
+  maxSelections: integer("max_selections"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

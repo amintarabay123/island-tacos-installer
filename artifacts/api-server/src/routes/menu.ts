@@ -266,7 +266,9 @@ router.get("/menu/modifiers", async (_req, res): Promise<void> => {
 });
 
 router.post("/menu/modifiers", async (req, res): Promise<void> => {
-  const { name, options } = req.body as { name?: string; options?: unknown[] };
+  const { name, options, required, minSelections, maxSelections } = req.body as {
+    name?: string; options?: unknown[]; required?: boolean; minSelections?: number; maxSelections?: number | null;
+  };
   if (!name || typeof name !== "string" || !name.trim()) {
     res.status(400).json({ error: "name is required" });
     return;
@@ -274,7 +276,14 @@ router.post("/menu/modifiers", async (req, res): Promise<void> => {
   const loyverseId = `manual_${crypto.randomUUID()}`;
   const [modifier] = await db
     .insert(modifiersTable)
-    .values({ loyverseId, name: name.trim(), options: (options ?? []) as import("@workspace/db").ModifierOption[] })
+    .values({
+      loyverseId,
+      name: name.trim(),
+      options: (options ?? []) as import("@workspace/db").ModifierOption[],
+      required: required ?? false,
+      minSelections: minSelections ?? 0,
+      maxSelections: maxSelections ?? null,
+    })
     .returning();
   res.status(201).json(modifier);
 });
@@ -282,10 +291,15 @@ router.post("/menu/modifiers", async (req, res): Promise<void> => {
 router.patch("/menu/modifiers/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-  const { name, options } = req.body as { name?: string; options?: unknown[] };
+  const { name, options, required, minSelections, maxSelections } = req.body as {
+    name?: string; options?: unknown[]; required?: boolean; minSelections?: number; maxSelections?: number | null;
+  };
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = String(name).trim();
   if (options !== undefined) updates.options = options;
+  if (required !== undefined) updates.required = required;
+  if (minSelections !== undefined) updates.minSelections = minSelections;
+  if (maxSelections !== undefined) updates.maxSelections = maxSelections === null ? null : Number(maxSelections);
   if (!Object.keys(updates).length) { res.status(400).json({ error: "Nothing to update" }); return; }
   const [modifier] = await db
     .update(modifiersTable)

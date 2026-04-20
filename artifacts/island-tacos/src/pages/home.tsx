@@ -16,6 +16,8 @@ interface ModifierOption {
   name: string;
   price: number;
   position: number;
+  allowMultiple?: boolean;
+  maxQuantity?: number;
 }
 
 interface ModifierGroup {
@@ -23,6 +25,9 @@ interface ModifierGroup {
   loyverseId: string;
   name: string;
   options: ModifierOption[];
+  required: boolean;
+  minSelections: number;
+  maxSelections: number | null;
 }
 
 export default function Home() {
@@ -34,7 +39,8 @@ export default function Home() {
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
-  const [selectedModifiers, setSelectedModifiers] = useState<Record<string, Set<string>>>({});
+  // Record<groupLoyverseId, Record<optionId, quantity>>
+  const [selectedModifiers, setSelectedModifiers] = useState<Record<string, Record<string, number>>>({});
   const [loadingModifiers, setLoadingModifiers] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
 
@@ -57,39 +63,59 @@ export default function Home() {
       const selected = selectedModifiers[group.loyverseId];
       if (!selected) continue;
       for (const option of group.options) {
-        if (selected.has(option.id)) extra += option.price;
+        const qty = selected[option.id] ?? 0;
+        if (qty > 0) extra += option.price * qty;
       }
     }
     return extra;
   }, [modifierGroups, selectedModifiers]);
 
-  const toggleModifier = (groupId: string, optionId: string) => {
+  const totalSelectionsForGroup = (groupId: string) => {
+    const sel = selectedModifiers[groupId];
+    if (!sel) return 0;
+    return Object.values(sel).reduce((s, q) => s + q, 0);
+  };
+
+  const changeModifierQty = (group: ModifierGroup, optionId: string, delta: number) => {
     setSelectedModifiers(prev => {
-      const current = new Set(prev[groupId] ?? []);
-      if (current.has(optionId)) current.delete(optionId);
-      else current.add(optionId);
-      return { ...prev, [groupId]: current };
+      const current = { ...(prev[group.loyverseId] ?? {}) };
+      const opt = group.options.find(o => o.id === optionId);
+      const maxQty = (opt?.allowMultiple ? (opt?.maxQuantity ?? 1) : 1);
+      const totalOther = Object.entries(current).filter(([k]) => k !== optionId).reduce((s, [, v]) => s + v, 0);
+      const newQty = Math.max(0, Math.min(maxQty, (current[optionId] ?? 0) + delta));
+      // Respect group maxSelections
+      if (delta > 0 && group.maxSelections !== null && totalOther + newQty > group.maxSelections) return prev;
+      if (newQty === 0) { delete current[optionId]; } else { current[optionId] = newQty; }
+      return { ...prev, [group.loyverseId]: current };
     });
   };
 
+  const modifierValidationError = useMemo(() => {
+    for (const group of modifierGroups) {
+      const total = totalSelectionsForGroup(group.loyverseId);
+      if (group.required && total === 0) return `Please make a selection for "${group.name}"`;
+      if (group.minSelections > 0 && total < group.minSelections)
+        return `"${group.name}" requires at least ${group.minSelections} selection${group.minSelections > 1 ? "s" : ""}`;
+    }
+    return null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modifierGroups, selectedModifiers]);
+
   const handleAddToCart = () => {
     if (!selectedItem) return;
+    if (modifierValidationError) return;
     const modifierSelections: ModifierSelection[] = [];
     for (const group of modifierGroups) {
       const selected = selectedModifiers[group.loyverseId];
-      if (!selected || selected.size === 0) continue;
-      const selectedOptions = group.options.filter(o => selected.has(o.id));
-      for (const option of selectedOptions) {
-        modifierSelections.push({
-          modifierId: group.loyverseId,
-          optionId: option.id,
-          name: option.name,
-          price: option.price,
-        });
+      if (!selected) continue;
+      for (const option of group.options) {
+        const qty = selected[option.id] ?? 0;
+        if (qty <= 0) continue;
+        for (let i = 0; i < qty; i++) {
+          modifierSelections.push({ modifierId: group.loyverseId, optionId: option.id, name: option.name, price: option.price });
+        }
       }
     }
-    // notes carries only the customer's free-text special instructions.
-    // Modifier details are fully captured in modifierSelections — no need to duplicate them.
     addItem(selectedItem, quantity, notes || undefined, modifierSelections.length > 0 ? modifierSelections : undefined);
     setSelectedItem(null);
     setQuantity(1);
@@ -316,37 +342,86 @@ export default function Home() {
                   </div>
                 ) : modifierGroups.length > 0 && (
                   <div className="space-y-5">
-                    {modifierGroups.map((group) => (
-                      <div key={group.loyverseId}>
-                        <Separator className="mb-4" />
-                        <p className="text-sm font-semibold mb-3">{group.name}</p>
-                        <div className="space-y-2">
-                          {group.options.map((option) => {
-                            const isSelected = selectedModifiers[group.loyverseId]?.has(option.id) ?? false;
-                            return (
-                              <label
-                                key={option.id}
-                                className="flex items-center justify-between gap-3 cursor-pointer group/opt"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Checkbox
-                                    id={option.id}
-                                    checked={isSelected}
-                                    onCheckedChange={() => toggleModifier(group.loyverseId, option.id)}
-                                  />
-                                  <span className="text-sm group-hover/opt:text-foreground transition-colors">
-                                    {option.name}
-                                  </span>
-                                </div>
-                                {option.price > 0 && (
-                                  <span className="text-sm text-muted-foreground shrink-0">+${option.price.toFixed(2)}</span>
-                                )}
-                              </label>
-                            );
-                          })}
+                    {modifierGroups.map((group) => {
+                      const totalSel = totalSelectionsForGroup(group.loyverseId);
+                      const atMax = group.maxSelections !== null && totalSel >= group.maxSelections;
+                      return (
+                        <div key={group.loyverseId}>
+                          <Separator className="mb-4" />
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-semibold">{group.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              {group.required && totalSel === 0 && (
+                                <span className="text-[10px] font-semibold uppercase tracking-wide bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400 px-1.5 py-0.5 rounded">Required</span>
+                              )}
+                              {group.minSelections > 0 && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  {group.maxSelections === group.minSelections
+                                    ? `Choose ${group.minSelections}`
+                                    : group.maxSelections
+                                    ? `${group.minSelections}–${group.maxSelections}`
+                                    : `Min ${group.minSelections}`}
+                                </span>
+                              )}
+                              {group.maxSelections !== null && group.minSelections === 0 && (
+                                <span className="text-[11px] text-muted-foreground">Up to {group.maxSelections}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {group.options.map((option) => {
+                              const qty = selectedModifiers[group.loyverseId]?.[option.id] ?? 0;
+                              const isSelected = qty > 0;
+                              const canIncrease = !atMax || isSelected;
+                              if (option.allowMultiple) {
+                                return (
+                                  <div key={option.id} className="flex items-center justify-between gap-3">
+                                    <span className={`text-sm ${isSelected ? "text-foreground font-medium" : "text-muted-foreground"}`}>{option.name}</span>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {option.price > 0 && (
+                                        <span className="text-sm text-muted-foreground">+${option.price.toFixed(2)}</span>
+                                      )}
+                                      <div className="flex items-center gap-1 border rounded-full px-1 py-0.5">
+                                        <button
+                                          className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted disabled:opacity-30 transition-colors"
+                                          onClick={() => changeModifierQty(group, option.id, -1)}
+                                          disabled={qty === 0}
+                                        ><Minus className="h-3 w-3" /></button>
+                                        <span className="w-4 text-center text-sm font-medium">{qty}</span>
+                                        <button
+                                          className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-muted disabled:opacity-30 transition-colors"
+                                          onClick={() => changeModifierQty(group, option.id, 1)}
+                                          disabled={!canIncrease || qty >= (option.maxQuantity ?? 1)}
+                                        ><Plus className="h-3 w-3" /></button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <label key={option.id} className="flex items-center justify-between gap-3 cursor-pointer group/opt">
+                                  <div className="flex items-center gap-3">
+                                    <Checkbox
+                                      id={`home-${option.id}`}
+                                      checked={isSelected}
+                                      disabled={!isSelected && atMax}
+                                      onCheckedChange={() => changeModifierQty(group, option.id, isSelected ? -1 : 1)}
+                                    />
+                                    <span className="text-sm group-hover/opt:text-foreground transition-colors">{option.name}</span>
+                                  </div>
+                                  {option.price > 0 && (
+                                    <span className="text-sm text-muted-foreground shrink-0">+${option.price.toFixed(2)}</span>
+                                  )}
+                                </label>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
+                    {modifierValidationError && (
+                      <p className="text-xs text-red-500 mt-1">{modifierValidationError}</p>
+                    )}
                     <Separator />
                   </div>
                 )}
@@ -391,7 +466,12 @@ export default function Home() {
                       <Plus className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <Button className="flex-1 h-10 font-semibold rounded-full" onClick={handleAddToCart}>
+                  <Button
+                    className="flex-1 h-10 font-semibold rounded-full"
+                    onClick={handleAddToCart}
+                    disabled={!!modifierValidationError}
+                    title={modifierValidationError ?? undefined}
+                  >
                     Add {quantity > 1 && `${quantity} × `}— ${((selectedItem.price + extraPrice) * quantity).toFixed(2)}
                   </Button>
                 </div>
