@@ -135,7 +135,7 @@ router.post("/menu/items", async (req, res): Promise<void> => {
       description: parsed.data.description ?? null,
       price: String(parsed.data.price),
       imageUrl: parsed.data.imageUrl ?? null,
-      posImageUrl: (parsed.data as { posImageUrl?: string | null }).posImageUrl ?? null,
+      posImageUrl: parsed.data.posImageUrl ?? null,
       available: parsed.data.available ?? true,
       popular: parsed.data.popular ?? false,
       spicy: parsed.data.spicy ?? false,
@@ -202,7 +202,7 @@ router.patch("/menu/items/:id", async (req, res): Promise<void> => {
   if (parsed.data.description !== undefined) updates.description = parsed.data.description;
   if (parsed.data.price !== undefined) updates.price = String(parsed.data.price);
   if (parsed.data.imageUrl !== undefined) updates.imageUrl = parsed.data.imageUrl;
-  if ((parsed.data as { posImageUrl?: string | null }).posImageUrl !== undefined) updates.posImageUrl = (parsed.data as { posImageUrl?: string | null }).posImageUrl;
+  if (parsed.data.posImageUrl !== undefined) updates.posImageUrl = parsed.data.posImageUrl;
   if (parsed.data.available !== undefined) updates.available = parsed.data.available;
   if (parsed.data.popular !== undefined) updates.popular = parsed.data.popular;
   if (parsed.data.spicy !== undefined) updates.spicy = parsed.data.spicy;
