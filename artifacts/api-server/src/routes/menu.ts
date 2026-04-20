@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, sql, inArray } from "drizzle-orm";
-import { db, menuCategoriesTable, menuItemsTable, modifiersTable } from "@workspace/db";
+import { db, menuCategoriesTable, menuItemsTable, modifiersTable, orderItemsTable } from "@workspace/db";
 import {
   CreateMenuCategoryBody,
   UpdateMenuCategoryParams,
@@ -119,6 +119,48 @@ router.get("/menu/items", async (req, res): Promise<void> => {
     price: parseFloat(item.price as unknown as string),
   }));
   res.json(result);
+});
+
+// ---- Top sellers (based on real order data) ----
+// Returns up to `limit` available items ordered by total units sold.
+// Falls back gracefully to an empty array if there are no sales yet.
+router.get("/menu/popular", async (req, res): Promise<void> => {
+  const limit = Math.min(parseInt(String(req.query.limit ?? "5")), 20);
+  // Optional rolling window filter via ?days=30
+  const days = req.query.days ? parseInt(String(req.query.days)) : null;
+
+  const rows = await db.execute(sql`
+    SELECT
+      mi.id,
+      mi.name,
+      mi.description,
+      mi.price,
+      mi.image_url      AS "imageUrl",
+      mi.pos_image_url  AS "posImageUrl",
+      mi.available,
+      mi.popular,
+      mi.spicy,
+      mi.vegetarian,
+      mi.sort_order     AS "sortOrder",
+      mi.category_id    AS "categoryId",
+      SUM(oi.quantity)::int AS "totalSold"
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    JOIN menu_items mi ON mi.id = oi.menu_item_id
+    WHERE mi.available = true
+      AND oi.menu_item_id IS NOT NULL
+      ${days ? sql`AND o.created_at >= NOW() - (${days} || ' days')::interval` : sql``}
+    GROUP BY mi.id
+    ORDER BY "totalSold" DESC
+    LIMIT ${limit}
+  `);
+
+  res.json(
+    rows.rows.map((r) => ({
+      ...r,
+      price: parseFloat(r.price as string),
+    }))
+  );
 });
 
 router.post("/menu/items", async (req, res): Promise<void> => {

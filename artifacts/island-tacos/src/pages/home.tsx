@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useListMenuCategories, useListMenuItems } from "@workspace/api-client-react";
 import { useCart, type ModifierSelection } from "@/lib/cart-context";
 import { Layout } from "@/components/layout";
@@ -52,10 +52,21 @@ export default function Home() {
     return items.filter(item => item.categoryId === activeCategory);
   }, [items, activeCategory]);
 
+  const [topSellers, setTopSellers] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    fetch("/api/menu/popular?limit=5")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: any[] | null) => { if (data) setTopSellers(data); })
+      .catch(() => {});
+  }, []);
+
+  // Use sales-driven top sellers when available; fall back to manually-flagged items
   const popularItems = useMemo(() => {
+    if (topSellers && topSellers.length > 0) return topSellers;
     if (!items) return [];
-    return items.filter(item => item.popular).slice(0, 3);
-  }, [items]);
+    return items.filter(item => item.popular).slice(0, 5);
+  }, [topSellers, items]);
 
   const extraPrice = useMemo(() => {
     let extra = 0;
@@ -183,9 +194,14 @@ export default function Home() {
       {/* Popular Items */}
       {!loadingItems && popularItems.length > 0 && (
         <section className="max-w-6xl mx-auto px-6 py-12">
-          <h2 className="text-lg font-semibold mb-5">Best Sellers</h2>
+          <div className="flex items-baseline gap-3 mb-5">
+            <h2 className="text-lg font-semibold">Best Sellers</h2>
+            {topSellers && topSellers.length > 0 && (
+              <span className="text-xs text-muted-foreground">Based on your orders</span>
+            )}
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-            {popularItems.map((item) => (
+            {popularItems.map((item, idx) => (
               <button
                 key={item.id}
                 className="text-left group border border-border rounded-xl overflow-hidden hover:border-foreground/20 transition-colors"
@@ -199,9 +215,16 @@ export default function Home() {
                       {item.name.charAt(0)}
                     </div>
                   )}
-                  <span className="absolute top-3 left-3 bg-secondary/90 text-secondary-foreground text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
-                    Best Seller
-                  </span>
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                    <span className="bg-secondary/90 text-secondary-foreground text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
+                      {idx === 0 ? "🔥 #1" : `#${idx + 1}`}
+                    </span>
+                    {item.totalSold > 0 && (
+                      <span className="bg-black/60 text-white text-[10px] font-medium px-1.5 py-0.5 rounded">
+                        {item.totalSold} sold
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="p-4 flex items-center justify-between gap-2">
                   <div className="min-w-0">
