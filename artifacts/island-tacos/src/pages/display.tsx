@@ -18,6 +18,7 @@ type DisplayState = {
   paymentMethod?: string;
   orderCode?: string;
   estimatedReadyAt?: string;
+  athmovilPublicToken?: string;
   updatedAt: number;
 };
 
@@ -151,6 +152,50 @@ function IdleScreen() {
   );
 }
 
+// ─── ATH Móvil QR Component ──────────────────────────────────────────────────
+
+function AthMovilQr({
+  publicToken,
+  total,
+  subtotal,
+  tax,
+  orderCode,
+}: {
+  publicToken: string;
+  total: number;
+  subtotal: number;
+  tax: number;
+  orderCode?: string;
+}) {
+  const paymentUrl = new URL(`https://payments.athmovil.com/pay/${publicToken}`);
+  paymentUrl.searchParams.set("total", total.toFixed(2));
+  paymentUrl.searchParams.set("subtotal", subtotal.toFixed(2));
+  paymentUrl.searchParams.set("tax", tax.toFixed(2));
+  if (orderCode) paymentUrl.searchParams.set("metadata1", orderCode);
+
+  const qrImgUrl =
+    `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&bgcolor=ffffff&color=000000&data=` +
+    encodeURIComponent(paymentUrl.toString());
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="bg-white rounded-2xl p-3 shadow-lg">
+        <img
+          src={qrImgUrl}
+          alt="ATH Móvil QR"
+          width={160}
+          height={160}
+          className="block"
+        />
+      </div>
+      <div className="text-center">
+        <p className="text-white font-bold text-sm">Pay with ATH Móvil</p>
+        <p className="text-zinc-500 text-xs mt-0.5">Scan with your ATH Móvil app</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Active Screen ────────────────────────────────────────────────────────────
 
 function ActiveScreen({ state }: { state: DisplayState }) {
@@ -223,12 +268,20 @@ function ActiveScreen({ state }: { state: DisplayState }) {
             </div>
           </div>
 
-          {state.paymentMethod && (
+          {state.paymentMethod === "athmovil" && state.athmovilPublicToken ? (
+            <AthMovilQr
+              publicToken={state.athmovilPublicToken}
+              total={state.total}
+              subtotal={state.subtotal}
+              tax={state.tax}
+              orderCode={state.orderCode}
+            />
+          ) : state.paymentMethod ? (
             <div className="bg-zinc-800/60 rounded-xl px-4 py-3 text-center">
               <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">Payment</p>
               <p className="text-white font-bold text-lg">{formatPaymentMethod(state.paymentMethod)}</p>
             </div>
-          )}
+          ) : null}
 
           <div className="text-center">
             <p className="text-zinc-600 text-xs uppercase tracking-widest">Thank you for your order</p>

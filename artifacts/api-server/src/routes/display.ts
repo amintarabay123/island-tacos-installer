@@ -33,7 +33,12 @@ let state: DisplayState = {
 
 // GET /display — customer display polls this
 router.get("/display", (_req: Request, res: Response) => {
-  res.json(state);
+  const publicToken = process.env.ATHMOVIL_PUBLIC_TOKEN ?? null;
+  const response: DisplayState & { athmovilPublicToken?: string | null } = { ...state };
+  if (state.paymentMethod === "athmovil" && publicToken) {
+    response.athmovilPublicToken = publicToken;
+  }
+  res.json(response);
 });
 
 // POST /display — POS pushes cart state (no auth required so display tablet doesn't need credentials)
