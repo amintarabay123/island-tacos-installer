@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { setPageMeta } from "@/lib/page-meta";
 
 type DisplayItem = {
@@ -153,13 +152,10 @@ function IdleScreen() {
   );
 }
 
-// ─── ATH Móvil QR Component ──────────────────────────────────────────────────
+// ─── ATH Móvil Payment Instructions ──────────────────────────────────────────
 
 function AthMovilQr({
-  publicToken,
   total,
-  subtotal,
-  tax,
   orderCode,
 }: {
   publicToken: string;
@@ -168,26 +164,25 @@ function AthMovilQr({
   tax: number;
   orderCode?: string;
 }) {
-  const params = new URLSearchParams();
-  params.set("total", total.toFixed(2));
-  params.set("subtotal", subtotal.toFixed(2));
-  params.set("tax", tax.toFixed(2));
-  if (orderCode) params.set("metadata1", orderCode);
-  const paymentUrl = `https://www.athmovil.com/pay/#${publicToken}?${params.toString()}`;
-
   return (
-    <div className="flex flex-col items-center gap-3">
-      <img src="/athmovil-logo.webp" alt="ATH Móvil" className="h-8 object-contain" />
-      <div className="bg-white rounded-2xl p-3 shadow-lg">
-        <QRCodeSVG
-          value={paymentUrl}
-          size={160}
-          bgColor="#ffffff"
-          fgColor="#000000"
-          level="M"
-        />
+    <div className="flex flex-col items-center gap-4 w-full max-w-xs">
+      <img src="/athmovil-logo.webp" alt="ATH Móvil" className="h-9 object-contain" />
+
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-5 w-full space-y-3">
+        <p className="text-zinc-400 text-xs font-semibold uppercase tracking-widest text-center">Open ATH Móvil app and:</p>
+
+        {[
+          { step: "1", text: <>Tap <strong className="text-white">"Pay a Business"</strong></> },
+          { step: "2", text: <>Search <strong className="text-white">Island Tacos</strong></> },
+          { step: "3", text: <>Enter exactly <strong className="text-[#F5A623] text-lg">${total.toFixed(2)}</strong></> },
+          ...(orderCode ? [{ step: "4", text: <>Note field: <strong className="text-white font-mono">{orderCode}</strong></> }] : []),
+        ].map(({ step, text }) => (
+          <div key={step} className="flex items-center gap-3">
+            <span className="w-6 h-6 rounded-full bg-[#F5A623] text-black text-xs font-black flex items-center justify-center shrink-0">{step}</span>
+            <span className="text-zinc-300 text-sm">{text}</span>
+          </div>
+        ))}
       </div>
-      <p className="text-zinc-400 text-xs">Scan with your ATH Móvil app</p>
     </div>
   );
 }
