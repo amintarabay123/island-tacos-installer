@@ -178,15 +178,14 @@ router.post("/payments/athmovil/create-session", async (req, res): Promise<void>
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        env: "production",
         publicToken,
-        timeout: "600",
-        total: String(total),
-        subtotal: String(total),
-        tax: "0",
+        timeout: 600,
+        total,
+        subtotal: total,
+        tax: 0,
         metadata1: String(order.id),
         metadata2: order.confirmationCode,
-        phoneNumber,
+        phoneNumber: parseInt(phoneNumber, 10) || phoneNumber,
         items: [],
       }),
     });
@@ -254,13 +253,10 @@ router.post("/payments/athmovil/check-status", async (req, res): Promise<void> =
   if (!publicToken) { res.status(500).json({ error: "ATH Móvil not configured" }); return; }
 
   try {
-    // Check current status
+    // Check current status — findPayment only needs publicToken + ecommerceId, no auth header
     const findRes = await fetch(`${ATH_BASE}/business/findPayment`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${session.authToken}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ecommerceId: session.ecommerceId, publicToken }),
     });
 
