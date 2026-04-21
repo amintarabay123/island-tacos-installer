@@ -24,11 +24,29 @@ export default function Checkout() {
 
   const [customerPhone, setCustomerPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [enabledMethods, setEnabledMethods] = useState<string[]>(["cash"]);
 
   // Pre-fill phone from localStorage if available
   useEffect(() => {
     const stored = localStorage.getItem("island_tacos_phone");
     if (stored) setCustomerPhone(stored);
+  }, []);
+
+  // Fetch which payment methods are enabled in admin settings
+  useEffect(() => {
+    fetch(`${basePath}/api/settings`)
+      .then(r => r.json())
+      .then((data: { online_payment_methods?: string }) => {
+        try {
+          const methods: string[] = JSON.parse(data.online_payment_methods ?? '["cash"]');
+          if (methods.length > 0) {
+            setEnabledMethods(methods);
+            if (!methods.includes(paymentMethod)) setPaymentMethod(methods[0]);
+          }
+        } catch { /* keep defaults */ }
+      })
+      .catch(() => {});
   }, []);
 
   const createOrder = useCreateOrder();
@@ -120,7 +138,7 @@ export default function Checkout() {
           customerPhone,
           orderType: "pickup",
           deliveryAddress: null,
-          paymentMethod: "cash",
+          paymentMethod: paymentMethod as "cash" | "card" | "athmovil",
           notes: notes || null,
           items: items.map((i) => ({
             menuItemId: i.menuItem.id,
@@ -200,15 +218,54 @@ export default function Checkout() {
               {/* Payment */}
               <section className="space-y-3">
                 <h2 className="text-xl font-bold">Payment</h2>
-                <div className="flex items-center gap-4 rounded-xl border-2 border-primary bg-primary/5 p-4">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <span className="text-primary font-black text-lg">$</span>
+                {enabledMethods.length === 1 && enabledMethods[0] === "cash" ? (
+                  <div className="flex items-center gap-4 rounded-xl border-2 border-primary bg-primary/5 p-4">
+                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-primary font-black text-lg">$</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold">Pay at Counter</p>
+                      <p className="text-sm text-muted-foreground">Cash or card — pay when you pick up your order</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold">Pay at Counter</p>
-                    <p className="text-sm text-muted-foreground">Cash or card — pay when you pick up your order</p>
+                ) : (
+                  <div className="space-y-2">
+                    {enabledMethods.map(m => {
+                      const info: Record<string, { label: string; description: string; icon: string }> = {
+                        cash: { label: "Pay at Counter", description: "Cash or card — pay when you pick up your order", icon: "$" },
+                        athmovil: { label: "ATH Móvil", description: "Pay now with ATH Móvil before pickup", icon: "A" },
+                        card: { label: "Card Online", description: "Pay now by card before pickup", icon: "💳" },
+                      };
+                      const meta = info[m] ?? { label: m, description: "", icon: "$" };
+                      const selected = paymentMethod === m;
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setPaymentMethod(m)}
+                          className={`w-full flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-colors ${
+                            selected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                          }`}
+                        >
+                          <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 font-black text-lg ${
+                            selected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                          }`}>
+                            {meta.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold">{meta.label}</p>
+                            <p className="text-sm text-muted-foreground">{meta.description}</p>
+                          </div>
+                          <div className={`h-5 w-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+                            selected ? "border-primary bg-primary" : "border-muted-foreground/40"
+                          }`}>
+                            {selected && <div className="h-2 w-2 rounded-full bg-white" />}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                </div>
+                )}
               </section>
 
               <Separator />

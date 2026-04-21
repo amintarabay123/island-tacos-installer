@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Store, Users, Plus, Pencil, Trash2, Shield, User, Check, X } from "lucide-react";
+import { ArrowLeft, Save, Store, Users, Plus, Pencil, Trash2, Shield, User, Check, X, CreditCard } from "lucide-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -16,6 +16,7 @@ type Settings = {
   phone: string;
   address: string;
   payment_methods: string;
+  online_payment_methods: string;
 };
 
 const DEFAULTS: Settings = {
@@ -23,7 +24,14 @@ const DEFAULTS: Settings = {
   phone: "284-544-8088",
   address: "Wickhams Cay 1, Road Town, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
+  online_payment_methods: '["cash"]',
 };
+
+const ONLINE_METHODS = [
+  { id: "cash", label: "Pay at Counter", description: "Customer pays cash or card when they pick up" },
+  { id: "athmovil", label: "ATH Móvil", description: "Customer pays online via ATH Móvil before pickup" },
+  { id: "card", label: "Card Online", description: "Customer pays by card online before pickup" },
+] as const;
 
 type Employee = {
   id: number;
@@ -61,11 +69,23 @@ export default function AdminSettings() {
           phone: data.phone ?? DEFAULTS.phone,
           address: data.address ?? DEFAULTS.address,
           payment_methods: data.payment_methods ?? DEFAULTS.payment_methods,
+          online_payment_methods: data.online_payment_methods ?? DEFAULTS.online_payment_methods,
         });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const getOnlineMethods = (): string[] => {
+    try { return JSON.parse(form.online_payment_methods); } catch { return ["cash"]; }
+  };
+
+  const toggleOnlineMethod = (id: string) => {
+    const current = getOnlineMethods();
+    const next = current.includes(id) ? current.filter(m => m !== id) : [...current, id];
+    if (next.length === 0) return;
+    setForm(f => ({ ...f, online_payment_methods: JSON.stringify(next) }));
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -309,6 +329,52 @@ export default function AdminSettings() {
           {field("phone", "Phone Number", "e.g. 284-544-8088")}
           {field("address", "Address", "e.g. Wickhams Cay 1, Road Town, BVI")}
           {field("payment_methods", "Accepted Payment Methods", "e.g. ATH Móvil · Card · Apple Pay")}
+        </section>
+
+        {/* ── Online Payment Methods ── */}
+        <section className="rounded-xl border bg-card p-6 space-y-5">
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <h2 className="font-bold text-base">Online Store Payment Methods</h2>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Control which payment options customers see when ordering online. At least one must stay enabled.
+          </p>
+          <div className="space-y-3">
+            {ONLINE_METHODS.map(m => {
+              const enabled = getOnlineMethods().includes(m.id);
+              const isLast = getOnlineMethods().length === 1 && enabled;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => toggleOnlineMethod(m.id)}
+                  disabled={isLast}
+                  className={`w-full flex items-center gap-4 rounded-lg border p-4 text-left transition-colors ${
+                    enabled
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-background hover:bg-muted/40"
+                  } ${isLast ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  <div className={`h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                    enabled ? "bg-primary border-primary" : "border-muted-foreground/40"
+                  }`}>
+                    {enabled && <Check className="h-3 w-3 text-primary-foreground" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">{m.label}</p>
+                    <p className="text-xs text-muted-foreground">{m.description}</p>
+                  </div>
+                  {enabled && (
+                    <span className="text-xs font-medium text-primary shrink-0">Enabled</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Changes take effect immediately after saving — no republish required.
+          </p>
         </section>
 
         {/* ── Employee & PIN Management ── */}

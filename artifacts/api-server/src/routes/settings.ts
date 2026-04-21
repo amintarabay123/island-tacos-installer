@@ -8,6 +8,7 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   phone: "284-544-8088",
   address: "Wickhams Cay 1, Road Town, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
+  online_payment_methods: '["cash"]',
 };
 
 // GET /api/settings — public, used by footer and display
