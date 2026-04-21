@@ -25,6 +25,7 @@ import SignInPage from "@/pages/sign-in";
 import SignUpPage from "@/pages/sign-up";
 import NotFound from "@/pages/not-found";
 import InstallPrompt from "@/components/install-prompt";
+import FbBrowserPrompt from "@/components/fb-browser-prompt";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -135,6 +136,7 @@ function ClerkProviderWithRoutes() {
           <CartProvider>
             <Router />
             <Toaster />
+            <FbBrowserPrompt />
             <InstallPrompt />
           </CartProvider>
         </TooltipProvider>
