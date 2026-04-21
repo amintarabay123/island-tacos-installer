@@ -12,6 +12,7 @@ import { useCreateOrder } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingBag, LogIn } from "lucide-react";
 import { saveLastOrder } from "@/lib/customer-account";
+import { AthMovilInstructions } from "@/components/athmovil-button";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -26,6 +27,7 @@ export default function Checkout() {
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [enabledMethods, setEnabledMethods] = useState<string[]>(["cash"]);
+  const [athPending, setAthPending] = useState<{ code: string; total: number } | null>(null);
 
   // Pre-fill phone from localStorage if available
   useEffect(() => {
@@ -152,7 +154,11 @@ export default function Checkout() {
         onSuccess: (order) => {
           saveLastOrder(order.confirmationCode);
           clearCart();
-          setLocation(`/track?code=${order.confirmationCode}`);
+          if (paymentMethod === "athmovil") {
+            setAthPending({ code: order.confirmationCode, total });
+          } else {
+            setLocation(`/track?code=${order.confirmationCode}`);
+          }
         },
         onError: (err: unknown) => {
           const msg = (err as { data?: { error?: string } })?.data?.error ?? "Failed to place order. Please try again.";
@@ -161,6 +167,28 @@ export default function Checkout() {
       }
     );
   };
+
+  // ATH Móvil payment instructions — shown after order is placed
+  if (athPending) {
+    return (
+      <Layout>
+        <div className="flex-1 py-8 md:py-12">
+          <div className="container mx-auto px-4 max-w-md">
+            <div className="text-center mb-6">
+              <div className="mx-auto w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-3xl mb-3">🧾</div>
+              <h1 className="text-2xl font-black">Order placed!</h1>
+              <p className="text-muted-foreground mt-1">Now complete your ATH Móvil payment to confirm it.</p>
+            </div>
+            <AthMovilInstructions
+              total={athPending.total}
+              confirmationCode={athPending.code}
+              onPaymentSent={() => setLocation(`/track?code=${athPending.code}`)}
+            />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
