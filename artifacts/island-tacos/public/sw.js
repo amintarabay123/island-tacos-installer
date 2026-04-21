@@ -1,5 +1,16 @@
-const CACHE = "island-tacos-v3";
-const SHELL = ["/", "/logo.png", "/icon.svg", "/icon-pos.svg", "/icon-kds.svg"];
+const CACHE = "island-tacos-v4";
+const SHELL = [
+  "/",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-pos-192.png",
+  "/icon-pos-512.png",
+  "/icon-kds-192.png",
+  "/icon-kds-512.png",
+  "/icon.svg",
+  "/icon-pos.svg",
+  "/icon-kds.svg",
+];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));

@@ -5,19 +5,21 @@ const router = Router();
 const ADMIN_PATH = process.env["ADMIN_PATH"] ?? "it-dav7dwn8";
 
 const storeIcons = [
-  { src: "/logo.png", sizes: "192x192", type: "image/png", purpose: "any" },
-  { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+  { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+  { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
   { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
 ];
 
 const posIcons = [
+  { src: "/icon-pos-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+  { src: "/icon-pos-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
   { src: "/icon-pos.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-  { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
 ];
 
 const kdsIcons = [
+  { src: "/icon-kds-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+  { src: "/icon-kds-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
   { src: "/icon-kds.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
-  { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
 ];
 
 router.get("/manifest.webmanifest", (req, res) => {
@@ -74,7 +76,7 @@ router.get("/manifest.webmanifest", (req, res) => {
           short_name: "Order",
           description: "Place a new order",
           url: "/",
-          icons: [{ src: "/logo.png", sizes: "192x192" }],
+          icons: [{ src: "/icon-192.png", sizes: "192x192" }],
         },
       ],
     };
