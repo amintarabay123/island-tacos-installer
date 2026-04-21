@@ -304,13 +304,38 @@ function ModifierModal({ item, modifiers, onConfirm, onClose }: {
 
 function PaymentModal({ total, onPay, onClose, onSplit }: {
   total: number;
-  onPay: (method: string, tendered?: number) => void;
+  onPay: (method: string, tendered?: number, splitNote?: string) => void;
   onClose: () => void;
   onSplit?: () => void;
 }) {
   const [tab, setTab] = useState<"cash" | "card" | "athmovil" | "split">("cash");
   const [tendered, setTendered] = useState(String(Math.ceil(total)));
   const change = Math.max(0, parseFloat(tendered || "0") - total);
+
+  // Split-by-amount state
+  const [splitAmounts, setSplitAmounts] = useState<{ cash: string; card: string; athmovil: string }>({ cash: "", card: "", athmovil: "" });
+  const [splitCollecting, setSplitCollecting] = useState(false);
+
+  const splitParsed = {
+    cash: parseFloat(splitAmounts.cash || "0"),
+    card: parseFloat(splitAmounts.card || "0"),
+    athmovil: parseFloat(splitAmounts.athmovil || "0"),
+  };
+  const splitSum = Math.round((splitParsed.cash + splitParsed.card + splitParsed.athmovil) * 100) / 100;
+  const splitRemaining = Math.round((total - splitSum) * 100) / 100;
+  const activeSplitMethods = (["cash", "card", "athmovil"] as const).filter(k => splitParsed[k] > 0);
+  const splitReady = Math.abs(splitRemaining) < 0.005 && activeSplitMethods.length >= 2;
+
+  const SPLIT_METHOD_LABELS: Record<string, { icon: string; label: string }> = {
+    cash: { icon: "💵", label: "Cash" },
+    card: { icon: "💳", label: "Card" },
+    athmovil: { icon: "📱", label: "ATH Móvil" },
+  };
+
+  const buildSplitNote = () => {
+    const parts = activeSplitMethods.map(k => `${SPLIT_METHOD_LABELS[k].icon} ${SPLIT_METHOD_LABELS[k].label} ${fmt(splitParsed[k])}`);
+    return `SPLIT: ${parts.join(" + ")}`;
+  };
 
   const QUICK = (() => {
     const add = (result: number[], v: number) => {
@@ -329,7 +354,7 @@ function PaymentModal({ total, onPay, onClose, onSplit }: {
     { key: "cash", label: "Cash" },
     { key: "card", label: "Card" },
     { key: "athmovil", label: "ATH Móvil" },
-    ...(onSplit ? [{ key: "split", label: "✂ Split" }] : []),
+    { key: "split", label: "✂ Split" },
   ] as const;
 
   return (
@@ -343,7 +368,7 @@ function PaymentModal({ total, onPay, onClose, onSplit }: {
         {/* Method tabs */}
         <div className="flex border-b border-[#1E2130]">
           {TABS.map(m => (
-            <button key={m.key} onClick={() => setTab(m.key as typeof tab)}
+            <button key={m.key} onClick={() => { setTab(m.key as typeof tab); setSplitCollecting(false); }}
               className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === m.key ? "text-[#F5A623] border-b-2 border-[#F5A623]" : "text-zinc-400 hover:text-white"}`}>
               {m.label}
             </button>
@@ -392,24 +417,84 @@ function PaymentModal({ total, onPay, onClose, onSplit }: {
               <p className="text-zinc-400 text-sm">Confirm receipt of <span className="text-[#F5A623] font-bold">{fmt(total)}</span></p>
             </div>
           )}
-          {tab === "split" && (
-            <div className="text-center py-6">
-              <div className="text-5xl mb-4">✂️</div>
-              <p className="text-white font-semibold mb-1">Split payment by item</p>
-              <p className="text-zinc-400 text-sm">Assign each item to Cash, Card, or ATH</p>
+          {tab === "split" && !splitCollecting && (
+            <div className="space-y-3">
+              <p className="text-zinc-400 text-xs uppercase tracking-wide font-semibold">Enter amount per method</p>
+              {(["cash", "card", "athmovil"] as const).map(k => (
+                <div key={k} className="flex items-center gap-3 bg-[#1A1D28] rounded-xl px-4 py-3 border border-[#2A2F45]">
+                  <span className="text-2xl">{SPLIT_METHOD_LABELS[k].icon}</span>
+                  <span className="text-white font-semibold flex-1">{SPLIT_METHOD_LABELS[k].label}</span>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-bold">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={splitAmounts[k]}
+                      onChange={e => setSplitAmounts(prev => ({ ...prev, [k]: e.target.value }))}
+                      className="w-28 pl-7 pr-2 py-2 rounded-lg bg-[#0A0B0F] text-white text-right text-lg font-mono border border-[#2A2F45] focus:border-[#F5A623] focus:outline-none"
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className={`rounded-xl px-4 py-3 flex items-center justify-between ${splitReady ? "bg-green-900/30 border border-green-700/40" : "bg-[#1A1D28] border border-[#2A2F45]"}`}>
+                <span className="text-zinc-400 text-sm font-semibold">
+                  {splitReady ? "Ready to charge" : splitRemaining < 0 ? "Over by" : "Remaining"}
+                </span>
+                <span className={`text-xl font-black ${splitReady ? "text-green-400" : splitRemaining < 0 ? "text-red-400" : "text-white"}`}>
+                  {splitReady ? "✓ " + fmt(total) : fmt(Math.abs(splitRemaining))}
+                </span>
+              </div>
+              {onSplit && (
+                <button
+                  onClick={() => { onClose(); onSplit(); }}
+                  className="w-full h-10 rounded-xl border border-[#2A2F45] text-zinc-400 hover:text-white hover:border-zinc-500 text-sm font-semibold transition-colors">
+                  Switch to split by item instead
+                </button>
+              )}
+            </div>
+          )}
+          {tab === "split" && splitCollecting && (
+            <div className="space-y-3">
+              <p className="text-zinc-400 text-xs uppercase tracking-wide font-semibold mb-1">Collect from customer</p>
+              {activeSplitMethods.map(k => (
+                <div key={k} className="flex items-center justify-between bg-[#1A1D28] rounded-xl px-4 py-4 border border-[#2A2F45]">
+                  <span className="text-white text-base font-semibold">{SPLIT_METHOD_LABELS[k].icon} {SPLIT_METHOD_LABELS[k].label}</span>
+                  <span className="text-[#F5A623] text-2xl font-black">{fmt(splitParsed[k])}</span>
+                </div>
+              ))}
+              {splitParsed.cash > 0 && (() => {
+                const cashChange = Math.max(0, splitParsed.cash - (total - splitParsed.card - splitParsed.athmovil));
+                return cashChange > 0.005 ? (
+                  <div className="bg-green-900/30 rounded-xl px-4 py-3 flex items-center justify-between border border-green-700/40">
+                    <span className="text-green-300 text-sm font-semibold">Cash change due</span>
+                    <span className="text-green-400 text-xl font-black">{fmt(cashChange)}</span>
+                  </div>
+                ) : null;
+              })()}
             </div>
           )}
         </div>
 
         <div className="p-5 border-t border-[#1E2130] flex gap-3">
           <button onClick={onClose} className="h-12 px-5 rounded-xl border border-[#2A2F45] text-zinc-300 font-semibold hover:bg-[#1E2130] transition-colors">Cancel</button>
-          {tab === "split" ? (
+          {tab === "split" && !splitCollecting && (
             <button
-              onClick={() => { onClose(); onSplit?.(); }}
-              className="flex-1 h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-black text-base transition-colors">
-              ✂ Open Split
+              disabled={!splitReady}
+              onClick={() => setSplitCollecting(true)}
+              className="flex-1 h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-30 disabled:cursor-not-allowed text-black font-black text-base transition-colors">
+              ✂ Confirm Split
             </button>
-          ) : (
+          )}
+          {tab === "split" && splitCollecting && (
+            <button
+              onClick={() => onPay("split", undefined, buildSplitNote())}
+              className="flex-1 h-12 rounded-xl bg-green-500 hover:bg-green-400 text-black font-black text-base transition-colors">
+              Mark as Paid
+            </button>
+          )}
+          {tab !== "split" && (
             <button
               disabled={tab === "cash" && parseFloat(tendered || "0") < total}
               onClick={() => onPay(tab, tab === "cash" ? parseFloat(tendered) : undefined)}
@@ -710,12 +795,15 @@ function TicketsDrawer({ onResume, onClose }: {
     load();
   };
 
-  const completeWithPayment = async (method: string) => {
+  const completeWithPayment = async (method: string, _tendered?: number, splitNote?: string) => {
     if (!chargeOrder) return;
+    const notes = splitNote
+      ? (chargeOrder.notes ? `${chargeOrder.notes}\n${splitNote}` : splitNote)
+      : chargeOrder.notes;
     await fetch(`/api/orders/${chargeOrder.id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "completed", actualPaymentMethod: method, paymentStatus: "paid" }),
+      body: JSON.stringify({ status: "completed", actualPaymentMethod: method, paymentStatus: "paid", ...(notes ? { notes } : {}) }),
     });
     setChargeOrder(null);
     onClose();
@@ -2072,9 +2160,12 @@ export default function POS() {
     }
   };
 
-  const handlePay = async (method: string, tendered?: number) => {
+  const handlePay = async (method: string, tendered?: number, splitNote?: string) => {
     setPaymentModal(false);
-    await placeOrder(method, "paid", tendered, undefined, customerPhone || undefined);
+    const noteWithSplit = splitNote
+      ? (orderNotes ? `${orderNotes}\n${splitNote}` : splitNote)
+      : (orderNotes || undefined);
+    await placeOrder(method, "paid", tendered, undefined, customerPhone || undefined, noteWithSplit);
   };
 
   const handleSplitPay = async (_groups: SplitGroup[], note: string) => {
