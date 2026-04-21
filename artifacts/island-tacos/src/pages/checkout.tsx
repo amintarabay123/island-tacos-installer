@@ -59,6 +59,45 @@ export default function Checkout() {
 
   const createOrder = useCreateOrder();
 
+  // ATH Móvil payment screen — must be checked BEFORE the empty-cart guard
+  // because the cart is cleared when the order is placed.
+  if (athPending) {
+    return (
+      <Layout>
+        <div className="flex-1 py-8 md:py-12">
+          <div className="container mx-auto px-4 max-w-md">
+            <div className="text-center mb-6">
+              <div className="mx-auto w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-3xl mb-3">🧾</div>
+              <h1 className="text-2xl font-black">Order placed!</h1>
+              <p className="text-muted-foreground mt-1">
+                Complete your ATH Móvil payment — your order is reserved for <strong>10 minutes</strong>.
+              </p>
+            </div>
+
+            {athPending.publicToken ? (
+              <AthMovilEcommerceButton
+                orderId={athPending.orderId}
+                total={athPending.total}
+                publicToken={athPending.publicToken}
+                items={athPending.items}
+                onCompleted={() => setLocation(`/track?code=${athPending!.code}`)}
+                onCancelled={() => {
+                  toast({ title: "Payment cancelled — your order is still reserved.", variant: "default" });
+                }}
+              />
+            ) : (
+              <AthMovilInstructions
+                total={athPending.total}
+                confirmationCode={athPending.code}
+                onPaymentSent={() => setLocation(`/track?code=${athPending!.code}`)}
+              />
+            )}
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   // Empty cart guard
   if (items.length === 0) {
     return (
@@ -201,44 +240,6 @@ export default function Checkout() {
       }
     );
   };
-
-  // ATH Móvil payment screen — shown after order is placed
-  if (athPending) {
-    return (
-      <Layout>
-        <div className="flex-1 py-8 md:py-12">
-          <div className="container mx-auto px-4 max-w-md">
-            <div className="text-center mb-6">
-              <div className="mx-auto w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-3xl mb-3">🧾</div>
-              <h1 className="text-2xl font-black">Order placed!</h1>
-              <p className="text-muted-foreground mt-1">
-                Complete your ATH Móvil payment — your order is reserved for <strong>10 minutes</strong>.
-              </p>
-            </div>
-
-            {athPending.publicToken ? (
-              <AthMovilEcommerceButton
-                orderId={athPending.orderId}
-                total={athPending.total}
-                publicToken={athPending.publicToken}
-                items={athPending.items}
-                onCompleted={() => setLocation(`/track?code=${athPending!.code}`)}
-                onCancelled={() => {
-                  toast({ title: "Payment cancelled — your order is still reserved.", variant: "default" });
-                }}
-              />
-            ) : (
-              <AthMovilInstructions
-                total={athPending.total}
-                confirmationCode={athPending.code}
-                onPaymentSent={() => setLocation(`/track?code=${athPending!.code}`)}
-              />
-            )}
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout>
