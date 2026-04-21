@@ -29,7 +29,21 @@ router.get("/manifest.webmanifest", (req, res) => {
 
   let manifest: object;
 
-  if (pathname.startsWith(`/${ADMIN_PATH}/pos`) || pathname.includes("/pos")) {
+  if (pathname.startsWith(`/${ADMIN_PATH}`) && !pathname.includes("/pos") && !pathname.includes("/kitchen")) {
+    manifest = {
+      name: "Island Tacos — Admin",
+      short_name: "IT Admin",
+      description: "Island Tacos admin dashboard",
+      start_url: `/${ADMIN_PATH}`,
+      scope: `/${ADMIN_PATH}/`,
+      display: "standalone",
+      background_color: "#0D0F17",
+      theme_color: "#F5A623",
+      orientation: "portrait-primary",
+      categories: ["business", "productivity"],
+      icons: posIcons,
+    };
+  } else if (pathname.startsWith(`/${ADMIN_PATH}/pos`) || pathname.includes("/pos")) {
     manifest = {
       name: "Island Tacos — POS",
       short_name: "IT POS",
