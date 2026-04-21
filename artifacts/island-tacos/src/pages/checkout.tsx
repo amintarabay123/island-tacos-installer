@@ -12,7 +12,7 @@ import { useCreateOrder } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingBag, LogIn } from "lucide-react";
 import { saveLastOrder } from "@/lib/customer-account";
-import { AthMovilInstructions } from "@/components/athmovil-button";
+import { AthMovilEcommerceButton, AthMovilInstructions } from "@/components/athmovil-button";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -27,7 +27,13 @@ export default function Checkout() {
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [enabledMethods, setEnabledMethods] = useState<string[]>(["cash"]);
-  const [athPending, setAthPending] = useState<{ code: string; total: number } | null>(null);
+  const [athPending, setAthPending] = useState<{
+    orderId: number;
+    code: string;
+    total: number;
+    publicToken: string | null;
+    items: { name: string; quantity: number; price: number }[];
+  } | null>(null);
 
   // Pre-fill phone from localStorage if available
   useEffect(() => {
@@ -151,12 +157,40 @@ export default function Checkout() {
         },
       },
       {
-        onSuccess: (order) => {
+        onSuccess: async (order) => {
           saveLastOrder(order.confirmationCode);
-          clearCart();
           if (paymentMethod === "athmovil") {
-            setAthPending({ code: order.confirmationCode, total });
+            // Snapshot items BEFORE clearing the cart
+            const athItems = items.map((i) => ({
+              name: i.menuItem.name,
+              quantity: i.quantity,
+              price: parseFloat(
+                ((i.menuItem.price + (i.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * i.quantity).toFixed(2)
+              ),
+            }));
+            clearCart();
+            // Fetch public token from the API
+            let publicToken: string | null = null;
+            try {
+              const res = await fetch(`${basePath}/api/payments/initiate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: order.id, paymentMethod: "athmovil" }),
+              });
+              if (res.ok) {
+                const data = await res.json() as { publicToken?: string };
+                publicToken = data.publicToken ?? null;
+              }
+            } catch { /* fall back to manual instructions */ }
+            setAthPending({
+              orderId: order.id,
+              code: order.confirmationCode,
+              total,
+              publicToken,
+              items: athItems,
+            });
           } else {
+            clearCart();
             setLocation(`/track?code=${order.confirmationCode}`);
           }
         },
@@ -168,7 +202,7 @@ export default function Checkout() {
     );
   };
 
-  // ATH Móvil payment instructions — shown after order is placed
+  // ATH Móvil payment screen — shown after order is placed
   if (athPending) {
     return (
       <Layout>
@@ -177,13 +211,29 @@ export default function Checkout() {
             <div className="text-center mb-6">
               <div className="mx-auto w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-3xl mb-3">🧾</div>
               <h1 className="text-2xl font-black">Order placed!</h1>
-              <p className="text-muted-foreground mt-1">Now complete your ATH Móvil payment to confirm it.</p>
+              <p className="text-muted-foreground mt-1">
+                Complete your ATH Móvil payment — your order is reserved for <strong>10 minutes</strong>.
+              </p>
             </div>
-            <AthMovilInstructions
-              total={athPending.total}
-              confirmationCode={athPending.code}
-              onPaymentSent={() => setLocation(`/track?code=${athPending.code}`)}
-            />
+
+            {athPending.publicToken ? (
+              <AthMovilEcommerceButton
+                orderId={athPending.orderId}
+                total={athPending.total}
+                publicToken={athPending.publicToken}
+                items={athPending.items}
+                onCompleted={() => setLocation(`/track?code=${athPending!.code}`)}
+                onCancelled={() => {
+                  toast({ title: "Payment cancelled — your order is still reserved.", variant: "default" });
+                }}
+              />
+            ) : (
+              <AthMovilInstructions
+                total={athPending.total}
+                confirmationCode={athPending.code}
+                onPaymentSent={() => setLocation(`/track?code=${athPending!.code}`)}
+              />
+            )}
           </div>
         </div>
       </Layout>
