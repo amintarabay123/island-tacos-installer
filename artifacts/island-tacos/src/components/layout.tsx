@@ -51,9 +51,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="max-w-6xl mx-auto flex h-16 items-center justify-between px-6">
 
           {/* Brand */}
-          <Link href="/" className="flex flex-col leading-none select-none">
-            <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">Restaurant</span>
-            <span className="text-base font-bold tracking-tight text-foreground">Island Tacos</span>
+          <Link href="/" className="flex items-center select-none">
+            <img src="/logo-wordmark.png" alt="Island Tacos" className="h-10 w-auto dark:invert" />
           </Link>
 
           {/* Desktop nav links */}
@@ -195,7 +194,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent side="left" className="w-72 p-0">
                 <div className="flex items-center justify-between px-6 py-5 border-b">
-                  <span className="font-bold">Island Tacos</span>
+                  <img src="/logo-wordmark.png" alt="Island Tacos" className="h-8 w-auto dark:invert" />
                   <button onClick={() => setMobileOpen(false)}>
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
