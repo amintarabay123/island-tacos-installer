@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "DKhwkiWVA5s5s7YzoIRl8"
@@ -30,3 +29,9 @@ id = "Zk8KomKjudUlpZucbWi4i"
 uri = "file://artifacts/island-tacos/public/images/veggie-taco.png"
 type = "image"
 title = "Veggie Taco"
+
+[[outputs]]
+id = "6QtvND-2Msj8jUq8Kz61s"
+uri = "file://island-tacos-order-qr.png"
+type = "image"
+title = "Island Tacos — Online Order QR Code (orders.islandtacosbvi.com)"
