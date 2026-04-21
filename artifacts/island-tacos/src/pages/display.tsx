@@ -152,7 +152,7 @@ function IdleScreen() {
   );
 }
 
-// ─── ATH Móvil Payment Instructions ──────────────────────────────────────────
+// ─── ATH Móvil QR Payment Panel ──────────────────────────────────────────────
 
 function AthMovilQr({
   total,
@@ -165,24 +165,27 @@ function AthMovilQr({
   orderCode?: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-4 w-full max-w-xs">
-      <img src="/athmovil-logo.webp" alt="ATH Móvil" className="h-9 object-contain" />
+    <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+      {/* QR code card */}
+      <img
+        src="/athmovil-path-qr.jpg"
+        alt="ATH Móvil QR — /islandtaco"
+        className="w-56 rounded-2xl shadow-xl"
+      />
 
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-5 w-full space-y-3">
-        <p className="text-zinc-400 text-xs font-semibold uppercase tracking-widest text-center">Open ATH Móvil app and:</p>
-
-        {[
-          { step: "1", text: <>Tap <strong className="text-white">"Pay a Business"</strong></> },
-          { step: "2", text: <>Search <strong className="text-white">Island Tacos</strong></> },
-          { step: "3", text: <>Enter exactly <strong className="text-[#F5A623] text-lg">${total.toFixed(2)}</strong></> },
-          ...(orderCode ? [{ step: "4", text: <>Note field: <strong className="text-white font-mono">{orderCode}</strong></> }] : []),
-        ].map(({ step, text }) => (
-          <div key={step} className="flex items-center gap-3">
-            <span className="w-6 h-6 rounded-full bg-[#F5A623] text-black text-xs font-black flex items-center justify-center shrink-0">{step}</span>
-            <span className="text-zinc-300 text-sm">{text}</span>
-          </div>
-        ))}
+      {/* Amount to enter */}
+      <div className="text-center">
+        <p className="text-zinc-500 text-xs uppercase tracking-widest mb-0.5">Scan &amp; enter this amount</p>
+        <p className="text-[#F5A623] text-4xl font-black tabular-nums">${total.toFixed(2)}</p>
       </div>
+
+      {/* Order code */}
+      {orderCode && (
+        <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2 text-center">
+          <p className="text-zinc-500 text-xs mb-0.5">Note / message field</p>
+          <p className="text-white font-mono font-bold text-sm tracking-widest">{orderCode}</p>
+        </div>
+      )}
     </div>
   );
 }
