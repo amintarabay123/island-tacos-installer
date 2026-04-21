@@ -219,11 +219,6 @@ export default function Home() {
                     <span className="bg-secondary/90 text-secondary-foreground text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
                       {idx === 0 ? "🔥 #1" : `#${idx + 1}`}
                     </span>
-                    {item.totalSold > 0 && (
-                      <span className="bg-black/60 text-white text-[10px] font-medium px-1.5 py-0.5 rounded">
-                        {item.totalSold} sold
-                      </span>
-                    )}
                   </div>
                 </div>
                 <div className="p-4 flex items-center justify-between gap-2">
