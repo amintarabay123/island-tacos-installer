@@ -1,119 +1,194 @@
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle, Smartphone, Copy, Check, Loader2, ExternalLink } from "lucide-react";
+import { CheckCircle, Smartphone, Copy, Check, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-// ─── Server-side session button (no JS SDK, no domain whitelist needed) ─────
+// ─── Automatic push-payment button ──────────────────────────────────────────
+// Flow: server calls ATH Móvil → push notification to customer's phone →
+//       customer taps Approve in app → server polls findPayment → marks paid
 
 interface AthMovilDirectButtonProps {
   orderId: number;
   total: number;
   confirmationCode: string;
+  customerPhone: string;
   onCompleted: () => void;
 }
+
+type PaymentStatus = "sending" | "waiting" | "completed" | "cancelled" | "error";
 
 export function AthMovilDirectButton({
   orderId,
   total,
   confirmationCode,
+  customerPhone,
   onCompleted,
 }: AthMovilDirectButtonProps) {
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
-  const [opened, setOpened] = useState(false);
+  const [status, setStatus] = useState<PaymentStatus>("sending");
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  const ecommerceIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, []);
 
-  // Create the ATH Móvil session server-side when the component mounts
+  // Step 1: Create session (send push to customer phone)
   useEffect(() => {
-    setStatus("loading");
-    fetch(`${basePath}/api/payments/athmovil/create-session`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId }),
-    })
-      .then(async (res) => {
-        if (!mountedRef.current) return;
-        if (!res.ok) throw new Error("session_failed");
-        const data = await res.json() as { redirectUrl?: string };
-        if (!data.redirectUrl) throw new Error("no_url");
-        setRedirectUrl(data.redirectUrl);
-        setStatus("ready");
-      })
-      .catch(() => {
-        if (mountedRef.current) setStatus("error");
-      });
-  }, [orderId]);
+    let cancelled = false;
+    const createSession = async () => {
+      try {
+        const res = await fetch(`${basePath}/api/payments/athmovil/create-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId }),
+        });
+        const data = await res.json() as { ecommerceId?: string; error?: string; detail?: string };
 
-  if (status === "loading") {
+        if (cancelled || !mountedRef.current) return;
+
+        if (!res.ok || !data.ecommerceId) {
+          setErrorDetail(data.detail ?? data.error ?? "ATH Móvil could not send payment request");
+          setStatus("error");
+          return;
+        }
+
+        ecommerceIdRef.current = data.ecommerceId;
+        setStatus("waiting");
+        startPolling();
+      } catch (err) {
+        if (cancelled || !mountedRef.current) return;
+        setErrorDetail("Could not reach server");
+        setStatus("error");
+      }
+    };
+
+    createSession();
+    return () => { cancelled = true; };
+  }, [orderId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Step 2: Poll for customer approval
+  const startPolling = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      if (!mountedRef.current) return;
+      try {
+        const res = await fetch(`${basePath}/api/payments/athmovil/check-status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId }),
+        });
+        const data = await res.json() as { status?: string };
+        if (!mountedRef.current) return;
+
+        if (data.status === "COMPLETED") {
+          clearInterval(pollRef.current!);
+          setStatus("completed");
+          setTimeout(() => { if (mountedRef.current) onCompleted(); }, 1500);
+        } else if (data.status === "CANCEL") {
+          clearInterval(pollRef.current!);
+          setStatus("cancelled");
+        }
+      } catch { /* retry next tick */ }
+    }, 5_000);
+  };
+
+  const retry = () => {
+    setStatus("sending");
+    setErrorDetail(null);
+  };
+
+  if (status === "sending") {
     return (
-      <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
-        <Loader2 className="w-5 h-5 animate-spin" />
-        <span className="text-sm">Preparing ATH Móvil payment…</span>
+      <div className="rounded-xl bg-orange-50 border border-orange-200 p-6 text-center space-y-3">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500 mx-auto" />
+        <p className="font-semibold text-orange-900">Sending payment request…</p>
+        <p className="text-sm text-orange-700">
+          We're notifying your ATH Móvil app to request ${total.toFixed(2)}.
+        </p>
       </div>
     );
   }
 
-  if (status === "error" || !redirectUrl) {
+  if (status === "waiting") {
     return (
-      <AthMovilInstructions
-        total={total}
-        confirmationCode={confirmationCode}
-        onPaymentSent={onCompleted}
-      />
+      <div className="space-y-4">
+        <div className="rounded-xl bg-orange-50 border border-orange-200 p-5 text-center space-y-3">
+          <div className="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center mx-auto">
+            <Smartphone className="w-7 h-7 text-orange-600" />
+          </div>
+          <p className="font-bold text-orange-900 text-lg">Check your ATH Móvil app</p>
+          <p className="text-sm text-orange-700">
+            We sent a <strong>${total.toFixed(2)}</strong> payment request to the ATH Móvil app on <strong>{customerPhone}</strong>.
+            Open the app and tap <strong>Approve</strong> to complete your order.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-xs text-orange-500 pt-1">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Waiting for your approval…
+          </div>
+        </div>
+        <p className="text-xs text-center text-muted-foreground">
+          Order #{confirmationCode} · ${total.toFixed(2)} · Held for 10 minutes
+        </p>
+      </div>
     );
   }
 
+  if (status === "completed") {
+    return (
+      <div className="rounded-xl bg-green-50 border border-green-200 p-6 text-center space-y-3">
+        <CheckCircle className="w-10 h-10 text-green-600 mx-auto" />
+        <p className="font-bold text-green-900 text-lg">Payment received!</p>
+        <p className="text-sm text-green-700">Taking you to your order…</p>
+      </div>
+    );
+  }
+
+  if (status === "cancelled") {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-xl bg-red-50 border border-red-200 p-5 text-center space-y-2">
+          <p className="font-semibold text-red-900">Payment request expired or was declined</p>
+          <p className="text-sm text-red-700">Your order is still held. Try sending a new request.</p>
+        </div>
+        <Button onClick={retry} className="w-full" variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" /> Send new payment request
+        </Button>
+        <div className="border-t pt-4">
+          <AthMovilInstructions
+            total={total}
+            confirmationCode={confirmationCode}
+            onPaymentSent={onCompleted}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // error state
   return (
     <div className="space-y-4">
-      {/* ATH Móvil branded payment link */}
-      <a
-        href={redirectUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => setOpened(true)}
-        className="flex items-center justify-center gap-3 w-full bg-[#FF6542] hover:bg-[#e5532f] active:bg-[#cc4a28] text-white font-bold text-base rounded-xl py-4 px-6 transition-colors shadow-sm"
-      >
-        <img
-          src="https://www.athmovil.com/img/logo/ath-movil-logo-white.png"
-          alt=""
-          className="h-5 w-auto"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+      <div className="rounded-xl bg-amber-50 border border-amber-200 p-5 space-y-2">
+        <p className="font-semibold text-amber-900">Couldn't send automatic payment request</p>
+        {errorDetail && <p className="text-xs text-amber-700 font-mono">{errorDetail}</p>}
+        <Button onClick={retry} size="sm" variant="outline" className="mt-2">
+          <RefreshCw className="h-4 w-4 mr-2" /> Try again
+        </Button>
+      </div>
+      <div className="border-t pt-4">
+        <p className="text-sm text-muted-foreground mb-3 text-center">Or pay manually:</p>
+        <AthMovilInstructions
+          total={total}
+          confirmationCode={confirmationCode}
+          onPaymentSent={onCompleted}
         />
-        Pay ${total.toFixed(2)} with ATH Móvil
-        <ExternalLink className="w-4 h-4 opacity-80" />
-      </a>
-
-      <p className="text-xs text-center text-muted-foreground">
-        Tapping the button will open ATH Móvil with the amount pre-filled.
-      </p>
-
-      {opened && (
-        <div className="rounded-xl bg-orange-50 border border-orange-200 p-4 space-y-3">
-          <p className="text-sm font-semibold text-orange-900 text-center">
-            Did you complete the payment in ATH Móvil?
-          </p>
-          <Button
-            onClick={onCompleted}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-            size="lg"
-          >
-            <CheckCircle className="h-5 w-5 mr-2" />
-            Yes, I've paid
-          </Button>
-          <button
-            onClick={() => setOpened(false)}
-            className="w-full text-xs text-muted-foreground underline"
-          >
-            I haven't paid yet — let me try again
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -207,6 +282,5 @@ export function AthMovilInstructions({
   );
 }
 
-// Legacy alias kept for any existing imports
 export { AthMovilInstructions as AthMovilButton };
 export { AthMovilDirectButton as AthMovilEcommerceButton };

@@ -26,6 +26,9 @@ app.listen(port, (err) => {
 
   // Register ATH Móvil webhook URL in production only (non-blocking)
   if (process.env["NODE_ENV"] === "production") {
-    registerAthMovilWebhook("https://order-direct-connect.replit.app/api/webhooks/athmovil").catch(() => {});
+    const publicUrl =
+      process.env["PUBLIC_URL"] ??
+      "https://orders.islandtacosbvi.com";
+    registerAthMovilWebhook(`${publicUrl}/api/webhooks/athmovil`).catch(() => {});
   }
 });

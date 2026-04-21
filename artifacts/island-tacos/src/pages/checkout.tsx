@@ -20,6 +20,7 @@ type AthState = {
   orderId: number;
   code: string;
   total: number;
+  phone: string;
   status: "waiting" | "ready" | "cancelled";
 };
 
@@ -143,6 +144,7 @@ export default function Checkout() {
               orderId={athState.orderId}
               total={athState.total}
               confirmationCode={athState.code}
+              customerPhone={athState.phone}
               onCompleted={() => setLocation(`/track?code=${athState!.code}`)}
             />
           </div>
@@ -258,6 +260,7 @@ export default function Checkout() {
               orderId: order.id,
               code: order.confirmationCode,
               total,
+              phone: customerPhone,
               status: "waiting",
             });
           } else {
