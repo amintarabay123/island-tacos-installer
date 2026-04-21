@@ -22,6 +22,17 @@ const kdsIcons = [
   { src: "/icon-kds.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
 ];
 
+const adminIcons = [
+  { src: "/icon-admin-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+  { src: "/icon-admin-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+  { src: "/icon-admin.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+];
+
+const displayIcons = [
+  { src: "/icon-display-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+  { src: "/icon-display-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+];
+
 router.get("/manifest.webmanifest", (req, res) => {
   const referer = req.headers["referer"] ?? req.headers["referrer"] ?? "";
   let pathname = "";
@@ -29,21 +40,7 @@ router.get("/manifest.webmanifest", (req, res) => {
 
   let manifest: object;
 
-  if (pathname.startsWith(`/${ADMIN_PATH}`) && !pathname.includes("/pos") && !pathname.includes("/kitchen")) {
-    manifest = {
-      name: "Island Tacos — Admin",
-      short_name: "IT Admin",
-      description: "Island Tacos admin dashboard",
-      start_url: `/${ADMIN_PATH}`,
-      scope: `/${ADMIN_PATH}/`,
-      display: "standalone",
-      background_color: "#0D0F17",
-      theme_color: "#F5A623",
-      orientation: "portrait-primary",
-      categories: ["business", "productivity"],
-      icons: posIcons,
-    };
-  } else if (pathname.startsWith(`/${ADMIN_PATH}/pos`) || pathname.includes("/pos")) {
+  if (pathname.includes("/pos")) {
     manifest = {
       name: "Island Tacos — POS",
       short_name: "IT POS",
@@ -51,13 +48,13 @@ router.get("/manifest.webmanifest", (req, res) => {
       start_url: `/${ADMIN_PATH}/pos`,
       scope: `/${ADMIN_PATH}/`,
       display: "standalone",
-      background_color: "#0D0F17",
-      theme_color: "#F59E0B",
+      background_color: "#0F1D44",
+      theme_color: "#4A90D9",
       orientation: "landscape",
       categories: ["business", "productivity"],
       icons: posIcons,
     };
-  } else if (pathname.startsWith(`/${ADMIN_PATH}/kitchen`) || pathname.includes("/kitchen")) {
+  } else if (pathname.includes("/kitchen")) {
     manifest = {
       name: "Island Tacos — Kitchen",
       short_name: "IT Kitchen",
@@ -65,11 +62,39 @@ router.get("/manifest.webmanifest", (req, res) => {
       start_url: `/${ADMIN_PATH}/kitchen`,
       scope: `/${ADMIN_PATH}/`,
       display: "standalone",
-      background_color: "#0D0F17",
+      background_color: "#0A2818",
       theme_color: "#22C55E",
       orientation: "landscape",
       categories: ["business", "productivity"],
       icons: kdsIcons,
+    };
+  } else if (pathname.includes("/display")) {
+    manifest = {
+      name: "Island Tacos — Display",
+      short_name: "IT Display",
+      description: "Island Tacos customer-facing display",
+      start_url: "/display",
+      scope: "/display",
+      display: "standalone",
+      background_color: "#0A2E35",
+      theme_color: "#1A7A8A",
+      orientation: "landscape",
+      categories: ["business"],
+      icons: displayIcons,
+    };
+  } else if (pathname.startsWith(`/${ADMIN_PATH}`)) {
+    manifest = {
+      name: "Island Tacos — Admin",
+      short_name: "IT Admin",
+      description: "Island Tacos admin dashboard",
+      start_url: `/${ADMIN_PATH}`,
+      scope: `/${ADMIN_PATH}/`,
+      display: "standalone",
+      background_color: "#2B0D4A",
+      theme_color: "#9B59B6",
+      orientation: "portrait-primary",
+      categories: ["business", "productivity"],
+      icons: adminIcons,
     };
   } else {
     manifest = {
