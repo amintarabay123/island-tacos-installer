@@ -168,17 +168,18 @@ function AthMovilQr({
   tax: number;
   orderCode?: string;
 }) {
-  const paymentUrl = new URL(`https://payments.athmovil.com/pay/${publicToken}`);
-  paymentUrl.searchParams.set("total", total.toFixed(2));
-  paymentUrl.searchParams.set("subtotal", subtotal.toFixed(2));
-  paymentUrl.searchParams.set("tax", tax.toFixed(2));
-  if (orderCode) paymentUrl.searchParams.set("metadata1", orderCode);
+  const params = new URLSearchParams();
+  params.set("total", total.toFixed(2));
+  params.set("subtotal", subtotal.toFixed(2));
+  params.set("tax", tax.toFixed(2));
+  if (orderCode) params.set("metadata1", orderCode);
+  const paymentUrl = `https://www.athmovil.com/pay/#${publicToken}?${params.toString()}`;
 
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="bg-white rounded-2xl p-3 shadow-lg">
         <QRCodeSVG
-          value={paymentUrl.toString()}
+          value={paymentUrl}
           size={160}
           bgColor="#ffffff"
           fgColor="#000000"

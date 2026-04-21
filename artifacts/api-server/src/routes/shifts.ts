@@ -13,7 +13,12 @@ router.get("/shifts/current", async (_req, res): Promise<void> => {
     .where(isNull(shiftsTable.closedAt))
     .orderBy(desc(shiftsTable.openedAt))
     .limit(1);
-  res.json(shift ?? null);
+  if (!shift) { res.json(null); return; }
+  res.json({
+    ...shift,
+    openingFloat: parseDecimal(shift.openingFloat),
+    closingFloat: shift.closingFloat ? parseDecimal(shift.closingFloat) : null,
+  });
 });
 
 router.get("/shifts", async (_req, res): Promise<void> => {
