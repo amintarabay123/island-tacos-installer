@@ -177,6 +177,7 @@ function AthMovilQr({
 
   return (
     <div className="flex flex-col items-center gap-3">
+      <img src="/athmovil-logo.webp" alt="ATH Móvil" className="h-8 object-contain" />
       <div className="bg-white rounded-2xl p-3 shadow-lg">
         <QRCodeSVG
           value={paymentUrl}
@@ -186,10 +187,7 @@ function AthMovilQr({
           level="M"
         />
       </div>
-      <div className="text-center">
-        <p className="text-white font-bold text-sm">Pay with ATH Móvil</p>
-        <p className="text-zinc-500 text-xs mt-0.5">Scan with your ATH Móvil app</p>
-      </div>
+      <p className="text-zinc-400 text-xs">Scan with your ATH Móvil app</p>
     </div>
   );
 }
