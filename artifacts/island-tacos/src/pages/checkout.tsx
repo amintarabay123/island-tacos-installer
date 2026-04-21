@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useUser } from "@clerk/react";
 import { useCart } from "@/lib/cart-context";
@@ -10,11 +10,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useCreateOrder } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, LogIn } from "lucide-react";
+import { ShoppingBag, LogIn, Loader2, XCircle } from "lucide-react";
 import { saveLastOrder } from "@/lib/customer-account";
-import { AthMovilEcommerceButton, AthMovilInstructions } from "@/components/athmovil-button";
+import { AthMovilDirectButton } from "@/components/athmovil-button";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+type AthState = {
+  orderId: number;
+  code: string;
+  total: number;
+  status: "waiting" | "ready" | "cancelled";
+};
 
 export default function Checkout() {
   const { items, total, clearCart } = useCart();
@@ -22,18 +29,12 @@ export default function Checkout() {
   const { toast } = useToast();
   const { user, isLoaded } = useUser();
 
-
   const [customerPhone, setCustomerPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [enabledMethods, setEnabledMethods] = useState<string[]>(["cash"]);
-  const [athPending, setAthPending] = useState<{
-    orderId: number;
-    code: string;
-    total: number;
-    publicToken: string | null;
-    items: { name: string; quantity: number; price: number }[];
-  } | null>(null);
+  const [athState, setAthState] = useState<AthState | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Pre-fill phone from localStorage if available
   useEffect(() => {
@@ -57,41 +58,93 @@ export default function Checkout() {
       .catch(() => {});
   }, []);
 
+  // Poll for order acceptance when in "waiting" state
+  useEffect(() => {
+    if (!athState || athState.status !== "waiting") {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      return;
+    }
+    const check = async () => {
+      try {
+        const res = await fetch(`${basePath}/api/orders/track/${athState.code}`);
+        if (!res.ok) return;
+        const data = await res.json() as { status?: string };
+        if (data.status === "cancelled") {
+          setAthState(prev => prev ? { ...prev, status: "cancelled" } : null);
+        } else if (data.status && data.status !== "pending") {
+          // Accepted by restaurant (confirmed / preparing / ready)
+          setAthState(prev => prev ? { ...prev, status: "ready" } : null);
+        }
+      } catch { /* ignore, retry next tick */ }
+    };
+    check(); // immediate check
+    pollRef.current = setInterval(check, 5_000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [athState?.status, athState?.code]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const createOrder = useCreateOrder();
 
-  // ATH Móvil payment screen — must be checked BEFORE the empty-cart guard
-  // because the cart is cleared when the order is placed.
-  if (athPending) {
+  // ── ATH Móvil screens — checked BEFORE empty-cart guard (cart is cleared on order place) ──
+  if (athState) {
+    if (athState.status === "cancelled") {
+      return (
+        <Layout>
+          <div className="flex-1 flex items-center justify-center py-20">
+            <div className="text-center space-y-4 max-w-sm mx-auto px-4">
+              <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                <XCircle className="h-9 w-9 text-red-500" />
+              </div>
+              <h1 className="text-2xl font-black">Order not accepted</h1>
+              <p className="text-muted-foreground">
+                The restaurant couldn't take your order right now. No payment was collected.
+              </p>
+              <Button onClick={() => setLocation("/")} className="w-full">Back to Menu</Button>
+            </div>
+          </div>
+        </Layout>
+      );
+    }
+
+    if (athState.status === "waiting") {
+      return (
+        <Layout>
+          <div className="flex-1 flex items-center justify-center py-20">
+            <div className="text-center space-y-5 max-w-sm mx-auto px-4">
+              <div className="mx-auto w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center">
+                <Loader2 className="h-9 w-9 text-orange-500 animate-spin" />
+              </div>
+              <h1 className="text-2xl font-black">Order placed!</h1>
+              <p className="text-muted-foreground">
+                Waiting for Island Tacos to accept your order before we collect payment.
+                <br /><span className="text-sm">This usually takes under a minute.</span>
+              </p>
+              <p className="text-xs font-mono bg-muted rounded-lg px-3 py-2 inline-block">
+                Order #{athState.code}
+              </p>
+            </div>
+          </div>
+        </Layout>
+      );
+    }
+
+    // status === "ready" — restaurant accepted, show ATH Móvil payment
     return (
       <Layout>
         <div className="flex-1 py-8 md:py-12">
           <div className="container mx-auto px-4 max-w-md">
             <div className="text-center mb-6">
-              <div className="mx-auto w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-3xl mb-3">🧾</div>
-              <h1 className="text-2xl font-black">Order placed!</h1>
+              <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-3xl mb-3">✅</div>
+              <h1 className="text-2xl font-black">Order accepted!</h1>
               <p className="text-muted-foreground mt-1">
-                Complete your ATH Móvil payment — your order is reserved for <strong>10 minutes</strong>.
+                Complete your ATH Móvil payment to confirm — your order is held for <strong>10 minutes</strong>.
               </p>
             </div>
-
-            {athPending.publicToken ? (
-              <AthMovilEcommerceButton
-                orderId={athPending.orderId}
-                total={athPending.total}
-                publicToken={athPending.publicToken}
-                items={athPending.items}
-                onCompleted={() => setLocation(`/track?code=${athPending!.code}`)}
-                onCancelled={() => {
-                  toast({ title: "Payment cancelled — your order is still reserved.", variant: "default" });
-                }}
-              />
-            ) : (
-              <AthMovilInstructions
-                total={athPending.total}
-                confirmationCode={athPending.code}
-                onPaymentSent={() => setLocation(`/track?code=${athPending!.code}`)}
-              />
-            )}
+            <AthMovilDirectButton
+              orderId={athState.orderId}
+              total={athState.total}
+              confirmationCode={athState.code}
+              onCompleted={() => setLocation(`/track?code=${athState!.code}`)}
+            />
           </div>
         </div>
       </Layout>
@@ -198,38 +251,16 @@ export default function Checkout() {
       {
         onSuccess: async (order) => {
           saveLastOrder(order.confirmationCode);
+          clearCart();
           if (paymentMethod === "athmovil") {
-            // Snapshot items BEFORE clearing the cart
-            const athItems = items.map((i) => ({
-              name: i.menuItem.name,
-              quantity: i.quantity,
-              price: parseFloat(
-                ((i.menuItem.price + (i.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * i.quantity).toFixed(2)
-              ),
-            }));
-            clearCart();
-            // Fetch public token from the API
-            let publicToken: string | null = null;
-            try {
-              const res = await fetch(`${basePath}/api/payments/initiate`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId: order.id, paymentMethod: "athmovil" }),
-              });
-              if (res.ok) {
-                const data = await res.json() as { publicToken?: string };
-                publicToken = data.publicToken ?? null;
-              }
-            } catch { /* fall back to manual instructions */ }
-            setAthPending({
+            // Show "waiting for acceptance" — payment comes AFTER restaurant accepts
+            setAthState({
               orderId: order.id,
               code: order.confirmationCode,
               total,
-              publicToken,
-              items: athItems,
+              status: "waiting",
             });
           } else {
-            clearCart();
             setLocation(`/track?code=${order.confirmationCode}`);
           }
         },

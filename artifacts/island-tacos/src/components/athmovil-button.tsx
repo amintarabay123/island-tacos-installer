@@ -1,162 +1,125 @@
 import { useState, useEffect, useRef } from "react";
-import { CheckCircle, Smartphone, Copy, Check, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle, Smartphone, Copy, Check, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-// Correct URL — file is at root of the repo, NOT in dist/
-const ATH_SCRIPT_URL =
-  "https://cdn.jsdelivr.net/gh/evertec/athmovil-javascript-api@master/athmovil.min.js";
+// ─── Server-side session button (no JS SDK, no domain whitelist needed) ─────
 
-// ─── eCommerce button (opens ATH Móvil app with amount pre-filled) ──────────
-
-interface AthMovilEcommerceButtonProps {
+interface AthMovilDirectButtonProps {
   orderId: number;
   total: number;
-  publicToken: string;
-  items: { name: string; quantity: number; price: number }[];
-  onCompleted: (referenceNumber: string) => void;
-  onCancelled: () => void;
+  confirmationCode: string;
+  onCompleted: () => void;
 }
 
-export function AthMovilEcommerceButton({
+export function AthMovilDirectButton({
   orderId,
   total,
-  publicToken,
-  items,
+  confirmationCode,
   onCompleted,
-  onCancelled,
-}: AthMovilEcommerceButtonProps) {
-  const [status, setStatus] = useState<"loading" | "ready" | "error" | "verifying">("loading");
+}: AthMovilDirectButtonProps) {
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+  const [opened, setOpened] = useState(false);
   const mountedRef = useRef(true);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
 
+  // Create the ATH Móvil session server-side when the component mounts
   useEffect(() => {
-    // Set the global config BEFORE the script runs so it picks it up on load
-    (window as Record<string, unknown>)["ATHM_Checkout"] = {
-      env: "production",
-      publicToken,
-      timeout: 600,
-      total: parseFloat(total.toFixed(2)),
-      subtotal: parseFloat(total.toFixed(2)),
-      tax: 0.0,
-      metadata1: String(orderId),
-      metadata2: "",
-      items: items.map((i) => ({
-        name: i.name,
-        description: "",
-        quantity: i.quantity,
-        price: parseFloat(i.price.toFixed(2)),
-        metadata: "",
-      })),
-    };
+    setStatus("loading");
+    fetch(`${basePath}/api/payments/athmovil/create-session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId }),
+    })
+      .then(async (res) => {
+        if (!mountedRef.current) return;
+        if (!res.ok) throw new Error("session_failed");
+        const data = await res.json() as { redirectUrl?: string };
+        if (!data.redirectUrl) throw new Error("no_url");
+        setRedirectUrl(data.redirectUrl);
+        setStatus("ready");
+      })
+      .catch(() => {
+        if (mountedRef.current) setStatus("error");
+      });
+  }, [orderId]);
 
-    (window as Record<string, unknown>)["ATHM_Checkout_Completed"] = async (response: { referenceNumber?: string }) => {
-      if (!mountedRef.current) return;
-      setStatus("verifying");
-      try {
-        const res = await fetch(`${basePath}/api/payments/athmovil/verify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId, referenceNumber: response.referenceNumber }),
-        });
-        if (res.ok && mountedRef.current) {
-          onCompleted(response.referenceNumber ?? "");
-        }
-      } finally {
-        if (mountedRef.current) setStatus("ready");
-      }
-    };
-
-    (window as Record<string, unknown>)["ATHM_Checkout_Cancelled"] = () => {
-      if (mountedRef.current) onCancelled();
-    };
-
-    (window as Record<string, unknown>)["ATHM_Checkout_Expired"] = () => {
-      if (mountedRef.current) setStatus("error");
-    };
-
-    // Remove any stale instance so the script re-runs fresh
-    const prev = document.getElementById("athmovil-js");
-    if (prev) prev.remove();
-
-    const script = document.createElement("script");
-    script.id = "athmovil-js";
-    script.src = ATH_SCRIPT_URL;
-    script.onload = () => {
-      if (mountedRef.current) {
-        // Give the script a tick to render into the div
-        setTimeout(() => {
-          if (mountedRef.current) {
-            const btn = document.getElementById("ATHMovil_Checkout_Button");
-            if (btn && btn.childElementCount > 0) {
-              setStatus("ready");
-            } else {
-              // Script loaded but didn't render a button — config issue or domain not whitelisted
-              setStatus("error");
-            }
-          }
-        }, 800);
-      }
-    };
-    script.onerror = () => {
-      if (mountedRef.current) setStatus("error");
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      const s = document.getElementById("athmovil-js");
-      if (s) s.remove();
-      delete (window as Record<string, unknown>)["ATHM_Checkout"];
-      delete (window as Record<string, unknown>)["ATHM_Checkout_Completed"];
-      delete (window as Record<string, unknown>)["ATHM_Checkout_Cancelled"];
-      delete (window as Record<string, unknown>)["ATHM_Checkout_Expired"];
-    };
-  }, [orderId, total, publicToken]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (status === "verifying") {
+  if (status === "loading") {
     return (
-      <div className="flex items-center justify-center gap-3 py-8 text-orange-600">
+      <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
         <Loader2 className="w-5 h-5 animate-spin" />
-        <span className="font-medium">Verifying payment…</span>
+        <span className="text-sm">Preparing ATH Móvil payment…</span>
       </div>
     );
   }
 
-  if (status === "error") {
+  if (status === "error" || !redirectUrl) {
     return (
       <AthMovilInstructions
         total={total}
-        confirmationCode={String(orderId)}
-        onPaymentSent={() => onCompleted("")}
+        confirmationCode={confirmationCode}
+        onPaymentSent={onCompleted}
       />
     );
   }
 
   return (
-    <div className="space-y-3">
-      {status === "loading" && (
-        <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm">Loading ATH Móvil…</span>
+    <div className="space-y-4">
+      {/* ATH Móvil branded payment link */}
+      <a
+        href={redirectUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => setOpened(true)}
+        className="flex items-center justify-center gap-3 w-full bg-[#FF6542] hover:bg-[#e5532f] active:bg-[#cc4a28] text-white font-bold text-base rounded-xl py-4 px-6 transition-colors shadow-sm"
+      >
+        <img
+          src="https://www.athmovil.com/img/logo/ath-movil-logo-white.png"
+          alt=""
+          className="h-5 w-auto"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+        />
+        Pay ${total.toFixed(2)} with ATH Móvil
+        <ExternalLink className="w-4 h-4 opacity-80" />
+      </a>
+
+      <p className="text-xs text-center text-muted-foreground">
+        Tapping the button will open ATH Móvil with the amount pre-filled.
+      </p>
+
+      {opened && (
+        <div className="rounded-xl bg-orange-50 border border-orange-200 p-4 space-y-3">
+          <p className="text-sm font-semibold text-orange-900 text-center">
+            Did you complete the payment in ATH Móvil?
+          </p>
+          <Button
+            onClick={onCompleted}
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+            size="lg"
+          >
+            <CheckCircle className="h-5 w-5 mr-2" />
+            Yes, I've paid
+          </Button>
+          <button
+            onClick={() => setOpened(false)}
+            className="w-full text-xs text-muted-foreground underline"
+          >
+            I haven't paid yet — let me try again
+          </button>
         </div>
       )}
-      <p className={`text-sm text-muted-foreground text-center ${status === "loading" ? "hidden" : ""}`}>
-        Tap the button below — it will open ATH Móvil with the exact amount already filled in.
-      </p>
-      {/* ATH Móvil SDK renders its button into this div */}
-      <div ref={containerRef} id="ATHMovil_Checkout_Button" className="flex justify-center min-h-[60px]" />
     </div>
   );
 }
 
 
-// ─── Manual instructions (fallback / Pay a Business flow) ───────────────────
+// ─── Manual instructions fallback ───────────────────────────────────────────
 
 interface AthMovilInstructionsProps {
   total: number;
@@ -176,11 +139,6 @@ export function AthMovilInstructions({
     await navigator.clipboard.writeText(confirmationCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handlePaymentSent = () => {
-    setWaiting(true);
-    onPaymentSent();
   };
 
   return (
@@ -228,7 +186,7 @@ export function AthMovilInstructions({
       </div>
 
       <Button
-        onClick={handlePaymentSent}
+        onClick={() => { setWaiting(true); onPaymentSent(); }}
         disabled={waiting}
         className="w-full bg-orange-600 hover:bg-orange-700 text-white"
         size="lg"
@@ -245,12 +203,10 @@ export function AthMovilInstructions({
           </span>
         )}
       </Button>
-
-      <p className="text-xs text-center text-muted-foreground">
-        Your order will be confirmed as soon as we receive your payment.
-      </p>
     </div>
   );
 }
 
+// Legacy alias kept for any existing imports
 export { AthMovilInstructions as AthMovilButton };
+export { AthMovilDirectButton as AthMovilEcommerceButton };
