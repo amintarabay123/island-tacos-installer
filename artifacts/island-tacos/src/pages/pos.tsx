@@ -302,13 +302,16 @@ function ModifierModal({ item, modifiers, onConfirm, onClose }: {
 
 // ─── Payment Modal ────────────────────────────────────────────────────────────
 
-function PaymentModal({ total, onPay, onClose, onSplit }: {
+function PaymentModal({ total, onPay, onClose, onSplit, onTabChange }: {
   total: number;
   onPay: (method: string, tendered?: number, splitNote?: string) => void;
   onClose: () => void;
   onSplit?: () => void;
+  onTabChange?: (tab: string) => void;
 }) {
   const [tab, setTab] = useState<"cash" | "card" | "athmovil" | "split">("cash");
+
+  useEffect(() => { onTabChange?.(tab); }, [tab]);
   const [tendered, setTendered] = useState(String(Math.ceil(total)));
   const change = Math.max(0, parseFloat(tendered || "0") - total);
 
@@ -1847,6 +1850,7 @@ export default function POS() {
   // Modals
   const [modifierModal, setModifierModal] = useState<{ item: MenuItem; mods: Modifier[] } | null>(null);
   const [paymentModal, setPaymentModal] = useState(false);
+  const [paymentTab, setPaymentTab] = useState<string>("cash");
   const [splitModal, setSplitModal] = useState(false);
   const [receiptModal, setReceiptModal] = useState<{ order: Order; tendered?: number } | null>(null);
   const [discountModal, setDiscountModal] = useState(false);
@@ -2033,6 +2037,7 @@ export default function POS() {
   // Broadcast cart state to customer display tablet (debounced 400ms)
   useEffect(() => {
     const t = setTimeout(() => {
+      const showingAthMovil = paymentModal && paymentTab === "athmovil";
       const body = cart.length > 0
         ? {
             status: "active",
@@ -2046,6 +2051,7 @@ export default function POS() {
             tax: 0,
             total,
             discountAmount: discount > 0 ? discount : undefined,
+            paymentMethod: showingAthMovil ? "athmovil" : undefined,
           }
         : { status: "idle", items: [], subtotal: 0, tax: 0, total: 0 };
       fetch("/api/display", {
@@ -2055,7 +2061,7 @@ export default function POS() {
       }).catch(() => {});
     }, 400);
     return () => clearTimeout(t);
-  }, [cart, subtotal, total, discount]);
+  }, [cart, subtotal, total, discount, paymentModal, paymentTab]);
 
   // Add item to cart
   const addItem = async (item: MenuItem) => {
@@ -2477,8 +2483,9 @@ export default function POS() {
         <PaymentModal
           total={total}
           onPay={handlePay}
-          onClose={() => setPaymentModal(false)}
-          onSplit={cart.length >= 2 ? () => { setPaymentModal(false); setSplitModal(true); } : undefined}
+          onClose={() => { setPaymentModal(false); setPaymentTab("cash"); }}
+          onSplit={cart.length >= 2 ? () => { setPaymentModal(false); setSplitModal(true); setPaymentTab("cash"); } : undefined}
+          onTabChange={setPaymentTab}
         />
       )}
 

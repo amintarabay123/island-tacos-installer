@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { setPageMeta } from "@/lib/page-meta";
 
 type DisplayItem = {
@@ -173,19 +174,15 @@ function AthMovilQr({
   paymentUrl.searchParams.set("tax", tax.toFixed(2));
   if (orderCode) paymentUrl.searchParams.set("metadata1", orderCode);
 
-  const qrImgUrl =
-    `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&bgcolor=ffffff&color=000000&data=` +
-    encodeURIComponent(paymentUrl.toString());
-
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="bg-white rounded-2xl p-3 shadow-lg">
-        <img
-          src={qrImgUrl}
-          alt="ATH Móvil QR"
-          width={160}
-          height={160}
-          className="block"
+        <QRCodeSVG
+          value={paymentUrl.toString()}
+          size={160}
+          bgColor="#ffffff"
+          fgColor="#000000"
+          level="M"
         />
       </div>
       <div className="text-center">
