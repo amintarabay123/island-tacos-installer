@@ -312,7 +312,6 @@ export default function AdminReports() {
                       <tr className="border-b border-gray-100">
                         <th className="text-left py-2 font-medium text-gray-500">#</th>
                         <th className="text-left py-2 font-medium text-gray-500">Item</th>
-                        <th className="text-right py-2 font-medium text-gray-500">Qty Sold</th>
                         <th className="text-right py-2 font-medium text-gray-500">Revenue</th>
                         <th className="text-right py-2 font-medium text-gray-500">% of Sales</th>
                       </tr>
@@ -322,7 +321,6 @@ export default function AdminReports() {
                         <tr key={item.name} className="border-b border-gray-50 hover:bg-gray-50">
                           <td className="py-2 text-gray-400">{i + 1}</td>
                           <td className="py-2 font-medium text-gray-900">{item.name}</td>
-                          <td className="py-2 text-right text-gray-700">{item.quantity}</td>
                           <td className="py-2 text-right font-semibold text-gray-900">{fmt(item.revenue)}</td>
                           <td className="py-2 text-right text-gray-400">
                             {report.totalSales > 0 ? `${((item.revenue / report.totalSales) * 100).toFixed(1)}%` : "0%"}
