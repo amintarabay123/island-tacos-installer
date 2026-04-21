@@ -251,16 +251,16 @@ function ModifierModal({ item, modifiers, onConfirm, onClose }: {
                             {opt.price > 0 && <span className="text-[#F5A623] text-sm font-semibold">+{fmt(opt.price)}</span>}
                             <div className="flex items-center gap-2 bg-[#0D0F18] rounded-full px-2 py-1">
                               <button
-                                className="w-6 h-6 flex items-center justify-center rounded-full text-zinc-400 hover:text-white disabled:opacity-30 transition-colors"
+                                className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-white disabled:opacity-30 transition-colors active:bg-white/10"
                                 onClick={() => changeQty(mod, opt, -1)}
                                 disabled={qty === 0}
-                              ><span className="text-lg leading-none">−</span></button>
+                              ><span className="text-xl leading-none">−</span></button>
                               <span className="w-5 text-center text-sm font-bold text-white">{qty}</span>
                               <button
-                                className="w-6 h-6 flex items-center justify-center rounded-full text-zinc-400 hover:text-white disabled:opacity-30 transition-colors"
+                                className="w-9 h-9 flex items-center justify-center rounded-full text-zinc-400 hover:text-white disabled:opacity-30 transition-colors active:bg-white/10"
                                 onClick={() => changeQty(mod, opt, 1)}
                                 disabled={atMax || qty >= (opt.maxQuantity ?? 1)}
-                              ><span className="text-lg leading-none">+</span></button>
+                              ><span className="text-xl leading-none">+</span></button>
                             </div>
                           </div>
                         </div>
@@ -313,7 +313,8 @@ function PaymentModal({ total, onPay, onClose, onSplit }: {
   const change = Math.max(0, parseFloat(tendered || "0") - total);
 
   // Split-by-amount state
-  const [splitAmounts, setSplitAmounts] = useState<{ cash: string; card: string; athmovil: string }>({ cash: "", card: "", athmovil: "" });
+  const [splitAmounts, setSplitAmounts] = useState<{ cash: string; card: string; athmovil: string }>({ cash: "0", card: "0", athmovil: "0" });
+  const [splitActive, setSplitActive] = useState<"cash" | "card" | "athmovil">("cash");
   const [splitCollecting, setSplitCollecting] = useState(false);
 
   const splitParsed = {
@@ -375,7 +376,7 @@ function PaymentModal({ total, onPay, onClose, onSplit }: {
           ))}
         </div>
 
-        <div className="p-5">
+        <div className="p-5 overflow-y-auto max-h-[60vh]">
           {tab === "cash" && (
             <div>
               <p className="text-zinc-400 text-sm mb-2">Amount tendered</p>
@@ -418,38 +419,43 @@ function PaymentModal({ total, onPay, onClose, onSplit }: {
             </div>
           )}
           {tab === "split" && !splitCollecting && (
-            <div className="space-y-3">
-              <p className="text-zinc-400 text-xs uppercase tracking-wide font-semibold">Enter amount per method</p>
-              {(["cash", "card", "athmovil"] as const).map(k => (
-                <div key={k} className="flex items-center gap-3 bg-[#1A1D28] rounded-xl px-4 py-3 border border-[#2A2F45]">
-                  <span className="text-2xl">{SPLIT_METHOD_LABELS[k].icon}</span>
-                  <span className="text-white font-semibold flex-1">{SPLIT_METHOD_LABELS[k].label}</span>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 font-bold">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={splitAmounts[k]}
-                      onChange={e => setSplitAmounts(prev => ({ ...prev, [k]: e.target.value }))}
-                      className="w-28 pl-7 pr-2 py-2 rounded-lg bg-[#0A0B0F] text-white text-right text-lg font-mono border border-[#2A2F45] focus:border-[#F5A623] focus:outline-none"
-                    />
-                  </div>
-                </div>
-              ))}
-              <div className={`rounded-xl px-4 py-3 flex items-center justify-between ${splitReady ? "bg-green-900/30 border border-green-700/40" : "bg-[#1A1D28] border border-[#2A2F45]"}`}>
+            <div className="space-y-2">
+              {/* Method selector rows — tap to activate */}
+              {(["cash", "card", "athmovil"] as const).map(k => {
+                const isActive = splitActive === k;
+                const amt = splitParsed[k];
+                return (
+                  <button
+                    key={k}
+                    onClick={() => setSplitActive(k)}
+                    className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 border transition-all ${isActive ? "border-[#F5A623] bg-[#F5A623]/10" : "border-[#2A2F45] bg-[#1A1D28] hover:border-zinc-500"}`}
+                  >
+                    <span className="text-2xl">{SPLIT_METHOD_LABELS[k].icon}</span>
+                    <span className={`font-semibold flex-1 text-left ${isActive ? "text-white" : "text-zinc-300"}`}>{SPLIT_METHOD_LABELS[k].label}</span>
+                    <span className={`text-xl font-black font-mono ${amt > 0 ? (isActive ? "text-[#F5A623]" : "text-white") : "text-zinc-600"}`}>
+                      {fmt(amt)}
+                    </span>
+                  </button>
+                );
+              })}
+              {/* Remaining tracker */}
+              <div className={`rounded-xl px-4 py-2.5 flex items-center justify-between ${splitReady ? "bg-green-900/30 border border-green-700/40" : "bg-[#0A0B0F] border border-[#2A2F45]"}`}>
                 <span className="text-zinc-400 text-sm font-semibold">
-                  {splitReady ? "Ready to charge" : splitRemaining < 0 ? "Over by" : "Remaining"}
+                  {splitReady ? "Ready!" : splitRemaining < 0 ? "Over by" : "Remaining"}
                 </span>
-                <span className={`text-xl font-black ${splitReady ? "text-green-400" : splitRemaining < 0 ? "text-red-400" : "text-white"}`}>
+                <span className={`text-lg font-black ${splitReady ? "text-green-400" : splitRemaining < 0 ? "text-red-400" : "text-zinc-300"}`}>
                   {splitReady ? "✓ " + fmt(total) : fmt(Math.abs(splitRemaining))}
                 </span>
               </div>
+              {/* Numpad for active method */}
+              <Numpad
+                value={splitAmounts[splitActive]}
+                onChange={v => setSplitAmounts(prev => ({ ...prev, [splitActive]: v }))}
+              />
               {onSplit && (
                 <button
                   onClick={() => { onClose(); onSplit(); }}
-                  className="w-full h-10 rounded-xl border border-[#2A2F45] text-zinc-400 hover:text-white hover:border-zinc-500 text-sm font-semibold transition-colors">
+                  className="w-full h-10 rounded-xl border border-[#2A2F45] text-zinc-500 hover:text-white hover:border-zinc-500 text-sm font-semibold transition-colors mt-1">
                   Switch to split by item instead
                 </button>
               )}
@@ -876,34 +882,34 @@ function TicketsDrawer({ onResume, onClose }: {
                 <div className="flex flex-wrap gap-2">
                   {o.status === "pending" && o.source === "online" && (
                     <>
-                      <button onClick={() => updateStatus(o.id, "confirmed")} className="flex-1 h-8 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors">Accept</button>
-                      <button onClick={() => updateStatus(o.id, "cancelled")} className="h-8 px-3 rounded-lg bg-red-900/50 hover:bg-red-800 text-red-300 text-xs font-semibold transition-colors">Reject</button>
+                      <button onClick={() => updateStatus(o.id, "confirmed")} className="flex-1 h-10 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors">Accept</button>
+                      <button onClick={() => updateStatus(o.id, "cancelled")} className="h-10 px-3 rounded-lg bg-red-900/50 hover:bg-red-800 text-red-300 text-sm font-semibold transition-colors">Reject</button>
                     </>
                   )}
                   {o.status === "confirmed" && (
-                    <button onClick={() => updateStatus(o.id, "preparing")} className="flex-1 h-8 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition-colors">Start Cooking</button>
+                    <button onClick={() => updateStatus(o.id, "preparing")} className="flex-1 h-10 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold transition-colors">Start Cooking</button>
                   )}
                   {o.status === "preparing" && (
-                    <button onClick={() => updateStatus(o.id, "ready")} className="flex-1 h-8 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-semibold transition-colors">Mark Ready</button>
+                    <button onClick={() => updateStatus(o.id, "ready")} className="flex-1 h-10 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-semibold transition-colors">Mark Ready</button>
                   )}
                   {o.source === "pos" && o.paymentStatus === "pending" && (
-                    <button onClick={() => resume(o)} className="h-8 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-semibold transition-colors">Edit</button>
+                    <button onClick={() => resume(o)} className="h-10 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-semibold transition-colors">Edit</button>
                   )}
                   {o.paymentStatus === "pending" ? (
-                    <button onClick={() => setChargeOrder(o)} className="flex-1 h-8 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-xs font-bold transition-colors">
+                    <button onClick={() => setChargeOrder(o)} className="flex-1 h-10 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-sm font-bold transition-colors">
                       Charge {fmt(o.total)}
                     </button>
                   ) : (
                     <>
-                      <span className="flex items-center gap-1 text-xs font-semibold text-green-400 bg-green-900/30 rounded-lg px-2 h-8">
+                      <span className="flex items-center gap-1 text-sm font-semibold text-green-400 bg-green-900/30 rounded-lg px-2 h-10">
                         ✓ Paid · {PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}
                       </span>
-                      <button onClick={() => completeOrder(o.id)} className="flex-1 h-8 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-xs font-semibold transition-colors">
+                      <button onClick={() => completeOrder(o.id)} className="flex-1 h-10 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-semibold transition-colors">
                         Complete → Receipts
                       </button>
                     </>
                   )}
-                  <button onClick={() => voidTicket(o.id)} className="h-8 px-3 rounded-lg bg-red-900/30 hover:bg-red-900/60 text-red-400 text-xs font-semibold transition-colors">Void</button>
+                  <button onClick={() => voidTicket(o.id)} className="h-10 px-3 rounded-lg bg-red-900/30 hover:bg-red-900/60 text-red-400 text-sm font-semibold transition-colors">Void</button>
                 </div>
               </div>
             ))}
@@ -1211,7 +1217,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
         <div className="flex gap-2 px-4 pt-3 pb-2">
           {(["today", "all"] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              className={`flex-1 h-8 rounded-lg text-sm font-semibold transition-colors ${filter === f ? "bg-[#F5A623] text-black" : "bg-[#1E2130] text-zinc-400 hover:text-white"}`}>
+              className={`flex-1 h-10 rounded-lg text-sm font-semibold transition-colors ${filter === f ? "bg-[#F5A623] text-black" : "bg-[#1E2130] text-zinc-400 hover:text-white"}`}>
               {f === "today" ? "Today" : "All Time"}
             </button>
           ))}
@@ -2191,7 +2197,7 @@ export default function POS() {
   // ─ Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 bg-[#191C2E] flex flex-col overflow-hidden" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="fixed inset-0 bg-[#191C2E] flex flex-col overflow-hidden select-none" style={{ fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-2.5 bg-[#141728] border-b border-[#252A42] flex-shrink-0">
@@ -2373,9 +2379,9 @@ export default function POS() {
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => changeQty(item.key, -1)} className="w-7 h-7 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-white text-lg flex items-center justify-center transition-colors">−</button>
+                        <button onClick={() => changeQty(item.key, -1)} className="w-10 h-10 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] active:bg-[#353B55] text-white text-xl flex items-center justify-center transition-colors">−</button>
                         <span className="text-white text-sm font-bold w-6 text-center">{item.quantity}</span>
-                        <button onClick={() => changeQty(item.key, 1)} className="w-7 h-7 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-white text-lg flex items-center justify-center transition-colors">+</button>
+                        <button onClick={() => changeQty(item.key, 1)} className="w-10 h-10 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] active:bg-[#353B55] text-white text-xl flex items-center justify-center transition-colors">+</button>
                       </div>
                       <div className="flex items-center gap-2">
                         <button onClick={() => setItemNoteModal(item.key)} className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors">Note</button>
@@ -2393,13 +2399,13 @@ export default function POS() {
             <div className="border-t border-[#1E2130] px-4 py-3 flex-shrink-0 space-y-2">
               {/* Discount + note row */}
               <div className="flex gap-2">
-                <button onClick={() => setDiscountModal(true)} className={`flex-1 h-8 rounded-lg text-xs font-semibold border transition-colors ${discount > 0 ? "border-green-500 text-green-400 bg-green-900/20" : "border-[#2A2F45] text-zinc-400 hover:text-white hover:border-zinc-500"}`}>
+                <button onClick={() => setDiscountModal(true)} className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-colors ${discount > 0 ? "border-green-500 text-green-400 bg-green-900/20" : "border-[#2A2F45] text-zinc-400 hover:text-white hover:border-zinc-500"}`}>
                   {discount > 0 ? `Discount -${fmt(discount)}` : "% Discount"}
                 </button>
                 {discount > 0 && (
-                  <button onClick={() => setDiscount(0)} className="h-8 w-8 rounded-lg border border-[#2A2F45] text-zinc-500 hover:text-red-400 text-sm transition-colors flex items-center justify-center">×</button>
+                  <button onClick={() => setDiscount(0)} className="h-10 w-10 rounded-lg border border-[#2A2F45] text-zinc-500 hover:text-red-400 text-base transition-colors flex items-center justify-center">×</button>
                 )}
-                <button onClick={() => setOrderNoteModal(true)} className={`flex-1 h-8 rounded-lg text-xs font-semibold border transition-colors ${orderNotes ? "border-blue-500 text-blue-400" : "border-[#2A2F45] text-zinc-400 hover:text-white hover:border-zinc-500"}`}>
+                <button onClick={() => setOrderNoteModal(true)} className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-colors ${orderNotes ? "border-blue-500 text-blue-400" : "border-[#2A2F45] text-zinc-400 hover:text-white hover:border-zinc-500"}`}>
                   {orderNotes ? "📝 Note" : "Add Note"}
                 </button>
               </div>
