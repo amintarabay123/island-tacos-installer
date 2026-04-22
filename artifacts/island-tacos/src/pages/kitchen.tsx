@@ -211,26 +211,39 @@ export default function Kitchen() {
       if (!audioCtxRef.current) return;
       const ctx = audioCtxRef.current;
       ctx.resume();
+
+      // Dynamics compressor maximizes perceived loudness
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -24;
+      comp.knee.value = 6;
+      comp.ratio.value = 20;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.15;
+      comp.connect(ctx.destination);
+
       const notes = [
         { freq: 523.25, t: 0 },
-        { freq: 659.25, t: 0.15 },
-        { freq: 783.99, t: 0.30 },
-        { freq: 1046.5, t: 0.45 },
-        { freq: 783.99, t: 0.65 },
-        { freq: 1046.5, t: 0.80 },
+        { freq: 659.25, t: 0.14 },
+        { freq: 783.99, t: 0.28 },
+        { freq: 1046.5, t: 0.42 },
+        { freq: 783.99, t: 0.60 },
+        { freq: 1046.5, t: 0.74 },
       ];
       notes.forEach(({ freq, t }) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, ctx.currentTime + t);
-        gain.gain.linearRampToValueAtTime(0.9, ctx.currentTime + t + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.65);
-        osc.start(ctx.currentTime + t);
-        osc.stop(ctx.currentTime + t + 0.7);
+        // Layer square + sine at octave for rich, loud tone
+        ["square", "sine"].forEach((type, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(comp);
+          osc.type = type as OscillatorType;
+          osc.frequency.value = i === 0 ? freq : freq * 2;
+          gain.gain.setValueAtTime(0, ctx.currentTime + t);
+          gain.gain.linearRampToValueAtTime(i === 0 ? 0.8 : 0.4, ctx.currentTime + t + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.55);
+          osc.start(ctx.currentTime + t);
+          osc.stop(ctx.currentTime + t + 0.6);
+        });
       });
     } catch {}
   }, []);
@@ -242,27 +255,39 @@ export default function Kitchen() {
       if (!audioCtxRef.current) return;
       const ctx = audioCtxRef.current;
       ctx.resume();
-      // Three descending tones — urgent / different from the "new order" chime
+
+      // Dynamics compressor maximizes perceived loudness
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -24;
+      comp.knee.value = 6;
+      comp.ratio.value = 20;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.15;
+      comp.connect(ctx.destination);
+
+      // Descending tones — urgent / different from the "new order" chime
       const notes = [
         { freq: 880, t: 0 },
-        { freq: 660, t: 0.25 },
-        { freq: 440, t: 0.5 },
-        { freq: 880, t: 0.9 },
-        { freq: 660, t: 1.15 },
-        { freq: 440, t: 1.4 },
+        { freq: 660, t: 0.22 },
+        { freq: 440, t: 0.44 },
+        { freq: 880, t: 0.80 },
+        { freq: 660, t: 1.02 },
+        { freq: 440, t: 1.24 },
       ];
       notes.forEach(({ freq, t }) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = "square";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, ctx.currentTime + t);
-        gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + t + 0.04);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.5);
-        osc.start(ctx.currentTime + t);
-        osc.stop(ctx.currentTime + t + 0.55);
+        ["square", "sawtooth"].forEach((type, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(comp);
+          osc.type = type as OscillatorType;
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0, ctx.currentTime + t);
+          gain.gain.linearRampToValueAtTime(i === 0 ? 0.9 : 0.3, ctx.currentTime + t + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.45);
+          osc.start(ctx.currentTime + t);
+          osc.stop(ctx.currentTime + t + 0.5);
+        });
       });
     } catch {}
   }, []);
@@ -340,7 +365,7 @@ export default function Kitchen() {
 
   useEffect(() => {
     fetchOrders();
-    const id = setInterval(fetchOrders, 10_000);
+    const id = setInterval(fetchOrders, 3_000);
     return () => clearInterval(id);
   }, [fetchOrders]);
 
@@ -460,7 +485,7 @@ export default function Kitchen() {
           {error ? (
             <span className="text-red-400 text-xs font-medium hidden sm:block">{error}</span>
           ) : lastFetch ? (
-            <span className="text-zinc-600 text-xs hidden lg:block">Refreshes every 10s · {lastFetch.toLocaleTimeString()}</span>
+            <span className="text-zinc-600 text-xs hidden lg:block">Refreshes every 3s · {lastFetch.toLocaleTimeString()}</span>
           ) : null}
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${error ? "bg-red-500" : "bg-green-400 animate-pulse"}`} />
