@@ -1815,7 +1815,7 @@ function SplitPaymentModal({
 export default function POS() {
   const [, navigate] = useLocation();
 
-  useEffect(() => { setPageMeta("🖥️ POS — Island Tacos", "🖥️"); }, []);
+  useEffect(() => { setPageMeta("POS — Island Tacos", "🖥️", { iconUrl: "/icon-pos-192.png", manifestUrl: "/manifest-pos.json" }); }, []);
 
   // Auth guard
   useEffect(() => {
