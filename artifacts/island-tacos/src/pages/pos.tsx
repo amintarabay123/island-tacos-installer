@@ -159,21 +159,47 @@ function Numpad({ value, onChange }: { value: string; onChange: (v: string) => v
 
 // ─── RetryImg ─────────────────────────────────────────────────────────────────
 // Retries failed image loads up to MAX_RETRIES times with exponential back-off.
-// Fixes random broken images when the proxy hasn't finished fetching from the
-// Loyverse CDN before the browser first requests the image.
+// Shows a pulsing skeleton while loading (so the dark card bg doesn't flash).
+// Falls back to a taco emoji if all retries are exhausted.
 const MAX_IMG_RETRIES = 4;
 function RetryImg({ src, alt, className }: { src: string; alt: string; className?: string }) {
   const [attempt, setAttempt] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Cache-bust suffix added on retries so the browser actually re-requests
   const bustedSrc = attempt === 0 ? src : `${src}&_r=${attempt}`;
   const handleError = () => {
+    setLoaded(false);
     if (attempt < MAX_IMG_RETRIES) {
       timerRef.current = setTimeout(() => setAttempt(a => a + 1), 1500 * (attempt + 1));
+    } else {
+      setFailed(true);
     }
   };
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
-  return <img src={bustedSrc} alt={alt} className={className} onError={handleError} />;
+
+  if (failed) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-2xl opacity-30">🌮</span>
+      </div>
+    );
+  }
+  return (
+    <>
+      {!loaded && (
+        <div className="absolute inset-0 bg-gradient-to-br from-zinc-700/60 to-zinc-800/60 animate-pulse" />
+      )}
+      <img
+        src={bustedSrc}
+        alt={alt}
+        className={`${className} transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
+        onLoad={() => setLoaded(true)}
+        onError={handleError}
+      />
+    </>
+  );
 }
 
 // ─── Modifier Modal ───────────────────────────────────────────────────────────
@@ -1105,7 +1131,7 @@ function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
         active:translate-y-0 active:scale-[0.98] active:shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
     >
       {(item.posImageUrl ?? item.imageUrl) ? (
-        <div className="w-full aspect-square rounded-xl overflow-hidden mb-1 bg-[#0A0B0F] shadow-inner">
+        <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-1 bg-[#0A0B0F] shadow-inner">
           <RetryImg src={(item.posImageUrl ?? item.imageUrl)!} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
         </div>
       ) : (

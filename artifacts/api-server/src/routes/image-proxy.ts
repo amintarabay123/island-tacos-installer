@@ -3,6 +3,7 @@ import https from "https";
 import http from "http";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 
 const router: IRouter = Router();
 
@@ -21,12 +22,37 @@ try { fs.mkdirSync(CACHE_DIR, { recursive: true }); } catch {}
 type CachedImage = { buffer: Buffer; contentType: string };
 const imageCache = new Map<string, CachedImage>();
 
+// ── Loyverse placeholder detection ───────────────────────────────────────────
+// Loyverse returns a generic placeholder JPEG when an item has no real photo.
+// These appear as dark/black boxes in the POS. We detect them by SHA-256 and
+// treat them as "no image" so the POS shows the styled emoji fallback instead.
+const LOYVERSE_PLACEHOLDER_HASHES = new Set([
+  "fe6dced500e2b6fe573222e65ad8bc72a37f4a3978128c5a37d2cb47717b5758", // Salad items (5 variants share this)
+  "cfaeb574054b2949ed8e17bea7b80804d6ad15347654148008e21439b412159a", // xSoda/Juice placeholder
+  "5e7e51d35b3266088c4ec3252ca372637ef06ab9430a11d64b022f403376e3b0", // xJarritos placeholder
+  "5160902186c2fc08963ecedc27a6a0cdda7a99fef30535157e8df844bb9eb6db", // wMisc placeholder
+]);
+
+function sha256(buf: Buffer): string {
+  return crypto.createHash("sha256").update(buf).digest("hex");
+}
+
+function isLoyversePlaceholder(buf: Buffer): boolean {
+  return LOYVERSE_PLACEHOLDER_HASHES.has(sha256(buf));
+}
+
 function urlToKey(targetUrl: string): string {
   return Buffer.from(targetUrl, "utf8").toString("base64url");
 }
 
 function diskBinPath(key: string) { return path.join(CACHE_DIR, `${key}.bin`); }
 function diskCtPath(key: string)  { return path.join(CACHE_DIR, `${key}.ct`);  }
+
+function deleteDiskFiles(targetUrl: string) {
+  const key = urlToKey(targetUrl);
+  try { fs.unlinkSync(diskBinPath(key)); } catch {}
+  try { fs.unlinkSync(diskCtPath(key)); } catch {}
+}
 
 /** Load an image from disk into the in-memory cache. Returns true if found. */
 function loadFromDisk(targetUrl: string): boolean {
@@ -36,6 +62,12 @@ function loadFromDisk(targetUrl: string): boolean {
   try {
     if (fs.existsSync(binPath) && fs.existsSync(ctPath)) {
       const buffer = fs.readFileSync(binPath);
+      // Reject cached Loyverse placeholder images
+      if (isLoyversePlaceholder(buffer)) {
+        fs.unlinkSync(binPath);
+        try { fs.unlinkSync(ctPath); } catch {}
+        return false;
+      }
       const contentType = fs.readFileSync(ctPath, "utf8");
       imageCache.set(targetUrl, { buffer, contentType });
       return true;
@@ -53,6 +85,10 @@ function saveToDisk(targetUrl: string, cached: CachedImage) {
   } catch {}
 }
 
+class PlaceholderImageError extends Error {
+  constructor() { super("LOYVERSE_PLACEHOLDER"); this.name = "PlaceholderImageError"; }
+}
+
 /** Fetch from upstream, write to disk + memory. */
 function fetchAndCache(targetUrl: string): Promise<CachedImage> {
   return new Promise((resolve, reject) => {
@@ -67,7 +103,12 @@ function fetchAndCache(targetUrl: string): Promise<CachedImage> {
       const chunks: Buffer[] = [];
       upstream.on("data", (chunk: Buffer) => chunks.push(chunk));
       upstream.on("end", () => {
-        const cached: CachedImage = { buffer: Buffer.concat(chunks), contentType };
+        const buffer = Buffer.concat(chunks);
+        // Reject Loyverse placeholder images — don't cache, signal 404
+        if (isLoyversePlaceholder(buffer)) {
+          return reject(new PlaceholderImageError());
+        }
+        const cached: CachedImage = { buffer, contentType };
         imageCache.set(targetUrl, cached);
         saveToDisk(targetUrl, cached);
         resolve(cached);
@@ -125,8 +166,12 @@ router.get("/image-proxy", async (req: Request, res: Response): Promise<void> =>
     res.setHeader("Cache-Control", "public, max-age=604800, immutable");
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.end(cached.buffer);
-  } catch {
-    res.status(502).end();
+  } catch (err) {
+    if (err instanceof PlaceholderImageError) {
+      res.status(404).setHeader("Cache-Control", "no-store").json({ error: "No image" });
+    } else {
+      res.status(502).end();
+    }
   }
 });
 
@@ -160,31 +205,77 @@ export function prewarmImageCache(urls: (string | null | undefined)[]) {
 
 /**
  * Eagerly warm all menu images from DB on server startup.
- * Called once after the server starts listening.
+ * Also detects and removes Loyverse placeholder images from cache + DB,
+ * so the frontend shows the emoji fallback instead of a dark box.
  */
 export async function warmAllMenuImages() {
   try {
     const { db, menuItemsTable } = await import("@workspace/db");
+    const { inArray } = await import("drizzle-orm");
+
     const items = await db.select({
       imageUrl: menuItemsTable.imageUrl,
       posImageUrl: menuItemsTable.posImageUrl,
     }).from(menuItemsTable);
 
-    const urls = items.flatMap(i => [i.imageUrl, i.posImageUrl]).filter(Boolean) as string[];
+    const allUrls = items.flatMap(i => [i.imageUrl, i.posImageUrl]).filter(Boolean) as string[];
+    const placeholderUrls: string[] = [];
+
     let fetched = 0;
-    for (const url of urls) {
+    for (const url of allUrls) {
       try {
         const parsed = new URL(url);
         if (!ALLOWED_HOSTS.includes(parsed.hostname)) continue;
+
+        // Check disk first
+        const key = urlToKey(url);
+        const binPath = diskBinPath(key);
+        if (fs.existsSync(binPath)) {
+          const buf = fs.readFileSync(binPath);
+          if (isLoyversePlaceholder(buf)) {
+            // Delete bad cache files and mark URL for DB clearing
+            deleteDiskFiles(url);
+            imageCache.delete(url);
+            placeholderUrls.push(url);
+            console.log(`[image-warm] placeholder detected, clearing: ${url}`);
+            continue;
+          }
+        }
+
         if (imageCache.has(url)) continue;
-        // Check disk first (fast, no network)
         if (loadFromDisk(url)) { fetched++; continue; }
-        // Fetch from Loyverse (rate-limit: max 3 concurrent)
-        ensureCached(url).catch(() => {});
+
+        // Fetch from Loyverse (placeholder detection happens inside fetchAndCache)
+        ensureCached(url).catch((err) => {
+          if (err instanceof PlaceholderImageError) {
+            placeholderUrls.push(url);
+          }
+        });
         fetched++;
-        // Small stagger to avoid hammering CDN
         if (fetched % 5 === 0) await new Promise(r => setTimeout(r, 200));
       } catch {}
+    }
+
+    // Clear placeholder image URLs from the DB so the menu API returns null for them
+    if (placeholderUrls.length > 0) {
+      console.log(`[image-warm] Nulling ${placeholderUrls.length} placeholder image_url(s) in DB`);
+      // Clear imageUrl where it's a placeholder
+      const placeholderImageUrls = placeholderUrls.filter(u =>
+        items.some(i => i.imageUrl === u)
+      );
+      const placeholderPosImageUrls = placeholderUrls.filter(u =>
+        items.some(i => i.posImageUrl === u)
+      );
+      if (placeholderImageUrls.length > 0) {
+        await db.update(menuItemsTable)
+          .set({ imageUrl: null })
+          .where(inArray(menuItemsTable.imageUrl, placeholderImageUrls));
+      }
+      if (placeholderPosImageUrls.length > 0) {
+        await db.update(menuItemsTable)
+          .set({ posImageUrl: null })
+          .where(inArray(menuItemsTable.posImageUrl, placeholderPosImageUrls));
+      }
     }
   } catch (e) {
     console.error("[image-warm] failed:", e);
