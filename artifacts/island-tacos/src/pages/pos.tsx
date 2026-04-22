@@ -910,6 +910,11 @@ function TicketsDrawer({ onResume, onClose }: {
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="text-white font-bold text-base leading-tight">{o.customerName || "Walk-in"}</p>
+                    {o.customerPhone && (
+                      <a href={`tel:${o.customerPhone}`} className="text-[#F5A623] text-sm font-semibold hover:underline leading-tight block mt-0.5">
+                        📞 {o.customerPhone}
+                      </a>
+                    )}
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                       <span className="text-zinc-500 text-xs font-mono">#{o.confirmationCode}</span>
                       <span className={`text-xs font-semibold ${STATUS_COLOR[o.status] ?? "text-zinc-400"}`}>
