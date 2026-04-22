@@ -437,9 +437,6 @@ export default function Home() {
                         </div>
                       );
                     })}
-                    {modifierValidationError && (
-                      <p className="text-xs text-red-500 mt-1">{modifierValidationError}</p>
-                    )}
                     <Separator />
                   </div>
                 )}
@@ -467,32 +464,38 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Quantity + Add */}
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center border border-border rounded-full h-10 shrink-0">
-                    <button
-                      className="w-10 h-full flex items-center justify-center hover:bg-muted rounded-l-full transition-colors"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="w-8 text-center text-sm font-semibold">{quantity}</span>
-                    <button
-                      className="w-10 h-full flex items-center justify-center hover:bg-muted rounded-r-full transition-colors"
-                      onClick={() => setQuantity(quantity + 1)}
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <Button
-                    className="flex-1 h-10 font-semibold rounded-full"
-                    onClick={handleAddToCart}
-                    disabled={!!modifierValidationError}
-                    title={modifierValidationError ?? undefined}
+              </div>
+            </div>
+
+            {/* Sticky footer — always visible regardless of scroll position */}
+            <div className="shrink-0 border-t border-border px-6 py-4">
+              {modifierValidationError && (
+                <p className="text-xs text-red-500 mb-3 text-center">{modifierValidationError}</p>
+              )}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center border border-border rounded-full h-11 shrink-0">
+                  <button
+                    className="w-10 h-full flex items-center justify-center hover:bg-muted rounded-l-full transition-colors"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   >
-                    Add {quantity > 1 && `${quantity} × `}— ${((selectedItem.price + extraPrice) * quantity).toFixed(2)}
-                  </Button>
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="w-8 text-center text-sm font-semibold">{quantity}</span>
+                  <button
+                    className="w-10 h-full flex items-center justify-center hover:bg-muted rounded-r-full transition-colors"
+                    onClick={() => setQuantity(quantity + 1)}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
                 </div>
+                <Button
+                  className="flex-1 h-11 font-semibold rounded-full"
+                  onClick={handleAddToCart}
+                  disabled={!!modifierValidationError}
+                  title={modifierValidationError ?? undefined}
+                >
+                  Add {quantity > 1 && `${quantity} × `}— ${((selectedItem.price + extraPrice) * quantity).toFixed(2)}
+                </Button>
               </div>
             </div>
           </DialogContent>
