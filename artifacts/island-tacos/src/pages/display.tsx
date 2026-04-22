@@ -193,7 +193,12 @@ function AthMovilQr({
 // ─── Active Screen ────────────────────────────────────────────────────────────
 
 function ActiveScreen({ state }: { state: DisplayState }) {
-  const discount = state.discountAmount ?? 0;
+  // Coerce to number defensively — DB-sourced values may arrive as strings
+  const n = (v: unknown) => parseFloat(String(v)) || 0;
+  const subtotal = n(state.subtotal);
+  const tax = n(state.tax);
+  const total = n(state.total);
+  const discount = n(state.discountAmount ?? 0);
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col select-none overflow-hidden">
@@ -230,7 +235,7 @@ function ActiveScreen({ state }: { state: DisplayState }) {
                   </div>
                 </div>
                 <div className="text-white font-semibold text-lg tabular-nums shrink-0">
-                  ${(item.unitPrice * item.quantity).toFixed(2)}
+                  ${(n(item.unitPrice) * item.quantity).toFixed(2)}
                 </div>
               </div>
             ))
@@ -242,7 +247,7 @@ function ActiveScreen({ state }: { state: DisplayState }) {
           <div className="flex-1 space-y-3">
             <div className="flex justify-between text-zinc-400 text-base">
               <span>Subtotal</span>
-              <span>${state.subtotal.toFixed(2)}</span>
+              <span>${subtotal.toFixed(2)}</span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-green-400 text-base">
@@ -250,24 +255,24 @@ function ActiveScreen({ state }: { state: DisplayState }) {
                 <span>−${discount.toFixed(2)}</span>
               </div>
             )}
-            {state.tax > 0 && (
+            {tax > 0 && (
               <div className="flex justify-between text-zinc-400 text-base">
                 <span>Tax</span>
-                <span>${state.tax.toFixed(2)}</span>
+                <span>${tax.toFixed(2)}</span>
               </div>
             )}
             <div className="border-t border-zinc-700 pt-3 flex justify-between text-white font-black text-2xl">
               <span>Total</span>
-              <span>${state.total.toFixed(2)}</span>
+              <span>${total.toFixed(2)}</span>
             </div>
           </div>
 
           {state.paymentMethod === "athmovil" && state.athmovilPublicToken ? (
             <AthMovilQr
               publicToken={state.athmovilPublicToken}
-              total={state.total}
-              subtotal={state.subtotal}
-              tax={state.tax}
+              total={total}
+              subtotal={subtotal}
+              tax={tax}
               orderCode={state.orderCode}
             />
           ) : state.paymentMethod ? (

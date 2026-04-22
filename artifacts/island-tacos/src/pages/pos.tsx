@@ -790,6 +790,8 @@ function TicketsDrawer({ onResume, onClose }: {
 
   // Push saved ticket to customer display when charging directly (without loading into cart)
   const chargeTicket = (o: Order) => {
+    // DB returns numeric fields as strings — coerce everything to number before sending
+    const n = (v: unknown) => parseFloat(String(v)) || 0;
     fetch("/api/display", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -798,13 +800,13 @@ function TicketsDrawer({ onResume, onClose }: {
         items: o.items.map(i => ({
           name: i.menuItemName,
           quantity: i.quantity,
-          unitPrice: i.menuItemPrice,
-          modifiers: (i.modifierSelections ?? []).map((m: CartModifier) => m.name),
+          unitPrice: n(i.menuItemPrice),
+          modifiers: (i.modifierSelections ?? []).map(m => m.name),
         })),
-        subtotal: o.subtotal,
-        tax: o.tax,
-        total: o.total,
-        discountAmount: o.discountAmount > 0 ? o.discountAmount : undefined,
+        subtotal: n(o.subtotal),
+        tax: n(o.tax),
+        total: n(o.total),
+        discountAmount: n(o.discountAmount) > 0 ? n(o.discountAmount) : undefined,
       }),
     }).catch(() => {});
     setChargeOrder(o);
