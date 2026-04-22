@@ -369,7 +369,10 @@ export default function Kitchen() {
     return () => clearInterval(id);
   }, [fetchOrders]);
 
-  // Repeat chime every 4s while there are confirmed orders waiting to be cooked
+  // Repeat chime every 4s while there are confirmed orders waiting to be cooked.
+  // NOTE: no cleanup return here — the interval must survive across orders updates
+  // (poll fires every 3s, which would reset the 4s timer if cleanup cleared it).
+  // The interval is stopped only when hasPending becomes false, or on unmount below.
   useEffect(() => {
     const hasPending = orders.some((o) => o.status === "confirmed");
     if (hasPending) {
@@ -382,13 +385,17 @@ export default function Kitchen() {
         chimeIntervalRef.current = null;
       }
     }
+  }, [orders, playChime]);
+
+  // Cleanup on unmount only
+  useEffect(() => {
     return () => {
       if (chimeIntervalRef.current) {
         clearInterval(chimeIntervalRef.current);
         chimeIntervalRef.current = null;
       }
     };
-  }, [orders, playChime]);
+  }, []);
 
   const broadcastUpdate = () => {
     try {
