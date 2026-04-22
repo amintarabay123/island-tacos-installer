@@ -33,6 +33,9 @@ type Order = {
 };
 
 const ACTIVE_STATUSES = new Set(["confirmed", "preparing", "ready"]);
+// KDS shows all orders placed within this window that have not been explicitly
+// cleared by kitchen staff, regardless of payment or POS completion status.
+const KDS_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 const OVERDUE_MS = 10 * 60 * 1000;
 const UNCOLLECTED_MS = 60 * 60 * 1000; // 1 hour in "ready" state = uncollected alert
 const UNCOLLECTED_RECHIME_MS = 15 * 60 * 1000; // re-chime every 15 min
@@ -304,7 +307,18 @@ export default function Kitchen() {
       const res = await fetch("/api/orders");
       if (!res.ok) throw new Error("Failed to fetch");
       const data: Order[] = await res.json();
-      const active = data.filter((o) => ACTIVE_STATUSES.has(o.status) && !o.kdsCleared);
+      // KDS shows orders that:
+      //  • have NOT been explicitly cleared by kitchen staff (kdsCleared = false)
+      //  • are not cancelled
+      //  • were placed within the last 24 hours (prevents historical orders flooding the board)
+      // Notably: payment status and POS "complete" actions do NOT remove from KDS.
+      // Only "Done ✓ — Clear" pressed by kitchen staff removes an order here.
+      const nowForFilter = Date.now();
+      const active = data.filter((o) =>
+        !o.kdsCleared &&
+        o.status !== "cancelled" &&
+        (nowForFilter - new Date(o.createdAt).getTime()) < KDS_WINDOW_MS
+      );
 
       // Track when each order first enters "ready" state
       const nowMs = Date.now();
@@ -490,7 +504,11 @@ export default function Kitchen() {
   for (const o of kdsOrders) {
     if (o.status === "confirmed") byCol.new.push(o);
     else if (o.status === "preparing") byCol.preparing.push(o);
-    else if (o.status === "ready") byCol.ready.push(o);
+    else {
+      // "ready" and "completed" (paid from POS but kitchen hasn't cleared yet)
+      // both belong in the Ready column — kitchen staff still needs to hand it off.
+      byCol.ready.push(o);
+    }
   }
 
   const hasOrders = orders.length > 0;
