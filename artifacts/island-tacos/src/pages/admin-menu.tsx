@@ -368,9 +368,9 @@ export default function AdminMenu() {
       setCatDialog(null);
     };
     if (catDialog?.mode === "create") {
-      createCategory.mutate({ data: { name: catForm.name, icon: catForm.icon || null } }, { onSuccess: done });
+      createCategory.mutate({ data: { name: catForm.name, icon: catForm.icon || null, sendToKds: catForm.sendToKds } }, { onSuccess: done });
     } else if (catDialog?.mode === "edit" && catDialog.id) {
-      updateCategory.mutate({ id: catDialog.id, data: { name: catForm.name, icon: catForm.icon || null } as Parameters<typeof updateCategory.mutate>[0]["data"] }, { onSuccess: done });
+      updateCategory.mutate({ id: catDialog.id, data: { name: catForm.name, icon: catForm.icon || null, sendToKds: catForm.sendToKds } as Parameters<typeof updateCategory.mutate>[0]["data"] }, { onSuccess: done });
     }
   };
 
@@ -456,18 +456,19 @@ export default function AdminMenu() {
                     className={`flex items-center gap-3 py-1.5 px-1 rounded-lg transition-all ${isCatDragging ? "opacity-40" : ""} ${isCatDragOver ? "bg-primary/10 border border-primary/40" : "border border-transparent"}`}
                   >
                     <GripVertical className="h-4 w-4 text-muted-foreground/40 cursor-grab shrink-0" />
-                    <Switch
-                      checked={cat.sendToKds}
-                      onCheckedChange={(v) => handleToggleKds(cat.id, v)}
-                      title="Show on Kitchen Display"
-                    />
                     <span className="text-lg w-7 text-center shrink-0">{(cat as { icon?: string | null }).icon ?? "📂"}</span>
                     <span className={`flex-1 text-sm font-medium ${cat.sendToKds ? "" : "text-muted-foreground line-through"}`}>
                       {cat.name}
                     </span>
-                    <span className="text-xs text-muted-foreground hidden sm:block">KDS</span>
+                    <label className="flex items-center gap-1.5 cursor-pointer shrink-0" title="Send items in this category to the Kitchen Display">
+                      <span className={`text-xs font-medium ${cat.sendToKds ? "text-green-600" : "text-muted-foreground"}`}>KDS</span>
+                      <Switch
+                        checked={cat.sendToKds}
+                        onCheckedChange={(v) => handleToggleKds(cat.id, v)}
+                      />
+                    </label>
                     <button
-                      onClick={() => { setCatForm({ name: cat.name, icon: (cat as { icon?: string | null }).icon ?? "" }); setCatDialog({ mode: "edit", id: cat.id }); }}
+                      onClick={() => { setCatForm({ name: cat.name, icon: (cat as { icon?: string | null }).icon ?? "", sendToKds: cat.sendToKds }); setCatDialog({ mode: "edit", id: cat.id }); }}
                       className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
                     >
                       <Pencil className="h-3.5 w-3.5" />
@@ -861,6 +862,16 @@ export default function AdminMenu() {
                 />
               </div>
               <p className="text-xs text-muted-foreground">Paste or type an emoji to represent this category.</p>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Send to Kitchen Display</p>
+                <p className="text-xs text-muted-foreground">When off, this category won't appear on the KDS</p>
+              </div>
+              <Switch
+                checked={catForm.sendToKds}
+                onCheckedChange={(v) => setCatForm((f) => ({ ...f, sendToKds: v }))}
+              />
             </div>
           </div>
           <DialogFooter>
