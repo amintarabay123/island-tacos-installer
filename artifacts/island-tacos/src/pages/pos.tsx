@@ -915,12 +915,16 @@ function TicketsDrawer({ onResume, onClose }: {
                   </div>
                   <span className="text-[#F5A623] font-bold shrink-0">{fmt(o.total)}</span>
                 </div>
-                <p className="text-zinc-500 text-xs mb-2 leading-relaxed">
-                  {o.items.map(i => {
+                <div className="mb-2 space-y-0.5">
+                  {o.items.map((i, idx) => {
                     const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
-                    return `${i.quantity}× ${i.menuItemName}${mods}`;
-                  }).join(" • ")}
-                </p>
+                    return (
+                      <div key={idx} className="text-zinc-400 text-xs leading-snug">
+                        <span className="font-semibold text-zinc-300">{i.quantity}×</span> {i.menuItemName}{mods}
+                      </div>
+                    );
+                  })}
+                </div>
                 {o.notes && <p className="text-zinc-400 text-xs italic mb-2">"{o.notes}"</p>}
                 <div className="flex flex-wrap gap-2">
                   {o.status === "pending" && o.source === "online" && (
