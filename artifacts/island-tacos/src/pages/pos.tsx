@@ -831,7 +831,9 @@ function TicketsDrawer({ onResume, onClose }: {
     try {
       const r = await fetch("/api/orders", { credentials: "include" });
       const data: Order[] = await r.json();
-      setOrders(data.filter(o => !["completed", "cancelled"].includes(o.status)));
+      // Show all non-cancelled orders EXCEPT completed ones that are already paid —
+      // completed+unpaid tickets must remain visible so staff can still edit/charge them.
+      setOrders(data.filter(o => o.status !== "cancelled" && !(o.status === "completed" && o.paymentStatus === "paid")));
     } finally { setLoading(false); }
   }, []);
 
@@ -1010,7 +1012,7 @@ function TicketsDrawer({ onResume, onClose }: {
                   {o.status === "preparing" && (
                     <button onClick={() => updateStatus(o.id, "ready")} className="flex-1 h-10 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-semibold transition-colors">Mark Ready</button>
                   )}
-                  {o.source === "pos" && o.paymentStatus === "pending" && (
+                  {o.paymentStatus === "pending" && (
                     <button onClick={() => resume(o)} className="h-10 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-semibold transition-colors">Edit</button>
                   )}
                   {o.paymentStatus === "pending" ? (
