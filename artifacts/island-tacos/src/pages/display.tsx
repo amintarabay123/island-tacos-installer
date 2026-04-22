@@ -22,9 +22,7 @@ type DisplayState = {
   updatedAt: number;
 };
 
-const IDLE_TIMEOUT_MS = 90_000;
 const RESET_AFTER_COMPLETE_MS = 12_000;
-const POLL_MS = 1_500;
 
 function formatPickupTime(eta?: string): string | null {
   if (!eta) return null;
@@ -77,24 +75,52 @@ export default function CustomerDisplay() {
     setPageMeta("Customer Display — Island Tacos", "🖥️", { iconUrl: "/icon-display-192.png" });
   }, []);
 
-  // Poll the display state
+  // Connect via SSE for instant updates; fall back to polling if needed
   useEffect(() => {
+    let es: EventSource | null = null;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
     let active = true;
-    const poll = async () => {
-      try {
-        const r = await fetch("/api/display", { cache: "no-store" });
-        if (!r.ok) return;
-        const data: DisplayState = await r.json();
-        if (!active) return;
-        setState(prev => {
-          if (data.updatedAt === prev.updatedAt) return prev;
-          return data;
-        });
-      } catch {}
+
+    const applyData = (data: DisplayState) => {
+      if (!active) return;
+      setState(prev => (data.updatedAt === prev.updatedAt ? prev : data));
     };
-    poll();
-    const t = setInterval(poll, POLL_MS);
-    return () => { active = false; clearInterval(t); };
+
+    const connectSSE = () => {
+      if (!active) return;
+      es = new EventSource("/api/display/stream");
+      es.onmessage = (e) => {
+        try { applyData(JSON.parse(e.data) as DisplayState); } catch {}
+      };
+      es.onerror = () => {
+        es?.close();
+        es = null;
+        // On error, fall back to polling until we can reconnect
+        if (!pollInterval) {
+          pollInterval = setInterval(async () => {
+            try {
+              const r = await fetch("/api/display", { cache: "no-store" });
+              if (!r.ok) return;
+              applyData(await r.json() as DisplayState);
+            } catch {}
+          }, 2_000);
+        }
+        // Retry SSE after 3s
+        setTimeout(() => {
+          if (!active) return;
+          if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+          connectSSE();
+        }, 3_000);
+      };
+    };
+
+    connectSSE();
+
+    return () => {
+      active = false;
+      es?.close();
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, []);
 
   // Auto-reset completed screen back to idle after RESET_AFTER_COMPLETE_MS
