@@ -1,12 +1,11 @@
 import { Link, useLocation } from "wouter";
 import { useCart } from "@/lib/cart-context";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Menu, X, Plus, Minus, Trash2, UserCircle } from "lucide-react";
+import { ShoppingBag, Menu, X, Plus, Minus, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -33,8 +32,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { items, total, removeItem, updateQuantity } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user } = useUser();
-  const hasAccount = !!user;
   const settings = useStoreSettings();
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -74,20 +71,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Cart + mobile menu */}
           <div className="flex items-center gap-2">
-            {/* Account button */}
-            <Link href="/account">
-              <button
-                className={`relative flex items-center gap-2 border border-border rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                  hasAccount ? "border-primary/40 text-primary hover:bg-primary/5" : "hover:bg-muted"
-                }`}
-              >
-                {user?.imageUrl
-                  ? <img src={user.imageUrl} alt="" className="w-4 h-4 rounded-full" />
-                  : <UserCircle className="w-4 h-4" />}
-                <span className="hidden sm:inline">{hasAccount ? "My Account" : "Sign In"}</span>
-              </button>
-            </Link>
-
             {/* Cart drawer */}
             <Sheet>
               <SheetTrigger asChild>
@@ -212,16 +195,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       {label}
                     </Link>
                   ))}
-                  <Link
-                    href="/account"
-                    onClick={() => setMobileOpen(false)}
-                    className={`px-3 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
-                      location === "/account" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                    }`}
-                  >
-                    <UserCircle className="w-4 h-4" />
-                    My Account
-                  </Link>
                 </nav>
               </SheetContent>
             </Sheet>

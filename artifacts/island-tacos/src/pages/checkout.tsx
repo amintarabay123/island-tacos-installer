@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { useUser } from "@clerk/react";
 import { useCart } from "@/lib/cart-context";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useCreateOrder } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, LogIn, Loader2, XCircle } from "lucide-react";
+import { ShoppingBag, Loader2, XCircle } from "lucide-react";
 import { saveLastOrder } from "@/lib/customer-account";
 import { AthMovilDirectButton } from "@/components/athmovil-button";
 
@@ -28,8 +27,8 @@ export default function Checkout() {
   const { items, total, clearCart } = useCart();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, isLoaded } = useUser();
 
+  const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -37,10 +36,12 @@ export default function Checkout() {
   const [athState, setAthState] = useState<AthState | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Pre-fill phone from localStorage if available
+  // Pre-fill from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem("island_tacos_phone");
-    if (stored) setCustomerPhone(stored);
+    const storedName = localStorage.getItem("island_tacos_name");
+    const storedPhone = localStorage.getItem("island_tacos_phone");
+    if (storedName) setCustomerName(storedName);
+    if (storedPhone) setCustomerPhone(storedPhone);
   }, []);
 
   // Fetch which payment methods are enabled in admin settings
@@ -73,19 +74,18 @@ export default function Checkout() {
         if (data.status === "cancelled") {
           setAthState(prev => prev ? { ...prev, status: "cancelled" } : null);
         } else if (data.status && data.status !== "pending") {
-          // Accepted by restaurant (confirmed / preparing / ready)
           setAthState(prev => prev ? { ...prev, status: "ready" } : null);
         }
       } catch { /* ignore, retry next tick */ }
     };
-    check(); // immediate check
+    check();
     pollRef.current = setInterval(check, 5_000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [athState?.status, athState?.code]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const createOrder = useCreateOrder();
 
-  // ── ATH Móvil screens — checked BEFORE empty-cart guard (cart is cleared on order place) ──
+  // ── ATH Móvil screens ──
   if (athState) {
     if (athState.status === "cancelled") {
       return (
@@ -128,7 +128,6 @@ export default function Checkout() {
       );
     }
 
-    // status === "ready" — restaurant accepted, show ATH Móvil payment
     return (
       <Layout>
         <div className="flex-1 py-8 md:py-12">
@@ -171,73 +170,26 @@ export default function Checkout() {
     );
   }
 
-  // Not signed in — show sign-in wall
-  if (isLoaded && !user) {
-    return (
-      <Layout>
-        <div className="flex-1 flex items-center justify-center py-20 px-4">
-          <div className="w-full max-w-sm text-center space-y-8">
-            <div className="space-y-3">
-              <div className="mx-auto w-20 h-20 rounded-full bg-orange-50 flex items-center justify-center text-4xl">
-                🌮
-              </div>
-              <h2 className="text-2xl font-black">Sign in to order</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                We need to know who's ordering so we can call your name when your food is ready.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <Button
-                className="w-full h-12 font-semibold bg-stone-900 hover:bg-stone-800 text-white border border-stone-700"
-                onClick={() => setLocation(`${basePath}/sign-in`)}
-              >
-                <LogIn className="h-4 w-4 mr-2" />
-                Sign in with Email
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Your cart is saved — signing in won't lose your items.
-              </p>
-            </div>
-
-            <Button variant="ghost" size="sm" onClick={() => setLocation("/")}>
-              ← Back to menu
-            </Button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  // Still loading Clerk
-  if (!isLoaded) {
-    return (
-      <Layout>
-        <div className="flex-1 flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      </Layout>
-    );
-  }
-
-  const customerName = user.fullName || user.firstName || user.username || "Customer";
-  const customerEmail = user.primaryEmailAddress?.emailAddress ?? "";
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerPhone) {
+    if (!customerName.trim()) {
+      toast({ title: "Please enter your name", variant: "destructive" });
+      return;
+    }
+    if (!customerPhone.trim()) {
       toast({ title: "Please enter your phone number", variant: "destructive" });
       return;
     }
-    // Save phone for next time
-    localStorage.setItem("island_tacos_phone", customerPhone);
+    // Remember for next time
+    localStorage.setItem("island_tacos_name", customerName.trim());
+    localStorage.setItem("island_tacos_phone", customerPhone.trim());
 
     createOrder.mutate(
       {
         data: {
-          customerName,
-          customerEmail,
-          customerPhone,
+          customerName: customerName.trim(),
+          customerEmail: "",
+          customerPhone: customerPhone.trim(),
           orderType: "pickup",
           deliveryAddress: null,
           paymentMethod: paymentMethod as "cash" | "card" | "athmovil",
@@ -255,12 +207,11 @@ export default function Checkout() {
           saveLastOrder(order.confirmationCode);
           clearCart();
           if (paymentMethod === "athmovil") {
-            // Show "waiting for acceptance" — payment comes AFTER restaurant accepts
             setAthState({
               orderId: order.id,
               code: order.confirmationCode,
               total,
-              phone: customerPhone,
+              phone: customerPhone.trim(),
               status: "waiting",
             });
           } else {
@@ -283,35 +234,22 @@ export default function Checkout() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <form onSubmit={handleSubmit} className="md:col-span-2 space-y-8">
-              {/* Account info from Clerk */}
+
+              {/* Contact info */}
               <section className="space-y-4">
-                <h2 className="text-xl font-bold">Contact Information</h2>
-
-                {/* Signed-in user pill */}
-                <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {user.imageUrl ? (
-                      <img src={user.imageUrl} alt="" className="w-8 h-8 rounded-full shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                        <span className="text-primary font-bold text-sm">{customerName[0]}</span>
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate">{customerName}</p>
-                      <p className="text-xs text-muted-foreground truncate">{customerEmail}</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setLocation(`${basePath}/sign-in`)}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-2 shrink-0"
-                  >
-                    Switch
-                  </button>
+                <h2 className="text-xl font-bold">Your Info</h2>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name *</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="First name is fine"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    autoComplete="given-name"
+                    required
+                  />
                 </div>
-
-                {/* Phone — the only editable field */}
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number *</Label>
                   <Input
@@ -320,9 +258,10 @@ export default function Checkout() {
                     placeholder="284-000-0000"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
+                    autoComplete="tel"
                     required
                   />
-                  <p className="text-xs text-muted-foreground">We'll call this number if there's an issue with your order.</p>
+                  <p className="text-xs text-muted-foreground">We'll call this number when your order is ready.</p>
                 </div>
               </section>
 
