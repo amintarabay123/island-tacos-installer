@@ -493,26 +493,18 @@ export default function Kitchen() {
               {error ? "Offline" : "Live"}
             </span>
           </div>
-          {!audioUnlocked && (
+          {(!audioUnlocked || notifPerm === "default") ? (
             <button
-              onClick={unlockAudio}
+              onClick={() => { unlockAudio(); requestNotifPermission(); }}
               className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors animate-pulse"
-              title="Tap to enable chime sounds"
+              title="Tap once to enable order chimes and alerts"
             >
-              🔊 <span className="hidden sm:inline">Sound</span>
+              🔔 <span className="hidden sm:inline">Enable Notifications</span>
             </button>
-          )}
-          {notifPerm === "granted" ? (
-            <span className="text-green-600 text-xs font-medium hidden sm:block">🔔</span>
-          ) : notifPerm === "denied" ? (
-            <span className="text-red-500 text-xs font-medium hidden sm:block" title="Enable in browser settings">🔕</span>
           ) : (
-            <button
-              onClick={requestNotifPermission}
-              className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-amber-950 text-xs font-bold transition-colors animate-pulse"
-            >
-              🔔 <span className="hidden sm:inline">Alerts</span>
-            </button>
+            <span className="text-green-500 text-xs font-medium hidden sm:flex items-center gap-1">
+              🔔 <span>Notifications on</span>
+            </span>
           )}
           <button
             onClick={openHistory}
