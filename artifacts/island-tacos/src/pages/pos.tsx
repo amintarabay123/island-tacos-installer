@@ -620,7 +620,13 @@ function HoldModal({ initialName, initialNote, onHold, onClose }: {
   const [note, setNote] = useState(initialNote);
   const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  useEffect(() => {
+    const t = setTimeout(() => nameInputRef.current?.focus(), 50);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (name.trim().length < 2) { setSuggestions([]); return; }
@@ -651,6 +657,7 @@ function HoldModal({ initialName, initialNote, onHold, onClose }: {
           <div className="relative">
             <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-1">Customer Name</label>
             <input
+              ref={nameInputRef}
               value={name}
               onChange={e => { setName(e.target.value); setShowSuggestions(true); }}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
