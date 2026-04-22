@@ -116,6 +116,7 @@ export default function Kitchen() {
   const isFirstFetchRef = useRef(true);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const chimeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chimeCountRef = useRef(0); // how many chimes have fired for the current batch
   const now = useNow();
   const [, navigate] = useLocation();
 
@@ -356,7 +357,18 @@ export default function Kitchen() {
           o.items.some(item => !item.alreadyMade)
         );
         if (newConfirmed.length > 0) {
-          playChime();
+          // Restart the 3-chime burst for this new batch
+          if (chimeIntervalRef.current) { clearInterval(chimeIntervalRef.current); chimeIntervalRef.current = null; }
+          chimeCountRef.current = 1;
+          playChime(); // chime #1
+          chimeIntervalRef.current = setInterval(() => {
+            chimeCountRef.current += 1;
+            playChime();
+            if (chimeCountRef.current >= 3) {
+              clearInterval(chimeIntervalRef.current!);
+              chimeIntervalRef.current = null;
+            }
+          }, 4_000);
           sendNotification(
             `👨‍🍳 New Order${newConfirmed.length > 1 ? "s" : ""} to Cook!`,
             `${newConfirmed.length} order${newConfirmed.length > 1 ? "s" : ""} need${newConfirmed.length === 1 ? "s" : ""} to be started`
@@ -379,23 +391,15 @@ export default function Kitchen() {
     return () => clearInterval(id);
   }, [fetchOrders]);
 
-  // Repeat chime every 4s while there are confirmed orders waiting to be cooked.
-  // NOTE: no cleanup return here — the interval must survive across orders updates
-  // (poll fires every 3s, which would reset the 4s timer if cleanup cleared it).
-  // The interval is stopped only when hasPending becomes false, or on unmount below.
+  // Stop the 3-chime burst early if all pending orders are cleared before it finishes.
   useEffect(() => {
     const hasPending = orders.some((o) => o.status === "confirmed" && o.items.some(item => !item.alreadyMade));
-    if (hasPending) {
-      if (!chimeIntervalRef.current) {
-        chimeIntervalRef.current = setInterval(playChime, 4_000);
-      }
-    } else {
-      if (chimeIntervalRef.current) {
-        clearInterval(chimeIntervalRef.current);
-        chimeIntervalRef.current = null;
-      }
+    if (!hasPending && chimeIntervalRef.current) {
+      clearInterval(chimeIntervalRef.current);
+      chimeIntervalRef.current = null;
+      chimeCountRef.current = 0;
     }
-  }, [orders, playChime]);
+  }, [orders]);
 
   // Cleanup on unmount only
   useEffect(() => {
