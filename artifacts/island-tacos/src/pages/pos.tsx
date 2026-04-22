@@ -159,13 +159,23 @@ function Numpad({ value, onChange }: { value: string; onChange: (v: string) => v
 
 // ─── Modifier Modal ───────────────────────────────────────────────────────────
 
-function ModifierModal({ item, modifiers, onConfirm, onClose }: {
+function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections = [], initialNote = "" }: {
   item: MenuItem; modifiers: Modifier[];
   onConfirm: (sels: CartModifier[], note: string) => void; onClose: () => void;
+  initialSelections?: CartModifier[]; initialNote?: string;
 }) {
+  // Build initial qtys from pre-existing selections (when editing a cart item)
+  const buildInitialQtys = () => {
+    const q: Record<string, Record<string, number>> = {};
+    for (const sel of initialSelections) {
+      if (!q[sel.modifierId]) q[sel.modifierId] = {};
+      q[sel.modifierId][sel.optionId] = (q[sel.modifierId][sel.optionId] ?? 0) + 1;
+    }
+    return q;
+  };
   // Record<modLoyverseId, Record<optionId, quantity>>
-  const [qtys, setQtys] = useState<Record<string, Record<string, number>>>({});
-  const [note, setNote] = useState("");
+  const [qtys, setQtys] = useState<Record<string, Record<string, number>>>(buildInitialQtys);
+  const [note, setNote] = useState(initialNote);
 
   const totalExtra = modifiers.reduce((sum, mod) => {
     const sel = qtys[mod.loyverseId] ?? {};
@@ -1937,7 +1947,10 @@ export default function POS() {
   }, []);
 
   // Modals
-  const [modifierModal, setModifierModal] = useState<{ item: MenuItem; mods: Modifier[] } | null>(null);
+  const [modifierModal, setModifierModal] = useState<{
+    item: MenuItem; mods: Modifier[];
+    editKey?: string; initialSelections?: CartModifier[]; initialNote?: string;
+  } | null>(null);
   const [paymentModal, setPaymentModal] = useState(false);
   const [paymentTab, setPaymentTab] = useState<string>("cash");
   const [splitModal, setSplitModal] = useState(false);
@@ -2200,6 +2213,25 @@ export default function POS() {
     setCart(cart.map(c => c.key === key ? { ...c, quantity: Math.max(1, c.quantity + delta) } : c));
   };
   const setItemNote = (key: string, note: string) => setCart(cart.map(c => c.key === key ? { ...c, notes: note } : c));
+
+  // Re-open the modifier modal pre-filled with a cart item's current selections
+  const editCartItem = async (cartItem: CartItem) => {
+    const menuItem = allItems.find(i => i.id === cartItem.menuItemId);
+    if (!menuItem) return;
+    try {
+      const r = await fetch(`/api/menu/items/${menuItem.id}/modifiers`, { credentials: "include" });
+      const mods: Modifier[] = await r.json();
+      if (mods.length > 0 || cartItem.notes) {
+        setModifierModal({
+          item: menuItem,
+          mods,
+          editKey: cartItem.key,
+          initialSelections: cartItem.modifierSelections,
+          initialNote: cartItem.notes,
+        });
+      }
+    } catch {}
+  };
 
   const clearCart = () => {
     setCart([]); setCustomerName(""); setCustomerPhone(""); setOrderNotes(""); setDiscount(0); setResumedOrderId(null);
@@ -2477,13 +2509,20 @@ export default function POS() {
                 return (
                   <div key={item.key} className="bg-[#13151C] rounded-xl p-3 border border-[#1E2130]">
                     <div className="flex items-start gap-2">
-                      <div className="flex-1 min-w-0">
+                      <button
+                        className="flex-1 min-w-0 text-left active:opacity-70 transition-opacity"
+                        onClick={() => editCartItem(item)}
+                        title="Tap to edit modifiers"
+                      >
                         <p className="text-white text-sm font-semibold truncate">{item.name}</p>
                         {item.modifierSelections.map((m, i) => (
                           <p key={i} className="text-zinc-400 text-xs">+ {m.name}{m.price > 0 ? ` (+${fmt(m.price)})` : ""}</p>
                         ))}
                         {item.notes && <p className="text-zinc-500 text-xs italic">{item.notes}</p>}
-                      </div>
+                        {(item.modifierSelections.length > 0 || item.notes) && (
+                          <p className="text-[#F5A623]/50 text-[10px] mt-0.5">tap to edit</p>
+                        )}
+                      </button>
                       <span className="text-[#F5A623] text-sm font-bold flex-shrink-0">{fmt(lineTotal)}</span>
                     </div>
                     <div className="flex items-center justify-between mt-2">
@@ -2577,7 +2616,20 @@ export default function POS() {
         <ModifierModal
           item={modifierModal.item}
           modifiers={modifierModal.mods}
-          onConfirm={(sels, note) => { pushToCart(modifierModal.item, sels, note); setModifierModal(null); }}
+          initialSelections={modifierModal.initialSelections}
+          initialNote={modifierModal.initialNote}
+          onConfirm={(sels, note) => {
+            if (modifierModal.editKey) {
+              // Replace the existing cart item's modifiers and note in-place
+              setCart(prev => prev.map(c => c.key === modifierModal.editKey
+                ? { ...c, modifierSelections: sels, notes: note }
+                : c
+              ));
+            } else {
+              pushToCart(modifierModal.item, sels, note);
+            }
+            setModifierModal(null);
+          }}
           onClose={() => setModifierModal(null)}
         />
       )}
