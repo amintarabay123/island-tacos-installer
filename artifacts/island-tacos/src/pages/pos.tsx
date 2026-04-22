@@ -157,6 +157,25 @@ function Numpad({ value, onChange }: { value: string; onChange: (v: string) => v
   );
 }
 
+// ─── RetryImg ─────────────────────────────────────────────────────────────────
+// Retries failed image loads up to MAX_RETRIES times with exponential back-off.
+// Fixes random broken images when the proxy hasn't finished fetching from the
+// Loyverse CDN before the browser first requests the image.
+const MAX_IMG_RETRIES = 4;
+function RetryImg({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [attempt, setAttempt] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cache-bust suffix added on retries so the browser actually re-requests
+  const bustedSrc = attempt === 0 ? src : `${src}&_r=${attempt}`;
+  const handleError = () => {
+    if (attempt < MAX_IMG_RETRIES) {
+      timerRef.current = setTimeout(() => setAttempt(a => a + 1), 1500 * (attempt + 1));
+    }
+  };
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+  return <img src={bustedSrc} alt={alt} className={className} onError={handleError} />;
+}
+
 // ─── Modifier Modal ───────────────────────────────────────────────────────────
 
 function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections = [], initialNote = "" }: {
@@ -1066,7 +1085,7 @@ function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
     >
       {(item.posImageUrl ?? item.imageUrl) ? (
         <div className="w-full aspect-square rounded-xl overflow-hidden mb-1 bg-[#0A0B0F] shadow-inner">
-          <img src={(item.posImageUrl ?? item.imageUrl)!} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
+          <RetryImg src={(item.posImageUrl ?? item.imageUrl)!} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
         </div>
       ) : (
         <div className="w-full aspect-square rounded-xl mb-1 bg-gradient-to-br from-[#1A1D2E] to-[#0D0F18] flex items-center justify-center shadow-inner">
@@ -1980,17 +1999,20 @@ export default function POS() {
   // Timestamp of last "completed" push — prevents the debounced idle from wiping it too soon
   const displayCompletedAt = useRef<number>(0);
 
-  // Silently unlock AudioContext on the first click anywhere — no action needed from staff
+  // Silently unlock AudioContext on the first interaction — supports both click and touch (iOS/iPad)
   useEffect(() => {
     const unlock = () => {
       try {
         if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-        audioCtxRef.current.resume();
+        audioCtxRef.current.resume().catch(() => {});
       } catch {}
-      document.removeEventListener("click", unlock);
     };
     document.addEventListener("click", unlock, { passive: true });
-    return () => document.removeEventListener("click", unlock);
+    document.addEventListener("touchend", unlock, { passive: true });
+    return () => {
+      document.removeEventListener("click", unlock);
+      document.removeEventListener("touchend", unlock);
+    };
   }, []);
 
   const requestNotifPermission = async () => {
@@ -2006,13 +2028,16 @@ export default function POS() {
     }
   }, []);
 
-  const playChime = useCallback(() => {
+  const playChime = useCallback(async () => {
     try {
       // Only chime in the active foreground tab
       if (document.visibilityState !== "visible") return;
-      if (!audioCtxRef.current) return;
+      // Create AudioContext lazily if it was never unlocked yet
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
       const ctx = audioCtxRef.current;
-      ctx.resume();
+      // MUST await resume — notes scheduled against a suspended context play at time=0
+      // (already elapsed) and are silently dropped
+      await ctx.resume();
       const notes = [
         { freq: 880, t: 0 }, { freq: 1108, t: 0.15 },
         { freq: 1320, t: 0.30 }, { freq: 880, t: 0.50 },

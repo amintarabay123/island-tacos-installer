@@ -33,7 +33,7 @@ function fetchAndCache(targetUrl: string): Promise<CachedImage> {
       upstream.on("error", reject);
     });
     req.on("error", reject);
-    req.setTimeout(8_000, () => { req.destroy(); reject(new Error("Timeout")); });
+    req.setTimeout(15_000, () => { req.destroy(); reject(new Error("Timeout")); });
   });
 }
 
