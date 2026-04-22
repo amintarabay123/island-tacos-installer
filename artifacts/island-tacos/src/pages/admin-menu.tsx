@@ -436,7 +436,7 @@ export default function AdminMenu() {
               <ChefHat className="h-4 w-4 text-muted-foreground" />
               <span className="font-semibold text-sm">Categories</span>
             </div>
-            <Button size="sm" variant="outline" onClick={() => { setCatForm({ name: "", icon: "" }); setCatDialog({ mode: "create" }); }}>
+            <Button size="sm" variant="outline" onClick={() => { setCatForm({ name: "", icon: "", sendToKds: true }); setCatDialog({ mode: "create" }); }}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Add
             </Button>
           </div>
