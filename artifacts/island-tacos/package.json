@@ -76,6 +76,7 @@
   },
   "dependencies": {
     "@clerk/react": "^6.4.2",
+    "jspdf": "^4.2.1",
     "qrcode.react": "^4.2.0"
   }
 }

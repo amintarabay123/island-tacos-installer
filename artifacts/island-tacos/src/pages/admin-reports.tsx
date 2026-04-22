@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
 import { adminRoutes } from "@/lib/admin-path";
 import { ArrowLeft, Download, RefreshCw, Calendar, TrendingUp, DollarSign, ShoppingBag, Percent, Printer, Save } from "lucide-react";
+import jsPDF from "jspdf";
 
 interface SalesReport {
   from: string;
@@ -82,8 +83,254 @@ export default function AdminReports() {
     setTimeout(() => setPrinterSaved(false), 2000);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const [pdfGenerating, setPdfGenerating] = useState(false);
+
+  const handleDownloadPDF = () => {
+    if (!report) return;
+    setPdfGenerating(true);
+    try {
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const W = 210; // A4 width mm
+      const ML = 18; // left margin
+      const MR = W - 18; // right margin
+      let y = 20;
+
+      const accent = [245, 120, 0] as [number, number, number];
+      const dark   = [30, 30, 30]  as [number, number, number];
+      const mid    = [100, 100, 100] as [number, number, number];
+      const light  = [200, 200, 200] as [number, number, number];
+      const bg     = [249, 250, 251] as [number, number, number];
+
+      const line   = () => { doc.setDrawColor(...light); doc.setLineWidth(0.3); doc.line(ML, y, MR, y); y += 4; };
+      const gap    = (n = 5) => { y += n; };
+      const checkPage = (needed = 12) => { if (y + needed > 275) { doc.addPage(); y = 20; } };
+
+      // ── Header ─────────────────────────────────────────────────────────
+      doc.setFillColor(...accent);
+      doc.rect(0, 0, W, 14, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(255, 255, 255);
+      doc.text("🌮  ISLAND TACOS", ML, 9.5);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text("Wickhams Cay 1, Road Town, Tortola · BVI", MR, 9.5, { align: "right" });
+      y = 22;
+
+      // ── Report title ────────────────────────────────────────────────────
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(18);
+      doc.setTextColor(...dark);
+      doc.text("Sales Report", ML, y);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...mid);
+      const periodLabel = from === to ? from : `${from}  →  ${to}`;
+      doc.text(periodLabel, ML, y + 6);
+      doc.text(`Generated ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`, MR, y + 6, { align: "right" });
+      y += 14;
+      line();
+
+      // ── Summary row ─────────────────────────────────────────────────────
+      const cards = [
+        { label: "Gross Sales",  value: fmt(report.totalSales) },
+        { label: "Net Sales",    value: fmt(report.netSales) },
+        { label: "Paid Orders",  value: String(report.paidOrders) },
+        { label: "Avg Order",    value: fmt(report.avgOrderValue) },
+      ];
+      const cardW = (MR - ML) / 4;
+      cards.forEach((c, i) => {
+        const x = ML + i * cardW;
+        doc.setFillColor(...bg);
+        doc.roundedRect(x + 1, y, cardW - 2, 18, 2, 2, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.setTextColor(...dark);
+        doc.text(c.value, x + cardW / 2, y + 9, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(...mid);
+        doc.text(c.label, x + cardW / 2, y + 14.5, { align: "center" });
+      });
+      y += 23;
+
+      // ── Payment Methods ──────────────────────────────────────────────────
+      checkPage(50);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...dark);
+      doc.text("Payment Methods", ML, y);
+      y += 5;
+      const methods = [
+        { label: "Cash",          value: report.byMethod.cash },
+        { label: "Card",          value: report.byMethod.card },
+        { label: "ATH Móvil",     value: report.byMethod.athmovil },
+        { label: "Split",         value: report.byMethod.split ?? 0 },
+        { label: "Complimentary", value: report.byMethod.complimentary ?? 0 },
+      ].filter(m => m.value > 0);
+
+      const colX = [ML, ML + 50, ML + 85, ML + 120];
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...mid);
+      doc.text("Method", colX[0], y);
+      doc.text("Amount", colX[1], y, { align: "right" });
+      doc.text("% of Sales", colX[2], y, { align: "right" });
+      doc.text("Bar", colX[3], y);
+      y += 2;
+      doc.setDrawColor(...light); doc.setLineWidth(0.2); doc.line(ML, y, MR, y);
+      y += 4;
+
+      methods.forEach(m => {
+        checkPage(8);
+        const pct = report.totalSales > 0 ? (m.value / report.totalSales) * 100 : 0;
+        const barW = (MR - colX[3] - 2) * (pct / 100);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(...dark);
+        doc.text(m.label, colX[0], y);
+        doc.text(fmt(m.value), colX[1], y, { align: "right" });
+        doc.setTextColor(...mid);
+        doc.text(`${pct.toFixed(1)}%`, colX[2], y, { align: "right" });
+        doc.setFillColor(...accent);
+        doc.roundedRect(colX[3], y - 3, Math.max(barW, 1), 3.5, 0.5, 0.5, "F");
+        y += 6.5;
+      });
+      gap(2);
+
+      // ── Daily Sales Table ────────────────────────────────────────────────
+      if (report.daily.length > 1) {
+        checkPage(20);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(...dark);
+        doc.text("Daily Sales", ML, y);
+        y += 5;
+
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...mid);
+        doc.text("Date", ML, y);
+        doc.text("Sales", ML + 55, y, { align: "right" });
+        doc.text("Orders", ML + 85, y, { align: "right" });
+        y += 2;
+        doc.setDrawColor(...light); doc.setLineWidth(0.2); doc.line(ML, y, ML + 90, y);
+        y += 4;
+
+        report.daily.forEach(d => {
+          checkPage(6);
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8.5);
+          doc.setTextColor(...dark);
+          doc.text(d.date, ML, y);
+          doc.text(fmt(d.sales), ML + 55, y, { align: "right" });
+          doc.setTextColor(...mid);
+          doc.text(String(d.orders), ML + 85, y, { align: "right" });
+          y += 5.5;
+        });
+        gap(3);
+      }
+
+      // ── Top Items ────────────────────────────────────────────────────────
+      if (report.topItems.length > 0) {
+        checkPage(20);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(...dark);
+        doc.text("Top Items", ML, y);
+        y += 5;
+
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...mid);
+        doc.text("#", ML, y);
+        doc.text("Item", ML + 8, y);
+        doc.text("Qty", MR - 35, y, { align: "right" });
+        doc.text("Revenue", MR - 15, y, { align: "right" });
+        doc.text("% Sales", MR, y, { align: "right" });
+        y += 2;
+        doc.setDrawColor(...light); doc.setLineWidth(0.2); doc.line(ML, y, MR, y);
+        y += 4;
+
+        report.topItems.forEach((item, i) => {
+          checkPage(6);
+          const pct = report.totalSales > 0 ? ((item.revenue / report.totalSales) * 100).toFixed(1) : "0.0";
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8.5);
+          doc.setTextColor(...mid);
+          doc.text(String(i + 1), ML, y);
+          doc.setTextColor(...dark);
+          doc.text(item.name.slice(0, 38), ML + 8, y);
+          doc.setTextColor(...mid);
+          doc.text(String(item.quantity), MR - 35, y, { align: "right" });
+          doc.setTextColor(...dark);
+          doc.text(fmt(item.revenue), MR - 15, y, { align: "right" });
+          doc.setTextColor(...mid);
+          doc.text(`${pct}%`, MR, y, { align: "right" });
+          y += 5.5;
+        });
+        gap(3);
+      }
+
+      // ── Summary Totals ───────────────────────────────────────────────────
+      checkPage(60);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...dark);
+      doc.text("Summary", ML, y);
+      y += 5;
+
+      const summaryRows: [string, string, boolean][] = [
+        ["Total Orders",        String(report.paidOrders),              false],
+        ["Gross Sales",         fmt(report.totalSales),                 false],
+        ["Cash Sales",          fmt(report.byMethod.cash),              false],
+        ["Card Sales",          fmt(report.byMethod.card),              false],
+        ["ATH Móvil Sales",     fmt(report.byMethod.athmovil),          false],
+        ...(report.byMethod.split > 0 ? [["Split Sales", fmt(report.byMethod.split), false] as [string,string,boolean]] : []),
+        ...(report.byMethod.complimentary > 0 ? [["Complimentary", fmt(report.byMethod.complimentary), false] as [string,string,boolean]] : []),
+        ["Total Refunds",       `− ${fmt(report.refundTotal)}`,        false],
+        ["Net Sales",           fmt(report.netSales),                   true ],
+      ];
+
+      const sumX = ML + 60;
+      summaryRows.forEach(([label, val, bold]) => {
+        checkPage(7);
+        if (bold) {
+          y += 1;
+          doc.setDrawColor(...light); doc.setLineWidth(0.3); doc.line(ML, y - 1, sumX + 25, y - 1);
+          y += 2;
+          doc.setFillColor(...accent);
+          doc.roundedRect(ML - 1, y - 4, sumX - ML + 27, 7, 1, 1, "F");
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.setTextColor(255, 255, 255);
+        } else {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8.5);
+          doc.setTextColor(...dark);
+        }
+        doc.text(label, ML + 2, y);
+        doc.text(val, sumX + 24, y, { align: "right" });
+        if (!bold) { doc.setTextColor(...light); doc.setLineWidth(0.15); doc.line(ML, y + 1.5, sumX + 25, y + 1.5); }
+        y += 7;
+      });
+
+      // ── Footer ───────────────────────────────────────────────────────────
+      const pages = doc.getNumberOfPages();
+      for (let p = 1; p <= pages; p++) {
+        doc.setPage(p);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...mid);
+        doc.text("Island Tacos · Confidential", ML, 291);
+        doc.text(`Page ${p} of ${pages}`, MR, 291, { align: "right" });
+      }
+
+      const filename = `island-tacos-report-${from}${from !== to ? `-to-${to}` : ""}.pdf`;
+      doc.save(filename);
+    } finally {
+      setPdfGenerating(false);
+    }
   };
 
   const maxSales = report?.daily.reduce((m, d) => Math.max(m, d.sales), 0) ?? 1;
@@ -113,9 +360,10 @@ export default function AdminReports() {
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
               <Printer className="w-4 h-4" /> <span className="hidden sm:inline">Printer</span>
             </button>
-            <button onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-lg transition-colors">
-              <Download className="w-4 h-4" /> <span className="hidden sm:inline">Export PDF</span>
+            <button onClick={handleDownloadPDF} disabled={!report || pdfGenerating}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+              <Download className={`w-4 h-4 ${pdfGenerating ? "animate-bounce" : ""}`} />
+              <span className="hidden sm:inline">{pdfGenerating ? "Generating…" : "Download PDF"}</span>
             </button>
           </div>
         </div>
