@@ -161,10 +161,11 @@ function Numpad({ value, onChange }: { value: string; onChange: (v: string) => v
 
 function ModifierModal({ item, modifiers, onConfirm, onClose }: {
   item: MenuItem; modifiers: Modifier[];
-  onConfirm: (sels: CartModifier[]) => void; onClose: () => void;
+  onConfirm: (sels: CartModifier[], note: string) => void; onClose: () => void;
 }) {
   // Record<modLoyverseId, Record<optionId, quantity>>
   const [qtys, setQtys] = useState<Record<string, Record<string, number>>>({});
+  const [note, setNote] = useState("");
 
   const totalExtra = modifiers.reduce((sum, mod) => {
     const sel = qtys[mod.loyverseId] ?? {};
@@ -207,7 +208,7 @@ function ModifierModal({ item, modifiers, onConfirm, onClose }: {
         }
       }
     }
-    onConfirm(sels);
+    onConfirm(sels, note.trim());
   };
 
   return (
@@ -288,7 +289,17 @@ function ModifierModal({ item, modifiers, onConfirm, onClose }: {
             <p className="text-red-400 text-sm text-center">{validationError}</p>
           )}
         </div>
-        <div className="p-5 border-t border-[#1E2130] flex gap-3">
+        <div className="px-5 pb-3 border-t border-[#1E2130] pt-4">
+          <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">Special Instructions</p>
+          <textarea
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="e.g. chicken slightly burnt, extra crispy…"
+            rows={2}
+            className="w-full bg-[#1E2130] border border-[#2A2F45] rounded-xl px-3 py-2.5 text-zinc-200 text-sm placeholder-zinc-600 resize-none focus:outline-none focus:border-[#F5A623]/60 transition-colors"
+          />
+        </div>
+        <div className="p-5 pt-2 flex gap-3">
           <button onClick={onClose} className="flex-1 h-12 rounded-xl border border-[#2A2F45] text-zinc-300 font-semibold hover:bg-[#1E2130] transition-colors">Cancel</button>
           <button onClick={handleConfirm} disabled={!!validationError}
             className="flex-2 flex-grow h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-50 text-black font-bold transition-colors">
@@ -2169,16 +2180,16 @@ export default function POS() {
     pushToCart(item, []);
   };
 
-  const pushToCart = (item: MenuItem, sels: CartModifier[]) => {
-    // Try to merge with existing identical item
-    const existingKey = cart.find(c =>
+  const pushToCart = (item: MenuItem, sels: CartModifier[], note = "") => {
+    // Try to merge with existing identical item (only when no note)
+    const existingKey = !note ? cart.find(c =>
       c.menuItemId === item.id && c.notes === "" &&
       JSON.stringify(c.modifierSelections) === JSON.stringify(sels)
-    )?.key;
+    )?.key : undefined;
     if (existingKey) {
       setCart(cart.map(c => c.key === existingKey ? { ...c, quantity: c.quantity + 1 } : c));
     } else {
-      setCart([...cart, { key: uid(), menuItemId: item.id, name: item.name, price: item.price, quantity: 1, notes: "", modifierSelections: sels }]);
+      setCart([...cart, { key: uid(), menuItemId: item.id, name: item.name, price: item.price, quantity: 1, notes: note, modifierSelections: sels }]);
     }
     // Auto-switch to cart panel on mobile
     if (window.innerWidth < 640) setMobileView("cart");
@@ -2566,7 +2577,7 @@ export default function POS() {
         <ModifierModal
           item={modifierModal.item}
           modifiers={modifierModal.mods}
-          onConfirm={sels => { pushToCart(modifierModal.item, sels); setModifierModal(null); }}
+          onConfirm={(sels, note) => { pushToCart(modifierModal.item, sels, note); setModifierModal(null); }}
           onClose={() => setModifierModal(null)}
         />
       )}
