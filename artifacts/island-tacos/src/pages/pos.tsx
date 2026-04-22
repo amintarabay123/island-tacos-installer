@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
@@ -2488,9 +2489,9 @@ export default function POS() {
           <button
             onClick={() => window.location.reload()}
             title="Reload POS"
-            className="px-2.5 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
+            className="px-2.5 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-400 hover:text-zinc-200 transition-colors"
           >
-            ⟳
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       </header>

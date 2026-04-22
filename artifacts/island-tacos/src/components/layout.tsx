@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useCart } from "@/lib/cart-context";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Menu, X, Plus, Minus, Trash2 } from "lucide-react";
+import { ShoppingBag, Menu, X, Plus, Minus, Trash2, RefreshCw } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -74,9 +74,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <button
               onClick={() => window.location.reload()}
               title="Reload page"
-              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-base"
+              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
-              ⟳
+              <RefreshCw className="w-4 h-4" />
             </button>
             {/* Cart drawer */}
             <Sheet>

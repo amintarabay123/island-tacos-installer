@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
@@ -554,9 +555,9 @@ export default function Kitchen() {
           <button
             onClick={() => window.location.reload()}
             title="Reload Kitchen Display"
-            className="text-gray-400 hover:text-gray-700 text-sm transition-colors px-2 py-1 rounded"
+            className="text-gray-400 hover:text-gray-700 transition-colors px-2 py-1 rounded"
           >
-            ⟳
+            <RefreshCw className="w-4 h-4" />
           </button>
           <button
             onClick={logout}

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { RefreshCw } from "lucide-react";
 import { setPageMeta } from "@/lib/page-meta";
 
 type DisplayItem = {
@@ -239,9 +240,9 @@ function ActiveScreen({ state }: { state: DisplayState }) {
           <button
             onClick={() => window.location.reload()}
             title="Reload Display"
-            className="text-zinc-600 hover:text-zinc-400 text-xl transition-colors"
+            className="text-zinc-600 hover:text-zinc-400 transition-colors"
           >
-            ⟳
+            <RefreshCw className="w-5 h-5" />
           </button>
         </div>
       </div>
