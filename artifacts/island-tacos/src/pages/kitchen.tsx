@@ -344,7 +344,11 @@ export default function Kitchen() {
           }
         });
       } else {
-        const newConfirmed = active.filter((o) => o.status === "confirmed" && !prevIdsRef.current.has(o.id));
+        const newConfirmed = active.filter((o) =>
+          o.status === "confirmed" &&
+          !prevIdsRef.current.has(o.id) &&
+          o.items.some(item => !item.alreadyMade)
+        );
         if (newConfirmed.length > 0) {
           playChime();
           sendNotification(
@@ -374,7 +378,7 @@ export default function Kitchen() {
   // (poll fires every 3s, which would reset the 4s timer if cleanup cleared it).
   // The interval is stopped only when hasPending becomes false, or on unmount below.
   useEffect(() => {
-    const hasPending = orders.some((o) => o.status === "confirmed");
+    const hasPending = orders.some((o) => o.status === "confirmed" && o.items.some(item => !item.alreadyMade));
     if (hasPending) {
       if (!chimeIntervalRef.current) {
         chimeIntervalRef.current = setInterval(playChime, 4_000);
