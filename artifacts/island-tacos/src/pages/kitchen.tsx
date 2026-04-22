@@ -734,7 +734,7 @@ export default function Kitchen() {
                           {isAdvancing ? "Updating…" : NEXT_LABEL[order.status]}
                         </button>
                       )}
-                      {order.status === "ready" && (
+                      {!next && (
                         <button
                           onClick={() => clearFromKds(order)}
                           disabled={isAdvancing}
