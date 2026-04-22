@@ -901,7 +901,9 @@ function TicketsDrawer({ onResume, onClose }: {
     await fetch(`/api/orders/${chargeOrder.id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "completed", actualPaymentMethod: method, paymentStatus: "paid", ...(notes ? { notes } : {}) }),
+      // Do NOT set status:"completed" here — the KDS owns order removal.
+      // Payment only marks the order as paid; kitchen staff clear it when done.
+      body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", ...(notes ? { notes } : {}) }),
     });
     // Update customer display to "completed" state
     fetch("/api/display", {
