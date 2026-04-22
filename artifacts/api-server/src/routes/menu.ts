@@ -30,6 +30,7 @@ router.get("/menu/categories", async (_req, res): Promise<void> => {
     .where(sql`${menuItemsTable.available} = true`)
     .groupBy(menuCategoriesTable.id)
     .orderBy(menuCategoriesTable.sortOrder);
+  res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=120");
   res.json(categories.map((r) => r.category));
 });
 
@@ -122,6 +123,7 @@ router.get("/menu/items", async (req, res): Promise<void> => {
     imageUrl: proxyImageUrl(item.imageUrl),
     posImageUrl: proxyImageUrl(item.posImageUrl),
   }));
+  res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=120");
   res.json(result);
 });
 
@@ -159,6 +161,7 @@ router.get("/menu/popular", async (req, res): Promise<void> => {
     LIMIT ${limit}
   `);
 
+  res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=120");
   res.json(
     rows.rows.map((r) => ({
       ...r,

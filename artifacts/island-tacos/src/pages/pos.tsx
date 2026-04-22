@@ -1980,13 +1980,19 @@ export default function POS() {
   const API = import.meta.env.BASE_URL.replace(/\/$/, "");
   useEffect(() => {
     if (customerName.trim().length < 2) { setCustomerSuggestions([]); return; }
+    const controller = new AbortController();
     const t = setTimeout(async () => {
       try {
-        const r = await fetch(`${API}/api/customers?q=${encodeURIComponent(customerName.trim())}&limit=6`, { headers: authHeaders() });
+        const r = await fetch(`${API}/api/customers?q=${encodeURIComponent(customerName.trim())}&limit=6`, {
+          headers: authHeaders(),
+          signal: controller.signal,
+        });
         if (r.ok) { const d = await r.json(); setCustomerSuggestions(d); setCustomerSuggestionsOpen(true); }
-      } catch {}
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") console.warn("Customer search failed", e);
+      }
     }, 250);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); controller.abort(); };
   }, [customerName, API]);
 
   // UI state

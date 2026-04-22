@@ -87,6 +87,8 @@ export default function CustomerDisplay() {
       setState(prev => (data.updatedAt === prev.updatedAt ? prev : data));
     };
 
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
     const connectSSE = () => {
       if (!active) return;
       es = new EventSource("/api/display/stream");
@@ -96,7 +98,7 @@ export default function CustomerDisplay() {
       es.onerror = () => {
         es?.close();
         es = null;
-        // On error, fall back to polling until we can reconnect
+        // On error, fall back to polling until SSE reconnects
         if (!pollInterval) {
           pollInterval = setInterval(async () => {
             try {
@@ -106,8 +108,10 @@ export default function CustomerDisplay() {
             } catch {}
           }, 2_000);
         }
-        // Retry SSE after 3s
-        setTimeout(() => {
+        // Retry SSE after 3s — cancel any pending retry first to prevent stacking
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
           if (!active) return;
           if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
           connectSSE();
@@ -121,6 +125,7 @@ export default function CustomerDisplay() {
       active = false;
       es?.close();
       if (pollInterval) clearInterval(pollInterval);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
     };
   }, []);
 

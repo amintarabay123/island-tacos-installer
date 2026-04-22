@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, boolean, integer, numeric, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, boolean, integer, numeric, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -34,7 +34,11 @@ export const menuItemsTable = pgTable("menu_items", {
   loyverseVariantId: text("loyverse_variant_id"),
   loyverseModifierIds: text("loyverse_modifier_ids").array(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  index("menu_items_category_id_idx").on(t.categoryId),
+  index("menu_items_available_idx").on(t.available),
+  index("menu_items_sort_order_idx").on(t.sortOrder),
+]);
 
 export const insertMenuItemSchema = createInsertSchema(menuItemsTable).omit({ id: true, createdAt: true });
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;

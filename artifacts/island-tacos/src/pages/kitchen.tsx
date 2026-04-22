@@ -400,10 +400,21 @@ export default function Kitchen() {
     }
   }, [playChime, playUrgentChime, sendNotification]);
 
+  // Use recursive setTimeout instead of setInterval so next poll only starts
+  // after the previous fetch completes — prevents overlapping in-flight requests
   useEffect(() => {
-    fetchOrders();
-    const id = setInterval(fetchOrders, 5_000);
-    return () => clearInterval(id);
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      if (cancelled) return;
+      await fetchOrders();
+      if (!cancelled) timerId = setTimeout(tick, 5_000);
+    };
+    tick();
+    return () => {
+      cancelled = true;
+      clearTimeout(timerId);
+    };
   }, [fetchOrders]);
 
   // Stop the 3-chime burst early if all pending orders are cleared before it finishes.

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, numeric, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, numeric, jsonb, boolean, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { menuItemsTable } from "./menu";
@@ -26,7 +26,13 @@ export const ordersTable = pgTable("orders", {
   estimatedReadyAt: timestamp("estimated_ready_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [
+  index("orders_status_idx").on(t.status),
+  index("orders_kds_cleared_idx").on(t.kdsCleared),
+  index("orders_created_at_idx").on(t.createdAt),
+  index("orders_customer_phone_idx").on(t.customerPhone),
+  index("orders_source_idx").on(t.source),
+]);
 
 export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
@@ -48,7 +54,9 @@ export const orderItemsTable = pgTable("order_items", {
   }[]>(),
   subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
   alreadyMade: boolean("already_made").notNull().default(false),
-});
+}, (t) => [
+  index("order_items_order_id_idx").on(t.orderId),
+]);
 
 export const insertOrderItemSchema = createInsertSchema(orderItemsTable).omit({ id: true });
 export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;

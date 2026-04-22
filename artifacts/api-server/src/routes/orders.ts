@@ -87,14 +87,23 @@ router.get("/orders", async (req, res): Promise<void> => {
   }
 
   const orders = await query;
-  const result = await Promise.all(
-    orders.map(async (order) => {
-      const items = await db
-        .select()
-        .from(orderItemsTable)
-        .where(eq(orderItemsTable.orderId, order.id));
-      return formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]);
-    })
+
+  // Single bulk fetch for all items — avoids N+1 (one query total instead of N+1)
+  const orderIds = orders.map((o) => o.id);
+  const allItems = orderIds.length > 0
+    ? await db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds))
+    : [];
+  const itemsByOrder = new Map<number, typeof allItems>();
+  for (const item of allItems) {
+    const list = itemsByOrder.get(item.orderId) ?? [];
+    list.push(item);
+    itemsByOrder.set(item.orderId, list);
+  }
+  const result = orders.map((order) =>
+    formatOrder(
+      order as unknown as Record<string, unknown>,
+      (itemsByOrder.get(order.id) ?? []) as unknown as Record<string, unknown>[],
+    )
   );
   res.json(result);
 });
