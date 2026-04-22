@@ -72,9 +72,9 @@ export default function AdminMenu() {
   const posImageInputRef = useRef<HTMLInputElement>(null);
 
   // Category management
-  type CatForm = { name: string; icon: string };
+  type CatForm = { name: string; icon: string; sendToKds: boolean };
   const [catDialog, setCatDialog] = useState<null | { mode: "create" | "edit"; id?: number }>(null);
-  const [catForm, setCatForm] = useState<CatForm>({ name: "", icon: "" });
+  const [catForm, setCatForm] = useState<CatForm>({ name: "", icon: "", sendToKds: true });
   const [form, setForm] = useState<MenuItemForm>(emptyForm);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
