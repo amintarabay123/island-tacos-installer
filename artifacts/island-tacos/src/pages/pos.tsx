@@ -937,7 +937,8 @@ function TicketsDrawer({ onResume, onClose }: {
     await fetch(`/api/orders/${order.id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "completed", actualPaymentMethod: "split", paymentStatus: "paid", notes: existingNotes }),
+      // Do NOT set status:"completed" — KDS owns removal, payment only marks as paid.
+      body: JSON.stringify({ actualPaymentMethod: "split", paymentStatus: "paid", notes: existingNotes }),
     });
     setSplitChargeOrder(null);
     onClose();
