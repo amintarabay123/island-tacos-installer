@@ -2281,7 +2281,7 @@ export default function POS() {
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-2.5 bg-[#141728] border-b border-[#252A42] flex-shrink-0">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Island Tacos" className="h-8 object-contain brightness-0 invert opacity-80"/>
+          <img src="/logo.svg" alt="Island Tacos" className="h-8 w-8 object-contain rounded-lg"/>
           <span className="text-zinc-500 text-sm font-medium hidden sm:block">Point of Sale</span>
         </div>
         <div className="text-zinc-400 text-sm font-mono">{time}</div>
