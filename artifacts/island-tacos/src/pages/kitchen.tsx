@@ -123,13 +123,13 @@ export default function Kitchen() {
   const [kdsCategories, setKdsCategories] = useState<KitchenCategory[]>([]);
   const [menuItemCategoryMap, setMenuItemCategoryMap] = useState<Map<number, number>>(new Map());
 
-  useEffect(() => {
-    // Fetch categories to know which have sendToKds = false
+  // Fetch category + item data — called on mount and refreshed every 60s so
+  // admin changes (e.g. toggling KDS off for Drinks) take effect automatically.
+  const fetchCategoryData = useCallback(() => {
     fetch("/api/menu/categories", { headers: authHeaders() })
       .then(r => r.json())
       .then((cats: KitchenCategory[]) => setKdsCategories(cats))
       .catch(() => {});
-    // Fetch menu items to build menuItemId -> categoryId map
     fetch("/api/menu/items", { headers: authHeaders() })
       .then(r => r.json())
       .then((menuItems: KitchenMenuItem[]) => {
@@ -139,6 +139,12 @@ export default function Kitchen() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetchCategoryData();
+    const id = setInterval(fetchCategoryData, 60_000);
+    return () => clearInterval(id);
+  }, [fetchCategoryData]);
 
   // Returns true if an item should appear on the KDS (based on its category's sendToKds flag)
   const isKdsItem = (item: OrderItem): boolean => {

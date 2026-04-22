@@ -460,13 +460,14 @@ export default function AdminMenu() {
                     <span className={`flex-1 text-sm font-medium ${cat.sendToKds ? "" : "text-muted-foreground line-through"}`}>
                       {cat.name}
                     </span>
-                    <label className="flex items-center gap-1.5 cursor-pointer shrink-0" title="Send items in this category to the Kitchen Display">
+                    <div className="flex items-center gap-1.5 shrink-0" title="Send items in this category to the Kitchen Display">
                       <span className={`text-xs font-medium ${cat.sendToKds ? "text-green-600" : "text-muted-foreground"}`}>KDS</span>
                       <Switch
                         checked={cat.sendToKds}
                         onCheckedChange={(v) => handleToggleKds(cat.id, v)}
+                        onClick={e => e.stopPropagation()}
                       />
-                    </label>
+                    </div>
                     <button
                       onClick={() => { setCatForm({ name: cat.name, icon: (cat as { icon?: string | null }).icon ?? "", sendToKds: cat.sendToKds }); setCatDialog({ mode: "edit", id: cat.id }); }}
                       className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
