@@ -55,7 +55,7 @@ function LiveClock() {
     return () => clearInterval(t);
   }, []);
   return (
-    <div className="text-white/40 text-6xl font-thin tabular-nums tracking-widest">
+    <div className="text-gray-900/40 text-6xl font-thin tabular-nums tracking-widest">
       {time.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
     </div>
   );
@@ -150,7 +150,7 @@ export default function CustomerDisplay() {
 
 function IdleScreen() {
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-8 select-none overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-8 select-none overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl" />
@@ -161,17 +161,17 @@ function IdleScreen() {
         <div className="text-8xl leading-none">🌮</div>
 
         <div className="space-y-2">
-          <h1 className="text-4xl font-black text-white tracking-tight">
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight">
             Island Tacos
           </h1>
-          <p className="text-zinc-400 text-lg font-medium">
+          <p className="text-gray-500 text-lg font-medium">
             Road Town, Tortola · BVI
           </p>
         </div>
 
         <LiveClock />
 
-        <p className="text-zinc-500 text-sm tracking-widest uppercase font-medium">
+        <p className="text-gray-400 text-sm tracking-widest uppercase font-medium">
           Step up to order
         </p>
       </div>
@@ -202,15 +202,15 @@ function AthMovilQr({
 
       {/* Amount to enter */}
       <div className="text-center">
-        <p className="text-zinc-500 text-xs uppercase tracking-widest mb-0.5">Scan &amp; enter this amount</p>
+        <p className="text-gray-400 text-xs uppercase tracking-widest mb-0.5">Scan &amp; enter this amount</p>
         <p className="text-[#F5A623] text-4xl font-black tabular-nums">${total.toFixed(2)}</p>
       </div>
 
       {/* Order code */}
       {orderCode && (
-        <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2 text-center">
-          <p className="text-zinc-500 text-xs mb-0.5">Note / message field</p>
-          <p className="text-white font-mono font-bold text-sm tracking-widest">{orderCode}</p>
+        <div className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-center">
+          <p className="text-gray-400 text-xs mb-0.5">Note / message field</p>
+          <p className="text-gray-900 font-mono font-bold text-sm tracking-widest">{orderCode}</p>
         </div>
       )}
     </div>
@@ -228,19 +228,19 @@ function ActiveScreen({ state }: { state: DisplayState }) {
   const discount = n(state.discountAmount ?? 0);
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col select-none overflow-hidden">
+    <div className="min-h-screen bg-gray-50 flex flex-col select-none overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-8 py-4 border-b border-zinc-800/60 shrink-0">
+      <div className="flex items-center justify-between px-8 py-4 border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🌮</span>
-          <span className="text-white font-black text-xl tracking-tight">Island Tacos</span>
+          <span className="text-gray-900 font-black text-xl tracking-tight">Island Tacos</span>
         </div>
         <div className="flex items-center gap-4">
-          <div className="text-zinc-500 text-sm font-medium uppercase tracking-widest">Your Order</div>
+          <div className="text-gray-400 text-sm font-medium uppercase tracking-widest">Your Order</div>
           <button
             onClick={() => window.location.reload()}
             title="Reload Display"
-            className="text-zinc-600 hover:text-zinc-400 transition-colors"
+            className="text-gray-500 hover:text-gray-500 transition-colors"
           >
             <RefreshCw className="w-5 h-5" />
           </button>
@@ -252,25 +252,25 @@ function ActiveScreen({ state }: { state: DisplayState }) {
         <div className="flex-1 overflow-y-auto px-8 py-6 space-y-3">
           {state.items.length === 0 ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-zinc-600 text-lg">Adding items…</p>
+              <p className="text-gray-500 text-lg">Adding items…</p>
             </div>
           ) : (
             state.items.map((item, i) => (
-              <div key={i} className="flex items-start justify-between gap-4 py-3 border-b border-zinc-800/50 last:border-0">
+              <div key={i} className="flex items-start justify-between gap-4 py-3 border-b border-gray-200 last:border-0">
                 <div className="flex items-start gap-4 min-w-0">
                   <div className="w-8 h-8 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-orange-400 font-black text-sm">{item.quantity}</span>
+                    <span className="text-amber-600 font-black text-sm">{item.quantity}</span>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-white font-semibold text-lg leading-snug">{item.name}</p>
+                    <p className="text-gray-900 font-semibold text-lg leading-snug">{item.name}</p>
                     {(item.modifiers ?? []).length > 0 && (
-                      <p className="text-yellow-400/80 text-sm mt-0.5">
+                      <p className="text-gray-500 text-sm mt-0.5">
                         + {item.modifiers!.join(", ")}
                       </p>
                     )}
                   </div>
                 </div>
-                <div className="text-white font-semibold text-lg tabular-nums shrink-0">
+                <div className="text-gray-900 font-semibold text-lg tabular-nums shrink-0">
                   ${(n(item.unitPrice) * item.quantity).toFixed(2)}
                 </div>
               </div>
@@ -279,25 +279,25 @@ function ActiveScreen({ state }: { state: DisplayState }) {
         </div>
 
         {/* Totals panel */}
-        <div className="w-72 shrink-0 flex flex-col border-l border-zinc-800/60 px-6 py-6 gap-4">
+        <div className="w-72 shrink-0 flex flex-col border-l border-gray-200 px-6 py-6 gap-4">
           <div className="flex-1 space-y-3">
-            <div className="flex justify-between text-zinc-400 text-base">
+            <div className="flex justify-between text-gray-500 text-base">
               <span>Subtotal</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
             {discount > 0 && (
-              <div className="flex justify-between text-green-400 text-base">
+              <div className="flex justify-between text-green-700 text-base">
                 <span>Discount</span>
                 <span>−${discount.toFixed(2)}</span>
               </div>
             )}
             {tax > 0 && (
-              <div className="flex justify-between text-zinc-400 text-base">
+              <div className="flex justify-between text-gray-500 text-base">
                 <span>Tax</span>
                 <span>${tax.toFixed(2)}</span>
               </div>
             )}
-            <div className="border-t border-zinc-700 pt-3 flex justify-between text-white font-black text-2xl">
+            <div className="border-t border-gray-200 pt-3 flex justify-between text-gray-900 font-black text-2xl">
               <span>Total</span>
               <span>${total.toFixed(2)}</span>
             </div>
@@ -312,14 +312,14 @@ function ActiveScreen({ state }: { state: DisplayState }) {
               orderCode={state.orderCode}
             />
           ) : state.paymentMethod ? (
-            <div className="bg-zinc-800/60 rounded-xl px-4 py-3 text-center">
-              <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">Payment</p>
-              <p className="text-white font-bold text-lg">{formatPaymentMethod(state.paymentMethod)}</p>
+            <div className="bg-gray-100 rounded-xl px-4 py-3 text-center">
+              <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Payment</p>
+              <p className="text-gray-900 font-bold text-lg">{formatPaymentMethod(state.paymentMethod)}</p>
             </div>
           ) : null}
 
           <div className="text-center">
-            <p className="text-zinc-600 text-xs uppercase tracking-widest">Thank you for your order</p>
+            <p className="text-gray-500 text-xs uppercase tracking-widest">Thank you for your order</p>
           </div>
         </div>
       </div>
@@ -339,7 +339,7 @@ function CompletedScreen({ state }: { state: DisplayState }) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-8 select-none text-center px-8">
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-8 select-none text-center px-8">
       {/* Background glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-green-500/8 rounded-full blur-3xl" />
@@ -347,32 +347,32 @@ function CompletedScreen({ state }: { state: DisplayState }) {
 
       <div className="relative flex flex-col items-center gap-6">
         {/* Big check */}
-        <div className="w-28 h-28 rounded-full bg-green-500/15 border-2 border-green-500/40 flex items-center justify-center">
-          <svg className="w-14 h-14 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <div className="w-28 h-28 rounded-full bg-green-50 border-2 border-green-300 flex items-center justify-center">
+          <svg className="w-14 h-14 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-5xl font-black text-white">Thank you!</h1>
-          <p className="text-zinc-400 text-xl">Your order has been placed.</p>
+          <h1 className="text-5xl font-black text-gray-900">Thank you!</h1>
+          <p className="text-gray-500 text-xl">Your order has been placed.</p>
         </div>
 
         {state.orderCode && (
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl px-8 py-4">
-            <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">Order code</p>
-            <p className="text-4xl font-mono font-black text-orange-400 tracking-widest">{state.orderCode}</p>
+          <div className="bg-white border border-gray-200 rounded-2xl px-8 py-4">
+            <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Order code</p>
+            <p className="text-4xl font-mono font-black text-amber-600 tracking-widest">{state.orderCode}</p>
           </div>
         )}
 
         {pickupTime && (
-          <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-full px-6 py-3">
-            <span className="text-amber-400 text-lg">⏱</span>
-            <span className="text-amber-300 font-semibold text-lg">{pickupTime}</span>
+          <div className="flex items-center gap-3 bg-amber-50 border border-amber-300 rounded-full px-6 py-3">
+            <span className="text-amber-600 text-lg">⏱</span>
+            <span className="text-amber-700 font-semibold text-lg">{pickupTime}</span>
           </div>
         )}
 
-        <p className="text-zinc-700 text-sm">
+        <p className="text-gray-600 text-sm">
           Returning to welcome screen in {countdown}s
         </p>
       </div>

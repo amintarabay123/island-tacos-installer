@@ -61,7 +61,7 @@ const STATUS_BTN: Record<string, string> = {
   pending: "bg-yellow-400 hover:bg-yellow-300 text-yellow-950 active:bg-yellow-200",
   confirmed: "bg-blue-400 hover:bg-blue-300 text-blue-950 active:bg-blue-200",
   preparing: "bg-green-400 hover:bg-green-300 text-green-950 active:bg-green-200",
-  ready: "bg-white hover:bg-zinc-100 text-zinc-950 active:bg-zinc-200",
+  ready: "bg-white hover:bg-gray-100 text-gray-900 active:bg-gray-200",
 };
 
 const COL_CONFIG = [
@@ -536,7 +536,7 @@ export default function Kitchen() {
           {(!audioUnlocked || notifPerm === "default") ? (
             <button
               onClick={() => { unlockAudio(); requestNotifPermission(); }}
-              className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-colors animate-pulse"
+              className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-gray-900 text-xs font-bold transition-colors animate-pulse"
               title="Tap once to enable order chimes and alerts"
             >
               🔔 <span className="hidden sm:inline">Enable Notifications</span>
@@ -578,7 +578,7 @@ export default function Kitchen() {
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${badge}`}>
                   {label}
                 </span>
-                <span className="text-zinc-500 text-sm">
+                <span className="text-gray-400 text-sm">
                   {byCol[key].length} {byCol[key].length === 1 ? "order" : "orders"}
                 </span>
               </div>
@@ -612,8 +612,8 @@ export default function Kitchen() {
             {COL_CONFIG.map(({ key }) => (
               <div key={key} className={`flex flex-col gap-3 ${key === mobileTab ? "flex" : "hidden sm:flex"}`}>
                 {byCol[key].length === 0 && (
-                  <div className="border border-dashed border-zinc-800 rounded-xl flex items-center justify-center h-28">
-                    <span className="text-zinc-700 text-sm">No orders</span>
+                  <div className="border border-dashed border-gray-200 rounded-xl flex items-center justify-center h-28">
+                    <span className="text-gray-600 text-sm">No orders</span>
                   </div>
                 )}
                 {byCol[key].map((order) => {
@@ -649,7 +649,7 @@ export default function Kitchen() {
                           <div className="text-2xl font-black tracking-tight leading-none">
                             {order.customerName}
                           </div>
-                          <div className="text-zinc-400 font-mono text-sm mt-1">#{order.confirmationCode}</div>
+                          <div className="text-gray-500 font-mono text-sm mt-1">#{order.confirmationCode}</div>
                           {order.status === "confirmed" && (
                             <div className="text-blue-300 text-xs font-semibold mt-0.5 uppercase tracking-wide">Accepted</div>
                           )}
@@ -658,10 +658,10 @@ export default function Kitchen() {
                           )}
                         </div>
                         <div className="text-right shrink-0">
-                          <div className={`text-sm font-bold tabular-nums ${overdue ? "text-red-400" : "text-zinc-400"}`}>
+                          <div className={`text-sm font-bold tabular-nums ${overdue ? "text-red-400" : "text-gray-500"}`}>
                             {age}
                           </div>
-                          <div className="text-xs text-zinc-500 mt-0.5 capitalize">{order.orderType}</div>
+                          <div className="text-xs text-gray-400 mt-0.5 capitalize">{order.orderType}</div>
                         </div>
                       </div>
 
@@ -670,11 +670,11 @@ export default function Kitchen() {
                           item.alreadyMade ? (
                             <div key={item.id} className="bg-gray-200/60 rounded px-3 py-2 opacity-50 flex items-center gap-2">
                               <span className="text-green-400 text-base font-bold shrink-0">✓</span>
-                              <div className="flex items-baseline gap-2 line-through decoration-zinc-500">
-                                <span className="text-lg font-semibold text-zinc-500 leading-none">{item.quantity}×</span>
-                                <span className="text-base font-medium text-zinc-500 leading-snug">{item.menuItemName}</span>
+                              <div className="flex items-baseline gap-2 line-through decoration-gray-400">
+                                <span className="text-lg font-semibold text-gray-400 leading-none">{item.quantity}×</span>
+                                <span className="text-base font-medium text-gray-400 leading-snug">{item.menuItemName}</span>
                               </div>
-                              <span className="text-xs text-zinc-600 ml-auto shrink-0">done</span>
+                              <span className="text-xs text-gray-500 ml-auto shrink-0">done</span>
                             </div>
                           ) : (
                             <div key={item.id} className="bg-white border border-gray-200 rounded px-3 py-3">
@@ -746,7 +746,7 @@ export default function Kitchen() {
                         <button
                           onClick={() => clearFromKds(order)}
                           disabled={isAdvancing}
-                          className="w-full rounded py-2 text-xs font-bold bg-zinc-700 hover:bg-zinc-600 text-zinc-200 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="w-full rounded py-2 text-xs font-bold bg-gray-200 hover:bg-gray-300 text-gray-700 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {isAdvancing ? "Clearing…" : "Done ✓ — Clear"}
                         </button>
@@ -760,40 +760,40 @@ export default function Kitchen() {
         </>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
-          <div className="text-6xl font-black text-zinc-800 tracking-tight">All Clear</div>
-          <div className="text-zinc-600 text-base">No active orders · refreshing every 10s</div>
+          <div className="text-6xl font-black text-gray-800 tracking-tight">All Clear</div>
+          <div className="text-gray-500 text-base">No active orders · refreshing every 10s</div>
         </div>
       )}
 
       {/* ── History Drawer ── */}
       {historyOpen && (
         <div className="fixed inset-0 bg-black/70 z-50 flex justify-end" onClick={() => setHistoryOpen(false)}>
-          <div className="bg-zinc-900 w-full max-w-sm h-full flex flex-col shadow-2xl border-l border-zinc-800" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
-              <h2 className="text-white text-lg font-bold">🕐 Order History</h2>
-              <button onClick={() => setHistoryOpen(false)} className="text-zinc-500 hover:text-white text-2xl font-bold w-8 h-8 flex items-center justify-center transition-colors">×</button>
+          <div className="bg-white w-full max-w-sm h-full flex flex-col shadow-2xl border-l border-gray-200" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+              <h2 className="text-gray-900 text-lg font-bold">🕐 Order History</h2>
+              <button onClick={() => setHistoryOpen(false)} className="text-gray-400 hover:text-gray-900 text-2xl font-bold w-8 h-8 flex items-center justify-center transition-colors">×</button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {historyLoading && <p className="text-zinc-500 text-center py-8">Loading…</p>}
+              {historyLoading && <p className="text-gray-400 text-center py-8">Loading…</p>}
               {!historyLoading && historyOrders.length === 0 && (
-                <p className="text-zinc-500 text-center py-8">No completed orders</p>
+                <p className="text-gray-400 text-center py-8">No completed orders</p>
               )}
               {!historyLoading && historyOrders.map(o => (
-                <div key={o.id} className="bg-zinc-800 rounded-xl p-4 flex flex-col gap-2">
+                <div key={o.id} className="bg-gray-100 rounded-xl p-4 flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-white font-bold text-base leading-tight">{o.customerName}</p>
-                      <p className="text-zinc-500 font-mono text-xs">#{o.confirmationCode}</p>
+                      <p className="text-gray-900 font-bold text-base leading-tight">{o.customerName}</p>
+                      <p className="text-gray-400 font-mono text-xs">#{o.confirmationCode}</p>
                     </div>
-                    <span className="text-zinc-400 text-xs">{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                    <span className="text-gray-500 text-xs">{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
                   </div>
-                  <div className="text-zinc-400 text-xs">
+                  <div className="text-gray-500 text-xs">
                     {o.items.map(i => `${i.quantity}× ${i.menuItemName}`).join(" · ")}
                   </div>
                   <button
                     disabled={recalling.has(o.id)}
                     onClick={() => recallOrder(o)}
-                    className="w-full h-9 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-xs font-bold transition-colors"
+                    className="w-full h-9 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-40 text-gray-900 text-xs font-bold transition-colors"
                   >
                     {recalling.has(o.id) ? "Recalling…" : "↩ Recall to Ready"}
                   </button>
