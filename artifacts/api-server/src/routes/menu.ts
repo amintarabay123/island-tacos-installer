@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, sql, inArray } from "drizzle-orm";
+import { proxyImageUrl } from "./image-proxy";
 import { db, menuCategoriesTable, menuItemsTable, modifiersTable, orderItemsTable } from "@workspace/db";
 import {
   CreateMenuCategoryBody,
@@ -113,10 +114,11 @@ router.get("/menu/items", async (req, res): Promise<void> => {
     query = query.where(eq(menuItemsTable.available, queryParsed.data.available));
   }
   const items = await query;
-  // Convert price from string to number
   const result = items.map((item) => ({
     ...item,
     price: parseFloat(item.price as unknown as string),
+    imageUrl: proxyImageUrl(item.imageUrl),
+    posImageUrl: proxyImageUrl(item.posImageUrl),
   }));
   res.json(result);
 });
@@ -159,6 +161,8 @@ router.get("/menu/popular", async (req, res): Promise<void> => {
     rows.rows.map((r) => ({
       ...r,
       price: parseFloat(r.price as string),
+      imageUrl: proxyImageUrl(r.imageUrl as string | null),
+      posImageUrl: proxyImageUrl(r.posImageUrl as string | null),
     }))
   );
 });
@@ -201,7 +205,7 @@ router.get("/menu/items/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Item not found" });
     return;
   }
-  res.json({ ...item, price: parseFloat(item.price as unknown as string) });
+  res.json({ ...item, price: parseFloat(item.price as unknown as string), imageUrl: proxyImageUrl(item.imageUrl), posImageUrl: proxyImageUrl(item.posImageUrl) });
 });
 
 router.get("/menu/items/:id/modifiers", async (req, res): Promise<void> => {

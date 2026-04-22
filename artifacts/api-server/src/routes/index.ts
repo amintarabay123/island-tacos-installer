@@ -16,6 +16,7 @@ import uploadRouter from "./upload";
 import displayRouter from "./display";
 import settingsRouter from "./settings";
 import employeesRouter from "./employees";
+import imageProxyRouter from "./image-proxy";
 
 const router: IRouter = Router();
 
@@ -38,6 +39,7 @@ router.use(paymentsRouter);
 router.use(webhooksRouter);
 router.use(uploadRouter);
 router.use(displayRouter);
+router.use(imageProxyRouter);
 router.use(settingsRouter); // GET is public; PATCH is guarded below
 
 // Customer lookup: /customers/lookup is public (for online account page)
