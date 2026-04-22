@@ -234,7 +234,16 @@ function ActiveScreen({ state }: { state: DisplayState }) {
           <span className="text-2xl">🌮</span>
           <span className="text-white font-black text-xl tracking-tight">Island Tacos</span>
         </div>
-        <div className="text-zinc-500 text-sm font-medium uppercase tracking-widest">Your Order</div>
+        <div className="flex items-center gap-4">
+          <div className="text-zinc-500 text-sm font-medium uppercase tracking-widest">Your Order</div>
+          <button
+            onClick={() => window.location.reload()}
+            title="Reload Display"
+            className="text-zinc-600 hover:text-zinc-400 text-xl transition-colors"
+          >
+            ⟳
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">

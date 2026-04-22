@@ -71,6 +71,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Cart + mobile menu */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              title="Reload page"
+              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-base"
+            >
+              ⟳
+            </button>
             {/* Cart drawer */}
             <Sheet>
               <SheetTrigger asChild>

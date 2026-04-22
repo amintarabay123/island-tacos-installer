@@ -552,6 +552,13 @@ export default function Kitchen() {
             🕐 <span className="hidden sm:inline">History</span>
           </button>
           <button
+            onClick={() => window.location.reload()}
+            title="Reload Kitchen Display"
+            className="text-gray-400 hover:text-gray-700 text-sm transition-colors px-2 py-1 rounded"
+          >
+            ⟳
+          </button>
+          <button
             onClick={logout}
             className="text-gray-400 hover:text-gray-700 text-xs transition-colors px-2 py-1 rounded"
           >

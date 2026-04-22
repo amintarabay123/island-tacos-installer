@@ -2468,12 +2468,30 @@ export default function POS() {
           <button onClick={() => setReceiptsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-300 text-sm font-medium transition-colors">
             🧾 <span className="hidden sm:inline">Receipts</span>
           </button>
-          <button onClick={() => setTicketsOpen(true)} className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-300 text-sm font-medium transition-colors">
-            🎫 <span className="hidden sm:inline">Tickets</span>
-            {ticketCount > 0 && <span className="absolute -top-1 -right-1 bg-[#F5A623] text-black text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">{ticketCount}</span>}
+          <button
+            onClick={() => setTicketsOpen(true)}
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
+              ticketCount > 0
+                ? "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_12px_rgba(245,166,35,0.5)] animate-pulse"
+                : "bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-300"
+            }`}
+          >
+            🎫 <span className="hidden sm:inline">{ticketCount > 0 ? `${ticketCount} Held` : "Tickets"}</span>
+            {ticketCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+                {ticketCount}
+              </span>
+            )}
           </button>
           <button onClick={() => navigate(adminRoutes.dashboard)} className="px-3 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-400 hover:text-white text-sm font-medium transition-colors">
             ← <span className="hidden sm:inline">Admin</span>
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            title="Reload POS"
+            className="px-2.5 py-1.5 rounded-lg bg-[#1E2130] hover:bg-[#2A2F45] text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
+          >
+            ⟳
           </button>
         </div>
       </header>
@@ -2641,8 +2659,8 @@ export default function POS() {
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={handleHold} disabled={submitting}
-                    className="h-14 rounded-xl border border-[#2A2F45] text-zinc-300 hover:bg-[#1E2130] text-base font-bold transition-colors disabled:opacity-50">
-                    💾 Save
+                    className="h-14 rounded-xl border-2 border-amber-500/60 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 text-base font-bold transition-all disabled:opacity-50 shadow-[0_0_8px_rgba(245,166,35,0.15)]">
+                    🎫 Hold
                   </button>
                   <button onClick={() => setSplitModal(true)} disabled={submitting || cart.length < 2}
                     className="h-14 rounded-xl border border-[#2A2F45] text-zinc-300 hover:bg-[#1E2130] text-base font-bold transition-colors disabled:opacity-50">
