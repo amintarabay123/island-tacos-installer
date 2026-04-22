@@ -966,6 +966,28 @@ function TicketsDrawer({ onResume, onClose }: {
           onPay={completeWithPayment}
           onClose={() => setChargeOrder(null)}
           onSplit={() => { setSplitChargeOrder(chargeOrder); setChargeOrder(null); }}
+          onTabChange={(tab) => {
+            if (!chargeOrder) return;
+            const n = (v: unknown) => parseFloat(String(v)) || 0;
+            fetch("/api/display", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                status: "active",
+                items: chargeOrder.items.map(i => ({
+                  name: i.menuItemName,
+                  quantity: i.quantity,
+                  unitPrice: n(i.menuItemPrice),
+                  modifiers: (i.modifierSelections ?? []).map(m => m.name),
+                })),
+                subtotal: n(chargeOrder.subtotal),
+                tax: n(chargeOrder.tax),
+                total: n(chargeOrder.total),
+                discountAmount: n(chargeOrder.discountAmount) > 0 ? n(chargeOrder.discountAmount) : undefined,
+                paymentMethod: tab === "athmovil" ? "athmovil" : undefined,
+              }),
+            }).catch(() => {});
+          }}
         />
       )}
 
