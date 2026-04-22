@@ -438,7 +438,7 @@ export default function Kitchen() {
   const [mobileTab, setMobileTab] = useState<"new" | "preparing" | "ready">("new");
 
   // Filter out orders where ALL items are in non-KDS categories
-  const kdsOrders = orders.filter(o => o.items.some(item => isKdsItem(item)));
+  const kdsOrders = orders.filter(o => o.items.some(item => isKdsItem(item) && !item.alreadyMade));
 
   const byCol: Record<string, Order[]> = { new: [], preparing: [], ready: [] };
   for (const o of kdsOrders) {
