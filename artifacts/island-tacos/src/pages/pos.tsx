@@ -25,7 +25,7 @@ type Order = {
   id: number; confirmationCode: string; customerName: string; status: string;
   paymentStatus: string; paymentMethod: string; source: string;
   subtotal: number; discountAmount: number; tax: number; total: number;
-  notes?: string | null; createdAt: string; customerPhone?: string | null;
+  notes?: string | null; createdAt: string; customerPhone?: string | null; customerEmail?: string | null;
   orderType?: string; estimatedReadyAt?: string | null;
   items: { id: number; menuItemId: number; menuItemName: string; quantity: number; menuItemPrice: number; subtotal: number; modifierSelections?: CartModifier[] | null; notes?: string | null; alreadyMade?: boolean | null }[];
 };
@@ -2797,7 +2797,7 @@ export default function POS() {
 
                 <div className="space-y-1.5">
                   {order.items.map(item => (
-                    <div key={item.id} className="bg-black/40 rounded-lg px-3 py-2.5">
+                    <div key={item.id} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
                       <div className="flex items-baseline gap-2">
                         <span className="text-lg font-black text-gray-900">{item.quantity}×</span>
                         <span className="text-base font-semibold text-gray-900">{item.menuItemName}</span>
