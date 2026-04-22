@@ -844,9 +844,10 @@ function DiscountModal({ subtotal, onApply, onClose }: { subtotal: number; onApp
 
 // ─── Tickets Drawer (Held + Live Queue tabs) ─────────────────────────────────
 
-function TicketsDrawer({ onResume, onClose }: {
+function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   onResume: (items: CartItem[], name: string, note: string, discount: number, orderId: number) => void;
   onClose: () => void;
+  onPaymentComplete: (order: Order, tendered?: number) => void;
 }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -921,7 +922,7 @@ function TicketsDrawer({ onResume, onClose }: {
     load();
   };
 
-  const completeWithPayment = async (method: string, _tendered?: number, splitNote?: string) => {
+  const completeWithPayment = async (method: string, tendered?: number, splitNote?: string) => {
     if (!chargeOrder) return;
     const notes = splitNote
       ? (chargeOrder.notes ? `${chargeOrder.notes}\n${splitNote}` : splitNote)
@@ -947,8 +948,9 @@ function TicketsDrawer({ onResume, onClose }: {
         orderCode: chargeOrder.confirmationCode,
       }),
     }).catch(() => {});
+    const paidOrder = { ...chargeOrder, paymentStatus: "paid", paymentMethod: method, ...(notes ? { notes } : {}) };
     setChargeOrder(null);
-    onClose();
+    onPaymentComplete(paidOrder, tendered);
   };
 
   const completeOrder = async (id: number) => {
@@ -968,8 +970,9 @@ function TicketsDrawer({ onResume, onClose }: {
       // Do NOT set status:"completed" — KDS owns removal, payment only marks as paid.
       body: JSON.stringify({ actualPaymentMethod: "split", paymentStatus: "paid", notes: existingNotes }),
     });
+    const paidOrder = { ...order, paymentStatus: "paid", paymentMethod: "split", notes: existingNotes };
     setSplitChargeOrder(null);
-    onClose();
+    onPaymentComplete(paidOrder);
   };
 
   const STATUS_COLOR: Record<string, string> = {
@@ -2103,19 +2106,19 @@ export default function POS() {
     } catch {}
   }, []);
 
-  // Poll for pending online orders every 8s
+  // Single poll for all orders every 8s — handles online notifications + ticket count
   useEffect(() => {
     const poll = async () => {
       try {
-        const r = await fetch("/api/orders");
+        const r = await fetch("/api/orders", { credentials: "include" });
         const data: Order[] = await r.json();
+
+        // ── Online order notifications ──
         const pending = data.filter(o => o.source === "online" && o.status === "pending");
         if (isFirstOnlineFetchRef.current) {
-          // First fetch: seed seenIds and show bell count, but don't pop up the blocker
           isFirstOnlineFetchRef.current = false;
           pending.forEach(o => seenOnlineIdsRef.current.add(o.id));
           setIncomingOrders(pending);
-          // Do NOT populate popupOrders — pre-existing orders shouldn't block the screen
         } else {
           const newOrders = pending.filter(o => !seenOnlineIdsRef.current.has(o.id));
           if (newOrders.length > 0) {
@@ -2132,6 +2135,12 @@ export default function POS() {
           pending.forEach(o => seenOnlineIdsRef.current.add(o.id));
           setIncomingOrders(pending);
         }
+
+        // ── Held ticket count ──
+        setTicketCount(data.filter(o =>
+          !["completed", "cancelled"].includes(o.status) &&
+          ((o.source === "pos" && o.paymentStatus === "pending") || o.status === "ready")
+        ).length);
       } catch {}
     };
     poll();
@@ -2179,24 +2188,6 @@ export default function POS() {
     return () => clearInterval(t);
   }, []);
 
-  useEffect(() => {
-    const loadCount = async () => {
-      try {
-        const r = await fetch("/api/orders", { credentials: "include" });
-        const data = await r.json();
-        setTicketCount(data.filter((o: Order) =>
-          !["completed","cancelled"].includes(o.status) &&
-          (
-            (o.source === "pos" && o.paymentStatus === "pending") ||
-            o.status === "ready"
-          )
-        ).length);
-      } catch {}
-    };
-    loadCount();
-    const t = setInterval(loadCount, 15000);
-    return () => clearInterval(t);
-  }, []);
 
   // Filtered items
   const filteredItems = allItems.filter(item => {
@@ -2369,8 +2360,10 @@ export default function POS() {
         }),
       }).catch(() => {});
       clearCart();
+      setResumedOrderId(null);
       setReceiptModal({ order, tendered });
-      setTicketCount(tc => tc + (paymentStatus === "pending" ? 1 : 0));
+      // Adjust held ticket count: +1 when holding a new ticket, -1 when paying a resumed one
+      setTicketCount(tc => Math.max(0, tc + (paymentStatus === "pending" ? 1 : resumedOrderId ? -1 : 0)));
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Failed to place order. Please try again.");
@@ -2405,6 +2398,12 @@ export default function POS() {
 
   const handleResume = (items: CartItem[], name: string, note: string, disc: number, orderId: number) => {
     setCart(items); setCustomerName(name); setOrderNotes(note); setDiscount(disc); setResumedOrderId(orderId);
+  };
+
+  const handleTicketPaymentComplete = (order: Order, tendered?: number) => {
+    setTicketsOpen(false);
+    setReceiptModal({ order, tendered });
+    setTicketCount(tc => Math.max(0, tc - 1));
   };
 
   // ─ Render ────────────────────────────────────────────────────────────────
@@ -2755,7 +2754,7 @@ export default function POS() {
       )}
 
       {ticketsOpen && (
-        <TicketsDrawer onResume={handleResume} onClose={() => setTicketsOpen(false)} />
+        <TicketsDrawer onResume={handleResume} onClose={() => setTicketsOpen(false)} onPaymentComplete={handleTicketPaymentComplete} />
       )}
 
       {holdModal && (

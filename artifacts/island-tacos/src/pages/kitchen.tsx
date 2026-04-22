@@ -401,7 +401,7 @@ export default function Kitchen() {
 
   useEffect(() => {
     fetchOrders();
-    const id = setInterval(fetchOrders, 3_000);
+    const id = setInterval(fetchOrders, 5_000);
     return () => clearInterval(id);
   }, [fetchOrders]);
 
