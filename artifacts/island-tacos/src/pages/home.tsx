@@ -311,7 +311,7 @@ export default function Home() {
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.description}</p>
                     <button
-                      className="mt-2 text-xs font-semibold flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity border border-border rounded-full px-3 py-1 hover:bg-foreground hover:text-background hover:border-foreground"
+                      className="mt-2 text-xs font-semibold flex items-center gap-1 border border-border rounded-full px-3 py-1 hover:bg-foreground hover:text-background hover:border-foreground transition-colors"
                       onClick={(e) => { e.stopPropagation(); openItemModal(item); }}
                     >
                       <Plus className="w-3 h-3" /> Add

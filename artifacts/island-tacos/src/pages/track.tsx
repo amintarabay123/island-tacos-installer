@@ -536,6 +536,9 @@ function NoCodeView() {
       <div className="w-full max-w-sm sm:max-w-md">
         {/* Header */}
         <div className="text-center mb-6">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3">
+            ← Back to Menu
+          </Link>
           <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Island Tacos</div>
           <h1 className="text-2xl font-black">Track Your Order</h1>
         </div>

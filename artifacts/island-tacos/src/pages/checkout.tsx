@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { useCreateOrder } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingBag, Loader2, XCircle } from "lucide-react";
-import { saveLastOrder } from "@/lib/customer-account";
+import { saveLastOrder, getCustomer, saveCustomer } from "@/lib/customer-account";
 import { AthMovilDirectButton } from "@/components/athmovil-button";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -36,12 +36,11 @@ export default function Checkout() {
   const [athState, setAthState] = useState<AthState | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Pre-fill from localStorage
+  // Pre-fill from saved profile (shared with track page)
   useEffect(() => {
-    const storedName = localStorage.getItem("island_tacos_name");
-    const storedPhone = localStorage.getItem("island_tacos_phone");
-    if (storedName) setCustomerName(storedName);
-    if (storedPhone) setCustomerPhone(storedPhone);
+    const profile = getCustomer();
+    if (profile?.name) setCustomerName(profile.name);
+    if (profile?.phone) setCustomerPhone(profile.phone);
   }, []);
 
   // Fetch which payment methods are enabled in admin settings
@@ -180,9 +179,8 @@ export default function Checkout() {
       toast({ title: "Please enter your phone number", variant: "destructive" });
       return;
     }
-    // Remember for next time
-    localStorage.setItem("island_tacos_name", customerName.trim());
-    localStorage.setItem("island_tacos_phone", customerPhone.trim());
+    // Remember for next time (shared with track page)
+    saveCustomer({ name: customerName.trim(), phone: customerPhone.trim(), email: "" });
 
     createOrder.mutate(
       {
