@@ -2,8 +2,8 @@
   "name": "Island Tacos — Kitchen",
   "short_name": "IT Kitchen",
   "description": "Island Tacos kitchen display system",
-  "start_url": "/it-dav7dwn8/kitchen",
-  "scope": "/it-dav7dwn8/",
+  "start_url": "/kitchen",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0D0F17",
   "theme_color": "#22C55E",
@@ -11,19 +11,19 @@
   "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/logo.png",
+      "src": "/icon-kds-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo.png",
+      "src": "/icon-kds-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon.svg",
+      "src": "/icon-kds.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
