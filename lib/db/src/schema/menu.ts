@@ -57,6 +57,7 @@ export const modifiersTable = pgTable("modifiers", {
   required: boolean("required").notNull().default(false),
   minSelections: integer("min_selections").notNull().default(0),
   maxSelections: integer("max_selections"),
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

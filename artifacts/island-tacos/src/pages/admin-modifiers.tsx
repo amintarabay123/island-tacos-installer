@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Pencil, Trash2, X, AlertCircle, Hash } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, X, AlertCircle, Hash, GripVertical } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type ModifierOption = { id: string; name: string; price: number; position: number; allowMultiple?: boolean; maxQuantity?: number };
@@ -18,6 +18,7 @@ type Modifier = {
   required: boolean;
   minSelections: number;
   maxSelections: number | null;
+  sortOrder: number;
   createdAt: string;
 };
 
@@ -35,7 +36,7 @@ function useModifiers() {
   };
 
   useEffect(() => { load(); }, []);
-  return { modifiers, loading, reload: load };
+  return { modifiers, setModifiers, loading, reload: load };
 }
 
 const emptyOption = (): ModifierOption => ({
@@ -76,12 +77,59 @@ function selectionRuleLabel(mod: Modifier) {
 }
 
 export default function AdminModifiers() {
-  const { modifiers, loading, reload } = useModifiers();
+  const { modifiers, setModifiers, loading, reload } = useModifiers();
   const { toast } = useToast();
   const [dialog, setDialog] = useState<null | { mode: "create" | "edit"; id?: number }>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
+
+  // ── Drag-and-drop state ──────────────────────────────────────────────────────
+  const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveReorder = (ordered: Modifier[]) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      fetch("/api/menu/modifiers/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: ordered.map((m) => m.id) }),
+      }).catch(() => {});
+    }, 400);
+  };
+
+  const handleDragStart = (id: number) => {
+    setDraggingId(id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: number) => {
+    e.preventDefault();
+    if (id !== draggingId) setDragOverId(id);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: number) => {
+    e.preventDefault();
+    if (!draggingId || draggingId === targetId) { setDraggingId(null); setDragOverId(null); return; }
+    const from = modifiers.findIndex((m) => m.id === draggingId);
+    const to = modifiers.findIndex((m) => m.id === targetId);
+    if (from < 0 || to < 0) { setDraggingId(null); setDragOverId(null); return; }
+    const next = [...modifiers];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setModifiers(next);
+    saveReorder(next);
+    setDraggingId(null);
+    setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    setDragOverId(null);
+  };
+
+  // ── CRUD ─────────────────────────────────────────────────────────────────────
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -204,57 +252,78 @@ export default function AdminModifiers() {
             <p className="text-sm mt-1">Add your first modifier to get started.</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {modifiers.map((mod) => {
-              const ruleLabel = selectionRuleLabel(mod);
-              return (
-                <div key={mod.id} className="rounded-xl border bg-card p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold">{mod.name}</p>
-                        {mod.loyverseId.startsWith("manual_") ? (
-                          <span className="text-[10px] uppercase tracking-wide font-semibold bg-muted text-muted-foreground rounded px-1.5 py-0.5">Custom</span>
-                        ) : (
-                          <span className="text-[10px] uppercase tracking-wide font-semibold bg-blue-50 text-blue-600 rounded px-1.5 py-0.5">Loyverse</span>
+          <>
+            <div className="space-y-3">
+              {modifiers.map((mod) => {
+                const ruleLabel = selectionRuleLabel(mod);
+                const isDragging = draggingId === mod.id;
+                const isDragOver = dragOverId === mod.id;
+                return (
+                  <div
+                    key={mod.id}
+                    draggable
+                    onDragStart={() => handleDragStart(mod.id)}
+                    onDragOver={(e) => handleDragOver(e, mod.id)}
+                    onDrop={(e) => handleDrop(e, mod.id)}
+                    onDragEnd={handleDragEnd}
+                    className={`rounded-xl border bg-card p-4 transition-all ${isDragging ? "opacity-40" : ""} ${isDragOver ? "ring-2 ring-primary/50 bg-primary/5" : ""}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Drag handle */}
+                      <div className="text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing mt-0.5 shrink-0 touch-none">
+                        <GripVertical className="h-5 w-5" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold">{mod.name}</p>
+                          {mod.loyverseId.startsWith("manual_") ? (
+                            <span className="text-[10px] uppercase tracking-wide font-semibold bg-muted text-muted-foreground rounded px-1.5 py-0.5">Custom</span>
+                          ) : (
+                            <span className="text-[10px] uppercase tracking-wide font-semibold bg-blue-50 text-blue-600 rounded px-1.5 py-0.5">Loyverse</span>
+                          )}
+                          {mod.required && (
+                            <span className="text-[10px] uppercase tracking-wide font-semibold bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 rounded px-1.5 py-0.5">Required</span>
+                          )}
+                        </div>
+                        {ruleLabel && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{ruleLabel}</p>
                         )}
-                        {mod.required && (
-                          <span className="text-[10px] uppercase tracking-wide font-semibold bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 rounded px-1.5 py-0.5">Required</span>
+                        {mod.options.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {mod.options.map((opt) => (
+                              <span key={opt.id} className="text-xs border rounded-full px-2 py-0.5 text-muted-foreground">
+                                {opt.name}
+                                {opt.price > 0 ? ` +$${opt.price.toFixed(2)}` : ""}
+                                {opt.allowMultiple ? " ×n" : ""}
+                              </span>
+                            ))}
+                          </div>
                         )}
                       </div>
-                      {ruleLabel && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{ruleLabel}</p>
-                      )}
-                      {mod.options.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {mod.options.map((opt) => (
-                            <span key={opt.id} className="text-xs border rounded-full px-2 py-0.5 text-muted-foreground">
-                              {opt.name}
-                              {opt.price > 0 ? ` +$${opt.price.toFixed(2)}` : ""}
-                              {opt.allowMultiple ? " ×n" : ""}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(mod)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost" size="sm"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => handleDelete(mod.id, mod.name)}
-                        disabled={deleting === mod.id}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(mod)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost" size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(mod.id, mod.name)}
+                          disabled={deleting === mod.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3 ml-1">
+              Drag <GripVertical className="inline h-3 w-3" /> to reorder — order applies in POS
+            </p>
+          </>
         )}
       </div>
 

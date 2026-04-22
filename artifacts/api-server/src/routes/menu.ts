@@ -225,10 +225,10 @@ router.get("/menu/items/:id/modifiers", async (req, res): Promise<void> => {
     .from(modifiersTable)
     .where(inArray(modifiersTable.loyverseId, modifierIds));
 
-  // Return in same order as item's modifier_ids list
-  const ordered = modifierIds
-    .map((lid) => mods.find((m) => m.loyverseId === lid))
-    .filter(Boolean);
+  // Return sorted by global sortOrder so POS respects the admin-set order
+  const ordered = mods
+    .filter((m) => modifierIds.includes(m.loyverseId))
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 
   res.json(ordered);
 });
@@ -328,8 +328,24 @@ router.get("/menu/modifiers", async (_req, res): Promise<void> => {
   const modifiers = await db
     .select()
     .from(modifiersTable)
-    .orderBy(modifiersTable.name);
+    .orderBy(modifiersTable.sortOrder, modifiersTable.name);
   res.json(modifiers);
+});
+
+// ---- Bulk reorder modifiers ----
+router.post("/menu/modifiers/reorder", async (req, res): Promise<void> => {
+  const { ids } = req.body as { ids?: unknown };
+  if (!Array.isArray(ids) || ids.some((v) => typeof v !== "number")) {
+    res.status(400).json({ error: "ids must be an array of numbers" });
+    return;
+  }
+  const typedIds = ids as number[];
+  await Promise.all(
+    typedIds.map((id, idx) =>
+      db.update(modifiersTable).set({ sortOrder: idx * 10 }).where(eq(modifiersTable.id, id))
+    )
+  );
+  res.json({ ok: true });
 });
 
 router.post("/menu/modifiers", async (req, res): Promise<void> => {
