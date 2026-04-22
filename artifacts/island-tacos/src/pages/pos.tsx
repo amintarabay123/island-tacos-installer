@@ -241,13 +241,27 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-[#13151C] rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="p-5 border-b border-[#1E2130]">
-          <h2 className="text-white text-xl font-bold">{item.name}</h2>
-          <p className="text-[#F5A623] text-lg font-semibold">{fmt(total)}</p>
-        </div>
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+    // Outer backdrop is the scroll container — the iOS-reliable pattern.
+    // overflow-y-auto on a fixed inset-0 div scrolls correctly on every device
+    // including iPhone/iPad Safari/PWA. Inner overflow-y-auto inside a flex
+    // parent with overflow-hidden reliably breaks on iOS.
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/70"
+      onClick={onClose}
+      style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+    >
+      <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4">
+        <div
+          className="bg-[#13151C] rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header — sticky inside the outer scroll */}
+          <div className="sticky top-0 z-10 bg-[#13151C] rounded-t-2xl sm:rounded-t-2xl p-5 border-b border-[#1E2130]">
+            <h2 className="text-white text-xl font-bold">{item.name}</h2>
+            <p className="text-[#F5A623] text-lg font-semibold">{fmt(total)}</p>
+          </div>
+          {/* Content — no overflow, flows naturally */}
+          <div className="p-5 space-y-6">
           {modifiers.map(mod => {
             const groupTotal = totalSelForGroup(mod);
             const atMax = mod.maxSelections !== null && groupTotal >= mod.maxSelections;
@@ -317,23 +331,25 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
           {validationError && (
             <p className="text-red-400 text-sm text-center">{validationError}</p>
           )}
-        </div>
-        <div className="px-5 pb-3 border-t border-[#1E2130] pt-4">
-          <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">Special Instructions</p>
-          <textarea
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            placeholder="e.g. chicken slightly burnt, extra crispy…"
-            rows={2}
-            className="w-full bg-[#1E2130] border border-[#2A2F45] rounded-xl px-3 py-2.5 text-zinc-200 text-sm placeholder-zinc-600 resize-none focus:outline-none focus:border-[#F5A623]/60 transition-colors"
-          />
-        </div>
-        <div className="p-5 pt-2 flex gap-3">
-          <button onClick={onClose} className="flex-1 h-12 rounded-xl border border-[#2A2F45] text-zinc-300 font-semibold hover:bg-[#1E2130] transition-colors">Cancel</button>
-          <button onClick={handleConfirm} disabled={!!validationError}
-            className="flex-2 flex-grow h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-50 text-black font-bold transition-colors">
-            Add to Order · {fmt(total)}
-          </button>
+          </div>
+          {/* Special instructions + action buttons — at the bottom of the flow */}
+          <div className="px-5 pb-3 border-t border-[#1E2130] pt-4">
+            <p className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">Special Instructions</p>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="e.g. chicken slightly burnt, extra crispy…"
+              rows={2}
+              className="w-full bg-[#1E2130] border border-[#2A2F45] rounded-xl px-3 py-2.5 text-zinc-200 text-sm placeholder-zinc-600 resize-none focus:outline-none focus:border-[#F5A623]/60 transition-colors"
+            />
+          </div>
+          <div className="p-5 pt-2 flex gap-3 pb-safe">
+            <button onClick={onClose} className="flex-1 h-12 rounded-xl border border-[#2A2F45] text-zinc-300 font-semibold hover:bg-[#1E2130] transition-colors">Cancel</button>
+            <button onClick={handleConfirm} disabled={!!validationError}
+              className="flex-2 flex-grow h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-50 text-black font-bold transition-colors">
+              Add to Order · {fmt(total)}
+            </button>
+          </div>
         </div>
       </div>
     </div>

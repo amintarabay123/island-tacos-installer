@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { registerAthMovilWebhook } from "./lib/athmovil-webhook-register";
+import { warmAllMenuImages } from "./routes/image-proxy";
 
 const rawPort = process.env["PORT"];
 
@@ -23,6 +24,10 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Warm all menu images on startup — loads disk cache first (no network),
+  // then fetches any missing images from Loyverse CDN in the background.
+  warmAllMenuImages().catch(() => {});
 
   // Register ATH Móvil webhook URL in production only (non-blocking)
   if (process.env["NODE_ENV"] === "production") {
