@@ -1948,6 +1948,8 @@ export default function POS() {
   const isFirstOnlineFetchRef = useRef(true);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const chimeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Timestamp of last "completed" push — prevents the debounced idle from wiping it too soon
+  const displayCompletedAt = useRef<number>(0);
 
   // Silently unlock AudioContext on the first click anywhere — no action needed from staff
   useEffect(() => {
@@ -2107,10 +2109,21 @@ export default function POS() {
   const subtotal = cart.reduce((s, i) => s + (i.price + i.modifierSelections.reduce((ms, m) => ms + m.price, 0)) * i.quantity, 0);
   const total = Math.max(0, subtotal - discount);
 
+  // On mount: immediately reset display to idle so stale state from a previous session is cleared
+  useEffect(() => {
+    fetch("/api/display", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "idle", items: [], subtotal: 0, tax: 0, total: 0 }),
+    }).catch(() => {});
+  }, []);
+
   // Broadcast cart state to customer display tablet (debounced 400ms)
   useEffect(() => {
     const t = setTimeout(() => {
       const showingAthMovil = paymentModal && paymentTab === "athmovil";
+      // Don't override a "completed" screen — let it show for 15s before going idle
+      if (cart.length === 0 && Date.now() - displayCompletedAt.current < 15_000) return;
       const body = cart.length > 0
         ? {
             status: "active",
@@ -2220,6 +2233,7 @@ export default function POS() {
       const order: Order = await r.json();
       if (!order?.items) throw new Error("Order response missing items");
       // Push "completed" state to customer display
+      displayCompletedAt.current = Date.now();
       fetch("/api/display", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
