@@ -2464,16 +2464,16 @@ export default function POS() {
 
           {/* Totals + actions */}
           {cart.length > 0 && (
-            <div className="border-t border-[#1E2130] px-4 py-3 flex-shrink-0 space-y-2">
+            <div className="border-t border-[#1E2130] px-4 py-4 flex-shrink-0 space-y-3">
               {/* Discount + note row */}
               <div className="flex gap-2">
-                <button onClick={() => setDiscountModal(true)} className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-colors ${discount > 0 ? "border-green-500 text-green-400 bg-green-900/20" : "border-[#2A2F45] text-zinc-400 hover:text-white hover:border-zinc-500"}`}>
+                <button onClick={() => setDiscountModal(true)} className={`flex-1 h-12 rounded-xl text-base font-semibold border transition-colors ${discount > 0 ? "border-green-500 text-green-400 bg-green-900/20" : "border-[#2A2F45] text-zinc-400 hover:text-white hover:border-zinc-500"}`}>
                   {discount > 0 ? `Discount -${fmt(discount)}` : "% Discount"}
                 </button>
                 {discount > 0 && (
-                  <button onClick={() => setDiscount(0)} className="h-10 w-10 rounded-lg border border-[#2A2F45] text-zinc-500 hover:text-red-400 text-base transition-colors flex items-center justify-center">×</button>
+                  <button onClick={() => setDiscount(0)} className="h-12 w-12 rounded-xl border border-[#2A2F45] text-zinc-500 hover:text-red-400 text-lg transition-colors flex items-center justify-center">×</button>
                 )}
-                <button onClick={() => setOrderNoteModal(true)} className={`flex-1 h-10 rounded-lg text-sm font-semibold border transition-colors ${orderNotes ? "border-blue-500 text-blue-400" : "border-[#2A2F45] text-zinc-400 hover:text-white hover:border-zinc-500"}`}>
+                <button onClick={() => setOrderNoteModal(true)} className={`flex-1 h-12 rounded-xl text-base font-semibold border transition-colors ${orderNotes ? "border-blue-500 text-blue-400" : "border-[#2A2F45] text-zinc-400 hover:text-white hover:border-zinc-500"}`}>
                   {orderNotes ? "📝 Note" : "Add Note"}
                 </button>
               </div>
@@ -2482,23 +2482,23 @@ export default function POS() {
               <div className="space-y-1 py-2 border-t border-[#1E2130]">
                 <div className="flex justify-between text-sm text-zinc-400"><span>Subtotal</span><span>{fmt(subtotal)}</span></div>
                 {discount > 0 && <div className="flex justify-between text-sm text-green-400"><span>Discount</span><span>-{fmt(discount)}</span></div>}
-                <div className="flex justify-between text-lg text-white font-black border-t border-[#1E2130] pt-1 mt-1"><span>Total</span><span className="text-[#F5A623]">{fmt(total)}</span></div>
+                <div className="flex justify-between text-xl text-white font-black border-t border-[#1E2130] pt-2 mt-1"><span>Total</span><span className="text-[#F5A623]">{fmt(total)}</span></div>
               </div>
 
               {/* Payment buttons */}
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <button onClick={handleHold} disabled={submitting}
-                    className="h-10 rounded-xl border border-[#2A2F45] text-zinc-300 hover:bg-[#1E2130] text-sm font-semibold transition-colors disabled:opacity-50">
+                    className="h-14 rounded-xl border border-[#2A2F45] text-zinc-300 hover:bg-[#1E2130] text-base font-bold transition-colors disabled:opacity-50">
                     💾 Save
                   </button>
                   <button onClick={() => setSplitModal(true)} disabled={submitting || cart.length < 2}
-                    className="h-10 rounded-xl border border-[#2A2F45] text-zinc-300 hover:bg-[#1E2130] text-sm font-semibold transition-colors disabled:opacity-50">
+                    className="h-14 rounded-xl border border-[#2A2F45] text-zinc-300 hover:bg-[#1E2130] text-base font-bold transition-colors disabled:opacity-50">
                     ✂ Split
                   </button>
                 </div>
                 <button onClick={() => setPaymentModal(true)} disabled={submitting}
-                  className="w-full h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-black text-base transition-colors disabled:opacity-50">
+                  className="w-full h-16 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-black text-xl transition-colors disabled:opacity-50">
                   {submitting ? "Processing…" : `Charge ${fmt(total)}`}
                 </button>
               </div>
