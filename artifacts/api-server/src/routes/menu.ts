@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, sql, inArray } from "drizzle-orm";
-import { proxyImageUrl } from "./image-proxy";
+import { proxyImageUrl, prewarmImageCache } from "./image-proxy";
 import { db, menuCategoriesTable, menuItemsTable, modifiersTable, orderItemsTable } from "@workspace/db";
 import {
   CreateMenuCategoryBody,
@@ -114,6 +114,8 @@ router.get("/menu/items", async (req, res): Promise<void> => {
     query = query.where(eq(menuItemsTable.available, queryParsed.data.available));
   }
   const items = await query;
+  // Pre-warm image cache so all Loyverse images are ready before the browser asks
+  prewarmImageCache(items.flatMap(i => [i.imageUrl, i.posImageUrl]));
   const result = items.map((item) => ({
     ...item,
     price: parseFloat(item.price as unknown as string),

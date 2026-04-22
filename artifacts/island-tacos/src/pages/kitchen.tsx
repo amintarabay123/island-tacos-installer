@@ -48,9 +48,9 @@ const NEXT_LABEL: Record<string, string> = {
 };
 
 const STATUS_CARD: Record<string, { border: string; bg: string }> = {
-  confirmed: { border: "border-blue-500", bg: "bg-blue-950/40" },
-  preparing: { border: "border-orange-500", bg: "bg-orange-950/40" },
-  ready: { border: "border-green-500", bg: "bg-green-950/40" },
+  confirmed: { border: "border-blue-400", bg: "bg-blue-50" },
+  preparing: { border: "border-orange-400", bg: "bg-amber-50" },
+  ready: { border: "border-green-500", bg: "bg-green-50" },
 };
 
 const STATUS_BTN: Record<string, string> = {
@@ -486,21 +486,21 @@ export default function Kitchen() {
   const hasOrders = orders.length > 0;
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col select-none overflow-hidden">
-      <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-zinc-900 border-b border-zinc-800 shrink-0 gap-2">
+    <div className="min-h-screen bg-gray-100 text-gray-900 flex flex-col select-none overflow-hidden">
+      <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-white border-b border-gray-200 shrink-0 gap-2 shadow-sm">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-base sm:text-lg font-bold truncate">Island Tacos</span>
-          <span className="text-zinc-500 text-sm hidden sm:inline">· Kitchen Display</span>
+          <span className="text-gray-400 text-sm hidden sm:inline">· Kitchen Display</span>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {error ? (
-            <span className="text-red-400 text-xs font-medium hidden sm:block">{error}</span>
+            <span className="text-red-500 text-xs font-medium hidden sm:block">{error}</span>
           ) : lastFetch ? (
-            <span className="text-zinc-600 text-xs hidden lg:block">Refreshes every 3s · {lastFetch.toLocaleTimeString()}</span>
+            <span className="text-gray-400 text-xs hidden lg:block">Refreshes every 3s · {lastFetch.toLocaleTimeString()}</span>
           ) : null}
           <div className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${error ? "bg-red-500" : "bg-green-400 animate-pulse"}`} />
-            <span className={`text-xs font-medium hidden sm:inline ${error ? "text-red-400" : "text-green-400"}`}>
+            <span className={`w-2 h-2 rounded-full ${error ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
+            <span className={`text-xs font-medium hidden sm:inline ${error ? "text-red-500" : "text-green-600"}`}>
               {error ? "Offline" : "Live"}
             </span>
           </div>
@@ -513,19 +513,19 @@ export default function Kitchen() {
               🔔 <span className="hidden sm:inline">Enable Notifications</span>
             </button>
           ) : (
-            <span className="text-green-500 text-xs font-medium hidden sm:flex items-center gap-1">
+            <span className="text-green-600 text-xs font-medium hidden sm:flex items-center gap-1">
               🔔 <span>Notifications on</span>
             </span>
           )}
           <button
             onClick={openHistory}
-            className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold transition-colors"
+            className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold transition-colors"
           >
             🕐 <span className="hidden sm:inline">History</span>
           </button>
           <button
             onClick={logout}
-            className="text-zinc-600 hover:text-zinc-400 text-xs transition-colors px-2 py-1 rounded"
+            className="text-gray-400 hover:text-gray-700 text-xs transition-colors px-2 py-1 rounded"
           >
             <span className="hidden sm:inline">Sign out</span>
             <span className="sm:hidden">✕</span>
@@ -550,21 +550,21 @@ export default function Kitchen() {
           </div>
 
           {/* Mobile tabs */}
-          <div className="sm:hidden flex border-b border-zinc-800 shrink-0">
+          <div className="sm:hidden flex border-b border-gray-200 shrink-0 bg-white">
             {COL_CONFIG.map(({ key, label, badge }) => (
               <button
                 key={key}
                 onClick={() => setMobileTab(key as "new" | "preparing" | "ready")}
                 className={`flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border-b-2 ${
                   mobileTab === key
-                    ? "border-current text-white"
-                    : "border-transparent text-zinc-500"
+                    ? "border-current text-gray-900"
+                    : "border-transparent text-gray-400"
                 }`}
               >
-                <span className={`w-2 h-2 rounded-full ${badge.includes("blue") ? "bg-blue-400" : badge.includes("orange") ? "bg-orange-400" : "bg-green-400"}`} />
+                <span className={`w-2 h-2 rounded-full ${badge.includes("blue") ? "bg-blue-400" : badge.includes("orange") ? "bg-orange-400" : "bg-green-500"}`} />
                 {label.split(" ")[0]}
                 {byCol[key].length > 0 && (
-                  <span className="bg-zinc-700 text-zinc-300 rounded-full text-[10px] w-4 h-4 flex items-center justify-center">
+                  <span className="bg-gray-200 text-gray-600 rounded-full text-[10px] w-4 h-4 flex items-center justify-center">
                     {byCol[key].length}
                   </span>
                 )}
@@ -632,7 +632,7 @@ export default function Kitchen() {
                       <div className="flex flex-col gap-2">
                         {order.items.filter(isKdsItem).map((item) => (
                           item.alreadyMade ? (
-                            <div key={item.id} className="bg-black/20 rounded px-3 py-2 opacity-50 flex items-center gap-2">
+                            <div key={item.id} className="bg-gray-200/60 rounded px-3 py-2 opacity-50 flex items-center gap-2">
                               <span className="text-green-400 text-base font-bold shrink-0">✓</span>
                               <div className="flex items-baseline gap-2 line-through decoration-zinc-500">
                                 <span className="text-lg font-semibold text-zinc-500 leading-none">{item.quantity}×</span>
@@ -641,19 +641,19 @@ export default function Kitchen() {
                               <span className="text-xs text-zinc-600 ml-auto shrink-0">done</span>
                             </div>
                           ) : (
-                            <div key={item.id} className="bg-black/40 rounded px-3 py-3">
+                            <div key={item.id} className="bg-white border border-gray-200 rounded px-3 py-3">
                               <div className="flex items-baseline gap-2">
-                                <span className="text-3xl font-black text-white leading-none">{item.quantity}×</span>
-                                <span className="text-xl font-bold text-white leading-snug">{item.menuItemName}</span>
+                                <span className="text-3xl font-black text-gray-900 leading-none">{item.quantity}×</span>
+                                <span className="text-xl font-bold text-gray-900 leading-snug">{item.menuItemName}</span>
                               </div>
                               {(item.modifierSelections ?? []).length > 0 ? (
-                                <div className="text-yellow-300 text-base mt-2 leading-snug font-medium space-y-0.5">
+                                <div className="text-amber-600 text-base mt-2 leading-snug font-medium space-y-0.5">
                                   {(item.modifierSelections ?? []).map((m, i) => (
                                     <div key={i}>+ {m.name}</div>
                                   ))}
                                 </div>
                               ) : item.notes ? (
-                                <div className="text-yellow-300 text-base mt-2 leading-snug whitespace-pre-line font-medium">
+                                <div className="text-amber-600 text-base mt-2 leading-snug whitespace-pre-line font-medium">
                                   {item.notes}
                                 </div>
                               ) : null}
@@ -663,7 +663,7 @@ export default function Kitchen() {
                       </div>
 
                       {order.notes && (
-                        <div className="bg-yellow-900/50 border border-yellow-700/40 rounded px-3 py-2 text-yellow-200 text-base leading-snug">
+                        <div className="bg-yellow-50 border border-yellow-300 rounded px-3 py-2 text-yellow-800 text-base leading-snug">
                           {order.notes}
                         </div>
                       )}
