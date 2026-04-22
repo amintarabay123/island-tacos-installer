@@ -775,15 +775,39 @@ function TicketsDrawer({ onResume, onClose }: {
   useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, [load]);
 
   const resume = (o: Order) => {
-    const kitchenFinished = ["ready", "completed"].includes(o.status);
+    // All items from a saved ticket were already sent to the KDS when first created.
+    // Mark them all alreadyMade so re-submitting doesn't re-fire them to the kitchen.
+    // Only brand-new items added after recall will be alreadyMade: false.
     const items: CartItem[] = o.items.map(i => ({
       key: uid(), menuItemId: i.menuItemId, name: i.menuItemName, price: i.menuItemPrice,
       quantity: i.quantity, notes: i.notes ?? "",
       modifierSelections: (i.modifierSelections ?? []) as CartModifier[],
-      alreadyMade: kitchenFinished || (i.alreadyMade ?? false),
+      alreadyMade: true,
     }));
     onResume(items, o.customerName, o.notes ?? "", o.discountAmount, o.id);
     onClose();
+  };
+
+  // Push saved ticket to customer display when charging directly (without loading into cart)
+  const chargeTicket = (o: Order) => {
+    fetch("/api/display", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "active",
+        items: o.items.map(i => ({
+          name: i.menuItemName,
+          quantity: i.quantity,
+          unitPrice: i.menuItemPrice,
+          modifiers: (i.modifierSelections ?? []).map((m: CartModifier) => m.name),
+        })),
+        subtotal: o.subtotal,
+        tax: o.tax,
+        total: o.total,
+        discountAmount: o.discountAmount > 0 ? o.discountAmount : undefined,
+      }),
+    }).catch(() => {});
+    setChargeOrder(o);
   };
 
   const voidTicket = async (id: number) => {
@@ -814,6 +838,20 @@ function TicketsDrawer({ onResume, onClose }: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "completed", actualPaymentMethod: method, paymentStatus: "paid", ...(notes ? { notes } : {}) }),
     });
+    // Update customer display to "completed" state
+    fetch("/api/display", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "completed",
+        items: [],
+        subtotal: 0,
+        tax: 0,
+        total: chargeOrder.total,
+        paymentMethod: method,
+        orderCode: chargeOrder.confirmationCode,
+      }),
+    }).catch(() => {});
     setChargeOrder(null);
     onClose();
   };
@@ -899,7 +937,7 @@ function TicketsDrawer({ onResume, onClose }: {
                     <button onClick={() => resume(o)} className="h-10 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white text-sm font-semibold transition-colors">Edit</button>
                   )}
                   {o.paymentStatus === "pending" ? (
-                    <button onClick={() => setChargeOrder(o)} className="flex-1 h-10 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-sm font-bold transition-colors">
+                    <button onClick={() => chargeTicket(o)} className="flex-1 h-10 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-sm font-bold transition-colors">
                       Charge {fmt(o.total)}
                     </button>
                   ) : (
