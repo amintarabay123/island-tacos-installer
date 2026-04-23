@@ -1159,6 +1159,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"today" | "all">("today");
+  const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Order | null>(null);
   const [printing, setPrinting] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
@@ -1188,9 +1189,16 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   }, []);
 
   const today = new Date().toDateString();
-  const visible = filter === "today"
-    ? orders.filter(o => new Date(o.createdAt).toDateString() === today)
-    : orders;
+  const q = search.trim().toLowerCase();
+  const visible = orders
+    .filter(o => filter === "today" ? new Date(o.createdAt).toDateString() === today : true)
+    .filter(o => {
+      if (!q) return true;
+      if ((o.customerName ?? "").toLowerCase().includes(q)) return true;
+      if ((o.customerPhone ?? "").toLowerCase().includes(q)) return true;
+      if (o.items.some(i => i.menuItemName.toLowerCase().includes(q))) return true;
+      return false;
+    });
 
   const totalRevenue = visible.reduce((s, o) => s + o.total, 0);
 
@@ -1392,6 +1400,26 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
+        {/* Search bar */}
+        <div className="px-4 pb-2">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Name, phone, or item…"
+              className="w-full h-10 pl-8 pr-8 bg-gray-100 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#F5A623]"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-lg leading-none"
+              >×</button>
+            )}
+          </div>
+        </div>
+
         {/* Summary bar */}
         {!loading && visible.length > 0 && (
           <div className="mx-4 mb-2 px-4 py-2 bg-gray-100 rounded-xl flex justify-between text-sm">
@@ -1404,7 +1432,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
           {loading && <p className="text-gray-400 text-center py-8">Loading…</p>}
           {!loading && visible.length === 0 && (
             <p className="text-gray-400 text-center py-8">
-              {filter === "today" ? "No completed orders today" : "No completed orders yet"}
+              {q ? `No orders matching "${search}"` : filter === "today" ? "No completed orders today" : "No completed orders yet"}
             </p>
           )}
           {visible.map(o => (
