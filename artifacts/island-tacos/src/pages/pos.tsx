@@ -1412,8 +1412,8 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
               className="w-full bg-gray-100 hover:bg-gray-200 rounded-xl p-4 text-left transition-colors">
               <div className="flex items-start justify-between mb-1">
                 <div>
-                  <span className="text-gray-900 font-bold text-sm">#{o.confirmationCode}</span>
-                  <span className="ml-2 text-gray-500 text-xs">{o.customerName || "Walk-in"}</span>
+                  <span className="text-gray-900 font-bold text-sm">{o.customerName || "Walk-in"}</span>
+                  <span className="ml-2 text-gray-500 text-xs">#{o.confirmationCode}</span>
                 </div>
                 <span className="text-[#F5A623] font-bold">{fmt(o.total)}</span>
               </div>
