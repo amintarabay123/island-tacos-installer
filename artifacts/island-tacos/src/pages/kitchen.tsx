@@ -170,7 +170,7 @@ export default function Kitchen() {
   const logout = async () => {
     clearAuthToken();
     await fetch("/api/auth/logout", { method: "POST", credentials: "include", headers: authHeaders() });
-    navigate(adminRoutes.login);
+    navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.kitchen)}`);
   };
 
   const [audioUnlocked, setAudioUnlocked] = useState(false);

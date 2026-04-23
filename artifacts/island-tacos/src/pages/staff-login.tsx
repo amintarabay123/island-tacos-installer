@@ -35,7 +35,7 @@ export default function StaffLogin() {
         const staffRoutes = [adminRoutes.kitchen, adminRoutes.pos];
         if (data.role === "staff") {
           // Honor the redirect only if it's a valid staff destination
-          navigate(redirectTo && staffRoutes.includes(redirectTo) ? redirectTo : adminRoutes.kitchen);
+          navigate(redirectTo && staffRoutes.includes(redirectTo) ? redirectTo : adminRoutes.pos);
         } else {
           // Admin can go anywhere, or default to dashboard
           navigate(redirectTo ?? adminRoutes.dashboard);

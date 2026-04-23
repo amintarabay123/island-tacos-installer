@@ -1947,8 +1947,8 @@ export default function POS() {
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then(r => r.json())
-      .then(d => { if (!d.authed) navigate(adminRoutes.login); })
-      .catch(() => navigate(adminRoutes.login));
+      .then(d => { if (!d.authed) navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`); })
+      .catch(() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`));
   }, [navigate]);
 
   // Menu data
