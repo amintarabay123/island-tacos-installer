@@ -145,6 +145,15 @@ router.get("/customers/:id", async (req: Request, res: Response): Promise<void> 
   });
 });
 
+router.delete("/customers/:id", async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [existing] = await db.select({ id: customersTable.id }).from(customersTable).where(eq(customersTable.id, id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+  await db.delete(customersTable).where(eq(customersTable.id, id));
+  res.json({ ok: true });
+});
+
 router.patch("/customers/:id/notes", async (req: Request, res: Response): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   const { notes } = req.body as { notes?: string };

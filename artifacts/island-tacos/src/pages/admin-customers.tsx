@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Search, Users, Phone, Mail, ShoppingBag, DollarSign, ChevronDown, ChevronUp, Loader2, X } from "lucide-react";
+import { ArrowLeft, Search, Users, Phone, Mail, ShoppingBag, DollarSign, ChevronDown, ChevronUp, Loader2, X, Trash2, Download } from "lucide-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -74,12 +74,14 @@ function CustomerRow({ c, onSelect }: { c: CustomerSummary; onSelect: () => void
   );
 }
 
-function CustomerDrawer({ customerId, onClose }: { customerId: number; onClose: () => void }) {
+function CustomerDrawer({ customerId, onClose, onDelete }: { customerId: number; onClose: () => void; onDelete: () => void }) {
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -104,6 +106,16 @@ function CustomerDrawer({ customerId, onClose }: { customerId: number; onClose: 
       body: JSON.stringify({ notes }),
     });
     setSavingNotes(false);
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    await fetch(`${API}/api/customers/${customerId}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    setDeleting(false);
+    onDelete();
   };
 
   return (
@@ -172,10 +184,37 @@ function CustomerDrawer({ customerId, onClose }: { customerId: number; onClose: 
                 rows={3}
                 className="w-full text-sm rounded-lg border bg-background px-3 py-2 outline-none focus:border-primary resize-none placeholder-muted-foreground"
               />
-              <Button size="sm" className="mt-2" onClick={saveNotes} disabled={savingNotes}>
-                {savingNotes ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-                Save Notes
-              </Button>
+              <div className="flex items-center justify-between mt-2">
+                <Button size="sm" onClick={saveNotes} disabled={savingNotes}>
+                  {savingNotes ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                  Save Notes
+                </Button>
+                {!deleteConfirm ? (
+                  <button
+                    onClick={() => setDeleteConfirm(true)}
+                    className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete customer
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-red-600 font-medium">Sure?</span>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="text-xs bg-red-600 text-white px-2.5 py-1 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                      {deleting ? "Deleting…" : "Yes, delete"}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Order history */}
@@ -260,6 +299,27 @@ export default function AdminCustomers() {
   const totalSpent = customers.reduce((s, c) => s + c.totalSpent, 0);
   const totalOrders = customers.reduce((s, c) => s + c.visitCount, 0);
 
+  const exportCSV = () => {
+    const header = ["Name", "Email", "Phone", "Total Orders", "Total Spent ($)", "Customer Since"];
+    const rows = customers.map(c => [
+      `"${c.name.replace(/"/g, '""')}"`,
+      `"${(c.email ?? "").replace(/"/g, '""')}"`,
+      `"${(c.phone ?? "").replace(/"/g, '""')}"`,
+      c.visitCount,
+      c.totalSpent.toFixed(2),
+      `"${new Date(c.createdAt).toLocaleDateString()}"`,
+    ]);
+    const csv = [header.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const label = query ? `customers-search-${query}` : "customers-all";
+    a.download = `island-tacos-${label}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
@@ -269,9 +329,15 @@ export default function AdminCustomers() {
               <ArrowLeft className="w-4 h-4 mr-1" /> Back
             </Button>
           </Link>
-          <div className="flex items-center gap-2 font-bold text-lg">
+          <div className="flex items-center gap-2 font-bold text-lg flex-1">
             <Users className="w-5 h-5" /> Customer Database
           </div>
+          {customers.length > 0 && (
+            <Button variant="outline" size="sm" onClick={exportCSV} className="shrink-0">
+              <Download className="w-4 h-4 mr-1.5" />
+              Export CSV
+            </Button>
+          )}
         </div>
       </header>
 
@@ -336,7 +402,11 @@ export default function AdminCustomers() {
       </div>
 
       {selectedId !== null && (
-        <CustomerDrawer customerId={selectedId} onClose={() => setSelectedId(null)} />
+        <CustomerDrawer
+          customerId={selectedId}
+          onClose={() => setSelectedId(null)}
+          onDelete={() => { setSelectedId(null); fetchCustomers(query); }}
+        />
       )}
     </div>
   );
