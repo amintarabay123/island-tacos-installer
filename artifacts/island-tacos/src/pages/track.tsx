@@ -313,7 +313,7 @@ type HistoryOrder = {
   status: string;
   total: number;
   createdAt: string;
-  items: { name: string; quantity: number }[];
+  items: { menuItemName: string; quantity: number }[];
 };
 
 function statusLabel(s: string) {
@@ -385,7 +385,7 @@ function CustomerHistorySection({ phone }: { phone: string }) {
               </span>
             </div>
             <div className="text-xs text-muted-foreground mt-0.5 truncate">
-              {o.items?.map((i) => `${i.quantity}x ${i.name}`).join(", ")}
+              {o.items?.map((i) => `${i.quantity}x ${i.menuItemName}`).join(", ")}
             </div>
             <div className="text-xs text-muted-foreground">
               {new Date(o.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
