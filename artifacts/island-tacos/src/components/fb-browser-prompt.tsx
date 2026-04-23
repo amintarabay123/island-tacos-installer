@@ -166,7 +166,7 @@ export default function FbBrowserPrompt() {
         )}
 
         {/* CTA row */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {ios && (
             <button
               onClick={copyLink}
@@ -180,10 +180,13 @@ export default function FbBrowserPrompt() {
 
           <button
             onClick={skip}
-            className="w-full text-center text-white/30 text-sm py-3 hover:text-white/50 transition-colors"
+            className="w-full flex items-center justify-center gap-2 bg-white text-black font-bold text-base rounded-2xl px-5 py-4 active:scale-[0.98] transition-all shadow-lg"
           >
-            Continue in Facebook browser anyway
+            Continue in Facebook browser
           </button>
+          <p className="text-center text-white/40 text-xs pb-1">
+            Some features may not work in the Facebook browser
+          </p>
         </div>
 
         {/* Safe area spacer */}
