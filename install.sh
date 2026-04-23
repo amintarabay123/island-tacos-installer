@@ -147,6 +147,12 @@ CLERK_PUB=$(ask "Clerk Publishable Key")
 CLERK_SECRET=$(ask_secret "Clerk Secret Key")
 echo ""
 
+echo -e "  ${DIM}── Cloud Menu Sync ───────────────────────────────────────────${RST}"
+echo -e "  ${DIM}      This lets the admin panel push menu changes to orders.islandtacosbvi.com.${RST}"
+echo -e "  ${DIM}      Make up any password — then add it as SYNC_SECRET in Replit secrets too.${RST}"
+SYNC_SECRET=$(ask_secret "Sync Secret (make up a password)")
+echo ""
+
 echo -e "  ${DIM}── Receipt Printer (optional) ───────────────────────────────${RST}"
 echo -e "  ${DIM}      Leave blank if unsure — you can set this in the POS later.${RST}"
 PRINTER_IP=$(ask "Printer IP address (e.g. 192.168.8.195)" "")
@@ -217,6 +223,8 @@ VITE_CLERK_PROXY_URL=${CLERK_PROXY_URL}
 VITE_ADMIN_PATH=/it-admin
 EOF
 
+echo "SYNC_TARGET_URL=https://orders.islandtacosbvi.com"           >> .env
+echo "SYNC_SECRET=${SYNC_SECRET}"                                   >> .env
 [ -n "$SMTP_PASS"   ] && echo "SMTP_PASSWORD=${SMTP_PASS}"         >> .env
 [ -n "$PRINTER_IP"  ] && echo "DEFAULT_PRINTER_IP=${PRINTER_IP}"   >> .env
 

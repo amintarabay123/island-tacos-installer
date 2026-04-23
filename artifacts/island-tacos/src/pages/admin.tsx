@@ -6,7 +6,7 @@ import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdmin
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, Monitor, LogOut, XCircle, BarChart3, Users } from "lucide-react";
+import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, Monitor, LogOut, XCircle, BarChart3, Users, CloudUpload } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +45,9 @@ export default function Admin() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [rejectState, setRejectState] = useState<RejectState>(null);
+  const [syncState, setSyncState] = useState<"idle" | "syncing" | "success" | "error">("idle");
+  const [syncMessage, setSyncMessage] = useState<string>("");
+  const [lastSync, setLastSync] = useState<string | null>(() => localStorage.getItem("lastMenuSync"));
   const prevOrderIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
 
@@ -63,6 +66,22 @@ export default function Admin() {
     clearAuthToken();
     await fetch("/api/auth/logout", { method: "POST", credentials: "include", headers: authHeaders() });
     navigate(adminRoutes.login);
+  };
+
+  const handleSync = async () => {
+    setSyncState("syncing"); setSyncMessage("");
+    try {
+      const r = await fetch("/api/sync/push", { method: "POST", credentials: "include", headers: authHeaders() });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error ?? "Sync failed");
+      const ts = new Date().toLocaleString();
+      setLastSync(ts); localStorage.setItem("lastMenuSync", ts);
+      setSyncState("success");
+      setSyncMessage(`${data.pushed?.categories ?? 0} categories, ${data.pushed?.items ?? 0} items pushed`);
+      setTimeout(() => setSyncState("idle"), 4000);
+    } catch (e) {
+      setSyncState("error"); setSyncMessage(String(e));
+    }
   };
 
 
@@ -228,6 +247,29 @@ export default function Admin() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Cloud sync */}
+        <div className="rounded-xl border bg-card p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-blue-50 p-2 text-blue-600"><CloudUpload className="h-5 w-5" /></div>
+            <div>
+              <p className="font-semibold text-sm">Sync Menu to Online Store</p>
+              <p className="text-xs text-muted-foreground">
+                {lastSync ? `Last synced: ${lastSync}` : "Pushes your menu to orders.islandtacosbvi.com"}
+              </p>
+              {syncMessage && (
+                <p className={`text-xs mt-0.5 ${syncState === "error" ? "text-red-600" : "text-green-600"}`}>{syncMessage}</p>
+              )}
+            </div>
+          </div>
+          <Button size="sm" variant="outline"
+            disabled={syncState === "syncing"}
+            onClick={handleSync}
+            className={syncState === "success" ? "border-green-500 text-green-700" : syncState === "error" ? "border-red-400 text-red-600" : ""}>
+            <CloudUpload className={`h-4 w-4 mr-1.5 ${syncState === "syncing" ? "animate-pulse" : ""}`} />
+            {syncState === "syncing" ? "Syncing…" : syncState === "success" ? "Synced!" : syncState === "error" ? "Retry Sync" : "Sync Now"}
+          </Button>
         </div>
 
         {stats?.popularItems && stats.popularItems.length > 0 && (

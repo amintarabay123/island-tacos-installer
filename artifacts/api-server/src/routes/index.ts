@@ -17,6 +17,7 @@ import displayRouter from "./display";
 import settingsRouter from "./settings";
 import employeesRouter from "./employees";
 import imageProxyRouter from "./image-proxy";
+import syncRouter from "./sync";
 
 const router: IRouter = Router();
 
@@ -41,6 +42,7 @@ router.use(uploadRouter);
 router.use(displayRouter);
 router.use(imageProxyRouter);
 router.use(settingsRouter); // GET is public; PATCH is guarded below
+router.use(syncRouter);    // /sync/receive uses own X-Sync-Secret auth; /sync/push is admin-guarded below
 
 // Customer lookup: /customers/lookup is public (for online account page)
 // /customers search is staff-accessible (POS autocomplete), /customers/:id notes patch is admin-checked in handler
@@ -57,10 +59,12 @@ router.use(/^\/(shifts|cash-transactions|print)/, (req: Request, res: Response, 
 router.use(shiftsRouter);
 router.use(printRouter);
 
-// Admin + Loyverse + Settings PATCH: owner only
+// Admin + Loyverse + Settings PATCH + Sync push/export: owner only
 router.use(/^\/(admin|loyverse|reports|employees)/, (req: Request, res: Response, next: NextFunction) => {
   requireAdminAuth(req, res, next);
 });
+router.use("/sync/push",   (req: Request, res: Response, next: NextFunction) => requireAdminAuth(req, res, next));
+router.use("/sync/export", (req: Request, res: Response, next: NextFunction) => requireAdminAuth(req, res, next));
 router.use("/settings", (req: Request, res: Response, next: NextFunction) => {
   if (req.method === "PATCH") return requireAdminAuth(req, res, next);
   next();
