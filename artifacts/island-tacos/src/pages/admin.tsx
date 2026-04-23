@@ -54,7 +54,7 @@ export default function Admin() {
       .then((r) => r.json())
       .then((d) => {
         if (!d.authed) navigate(adminRoutes.login);
-        else if (d.role !== "admin") navigate(adminRoutes.kitchen);
+        else if (d.role !== "admin") navigate(adminRoutes.pos);
       })
       .catch(() => navigate(adminRoutes.login));
   }, [navigate]);
@@ -151,11 +151,10 @@ export default function Admin() {
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Live</span>
               </div>
-              <Link href={adminRoutes.pos}>
-                <Button size="sm" className="bg-[#F5A623] hover:bg-[#E09520] text-black font-bold shrink-0">
-                  🧾 <span className="hidden sm:inline ml-1">POS</span>
-                </Button>
-              </Link>
+              <Button size="sm" className="bg-[#F5A623] hover:bg-[#E09520] text-black font-bold shrink-0"
+                onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`)}>
+                🧾 <span className="hidden sm:inline ml-1">POS</span>
+              </Button>
               <Link href={adminRoutes.kitchen}>
                 <Button variant="outline" size="sm" className="shrink-0">
                   <Monitor className="h-4 w-4" />

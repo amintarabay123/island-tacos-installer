@@ -2486,7 +2486,7 @@ export default function POS() {
               </span>
             )}
           </button>
-          <button onClick={() => navigate(adminRoutes.dashboard)} className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">
+          <button onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.dashboard)}`)} className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">
             ← <span className="hidden sm:inline">Admin</span>
           </button>
           <button
