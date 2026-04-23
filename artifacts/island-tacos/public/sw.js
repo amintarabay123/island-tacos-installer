@@ -1,4 +1,4 @@
-const CACHE = "island-tacos-v5";
+const CACHE = "island-tacos-v6";
 const STATIC_ASSETS = [
   "/icon-192.png",
   "/icon-512.png",
@@ -39,12 +39,13 @@ self.addEventListener("fetch", e => {
   // Never intercept API calls
   if (url.pathname.startsWith("/api/")) return;
 
-  // For navigation requests (HTML pages) — always network-first so the app
-  // always loads the latest HTML with correct JS asset references.
-  // Only fall back to cache if the network is completely unreachable.
+  // For navigation requests (HTML pages) — always bypass both SW cache and
+  // HTTP cache so the app always loads the latest HTML with correct JS asset
+  // references. No stale-HTML fallback: if offline, the browser shows its
+  // own offline page rather than serving an old version of the app.
   if (e.request.mode === "navigate") {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match("/"))
+      fetch(e.request, { cache: "no-store" })
     );
     return;
   }
