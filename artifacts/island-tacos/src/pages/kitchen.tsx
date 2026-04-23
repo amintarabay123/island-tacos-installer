@@ -113,6 +113,18 @@ export default function Kitchen() {
   const [advancing, setAdvancing] = useState<Set<number>>(new Set());
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Local strikethrough state: Map<orderId, Set<itemId>>
+  // Purely visual — lets staff tap an item to mark it done while the order stays open.
+  const [struckItems, setStruckItems] = useState<Map<number, Set<number>>>(new Map());
+  const toggleStruck = (orderId: number, itemId: number) => {
+    setStruckItems(prev => {
+      const next = new Map(prev);
+      const set = new Set(next.get(orderId) ?? []);
+      set.has(itemId) ? set.delete(itemId) : set.add(itemId);
+      next.set(orderId, set);
+      return next;
+    });
+  };
   const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
     typeof Notification !== "undefined" ? Notification.permission : "denied"
   );
@@ -687,25 +699,37 @@ export default function Kitchen() {
                               </div>
                               <span className="text-xs text-gray-500 ml-auto shrink-0">done</span>
                             </div>
-                          ) : (
-                            <div key={item.id} className="bg-white border border-gray-200 rounded px-3 py-3">
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-3xl font-black text-gray-900 leading-none">{item.quantity}×</span>
-                                <span className="text-xl font-bold text-gray-900 leading-snug">{item.menuItemName}</span>
-                              </div>
-                              {(item.modifierSelections ?? []).length > 0 ? (
-                                <div className="text-amber-600 text-base mt-2 leading-snug font-medium space-y-0.5">
-                                  {(item.modifierSelections ?? []).map((m, i) => (
-                                    <div key={i}>+ {m.name}</div>
-                                  ))}
+                          ) : (() => {
+                            const struck = struckItems.get(order.id)?.has(item.id) ?? false;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => toggleStruck(order.id, item.id)}
+                                className={`w-full text-left rounded px-3 py-3 border transition-all active:scale-[0.98] ${
+                                  struck
+                                    ? "bg-gray-100 border-gray-200 opacity-60"
+                                    : "bg-white border-gray-200 hover:border-gray-300"
+                                }`}
+                              >
+                                <div className={`flex items-baseline gap-2 ${struck ? "line-through decoration-gray-500 decoration-2" : ""}`}>
+                                  <span className={`text-3xl font-black leading-none ${struck ? "text-gray-400" : "text-gray-900"}`}>{item.quantity}×</span>
+                                  <span className={`text-xl font-bold leading-snug ${struck ? "text-gray-400" : "text-gray-900"}`}>{item.menuItemName}</span>
+                                  {struck && <span className="text-xs text-gray-400 font-normal ml-1 no-underline">done</span>}
                                 </div>
-                              ) : item.notes ? (
-                                <div className="text-amber-600 text-base mt-2 leading-snug whitespace-pre-line font-medium">
-                                  {item.notes}
-                                </div>
-                              ) : null}
-                            </div>
-                          )
+                                {!struck && (item.modifierSelections ?? []).length > 0 ? (
+                                  <div className="text-amber-600 text-base mt-2 leading-snug font-medium space-y-0.5">
+                                    {(item.modifierSelections ?? []).map((m, i) => (
+                                      <div key={i}>+ {m.name}</div>
+                                    ))}
+                                  </div>
+                                ) : !struck && item.notes ? (
+                                  <div className="text-amber-600 text-base mt-2 leading-snug whitespace-pre-line font-medium">
+                                    {item.notes}
+                                  </div>
+                                ) : null}
+                              </button>
+                            );
+                          })()
                         ))}
                       </div>
 
