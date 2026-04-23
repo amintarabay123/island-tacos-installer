@@ -717,13 +717,13 @@ export default function Kitchen() {
                                   {struck && <span className="text-xs text-gray-400 font-normal ml-1 no-underline">done</span>}
                                 </div>
                                 {!struck && (item.modifierSelections ?? []).length > 0 ? (
-                                  <div className="text-amber-600 text-base mt-2 leading-snug font-medium space-y-0.5">
+                                  <div className="text-amber-600 text-xl mt-2 leading-snug font-semibold space-y-1">
                                     {(item.modifierSelections ?? []).map((m, i) => (
                                       <div key={i}>+ {m.name}</div>
                                     ))}
                                   </div>
                                 ) : !struck && item.notes ? (
-                                  <div className="text-amber-600 text-base mt-2 leading-snug whitespace-pre-line font-medium">
+                                  <div className="text-amber-600 text-xl mt-2 leading-snug whitespace-pre-line font-semibold">
                                     {item.notes}
                                   </div>
                                 ) : null}
