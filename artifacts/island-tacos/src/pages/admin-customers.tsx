@@ -50,25 +50,44 @@ function statusColor(status: string) {
   }
 }
 
-function CustomerRow({ c, onSelect }: { c: CustomerSummary; onSelect: () => void }) {
+function CustomerRow({
+  c,
+  checked,
+  onToggle,
+  onSelect,
+}: {
+  c: CustomerSummary;
+  checked: boolean;
+  onToggle: () => void;
+  onSelect: () => void;
+}) {
   return (
-    <div
-      onClick={onSelect}
-      className="flex items-center gap-4 px-5 py-4 border-b last:border-b-0 hover:bg-muted/40 cursor-pointer transition-colors"
-    >
-      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-        {c.name.charAt(0).toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm truncate">{c.name}</p>
-        <div className="flex items-center gap-3 mt-0.5">
-          {c.email && <span className="text-xs text-muted-foreground truncate">{c.email}</span>}
-          {c.phone && <span className="text-xs text-muted-foreground">{c.phone}</span>}
+    <div className={`flex items-center gap-3 px-5 py-4 border-b last:border-b-0 transition-colors ${checked ? "bg-primary/5" : "hover:bg-muted/40"}`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onToggle}
+        onClick={e => e.stopPropagation()}
+        className="w-4 h-4 rounded accent-primary shrink-0 cursor-pointer"
+      />
+      <div
+        onClick={onSelect}
+        className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+      >
+        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+          {c.name.charAt(0).toUpperCase()}
         </div>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="text-sm font-semibold">${c.totalSpent.toFixed(2)}</p>
-        <p className="text-xs text-muted-foreground">{c.visitCount} {c.visitCount === 1 ? "order" : "orders"}</p>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm truncate">{c.name}</p>
+          <div className="flex items-center gap-3 mt-0.5">
+            {c.email && <span className="text-xs text-muted-foreground truncate">{c.email}</span>}
+            {c.phone && <span className="text-xs text-muted-foreground">{c.phone}</span>}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-semibold">${c.totalSpent.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground">{c.visitCount} {c.visitCount === 1 ? "order" : "orders"}</p>
+        </div>
       </div>
     </div>
   );
@@ -277,6 +296,9 @@ export default function AdminCustomers() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchCustomers = useCallback((q: string) => {
     setLoading(true);
@@ -298,6 +320,38 @@ export default function AdminCustomers() {
 
   const totalSpent = customers.reduce((s, c) => s + c.totalSpent, 0);
   const totalOrders = customers.reduce((s, c) => s + c.visitCount, 0);
+
+  const toggleCheck = (id: number) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const allChecked = customers.length > 0 && customers.every(c => checkedIds.has(c.id));
+  const someChecked = customers.some(c => checkedIds.has(c.id));
+
+  const toggleAll = () => {
+    if (allChecked) {
+      setCheckedIds(new Set());
+    } else {
+      setCheckedIds(new Set(customers.map(c => c.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    await Promise.all(
+      [...checkedIds].map(id =>
+        fetch(`${API}/api/customers/${id}`, { method: "DELETE", headers: authHeaders() })
+      )
+    );
+    setBulkDeleting(false);
+    setBulkConfirm(false);
+    setCheckedIds(new Set());
+    fetchCustomers(query);
+  };
 
   const exportCSV = () => {
     const header = ["Name", "Email", "Phone", "Total Orders", "Total Spent ($)", "Customer Since"];
@@ -389,17 +443,72 @@ export default function AdminCustomers() {
             </div>
           ) : (
             <div>
-              <div className="px-5 py-3 bg-muted/30 border-b flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                <span>Customer</span>
+              <div className="px-5 py-3 bg-muted/30 border-b flex items-center gap-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <input
+                  type="checkbox"
+                  checked={allChecked}
+                  ref={el => { if (el) el.indeterminate = someChecked && !allChecked; }}
+                  onChange={toggleAll}
+                  className="w-4 h-4 rounded accent-primary cursor-pointer"
+                />
+                <span className="flex-1">Customer</span>
                 <span>Spent / Orders</span>
               </div>
               {customers.map(c => (
-                <CustomerRow key={c.id} c={c} onSelect={() => setSelectedId(c.id)} />
+                <CustomerRow
+                  key={c.id}
+                  c={c}
+                  checked={checkedIds.has(c.id)}
+                  onToggle={() => toggleCheck(c.id)}
+                  onSelect={() => setSelectedId(c.id)}
+                />
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Bulk action bar */}
+      {someChecked && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl">
+          <span className="text-sm font-semibold">
+            {checkedIds.size} selected
+          </span>
+          <div className="w-px h-5 bg-white/20" />
+          {!bulkConfirm ? (
+            <button
+              onClick={() => setBulkConfirm(true)}
+              className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 font-semibold transition-colors"
+            >
+              <Trash2 className="w-4 h-4" /> Delete
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-red-400 font-medium">Delete {checkedIds.size} customer{checkedIds.size !== 1 ? "s" : ""}?</span>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="text-sm bg-red-600 text-white px-3 py-1 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {bulkDeleting ? "Deleting…" : "Yes, delete"}
+              </button>
+              <button
+                onClick={() => setBulkConfirm(false)}
+                className="text-sm text-white/60 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+          <div className="w-px h-5 bg-white/20" />
+          <button
+            onClick={() => { setCheckedIds(new Set()); setBulkConfirm(false); }}
+            className="text-white/60 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {selectedId !== null && (
         <CustomerDrawer
