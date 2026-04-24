@@ -6,7 +6,7 @@ import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdmin
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, Monitor, LogOut, XCircle, BarChart3, Users, CloudUpload } from "lucide-react";
+import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, Monitor, LogOut, XCircle, BarChart3, Users, CloudUpload, Menu, X, ChefHat, UtensilsCrossed, Store } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +45,7 @@ export default function Admin() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [rejectState, setRejectState] = useState<RejectState>(null);
+  const [navOpen, setNavOpen] = useState(false);
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "success" | "error">("idle");
   const [syncMessage, setSyncMessage] = useState<string>("");
   const [lastSync, setLastSync] = useState<string | null>(() => localStorage.getItem("lastMenuSync"));
@@ -158,70 +159,156 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
+      {/* Mobile slide-in nav drawer */}
+      {navOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setNavOpen(false)} />
+          {/* Panel */}
+          <div className="relative ml-auto w-72 h-full bg-background shadow-2xl flex flex-col overflow-y-auto">
+            {/* Panel header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <span className="font-black text-lg text-primary">ISLAND TACOS</span>
+              <button onClick={() => setNavOpen(false)} className="p-1.5 rounded-md hover:bg-muted">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {/* Nav sections */}
+            <nav className="flex-1 px-3 py-4 space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pb-1">Operations</p>
+              <button onClick={() => { setNavOpen(false); navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`); }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-muted text-left font-medium">
+                <span className="text-lg">🧾</span> POS Terminal
+              </button>
+              <Link href={adminRoutes.kitchen} onClick={() => setNavOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
+                  <ChefHat className="h-5 w-5 text-orange-500" /> Kitchen Display
+                </div>
+              </Link>
+              <a href={adminRoutes.display} target="_blank" rel="noopener noreferrer" onClick={() => setNavOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium">
+                  <Monitor className="h-5 w-5 text-blue-500" /> Customer Display
+                </div>
+              </a>
+
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pb-1 pt-4">Manage</p>
+              <Link href={adminRoutes.menu} onClick={() => setNavOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
+                  <UtensilsCrossed className="h-5 w-5 text-green-600" /> Menu Editor
+                </div>
+              </Link>
+              <Link href={adminRoutes.modifiers} onClick={() => setNavOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
+                  <Settings className="h-5 w-5 text-green-700" /> Modifiers
+                </div>
+              </Link>
+              <Link href={adminRoutes.settings} onClick={() => setNavOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
+                  <Settings className="h-5 w-5 text-muted-foreground" /> Store Settings
+                </div>
+              </Link>
+
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pb-1 pt-4">Analytics</p>
+              <Link href={adminRoutes.reports} onClick={() => setNavOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
+                  <BarChart3 className="h-5 w-5 text-purple-600" /> Reports
+                </div>
+              </Link>
+              <Link href={adminRoutes.customers} onClick={() => setNavOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
+                  <Users className="h-5 w-5 text-blue-600" /> Customers
+                </div>
+              </Link>
+
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pb-1 pt-4">More</p>
+              <Link href="/" onClick={() => setNavOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
+                  <Store className="h-5 w-5 text-primary" /> Online Store
+                </div>
+              </Link>
+            </nav>
+            {/* Sign out at bottom */}
+            <div className="px-3 pb-6 border-t pt-4">
+              <button onClick={() => { setNavOpen(false); logout(); }}
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-red-50 text-red-600 font-medium">
+                <LogOut className="h-5 w-5" /> Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4">
           <div className="flex h-14 md:h-16 items-center justify-between gap-4">
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-base md:text-xl font-black text-primary">ISLAND TACOS</span>
               <span className="text-muted-foreground hidden sm:inline">— Admin</span>
             </div>
-            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 justify-end">
+            {/* Mobile: POS shortcut + hamburger */}
+            <div className="flex items-center gap-2 md:hidden">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs text-muted-foreground font-medium">Live</span>
+              </div>
+              <Button size="sm" className="bg-[#F5A623] hover:bg-[#E09520] text-black font-bold"
+                onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`)}>
+                🧾 POS
+              </Button>
+              <button onClick={() => setNavOpen(true)} className="p-2 rounded-md hover:bg-muted">
+                <Menu className="h-5 w-5" />
+              </button>
+            </div>
+            {/* Desktop: full nav bar (unchanged) */}
+            <div className="hidden md:flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 justify-end">
               <div className="flex items-center gap-1 mr-1 shrink-0">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs text-muted-foreground font-medium hidden sm:inline">Live</span>
+                <span className="text-xs text-muted-foreground font-medium">Live</span>
               </div>
               <Button size="sm" className="bg-[#F5A623] hover:bg-[#E09520] text-black font-bold shrink-0"
                 onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`)}>
-                🧾 <span className="hidden sm:inline ml-1">POS</span>
+                🧾 POS
               </Button>
               <Link href={adminRoutes.kitchen}>
                 <Button variant="outline" size="sm" className="shrink-0">
-                  <Monitor className="h-4 w-4" />
-                  <span className="hidden md:inline ml-1.5">Kitchen</span>
+                  <Monitor className="h-4 w-4" /><span className="ml-1.5">Kitchen</span>
                 </Button>
               </Link>
               <a href={adminRoutes.display} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm" className="shrink-0">
-                  <Monitor className="h-4 w-4 text-blue-500" />
-                  <span className="hidden md:inline ml-1.5">Display</span>
+                  <Monitor className="h-4 w-4 text-blue-500" /><span className="ml-1.5">Display</span>
                 </Button>
               </a>
               <Link href={adminRoutes.menu}>
-                <Button variant="outline" size="sm" className="shrink-0 hidden sm:flex">
-                  <Settings className="h-4 w-4" />
-                  <span className="hidden lg:inline ml-1.5">Menu</span>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <Settings className="h-4 w-4" /><span className="ml-1.5">Menu</span>
                 </Button>
               </Link>
               <Link href={adminRoutes.modifiers}>
-                <Button variant="outline" size="sm" className="shrink-0 hidden md:flex">
-                  <Settings className="h-4 w-4" />
-                  <span className="hidden lg:inline ml-1.5">Modifiers</span>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <Settings className="h-4 w-4" /><span className="ml-1.5">Modifiers</span>
                 </Button>
               </Link>
               <Link href={adminRoutes.reports}>
                 <Button variant="outline" size="sm" className="shrink-0">
-                  <BarChart3 className="h-4 w-4" />
-                  <span className="hidden md:inline ml-1.5">Reports</span>
+                  <BarChart3 className="h-4 w-4" /><span className="ml-1.5">Reports</span>
                 </Button>
               </Link>
               <Link href={adminRoutes.customers}>
                 <Button variant="outline" size="sm" className="shrink-0">
-                  <Users className="h-4 w-4" />
-                  <span className="hidden md:inline ml-1.5">Customers</span>
+                  <Users className="h-4 w-4" /><span className="ml-1.5">Customers</span>
                 </Button>
               </Link>
               <Link href={adminRoutes.settings}>
-                <Button variant="outline" size="sm" className="shrink-0 hidden sm:flex">
-                  <Settings className="h-4 w-4 text-muted-foreground" />
-                  <span className="hidden lg:inline ml-1.5">Store</span>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <Settings className="h-4 w-4 text-muted-foreground" /><span className="ml-1.5">Store</span>
                 </Button>
               </Link>
               <Link href="/">
-                <Button variant="ghost" size="sm" className="shrink-0 hidden sm:flex">Store</Button>
+                <Button variant="ghost" size="sm" className="shrink-0">Store</Button>
               </Link>
               <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground shrink-0">
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline ml-1.5">Sign out</span>
+                <LogOut className="h-4 w-4" /><span className="ml-1.5">Sign out</span>
               </Button>
             </div>
           </div>
