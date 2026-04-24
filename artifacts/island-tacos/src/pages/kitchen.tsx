@@ -710,13 +710,25 @@ export default function Kitchen() {
                       <div className="flex flex-col gap-2">
                         {order.items.filter(isKdsItem).map((item) => (
                           item.alreadyMade ? (
-                            <div key={item.id} className="bg-gray-200/60 rounded px-3 py-2 opacity-50 flex items-center gap-2">
-                              <span className="text-green-400 text-base font-bold shrink-0">✓</span>
-                              <div className="flex items-baseline gap-2 line-through decoration-gray-400">
-                                <span className="text-lg font-semibold text-gray-400 leading-none">{item.quantity}×</span>
-                                <span className="text-base font-medium text-gray-400 leading-snug">{item.menuItemName}</span>
+                            <div key={item.id} className="bg-gray-200/60 rounded px-3 py-2 opacity-50">
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-green-400 text-base font-bold shrink-0">✓</span>
+                                <div className="flex items-baseline gap-2 line-through decoration-gray-400 flex-1">
+                                  <span className="text-lg font-semibold text-gray-400 leading-none">{item.quantity}×</span>
+                                  <span className="text-base font-medium text-gray-400 leading-snug">{item.menuItemName}</span>
+                                </div>
+                                <span className="text-xs text-gray-500 ml-auto shrink-0">done</span>
                               </div>
-                              <span className="text-xs text-gray-500 ml-auto shrink-0">done</span>
+                              {(item.modifierSelections ?? []).length > 0 && (
+                                <div className="ml-6 mt-1 space-y-0.5 line-through decoration-gray-400">
+                                  {(item.modifierSelections ?? []).map((m, i) => (
+                                    <div key={i} className="text-sm text-gray-400 font-medium">+ {m.name}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {(item.modifierSelections ?? []).length === 0 && item.notes && (
+                                <div className="ml-6 mt-1 text-sm text-gray-400 font-medium line-through decoration-gray-400">{item.notes}</div>
+                              )}
                             </div>
                           ) : (() => {
                             const struck = struckItems.get(order.id)?.has(item.id) ?? false;
