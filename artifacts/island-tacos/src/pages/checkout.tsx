@@ -34,6 +34,9 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [enabledMethods, setEnabledMethods] = useState<string[]>(["cash"]);
   const [athState, setAthState] = useState<AthState | null>(null);
+  const [storeOpen, setStoreOpen] = useState(true);
+  const [storeOpenTime, setStoreOpenTime] = useState("11:00 AM");
+  const [storeCloseOrdersAt, setStoreCloseOrdersAt] = useState("6:45 PM");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Pre-fill from saved profile (shared with track page)
@@ -43,11 +46,11 @@ export default function Checkout() {
     if (profile?.phone) setCustomerPhone(profile.phone);
   }, []);
 
-  // Fetch which payment methods are enabled in admin settings
+  // Fetch which payment methods and store hours are enabled in admin settings
   useEffect(() => {
     fetch(`${basePath}/api/settings`)
       .then(r => r.json())
-      .then((data: { online_payment_methods?: string }) => {
+      .then((data: Record<string, string>) => {
         try {
           const methods: string[] = JSON.parse(data.online_payment_methods ?? '["cash"]');
           if (methods.length > 0) {
@@ -55,6 +58,14 @@ export default function Checkout() {
             if (!methods.includes(paymentMethod)) setPaymentMethod(methods[0]);
           }
         } catch { /* keep defaults */ }
+        const fmt = (hhmm: string) => {
+          const [h, m] = hhmm.split(":").map(Number);
+          const ampm = h >= 12 ? "PM" : "AM";
+          return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+        };
+        setStoreOpen(data.is_open !== "false");
+        setStoreOpenTime(fmt(data.open_time ?? "11:00"));
+        setStoreCloseOrdersAt(fmt(data.closes_orders_at ?? "18:45"));
       })
       .catch(() => {});
   }, []);
@@ -332,10 +343,16 @@ export default function Checkout() {
                 />
               </section>
 
+              {!storeOpen && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-center">
+                  <p className="text-sm font-semibold text-amber-800">Online ordering is closed right now</p>
+                  <p className="text-xs text-amber-700 mt-1">We're open {storeOpenTime} – {storeCloseOrdersAt} AST · Last orders are 15 min before closing</p>
+                </div>
+              )}
               <Button
                 type="submit"
                 className="w-full h-14 text-lg font-bold"
-                disabled={createOrder.isPending}
+                disabled={createOrder.isPending || !storeOpen}
               >
                 {createOrder.isPending ? "Placing Order..." : `Place Order — $${total.toFixed(2)}`}
               </Button>

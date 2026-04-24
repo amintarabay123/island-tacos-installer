@@ -17,14 +17,20 @@ type Settings = {
   address: string;
   payment_methods: string;
   online_payment_methods: string;
+  open_time: string;
+  close_time: string;
+  cutoff_minutes: string;
 };
 
 const DEFAULTS: Settings = {
-  hours: "11am – 10pm daily",
+  hours: "11am – 7pm daily",
   phone: "284-544-8088",
   address: "Wickhams Cay 1, Road Town, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
   online_payment_methods: '["cash"]',
+  open_time: "11:00",
+  close_time: "19:00",
+  cutoff_minutes: "15",
 };
 
 const ONLINE_METHODS = [
@@ -70,6 +76,9 @@ export default function AdminSettings() {
           address: data.address ?? DEFAULTS.address,
           payment_methods: data.payment_methods ?? DEFAULTS.payment_methods,
           online_payment_methods: data.online_payment_methods ?? DEFAULTS.online_payment_methods,
+          open_time: data.open_time ?? DEFAULTS.open_time,
+          close_time: data.close_time ?? DEFAULTS.close_time,
+          cutoff_minutes: data.cutoff_minutes ?? DEFAULTS.cutoff_minutes,
         });
       })
       .catch(() => {})
@@ -325,10 +334,73 @@ export default function AdminSettings() {
         {/* ── Business Info ── */}
         <section className="rounded-xl border bg-card p-6 space-y-5">
           <h2 className="font-bold text-base">Business Info</h2>
-          {field("hours", "Store Hours", "e.g. 11am – 10pm daily")}
+          {field("hours", "Store Hours (display text)", "e.g. 11am – 7pm daily")}
           {field("phone", "Phone Number", "e.g. 284-544-8088")}
           {field("address", "Address", "e.g. Wickhams Cay 1, Road Town, BVI")}
           {field("payment_methods", "Accepted Payment Methods", "e.g. ATH Móvil · Card · Apple Pay")}
+        </section>
+
+        {/* ── Online Ordering Hours ── */}
+        <section className="rounded-xl border bg-card p-6 space-y-5">
+          <div>
+            <h2 className="font-bold text-base">Online Ordering Hours</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              All times are in Atlantic Standard Time (AST). Online orders are automatically blocked outside these hours.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="open_time">Opens at</Label>
+              <Input
+                id="open_time"
+                type="time"
+                value={form.open_time}
+                onChange={e => setForm(f => ({ ...f, open_time: e.target.value }))}
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="close_time">Closes at</Label>
+              <Input
+                id="close_time"
+                type="time"
+                value={form.close_time}
+                onChange={e => setForm(f => ({ ...f, close_time: e.target.value }))}
+                disabled={loading}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="cutoff_minutes">Stop accepting orders (minutes before closing)</Label>
+            <div className="flex items-center gap-3">
+              <Input
+                id="cutoff_minutes"
+                type="number"
+                min="0"
+                max="60"
+                value={form.cutoff_minutes}
+                onChange={e => setForm(f => ({ ...f, cutoff_minutes: e.target.value }))}
+                disabled={loading}
+                className="w-24"
+              />
+              <span className="text-sm text-muted-foreground">minutes</span>
+            </div>
+            {(() => {
+              const closeH = parseInt(form.close_time?.split(":")[0] ?? "19");
+              const closeM = parseInt(form.close_time?.split(":")[1] ?? "0");
+              const cutoff = parseInt(form.cutoff_minutes ?? "15");
+              const cutoffTotal = closeH * 60 + closeM - cutoff;
+              const ch = Math.floor(cutoffTotal / 60);
+              const cm = cutoffTotal % 60;
+              const ampm = ch >= 12 ? "PM" : "AM";
+              const label = `${ch % 12 || 12}:${String(Math.max(0, cm)).padStart(2, "0")} ${ampm}`;
+              return (
+                <p className="text-xs text-muted-foreground">
+                  Last order accepted at <span className="font-medium">{label} AST</span>
+                </p>
+              );
+            })()}
+          </div>
         </section>
 
         {/* ── Online Payment Methods ── */}

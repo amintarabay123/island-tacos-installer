@@ -9,13 +9,23 @@ import { useState, useEffect } from "react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type StoreSettings = { hours: string; phone: string; address: string; payment_methods: string };
+type StoreSettings = { hours: string; phone: string; address: string; payment_methods: string; is_open: string; open_time: string; closes_orders_at: string };
 const SETTING_DEFAULTS: StoreSettings = {
-  hours: "11am – 10pm daily",
+  hours: "11am – 7pm daily",
   phone: "284-544-8088",
   address: "Wickhams Cay 1, Road Town, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
+  is_open: "true",
+  open_time: "11:00",
+  closes_orders_at: "18:45",
 };
+
+function formatTime(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
+}
 
 function useStoreSettings() {
   const [settings, setSettings] = useState<StoreSettings>(SETTING_DEFAULTS);
@@ -164,12 +174,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <span className="text-sm text-muted-foreground">Total</span>
                       <span className="font-semibold">${total.toFixed(2)}</span>
                     </div>
-                    <Button
-                      className="w-full h-11 font-semibold rounded-full"
-                      onClick={() => setLocation("/checkout")}
-                    >
-                      Checkout
-                    </Button>
+                    {settings.is_open === "false" ? (
+                      <div className="space-y-2">
+                        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-center">
+                          <p className="text-xs font-semibold text-amber-800">Online ordering closed</p>
+                          <p className="text-xs text-amber-700 mt-0.5">Opens at {formatTime(settings.open_time)} · Last orders at {formatTime(settings.closes_orders_at)}</p>
+                        </div>
+                        <Button
+                          className="w-full h-11 font-semibold rounded-full"
+                          disabled
+                        >
+                          Checkout
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        className="w-full h-11 font-semibold rounded-full"
+                        onClick={() => setLocation("/checkout")}
+                      >
+                        Checkout
+                      </Button>
+                    )}
                   </div>
                 )}
               </SheetContent>

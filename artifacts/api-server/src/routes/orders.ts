@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, and, inArray, count, or } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable, storeSettingsTable } from "@workspace/db";
 import { upsertCustomer } from "./customers";
+import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import nodemailer from "nodemailer";
 
 const mailer = nodemailer.createTransport({
@@ -226,6 +227,22 @@ router.post("/orders", async (req, res): Promise<void> => {
   if (!parsed.data.items || parsed.data.items.length === 0) {
     res.status(400).json({ error: "Order must have at least one item" });
     return;
+  }
+
+  // Enforce business hours for online orders only
+  if (parsed.data.source !== "pos") {
+    const settingRows = await db.select().from(storeSettingsTable);
+    const settings: Record<string, string> = { ...SETTING_DEFAULTS };
+    for (const row of settingRows) settings[row.key] = row.value;
+    const { is_open, closes_orders_at } = computeStoreStatus(settings);
+    if (!is_open) {
+      const [ch, cm] = (settings.open_time ?? "11:00").split(":").map(Number);
+      const ampm = ch >= 12 ? "PM" : "AM";
+      const hour = ch % 12 || 12;
+      const opensAt = `${hour}:${String(cm).padStart(2, "0")} ${ampm}`;
+      res.status(403).json({ error: `We're not accepting orders right now. We open at ${opensAt} AST.`, code: "CLOSED" });
+      return;
+    }
   }
 
   const menuItemIds = parsed.data.items.map((i) => i.menuItemId);
