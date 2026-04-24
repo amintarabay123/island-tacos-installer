@@ -55,6 +55,114 @@ function formatOrder(order: Record<string, unknown>, items: Record<string, unkno
   };
 }
 
+const STORE_URL = process.env.STORE_URL ?? "https://orders.islandtacosbvi.com";
+const SMTP_FROM  = process.env.SMTP_FROM  ?? "Island Tacos <orders@islandtacosbvi.com>";
+
+function fmtMoney(n: unknown) { return `$${parseFloat(n as string).toFixed(2)}`; }
+const PAY_LABEL: Record<string, string> = { cash: "Cash", card: "Card", athmovil: "ATH Móvil", split: "Split", complimentary: "Comp" };
+
+function emailShell(bodyContent: string) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f5f5f0;font-family:Arial,sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f0;padding:32px 0">
+<tr><td align="center">
+<table width="480" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+  <tr><td style="background:#1a1a1a;padding:24px 32px;text-align:center">
+    <div style="color:#e05a00;font-size:24px;font-weight:800;letter-spacing:1px">🌮 ISLAND TACOS</div>
+    <div style="color:#999;font-size:12px;margin-top:4px">Wickhams Cay 1, Road Town, BVI</div>
+  </td></tr>
+  ${bodyContent}
+  <tr><td style="padding:20px 32px;text-align:center;background:#fafaf8;border-top:1px solid #eee">
+    <div style="color:#aaa;font-size:12px">© Island Tacos · orders@islandtacosbvi.com</div>
+  </td></tr>
+</table>
+</td></tr>
+</table></body></html>`;
+}
+
+type OrderRow = typeof import("@workspace/db").ordersTable.$inferSelect;
+type OrderItemRow = typeof import("@workspace/db").orderItemsTable.$inferSelect;
+
+function buildItemRows(items: OrderItemRow[]) {
+  return items.map(i => {
+    const mods = (i.modifierSelections as { name: string; price: number }[] | null ?? []);
+    const modLines = mods.map(m => `<tr><td style="padding:1px 0 1px 16px;color:#999;font-size:13px">+ ${m.name}</td><td style="text-align:right;color:#999;font-size:13px">${m.price > 0 ? `+${fmtMoney(m.price)}` : ""}</td></tr>`).join("");
+    return `<tr><td style="padding:4px 0;font-size:14px">${i.quantity}× ${i.menuItemName}${i.notes ? `<br><span style="color:#999;font-size:12px">${i.notes}</span>` : ""}</td><td style="text-align:right;font-size:14px;font-weight:600">${fmtMoney(i.subtotal)}</td></tr>${modLines}`;
+  }).join("");
+}
+
+async function sendConfirmationEmail(order: OrderRow, items: OrderItemRow[]) {
+  if (!order.customerEmail) return;
+  const trackUrl = `${STORE_URL}/track?code=${order.confirmationCode}`;
+  const estimatedTime = order.estimatedReadyAt
+    ? new Date(order.estimatedReadyAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" })
+    : null;
+
+  const html = emailShell(`
+    <tr><td style="padding:28px 32px 8px;text-align:center">
+      <div style="font-size:36px">✅</div>
+      <div style="font-size:20px;font-weight:800;color:#1a1a1a;margin-top:8px">Order Confirmed!</div>
+      <div style="font-size:13px;color:#666;margin-top:6px">Hi <strong>${order.customerName || "there"}</strong> — we've got your order and we're getting it ready.</div>
+    </td></tr>
+    <tr><td style="padding:12px 32px">
+      <div style="background:#f5f5f0;border-radius:10px;padding:16px 20px;text-align:center">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:4px">Your Order Code</div>
+        <div style="font-size:34px;font-weight:900;letter-spacing:4px;color:#e05a00">${order.confirmationCode}</div>
+        ${estimatedTime ? `<div style="font-size:13px;color:#666;margin-top:6px">Estimated ready at <strong>${estimatedTime}</strong></div>` : ""}
+      </div>
+    </td></tr>
+    <tr><td style="padding:4px 32px 0"><hr style="border:none;border-top:1px dashed #ddd;margin:0"></td></tr>
+    <tr><td style="padding:12px 32px 4px">
+      <table width="100%" cellpadding="0" cellspacing="0">${buildItemRows(items)}</table>
+    </td></tr>
+    <tr><td style="padding:4px 32px 12px"><hr style="border:none;border-top:1px dashed #ddd;margin:0"></td></tr>
+    <tr><td style="padding:0 32px 20px">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${parseFloat(order.discountAmount as string) > 0 ? `<tr><td style="font-size:13px;color:#22c55e;padding:2px 0">Discount</td><td style="text-align:right;font-size:13px;color:#22c55e">-${fmtMoney(order.discountAmount)}</td></tr>` : ""}
+        <tr><td style="font-size:16px;font-weight:800;color:#1a1a1a;padding:6px 0 2px;border-top:2px solid #1a1a1a">TOTAL</td><td style="text-align:right;font-size:16px;font-weight:800;color:#e05a00;border-top:2px solid #1a1a1a">${fmtMoney(order.total)}</td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:0 32px 24px;text-align:center">
+      <a href="${trackUrl}" style="display:inline-block;background:#e05a00;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px">Track My Order →</a>
+      <div style="font-size:12px;color:#aaa;margin-top:10px">We'll email you again the moment it's ready for pickup.</div>
+    </td></tr>
+  `);
+
+  await mailer.sendMail({
+    from: SMTP_FROM,
+    to: order.customerEmail,
+    subject: `Order Confirmed — #${order.confirmationCode} 🌮`,
+    html,
+  });
+}
+
+async function sendReadyEmail(order: OrderRow) {
+  if (!order.customerEmail) return;
+
+  const html = emailShell(`
+    <tr><td style="padding:28px 32px 8px;text-align:center">
+      <div style="font-size:48px">🔔</div>
+      <div style="font-size:22px;font-weight:900;color:#1a1a1a;margin-top:8px">Your Order is Ready!</div>
+      <div style="font-size:14px;color:#666;margin-top:6px">Hi <strong>${order.customerName || "there"}</strong> — come grab your food!</div>
+    </td></tr>
+    <tr><td style="padding:16px 32px 24px">
+      <div style="background:#f0fdf4;border:2px solid #22c55e;border-radius:10px;padding:16px 20px;text-align:center">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#16a34a;margin-bottom:4px">Your Order Code</div>
+        <div style="font-size:36px;font-weight:900;letter-spacing:4px;color:#16a34a">${order.confirmationCode}</div>
+        <div style="font-size:13px;color:#555;margin-top:8px;font-weight:600">📍 Wickhams Cay 1, Road Town, BVI</div>
+        <div style="font-size:12px;color:#888;margin-top:4px">Total: ${fmtMoney(order.total)} · ${PAY_LABEL[order.paymentMethod] ?? order.paymentMethod}</div>
+      </div>
+    </td></tr>
+  `);
+
+  await mailer.sendMail({
+    from: SMTP_FROM,
+    to: order.customerEmail,
+    subject: `Your order is ready for pickup! 🌮 #${order.confirmationCode}`,
+    html,
+  });
+}
+
 router.get("/orders", async (req, res): Promise<void> => {
   const queryParsed = ListOrdersQueryParams.safeParse(req.query);
   if (!queryParsed.success) {
@@ -235,6 +343,13 @@ router.post("/orders", async (req, res): Promise<void> => {
     total,
   ).catch(() => {});
 
+  // Send confirmation email for online orders with an email address
+  if (order.source !== "pos" && order.customerEmail) {
+    sendConfirmationEmail(order, items).catch((err) =>
+      console.error("[email] confirmation failed:", err?.message)
+    );
+  }
+
   res.status(201).json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
 
@@ -328,6 +443,13 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     .select()
     .from(orderItemsTable)
     .where(eq(orderItemsTable.orderId, order.id));
+
+  // Send "ready for pickup" email when status transitions to ready
+  if (parsed.data.status === "ready" && order.customerEmail) {
+    sendReadyEmail(order).catch((err) =>
+      console.error("[email] ready notification failed:", err?.message)
+    );
+  }
 
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
