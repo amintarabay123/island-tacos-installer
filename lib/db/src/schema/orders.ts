@@ -24,6 +24,7 @@ export const ordersTable = pgTable("orders", {
   kdsCleared: boolean("kds_cleared").notNull().default(false),
   cancellationReason: text("cancellation_reason"),
   estimatedReadyAt: timestamp("estimated_ready_at", { withTimezone: true }),
+  scheduledPickupAt: timestamp("scheduled_pickup_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [

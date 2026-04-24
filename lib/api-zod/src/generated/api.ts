@@ -247,6 +247,7 @@ export const CreateOrderBody = zod.object({
   source: zod.enum(["online", "pos"]).optional(),
   discountAmount: zod.number().optional(),
   notes: zod.string().nullish(),
+  scheduledPickupAt: zod.string().nullish(),
   items: zod.array(
     zod.object({
       menuItemId: zod.number(),

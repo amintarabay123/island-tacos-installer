@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useCart } from "@/lib/cart-context";
 import { Layout } from "@/components/layout";
@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreateOrder } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, Loader2, XCircle } from "lucide-react";
+import { ShoppingBag, Loader2, XCircle, Clock, CalendarClock } from "lucide-react";
 import { saveLastOrder, getCustomer, saveCustomer } from "@/lib/customer-account";
 import { AthMovilDirectButton } from "@/components/athmovil-button";
 
@@ -37,7 +38,32 @@ export default function Checkout() {
   const [storeOpen, setStoreOpen] = useState(true);
   const [storeOpenTime, setStoreOpenTime] = useState("11:00 AM");
   const [storeCloseOrdersAt, setStoreCloseOrdersAt] = useState("6:45 PM");
+  const [rawCloseTime, setRawCloseTime] = useState("19:00");
+  const [pickupMode, setPickupMode] = useState<"asap" | "scheduled">("asap");
+  const [scheduledTime, setScheduledTime] = useState<string>("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Generate available pickup time slots for today (30-min minimum, 15-min increments, before close)
+  const pickupSlots = useMemo(() => {
+    const bviNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Puerto_Rico" }));
+    const minMins = bviNow.getHours() * 60 + bviNow.getMinutes() + 30;
+    const firstSlot = Math.ceil(minMins / 15) * 15;
+    const [closeH, closeM] = rawCloseTime.split(":").map(Number);
+    const maxMins = closeH * 60 + closeM;
+    const year = bviNow.getFullYear();
+    const month = String(bviNow.getMonth() + 1).padStart(2, "0");
+    const day = String(bviNow.getDate()).padStart(2, "0");
+    const slots: { label: string; isoStr: string }[] = [];
+    for (let mins = firstSlot; mins < maxMins; mins += 15) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      const ampm = h >= 12 ? "PM" : "AM";
+      const label = `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+      const isoStr = `${year}-${month}-${day}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00-04:00`;
+      slots.push({ label, isoStr });
+    }
+    return slots;
+  }, [rawCloseTime]);
 
   // Pre-fill from saved profile (shared with track page)
   useEffect(() => {
@@ -66,6 +92,7 @@ export default function Checkout() {
         setStoreOpen(data.is_open !== "false");
         setStoreOpenTime(fmt(data.open_time ?? "11:00"));
         setStoreCloseOrdersAt(fmt(data.closes_orders_at ?? "18:45"));
+        setRawCloseTime(data.close_time ?? "19:00");
       })
       .catch(() => {});
   }, []);
@@ -190,6 +217,11 @@ export default function Checkout() {
       toast({ title: "Please enter your phone number", variant: "destructive" });
       return;
     }
+    if (pickupMode === "scheduled" && !scheduledTime) {
+      toast({ title: "Please select a pickup time", variant: "destructive" });
+      return;
+    }
+
     // Remember for next time (shared with track page)
     saveCustomer({ name: customerName.trim(), phone: customerPhone.trim(), email: "" });
 
@@ -203,6 +235,7 @@ export default function Checkout() {
           deliveryAddress: null,
           paymentMethod: paymentMethod as "cash" | "card" | "athmovil",
           notes: notes || null,
+          scheduledPickupAt: pickupMode === "scheduled" ? scheduledTime : null,
           items: items.map((i) => ({
             menuItemId: i.menuItem.id,
             quantity: i.quantity,
@@ -272,6 +305,65 @@ export default function Checkout() {
                   />
                   <p className="text-xs text-muted-foreground">We'll call this number when your order is ready.</p>
                 </div>
+              </section>
+
+              <Separator />
+
+              {/* Pickup Time */}
+              <section className="space-y-3">
+                <h2 className="text-xl font-bold">Pickup Time</h2>
+                <div className="space-y-2">
+                  {[
+                    { value: "asap", icon: <Clock className="h-5 w-5" />, label: "As soon as possible", desc: "Ready in about 20–30 min" },
+                    { value: "scheduled", icon: <CalendarClock className="h-5 w-5" />, label: "Schedule a pickup time", desc: `Choose any time today before ${storeCloseOrdersAt}` },
+                  ].map(opt => {
+                    const selected = pickupMode === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setPickupMode(opt.value as "asap" | "scheduled")}
+                        className={`w-full flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-colors ${
+                          selected ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"
+                        }`}
+                      >
+                        <div className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${
+                          selected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                        }`}>
+                          {opt.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold">{opt.label}</p>
+                          <p className="text-sm text-muted-foreground">{opt.desc}</p>
+                        </div>
+                        <div className={`h-5 w-5 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors ${
+                          selected ? "border-primary bg-primary" : "border-muted-foreground/40"
+                        }`}>
+                          {selected && <div className="h-2 w-2 rounded-full bg-white" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {pickupMode === "scheduled" && (
+                  <div className="space-y-2 pt-1">
+                    <Label>Select a pickup time</Label>
+                    {pickupSlots.length === 0 ? (
+                      <p className="text-sm text-destructive">No available time slots today — we're closing soon.</p>
+                    ) : (
+                      <Select value={scheduledTime} onValueChange={setScheduledTime}>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Choose a time…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pickupSlots.map(slot => (
+                            <SelectItem key={slot.isoStr} value={slot.isoStr}>{slot.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                )}
               </section>
 
               <Separator />

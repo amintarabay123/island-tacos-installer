@@ -49,21 +49,22 @@ export default function TrackOrder() {
     );
   }
 
-  const { status, confirmationCode, customerName, cancellationReason, items, total, estimatedReadyAt } = order;
+  const { status, confirmationCode, customerName, cancellationReason, items, total, estimatedReadyAt, scheduledPickupAt } = order as typeof order & { scheduledPickupAt?: string | null };
 
-  function formatPickupTime(eta: Date | string | null | undefined): string | null {
+  function formatPickupTime(eta: Date | string | null | undefined, isScheduled: boolean): string | null {
     if (!eta) return null;
     const d = new Date(eta);
     if (isNaN(d.getTime())) return null;
+    const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" });
+    if (isScheduled) return `Scheduled for ${timeStr}`;
     const diffMs = d.getTime() - Date.now();
     const diffMin = Math.round(diffMs / 60000);
     if (diffMin <= 1) return "Just a moment";
-    const timeStr = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
     if (diffMin < 60) return `About ${diffMin} min — ready around ${timeStr}`;
     return `Ready around ${timeStr}`;
   }
 
-  const pickupTimeLabel = formatPickupTime(estimatedReadyAt);
+  const pickupTimeLabel = formatPickupTime(estimatedReadyAt, !!scheduledPickupAt);
 
   if (status === "cancelled") {
     return (

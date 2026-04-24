@@ -30,6 +30,7 @@ type Order = {
   notes?: string | null;
   total: number;
   createdAt: string;
+  scheduledPickupAt?: string | null;
   items: OrderItem[];
 };
 
@@ -534,6 +535,15 @@ export default function Kitchen() {
       byCol.ready.push(o);
     }
   }
+  // Sort each column: soonest scheduled first, then ASAP by creation time
+  const sortOrders = (list: Order[]) => list.sort((a, b) => {
+    const ta = a.scheduledPickupAt ? new Date(a.scheduledPickupAt).getTime() : new Date(a.createdAt).getTime();
+    const tb = b.scheduledPickupAt ? new Date(b.scheduledPickupAt).getTime() : new Date(b.createdAt).getTime();
+    return ta - tb;
+  });
+  sortOrders(byCol.new);
+  sortOrders(byCol.preparing);
+  sortOrders(byCol.ready);
 
   const hasOrders = orders.length > 0;
 
@@ -673,7 +683,16 @@ export default function Kitchen() {
                             {order.customerName}
                           </div>
                           <div className="text-gray-500 font-mono text-sm mt-1">#{order.confirmationCode}</div>
-                          {order.status === "confirmed" && (
+                          {order.scheduledPickupAt && (() => {
+                            const d = new Date(order.scheduledPickupAt);
+                            const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" });
+                            return (
+                              <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-purple-900/60 border border-purple-500/50">
+                                <span className="text-purple-200 text-xs font-bold">⏰ Scheduled {timeStr}</span>
+                              </div>
+                            );
+                          })()}
+                          {!order.scheduledPickupAt && order.status === "confirmed" && (
                             <div className="text-blue-300 text-xs font-semibold mt-0.5 uppercase tracking-wide">Accepted</div>
                           )}
                           {order.status === "ready" && (

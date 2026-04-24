@@ -229,12 +229,13 @@ router.post("/orders", async (req, res): Promise<void> => {
     return;
   }
 
-  // Enforce business hours for online orders only
+  // Enforce business hours for online orders only + validate scheduled pickup
+  let scheduledPickupAtDate: Date | null = null;
   if (parsed.data.source !== "pos") {
     const settingRows = await db.select().from(storeSettingsTable);
     const settings: Record<string, string> = { ...SETTING_DEFAULTS };
     for (const row of settingRows) settings[row.key] = row.value;
-    const { is_open, closes_orders_at } = computeStoreStatus(settings);
+    const { is_open } = computeStoreStatus(settings);
     if (!is_open) {
       const [ch, cm] = (settings.open_time ?? "11:00").split(":").map(Number);
       const ampm = ch >= 12 ? "PM" : "AM";
@@ -242,6 +243,34 @@ router.post("/orders", async (req, res): Promise<void> => {
       const opensAt = `${hour}:${String(cm).padStart(2, "0")} ${ampm}`;
       res.status(403).json({ error: `We're not accepting orders right now. We open at ${opensAt} AST.`, code: "CLOSED" });
       return;
+    }
+
+    // Validate scheduled pickup time if provided
+    if (parsed.data.scheduledPickupAt) {
+      const d = new Date(parsed.data.scheduledPickupAt);
+      if (isNaN(d.getTime())) {
+        res.status(400).json({ error: "Invalid scheduled pickup time" });
+        return;
+      }
+      // Must be at least 15 minutes in the future
+      if (d.getTime() < Date.now() + 15 * 60 * 1000) {
+        res.status(400).json({ error: "Scheduled pickup must be at least 15 minutes from now" });
+        return;
+      }
+      // Must be same day in BVI and before closing time
+      const bviScheduled = new Date(d.toLocaleString("en-US", { timeZone: "America/Puerto_Rico" }));
+      const bviNow = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Puerto_Rico" }));
+      if (bviScheduled.toDateString() !== bviNow.toDateString()) {
+        res.status(400).json({ error: "Scheduled orders must be for today only" });
+        return;
+      }
+      const scheduledMins = bviScheduled.getHours() * 60 + bviScheduled.getMinutes();
+      const [closeH, closeM] = (settings.close_time ?? "19:00").split(":").map(Number);
+      if (scheduledMins >= closeH * 60 + closeM) {
+        res.status(400).json({ error: "Scheduled time must be before closing time" });
+        return;
+      }
+      scheduledPickupAtDate = d;
     }
   }
 
@@ -331,7 +360,8 @@ router.post("/orders", async (req, res): Promise<void> => {
       deliveryFee: String(deliveryFee),
       total: String(total),
       notes: parsed.data.notes ?? null,
-      estimatedReadyAt,
+      estimatedReadyAt: scheduledPickupAtDate ?? estimatedReadyAt,
+      scheduledPickupAt: scheduledPickupAtDate,
     })
     .returning();
 

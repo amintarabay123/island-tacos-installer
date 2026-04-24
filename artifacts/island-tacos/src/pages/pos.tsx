@@ -26,7 +26,7 @@ type Order = {
   paymentStatus: string; paymentMethod: string; source: string;
   subtotal: number; discountAmount: number; tax: number; total: number;
   notes?: string | null; createdAt: string; customerPhone?: string | null; customerEmail?: string | null;
-  orderType?: string; estimatedReadyAt?: string | null;
+  orderType?: string; estimatedReadyAt?: string | null; scheduledPickupAt?: string | null;
   items: { id: number; menuItemId: number; menuItemName: string; quantity: number; menuItemPrice: number; subtotal: number; modifierSelections?: CartModifier[] | null; notes?: string | null; alreadyMade?: boolean | null }[];
 };
 
@@ -1011,6 +1011,11 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                       <span className={`text-xs font-semibold ${STATUS_COLOR[o.status] ?? "text-gray-500"}`}>
                         {STATUS_LABEL[o.status] ?? o.status}
                       </span>
+                      {o.scheduledPickupAt && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 font-semibold">
+                          ⏰ {new Date(o.scheduledPickupAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" })}
+                        </span>
+                      )}
                       <span className={`text-xs px-1.5 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"}`}>
                         {o.source === "pos" ? "POS" : "Online"}
                       </span>
