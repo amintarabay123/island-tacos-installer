@@ -65,7 +65,7 @@ export default defineConfig({
           // Routing + state
           "vendor-query": ["@tanstack/react-query", "wouter"],
           // Clerk auth — large, almost never changes
-          "vendor-clerk": ["@clerk/react", "@clerk/shared"],
+          "vendor-clerk": ["@clerk/react"],
           // Radix UI components — large UI library
           "vendor-radix": [
             "@radix-ui/react-dialog",
