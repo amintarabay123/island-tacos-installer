@@ -18,6 +18,7 @@ import settingsRouter from "./settings";
 import employeesRouter from "./employees";
 import imageProxyRouter from "./image-proxy";
 import syncRouter from "./sync";
+import downloadsRouter from "./downloads";
 
 const router: IRouter = Router();
 
@@ -30,6 +31,9 @@ router.get("/print/bridge.js", (_req, res): void => {
   res.setHeader("Content-Disposition", 'attachment; filename="island-tacos-bridge.js"');
   res.send(bridgeScriptContent());
 });
+
+// Public download routes (no auth required)
+router.use(downloadsRouter);
 
 // Public routes (upload requires staff auth; /uploads static serving is public)
 router.use(healthRouter);
