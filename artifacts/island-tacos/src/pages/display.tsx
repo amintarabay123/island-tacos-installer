@@ -73,7 +73,7 @@ export default function CustomerDisplay() {
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setPageMeta("Customer Display — Island Tacos", "🖥️", { iconUrl: "/icon-display-192.png" });
+    setPageMeta("Customer Display — Island Tacos", "🖥️", { iconUrl: "/icon-display-192.png", manifestUrl: "/manifest-display.json" });
   }, []);
 
   // Connect via SSE for instant updates; fall back to polling if needed

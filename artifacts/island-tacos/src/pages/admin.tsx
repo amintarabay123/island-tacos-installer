@@ -39,7 +39,7 @@ const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
 type RejectState = { orderId: number; reason: string } | null;
 
 export default function Admin() {
-  useEffect(() => { setPageMeta("Admin — Island Tacos", "⚙️", { iconUrl: "/icon-admin-192.png" }); }, []);
+  useEffect(() => { setPageMeta("Admin — Island Tacos", "⚙️", { iconUrl: "/icon-admin-192.png", manifestUrl: "/manifest-admin.json" }); }, []);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
