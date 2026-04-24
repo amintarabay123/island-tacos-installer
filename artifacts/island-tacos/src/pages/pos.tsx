@@ -385,9 +385,10 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
 
 // ─── Payment Modal ────────────────────────────────────────────────────────────
 
-function PaymentModal({ total, onPay, onClose, onSplit, onTabChange }: {
+function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHold }: {
   total: number;
   onPay: (method: string, tendered?: number, splitNote?: string) => void;
+  onPayAndHold?: (method: string, tendered?: number, splitNote?: string) => void;
   onClose: () => void;
   onSplit?: () => void;
   onTabChange?: (tab: string) => void;
@@ -587,12 +588,22 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange }: {
             </button>
           )}
           {tab !== "split" && (
-            <button
-              disabled={tab === "cash" && parseFloat(tendered || "0") < total}
-              onClick={() => onPay(tab, tab === "cash" ? parseFloat(tendered) : undefined)}
-              className="flex-1 h-12 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-black text-lg transition-colors">
-              Charge {fmt(total)}
-            </button>
+            <div className="flex-1 flex flex-col gap-2">
+              {onPayAndHold && (
+                <button
+                  disabled={tab === "cash" && parseFloat(tendered || "0") < total}
+                  onClick={() => onPayAndHold(tab, tab === "cash" ? parseFloat(tendered) : undefined)}
+                  className="w-full h-11 rounded-xl bg-amber-400 hover:bg-amber-500 disabled:opacity-30 disabled:cursor-not-allowed text-black font-bold text-sm transition-colors">
+                  ⏸ Charge & Hold
+                </button>
+              )}
+              <button
+                disabled={tab === "cash" && parseFloat(tendered || "0") < total}
+                onClick={() => onPay(tab, tab === "cash" ? parseFloat(tendered) : undefined)}
+                className="w-full h-12 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-30 disabled:cursor-not-allowed text-black font-black text-lg transition-colors">
+                {onPayAndHold ? "✅ Charge & Complete" : `Charge ${fmt(total)}`}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -954,6 +965,20 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     onPaymentComplete(paidOrder, tendered);
   };
 
+  const completeWithPaymentAndHold = async (method: string, tendered?: number, splitNote?: string) => {
+    if (!chargeOrder) return;
+    const notes = splitNote
+      ? (chargeOrder.notes ? `${chargeOrder.notes}\n${splitNote}` : splitNote)
+      : chargeOrder.notes;
+    await fetch(`/api/orders/${chargeOrder.id}`, {
+      method: "PATCH", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", ...(notes ? { notes } : {}) }),
+    });
+    setChargeOrder(null);
+    load(); // ticket stays in list (status is still "confirmed", not "completed")
+  };
+
   const completeOrder = async (id: number) => {
     await fetch(`/api/orders/${id}`, {
       method: "PATCH", credentials: "include",
@@ -1076,6 +1101,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
         <PaymentModal
           total={chargeOrder.total}
           onPay={completeWithPayment}
+          onPayAndHold={completeWithPaymentAndHold}
           onClose={() => setChargeOrder(null)}
           onSplit={() => { setSplitChargeOrder(chargeOrder); setChargeOrder(null); }}
           onTabChange={(tab) => {
