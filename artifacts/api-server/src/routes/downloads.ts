@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { spawn } from "child_process";
 
 const router: IRouter = Router();
 
@@ -40,6 +41,42 @@ router.get("/download/setup-guide", (_req, res): void => {
   if (!fs.existsSync(full)) { res.status(404).send("Not found"); return; }
   res.setHeader("Content-Type", "text/html");
   res.send(fs.readFileSync(full, "utf-8"));
+});
+
+// Full project download — streams a fresh tar.gz of the source code (excludes node_modules, dist, .git)
+// Windows 10/11 can open .tar.gz natively (right-click → Extract All), or use 7-Zip/WinRAR
+router.get("/download/project", (req, res): void => {
+  const filename = "island-tacos-project.tar.gz";
+  res.setHeader("Content-Type", "application/gzip");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+  const exclude = [
+    "--exclude=./.git",
+    "--exclude=*/node_modules",
+    "--exclude=./.local",
+    "--exclude=*/dist",
+    "--exclude=*.log",
+    "--exclude=*.map",
+    "--exclude=./attached_assets",
+    "--exclude=./artifacts/island-tacos/public/island-tacos-installer*",
+  ];
+
+  const tar = spawn("tar", ["-czf", "-", ...exclude, "."], { cwd: PROJECT_ROOT });
+
+  tar.stdout.pipe(res);
+
+  tar.stderr.on("data", (data: Buffer) => {
+    // log but don't fail — tar emits warnings about changing files that are harmless
+    console.warn("[download/project] tar warning:", data.toString().trim());
+  });
+
+  tar.on("error", (err: Error) => {
+    if (!res.headersSent) {
+      res.status(500).send("Failed to create archive: " + err.message);
+    }
+  });
+
+  req.on("close", () => tar.kill());
 });
 
 export default router;
