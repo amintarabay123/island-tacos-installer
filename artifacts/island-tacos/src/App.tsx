@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { ClerkProvider, useClerk } from "@clerk/react";
@@ -7,31 +7,36 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/lib/cart-context";
 import ProtectedRoute from "@/components/protected-route";
 import { ADMIN_PATH, adminRoutes } from "@/lib/admin-path";
+import InstallPrompt from "@/components/install-prompt";
+import FbBrowserPrompt from "@/components/fb-browser-prompt";
+
+// Customer-facing pages — eager (fastest path for real customers)
 import Home from "@/pages/home";
 import Checkout from "@/pages/checkout";
 import TrackOrder from "@/pages/track";
-import Admin from "@/pages/admin";
-import AdminMenu from "@/pages/admin-menu";
-import AdminModifiers from "@/pages/admin-modifiers";
-import AdminReports from "@/pages/admin-reports";
-import AdminCustomers from "@/pages/admin-customers";
-import AdminSettings from "@/pages/admin-settings";
-import AccountPage from "@/pages/account";
-import Kitchen from "@/pages/kitchen";
-import POS from "@/pages/pos";
-import CustomerDisplay from "@/pages/display";
-import StaffLogin from "@/pages/staff-login";
-import SignInPage from "@/pages/sign-in";
-import SignUpPage from "@/pages/sign-up";
 import NotFound from "@/pages/not-found";
-import InstallPrompt from "@/components/install-prompt";
-import FbBrowserPrompt from "@/components/fb-browser-prompt";
+
+// Everything else is lazy — these are staff/admin pages, load only when navigated to
+const Admin = lazy(() => import("@/pages/admin"));
+const AdminMenu = lazy(() => import("@/pages/admin-menu"));
+const AdminModifiers = lazy(() => import("@/pages/admin-modifiers"));
+const AdminReports = lazy(() => import("@/pages/admin-reports"));
+const AdminCustomers = lazy(() => import("@/pages/admin-customers"));
+const AdminSettings = lazy(() => import("@/pages/admin-settings"));
+const AccountPage = lazy(() => import("@/pages/account"));
+const Kitchen = lazy(() => import("@/pages/kitchen"));
+const POS = lazy(() => import("@/pages/pos"));
+const CustomerDisplay = lazy(() => import("@/pages/display"));
+const StaffLogin = lazy(() => import("@/pages/staff-login"));
+const SignInPage = lazy(() => import("@/pages/sign-in"));
+const SignUpPage = lazy(() => import("@/pages/sign-up"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 30 * 1000,
+      staleTime: 60 * 1000,       // 1 min — reduce redundant refetches
+      gcTime: 10 * 60 * 1000,     // 10 min — keep unused data in memory cache longer
     },
   },
 });
@@ -134,7 +139,9 @@ function ClerkProviderWithRoutes() {
         <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
           <CartProvider>
-            <Router />
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+              <Router />
+            </Suspense>
             <Toaster />
             <FbBrowserPrompt />
             <InstallPrompt />

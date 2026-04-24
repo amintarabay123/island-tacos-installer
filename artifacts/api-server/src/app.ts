@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import compression from "compression";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
 import { CLERK_PROXY_PATH, clerkProxyMiddleware } from "./middlewares/clerkProxyMiddleware";
@@ -9,6 +10,9 @@ import path from "path";
 import { existsSync } from "fs";
 
 const app: Express = express();
+
+// Gzip all responses — biggest single win for slow connections
+app.use(compression());
 
 app.use(
   pinoHttp({

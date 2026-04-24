@@ -57,6 +57,30 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Core React runtime — changes almost never, maximally cacheable
+          "vendor-react": ["react", "react-dom"],
+          // Routing + state
+          "vendor-query": ["@tanstack/react-query", "wouter"],
+          // Clerk auth — large, almost never changes
+          "vendor-clerk": ["@clerk/react", "@clerk/shared"],
+          // Radix UI components — large UI library
+          "vendor-radix": [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-label",
+            "@radix-ui/react-select",
+            "@radix-ui/react-separator",
+            "@radix-ui/react-slot",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-toast",
+            "@radix-ui/react-tooltip",
+          ],
+        },
+      },
+    },
   },
   server: {
     port,
