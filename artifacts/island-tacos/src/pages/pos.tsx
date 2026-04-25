@@ -1551,6 +1551,8 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<SoldOutData | null>(null);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [quickSearch, setQuickSearch] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1617,6 +1619,45 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
   const soldOutOptCount = data ? data.modifiers.reduce((s, m) => s + m.unavailableOptionIds.length, 0) : 0;
   const totalSoldOut = soldOutItemCount + soldOutOptCount;
 
+  // ── Bulk / Quick-mark helpers ──────────────────────────────────────────────
+  const qTerm = quickSearch.trim().toLowerCase();
+  const bulkMatchItems = qTerm && data
+    ? data.items.filter(i => i.name.toLowerCase().includes(qTerm))
+    : [];
+  const bulkMatchOptions: { mod: SoldOutModifier; optionId: string }[] = qTerm && data
+    ? data.modifiers.flatMap(m =>
+        (m.options as { id: string; name: string; price: number }[])
+          .filter(o => o.name.toLowerCase().includes(qTerm))
+          .map(o => ({ mod: m, optionId: o.id }))
+      )
+    : [];
+  const bulkTotal = bulkMatchItems.length + bulkMatchOptions.length;
+
+  const bulkMark = async (available: boolean) => {
+    if (!bulkTotal || bulkBusy) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all([
+        ...bulkMatchItems.map(item =>
+          fetch(`/api/menu/soldout/item/${item.id}`, {
+            method: "POST", credentials: "include",
+            headers: { "Content-Type": "application/json", ...authHeaders() },
+            body: JSON.stringify({ available }),
+          })
+        ),
+        ...bulkMatchOptions.map(({ mod, optionId }) =>
+          fetch("/api/menu/soldout/modifier-option", {
+            method: "POST", credentials: "include",
+            headers: { "Content-Type": "application/json", ...authHeaders() },
+            body: JSON.stringify({ modifierId: mod.id, optionId, available }),
+          })
+        ),
+      ]);
+      await load();
+      setQuickSearch("");
+    } finally { setBulkBusy(false); }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-stretch justify-end" onClick={onClose}>
       <div
@@ -1626,9 +1667,9 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-red-50">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">86 List — Sold Out</h2>
+            <h2 className="text-lg font-bold text-gray-900">🚫 Sold Out List</h2>
             {totalSoldOut > 0 ? (
-              <p className="text-xs text-red-600 font-medium mt-0.5">{totalSoldOut} item{totalSoldOut !== 1 ? "s" : ""} currently 86'd</p>
+              <p className="text-xs text-red-600 font-medium mt-0.5">{totalSoldOut} item{totalSoldOut !== 1 ? "s" : ""} currently sold out</p>
             ) : (
               <p className="text-xs text-gray-400 mt-0.5">Everything is available</p>
             )}
@@ -1638,6 +1679,53 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
             className="text-gray-400 hover:text-gray-600 text-2xl leading-none px-1"
           >×</button>
         </div>
+
+        {/* Quick Mark by keyword */}
+        {!loading && data && (
+          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Quick Mark</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={quickSearch}
+                onChange={e => setQuickSearch(e.target.value)}
+                placeholder='e.g. "Steak" or "Shrimp"'
+                className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
+              />
+            </div>
+            {qTerm && (
+              <div className="mt-2">
+                {bulkTotal > 0 ? (
+                  <>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Found <span className="font-bold text-gray-800">{bulkTotal}</span> match{bulkTotal !== 1 ? "es" : ""}
+                      {bulkMatchItems.length > 0 && ` (${bulkMatchItems.length} item${bulkMatchItems.length !== 1 ? "s" : ""})`}
+                      {bulkMatchOptions.length > 0 && ` · ${bulkMatchOptions.length} modifier option${bulkMatchOptions.length !== 1 ? "s" : ""}`}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        disabled={bulkBusy}
+                        onClick={() => bulkMark(false)}
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2 rounded-lg transition-colors disabled:opacity-40"
+                      >
+                        {bulkBusy ? "Marking…" : "🚫 Mark All Sold Out"}
+                      </button>
+                      <button
+                        disabled={bulkBusy}
+                        onClick={() => bulkMark(true)}
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-bold py-2 rounded-lg transition-colors disabled:opacity-40"
+                      >
+                        {bulkBusy ? "…" : "✓ Restore All"}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-400 italic">No items or options match "{qTerm}"</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
@@ -1667,7 +1755,7 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
                         >
                           <span className={`text-sm font-medium flex-1 mr-2 ${isSoldOut ? "line-through text-red-400" : "text-gray-800"}`}>
                             {item.name}
-                            {isSoldOut && <span className="ml-2 text-xs font-bold text-red-500 no-underline" style={{ textDecoration: "none" }}>86'd</span>}
+                            {isSoldOut && <span className="ml-2 text-xs font-bold text-red-500 no-underline" style={{ textDecoration: "none" }}>OUT</span>}
                           </span>
                           <button
                             disabled={busy}
@@ -1678,7 +1766,7 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
                                 : "bg-red-100 text-red-700 hover:bg-red-200"
                             } disabled:opacity-40`}
                           >
-                            {busy ? "…" : isSoldOut ? "Restore" : "86 It"}
+                            {busy ? "…" : isSoldOut ? "Restore" : "Sold Out"}
                           </button>
                         </div>
                       );
@@ -1716,7 +1804,7 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
                             <span className={`text-sm flex-1 mr-2 ${isSoldOut ? "line-through text-red-400" : "text-gray-700"}`}>
                               {opt.name}
                               {opt.price > 0 && <span className="text-gray-400 text-xs ml-1">+${opt.price.toFixed(2)}</span>}
-                              {isSoldOut && <span className="ml-2 text-xs font-bold text-red-500" style={{ textDecoration: "none" }}>86'd</span>}
+                              {isSoldOut && <span className="ml-2 text-xs font-bold text-red-500" style={{ textDecoration: "none" }}>OUT</span>}
                             </span>
                             <button
                               disabled={busy}
@@ -1727,7 +1815,7 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
                                   : "bg-red-100 text-red-700 hover:bg-red-200"
                               } disabled:opacity-40`}
                             >
-                              {busy ? "…" : isSoldOut ? "Restore" : "86 It"}
+                              {busy ? "…" : isSoldOut ? "Restore" : "Sold Out"}
                             </button>
                           </div>
                         );
@@ -2799,7 +2887,7 @@ export default function POS() {
             onClick={() => setSoldOutOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-sm font-bold transition-colors"
           >
-            86 <span className="hidden sm:inline">List</span>
+            🚫 <span className="hidden sm:inline">Sold Out</span>
           </button>
           <button
             onClick={() => setTicketsOpen(true)}
