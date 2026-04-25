@@ -189,6 +189,9 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
       closeTime: formatTime(settings.close_time ?? "19:00"),
       isOpen: is_open,
       ordersClosedAt: formatTime(closes_orders_at),
+      ...(is_open ? {} : {
+        closedInstruction: `IMPORTANT: Island Tacos is currently CLOSED. You MUST NOT take any orders or collect any food selections. Inform the caller that the store is closed and that they can call back when we open at ${formatTime(settings.open_time ?? "11:00")} AST. Do not attempt to place an order.`,
+      }),
       menu: menuData,
     };
 
@@ -234,10 +237,12 @@ router.post("/vapi/order", async (req: Request, res: Response): Promise<void> =>
     const ampm = ch >= 12 ? "PM" : "AM";
     const hour = ch % 12 || 12;
     const opensAt = `${hour}:${String(cm).padStart(2, "0")} ${ampm}`;
-    res.status(403).json({
-      error: `We're not accepting orders right now. We open at ${opensAt} AST.`,
-      code: "CLOSED",
-    });
+    console.log(`[vapi/order] rejected — store closed, opens at ${opensAt}`);
+    res.json(vapiResult(toolCallId, JSON.stringify({
+      success: false,
+      error: "STORE_CLOSED",
+      message: `Island Tacos is currently closed and not accepting orders. We open at ${opensAt} AST. Please call back during business hours.`,
+    })));
     return;
   }
 
