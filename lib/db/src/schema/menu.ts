@@ -62,6 +62,8 @@ export const modifiersTable = pgTable("modifiers", {
   minSelections: integer("min_selections").notNull().default(0),
   maxSelections: integer("max_selections"),
   sortOrder: integer("sort_order").notNull().default(0),
+  // IDs of modifier options currently marked as sold out (86'd)
+  unavailableOptionIds: text("unavailable_option_ids").array().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

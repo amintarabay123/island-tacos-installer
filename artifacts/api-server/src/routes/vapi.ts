@@ -151,11 +151,13 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
         .map(m => ({
           name: m.name,
           required: m.required,
-          options: (m.options as { id: string; name: string; price: number }[]).map(o => ({
-            id: o.id,
-            name: o.name,
-            price: o.price,
-          })),
+          options: (m.options as { id: string; name: string; price: number }[])
+            .filter(o => !(m.unavailableOptionIds ?? []).includes(o.id))
+            .map(o => ({
+              id: o.id,
+              name: o.name,
+              price: o.price,
+            })),
         }));
 
       return {

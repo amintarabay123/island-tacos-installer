@@ -1536,6 +1536,215 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ─── 86 List / Sold-Out Drawer ────────────────────────────────────────────────
+
+type SoldOutItem = { id: number; name: string; categoryId: number; available: boolean };
+type SoldOutModifier = {
+  id: number; name: string;
+  options: { id: string; name: string; price: number }[];
+  unavailableOptionIds: string[];
+};
+type SoldOutCategory = { id: number; name: string };
+type SoldOutData = { items: SoldOutItem[]; modifiers: SoldOutModifier[]; categories: SoldOutCategory[] };
+
+function SoldOutDrawer({ onClose }: { onClose: () => void }) {
+  const [data, setData] = useState<SoldOutData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch("/api/menu/soldout", { credentials: "include", headers: authHeaders() });
+      if (r.ok) setData(await r.json());
+    } finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggleItem = async (item: SoldOutItem) => {
+    const key = `item-${item.id}`;
+    setToggling(key);
+    const newVal = !item.available;
+    try {
+      const r = await fetch(`/api/menu/soldout/item/${item.id}`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ available: newVal }),
+      });
+      if (r.ok) {
+        setData(prev => prev ? {
+          ...prev,
+          items: prev.items.map(i => i.id === item.id ? { ...i, available: newVal } : i),
+        } : prev);
+      }
+    } finally { setToggling(null); }
+  };
+
+  const toggleOption = async (mod: SoldOutModifier, optionId: string) => {
+    const key = `opt-${mod.id}-${optionId}`;
+    setToggling(key);
+    const isCurrentlyUnavailable = mod.unavailableOptionIds.includes(optionId);
+    const newAvailable = isCurrentlyUnavailable; // toggling: if unavailable → make available
+    try {
+      const r = await fetch("/api/menu/soldout/modifier-option", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ modifierId: mod.id, optionId, available: newAvailable }),
+      });
+      if (r.ok) {
+        setData(prev => prev ? {
+          ...prev,
+          modifiers: prev.modifiers.map(m => m.id !== mod.id ? m : {
+            ...m,
+            unavailableOptionIds: newAvailable
+              ? m.unavailableOptionIds.filter(id => id !== optionId)
+              : [...m.unavailableOptionIds, optionId],
+          }),
+        } : prev);
+      }
+    } finally { setToggling(null); }
+  };
+
+  const itemsByCategory = data
+    ? data.categories.map(cat => ({
+        cat,
+        items: data.items.filter(i => i.categoryId === cat.id),
+      })).filter(g => g.items.length > 0)
+    : [];
+
+  const soldOutItemCount = data ? data.items.filter(i => !i.available).length : 0;
+  const soldOutOptCount = data ? data.modifiers.reduce((s, m) => s + m.unavailableOptionIds.length, 0) : 0;
+  const totalSoldOut = soldOutItemCount + soldOutOptCount;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-stretch justify-end" onClick={onClose}>
+      <div
+        className="bg-white w-full max-w-md h-full flex flex-col shadow-2xl overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-red-50">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">86 List — Sold Out</h2>
+            {totalSoldOut > 0 ? (
+              <p className="text-xs text-red-600 font-medium mt-0.5">{totalSoldOut} item{totalSoldOut !== 1 ? "s" : ""} currently 86'd</p>
+            ) : (
+              <p className="text-xs text-gray-400 mt-0.5">Everything is available</p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl leading-none px-1"
+          >×</button>
+        </div>
+
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+        ) : !data ? (
+          <div className="flex-1 flex items-center justify-center text-red-500 text-sm">Failed to load</div>
+        ) : (
+          <div className="flex-1 overflow-y-auto">
+
+            {/* ── Menu Items ── */}
+            <div className="px-4 pt-4 pb-2">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Menu Items</p>
+              {itemsByCategory.map(({ cat, items }) => (
+                <div key={cat.id} className="mb-4">
+                  <p className="text-xs font-semibold text-gray-500 mb-1.5">{cat.name}</p>
+                  <div className="space-y-1.5">
+                    {items.map(item => {
+                      const isSoldOut = !item.available;
+                      const busy = toggling === `item-${item.id}`;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex items-center justify-between rounded-xl px-3 py-2.5 border transition-colors ${
+                            isSoldOut
+                              ? "bg-red-50 border-red-200"
+                              : "bg-gray-50 border-gray-200"
+                          }`}
+                        >
+                          <span className={`text-sm font-medium flex-1 mr-2 ${isSoldOut ? "line-through text-red-400" : "text-gray-800"}`}>
+                            {item.name}
+                            {isSoldOut && <span className="ml-2 text-xs font-bold text-red-500 no-underline" style={{ textDecoration: "none" }}>86'd</span>}
+                          </span>
+                          <button
+                            disabled={busy}
+                            onClick={() => toggleItem(item)}
+                            className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors min-w-[80px] text-center ${
+                              isSoldOut
+                                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                : "bg-red-100 text-red-700 hover:bg-red-200"
+                            } disabled:opacity-40`}
+                          >
+                            {busy ? "…" : isSoldOut ? "Restore" : "86 It"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Divider */}
+            {data.modifiers.length > 0 && (
+              <div className="h-px bg-gray-200 mx-4 my-2" />
+            )}
+
+            {/* ── Modifier Options ── */}
+            {data.modifiers.length > 0 && (
+              <div className="px-4 pt-2 pb-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Modifier Options</p>
+                {data.modifiers.map(mod => (
+                  <div key={mod.id} className="mb-4">
+                    <p className="text-xs font-semibold text-gray-500 mb-1.5">{mod.name}</p>
+                    <div className="space-y-1.5">
+                      {(mod.options as { id: string; name: string; price: number }[]).map(opt => {
+                        const isSoldOut = mod.unavailableOptionIds.includes(opt.id);
+                        const busy = toggling === `opt-${mod.id}-${opt.id}`;
+                        return (
+                          <div
+                            key={opt.id}
+                            className={`flex items-center justify-between rounded-xl px-3 py-2.5 border transition-colors ${
+                              isSoldOut
+                                ? "bg-red-50 border-red-200"
+                                : "bg-gray-50 border-gray-200"
+                            }`}
+                          >
+                            <span className={`text-sm flex-1 mr-2 ${isSoldOut ? "line-through text-red-400" : "text-gray-700"}`}>
+                              {opt.name}
+                              {opt.price > 0 && <span className="text-gray-400 text-xs ml-1">+${opt.price.toFixed(2)}</span>}
+                              {isSoldOut && <span className="ml-2 text-xs font-bold text-red-500" style={{ textDecoration: "none" }}>86'd</span>}
+                            </span>
+                            <button
+                              disabled={busy}
+                              onClick={() => toggleOption(mod, opt.id)}
+                              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors min-w-[80px] text-center ${
+                                isSoldOut
+                                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                  : "bg-red-100 text-red-700 hover:bg-red-200"
+                              } disabled:opacity-40`}
+                            >
+                              {busy ? "…" : isSoldOut ? "Restore" : "86 It"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Open Shift Modal ────────────────────────────────────────────────────────
 
 function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
@@ -2131,6 +2340,7 @@ export default function POS() {
   const [holdModal, setHoldModal] = useState(false);
   const [ticketsOpen, setTicketsOpen] = useState(false);
   const [receiptsOpen, setReceiptsOpen] = useState(false);
+  const [soldOutOpen, setSoldOutOpen] = useState(false);
   const [itemNoteModal, setItemNoteModal] = useState<string | null>(null); // cart item key
   const [orderNoteModal, setOrderNoteModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -2586,6 +2796,12 @@ export default function POS() {
             🧾 <span className="hidden sm:inline">Receipts</span>
           </button>
           <button
+            onClick={() => setSoldOutOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-sm font-bold transition-colors"
+          >
+            86 <span className="hidden sm:inline">List</span>
+          </button>
+          <button
             onClick={() => setTicketsOpen(true)}
             className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${
               ticketCount > 0
@@ -3011,6 +3227,10 @@ export default function POS() {
 
       {receiptsOpen && (
         <ReceiptsDrawer onClose={() => setReceiptsOpen(false)} />
+      )}
+
+      {soldOutOpen && (
+        <SoldOutDrawer onClose={() => setSoldOutOpen(false)} />
       )}
 
       {/* Item note inline modal */}

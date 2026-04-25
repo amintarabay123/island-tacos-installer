@@ -229,11 +229,91 @@ router.get("/menu/items/:id/modifiers", async (req, res): Promise<void> => {
     .where(inArray(modifiersTable.loyverseId, modifierIds));
 
   // Return sorted by global sortOrder so POS respects the admin-set order
+  // Strip out any options that are currently 86'd (unavailableOptionIds)
   const ordered = mods
     .filter((m) => modifierIds.includes(m.loyverseId))
-    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+    .map((m) => ({
+      ...m,
+      options: (m.options as import("@workspace/db").ModifierOption[]).filter(
+        (o) => !(m.unavailableOptionIds ?? []).includes(o.id)
+      ),
+    }));
 
   res.json(ordered);
+});
+
+// ---- 86 List (Sold Out) ----
+
+// GET /api/menu/soldout — full sold-out snapshot for the POS panel
+router.get("/menu/soldout", async (_req, res): Promise<void> => {
+  const [items, modifiers] = await Promise.all([
+    db
+      .select({
+        id: menuItemsTable.id,
+        name: menuItemsTable.name,
+        categoryId: menuItemsTable.categoryId,
+        available: menuItemsTable.available,
+      })
+      .from(menuItemsTable)
+      .orderBy(menuItemsTable.categoryId, menuItemsTable.sortOrder),
+    db
+      .select({
+        id: modifiersTable.id,
+        name: modifiersTable.name,
+        options: modifiersTable.options,
+        unavailableOptionIds: modifiersTable.unavailableOptionIds,
+      })
+      .from(modifiersTable)
+      .orderBy(modifiersTable.sortOrder, modifiersTable.name),
+  ]);
+  const categories = await db
+    .select({ id: menuCategoriesTable.id, name: menuCategoriesTable.name })
+    .from(menuCategoriesTable)
+    .orderBy(menuCategoriesTable.sortOrder);
+  res.json({ items, modifiers, categories });
+});
+
+// POST /api/menu/soldout/item/:id — toggle a menu item's available flag
+router.post("/menu/soldout/item/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { available } = req.body as { available?: boolean };
+  if (typeof available !== "boolean") { res.status(400).json({ error: "available (bool) required" }); return; }
+  const [updated] = await db
+    .update(menuItemsTable)
+    .set({ available })
+    .where(eq(menuItemsTable.id, id))
+    .returning({ id: menuItemsTable.id, available: menuItemsTable.available });
+  if (!updated) { res.status(404).json({ error: "Item not found" }); return; }
+  res.json(updated);
+});
+
+// POST /api/menu/soldout/modifier-option — toggle a modifier option's availability
+// Body: { modifierId: number, optionId: string, available: boolean }
+router.post("/menu/soldout/modifier-option", async (req, res): Promise<void> => {
+  const { modifierId, optionId, available } = req.body as { modifierId?: unknown; optionId?: unknown; available?: unknown };
+  const mid = Number(modifierId);
+  if (isNaN(mid) || typeof optionId !== "string" || !optionId || typeof available !== "boolean") {
+    res.status(400).json({ error: "modifierId (number), optionId (string), available (bool) required" });
+    return;
+  }
+  const [modifier] = await db.select().from(modifiersTable).where(eq(modifiersTable.id, mid));
+  if (!modifier) { res.status(404).json({ error: "Modifier not found" }); return; }
+
+  let ids: string[] = Array.isArray(modifier.unavailableOptionIds) ? [...modifier.unavailableOptionIds] : [];
+  if (!available && !ids.includes(optionId)) {
+    ids.push(optionId);
+  } else if (available) {
+    ids = ids.filter((i) => i !== optionId);
+  }
+
+  const [updated] = await db
+    .update(modifiersTable)
+    .set({ unavailableOptionIds: ids })
+    .where(eq(modifiersTable.id, mid))
+    .returning({ id: modifiersTable.id, unavailableOptionIds: modifiersTable.unavailableOptionIds });
+  res.json(updated);
 });
 
 router.patch("/menu/items/:id", async (req, res): Promise<void> => {
