@@ -85,7 +85,7 @@ function validateVapiOrder(body: unknown): { data: VapiOrderPayload } | { error:
   };
 }
 
-router.get("/vapi/menu", async (_req: Request, res: Response): Promise<void> => {
+router.all("/vapi/menu", async (_req: Request, res: Response): Promise<void> => {
   try {
     const [categories, items, modifiers] = await Promise.all([
       db.select().from(menuCategoriesTable).orderBy(menuCategoriesTable.sortOrder),
