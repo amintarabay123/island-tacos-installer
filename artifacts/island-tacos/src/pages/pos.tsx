@@ -1205,6 +1205,8 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   const [emailSending, setEmailSending] = useState(false);
   const [emailStatus, setEmailStatus] = useState<"idle" | "sent" | "error">("idle");
   const [emailError, setEmailError] = useState("");
+  const [refiring, setRefiring] = useState(false);
+  const [refireStatus, setRefireStatus] = useState<"idle" | "sent" | "error">("idle");
 
   useEffect(() => {
     fetch("/api/orders", { credentials: "include" })
@@ -1288,6 +1290,32 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
             {refundSuccess && <p className="text-green-700 text-xs text-center">✓ Refund recorded</p>}
             {emailStatus === "sent" && <p className="text-green-700 text-xs text-center">✓ Receipt emailed!</p>}
             {emailStatus === "error" && <p className="text-red-600 text-xs text-center">Email failed: {emailError}</p>}
+            {refireStatus === "sent" && <p className="text-green-700 text-xs text-center">✓ Re-fired to KDS</p>}
+            {refireStatus === "error" && <p className="text-red-600 text-xs text-center">Re-fire failed — try again</p>}
+            <button
+              disabled={refiring}
+              onClick={async () => {
+                setRefiring(true);
+                setRefireStatus("idle");
+                try {
+                  const r = await fetch(`/api/orders/${selected.id}`, {
+                    method: "PATCH",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json", ...authHeaders() },
+                    body: JSON.stringify({ status: "ready", kdsCleared: false }),
+                  });
+                  if (r.ok) setRefireStatus("sent");
+                  else setRefireStatus("error");
+                } catch {
+                  setRefireStatus("error");
+                } finally {
+                  setRefiring(false);
+                }
+              }}
+              className="w-full h-10 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-300 text-purple-700 text-sm font-bold transition-colors disabled:opacity-50"
+            >
+              {refiring ? "Sending…" : "🔁 Re-fire to KDS"}
+            </button>
             <div className="flex gap-2">
               <button
                 onClick={async () => {
@@ -1467,7 +1495,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
             </p>
           )}
           {visible.map(o => (
-            <button key={o.id} onClick={() => setSelected(o)}
+            <button key={o.id} onClick={() => { setSelected(o); setRefireStatus("idle"); }}
               className="w-full bg-gray-100 hover:bg-gray-200 rounded-xl p-4 text-left transition-colors">
               <div className="flex items-start justify-between mb-1">
                 <div>
