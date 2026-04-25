@@ -168,14 +168,31 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
       };
     });
 
+    const settingRows = await db.select().from(storeSettingsTable);
+    const settings: Record<string, string> = { ...SETTING_DEFAULTS };
+    for (const row of settingRows) settings[row.key] = row.value;
+    const { is_open, closes_orders_at } = computeStoreStatus(settings);
+
+    const formatTime = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      const ampm = h >= 12 ? "PM" : "AM";
+      const h12 = h % 12 || 12;
+      return m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2, "0")}${ampm}`;
+    };
+
     const payload = {
       restaurantName: "Island Tacos",
       currency: "USD",
+      hours: settings.hours ?? `${formatTime(settings.open_time ?? "11:00")} – ${formatTime(settings.close_time ?? "19:00")} daily`,
+      openTime: formatTime(settings.open_time ?? "11:00"),
+      closeTime: formatTime(settings.close_time ?? "19:00"),
+      isOpen: is_open,
+      ordersClosedAt: formatTime(closes_orders_at),
       menu: menuData,
     };
 
     const resultStr = JSON.stringify(payload);
-    console.log(`[vapi/menu] returning ${menuData.length} items, ${resultStr.length} bytes`);
+    console.log(`[vapi/menu] returning ${menuData.length} items, hours=${payload.hours}, isOpen=${is_open}`);
     res.json(vapiResult(toolCallId, resultStr));
   } catch (err) {
     console.error("[vapi/menu] error:", err);
