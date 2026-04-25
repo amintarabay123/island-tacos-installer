@@ -51,9 +51,27 @@ interface VapiOrderPayload {
   items: VapiOrderItem[];
 }
 
-function validateVapiOrder(body: unknown): { data: VapiOrderPayload } | { error: string } {
-  if (!body || typeof body !== "object") return { error: "Invalid request body" };
+function extractVapiArgs(body: unknown): unknown {
+  // Vapi wraps arguments inside message.toolCallList[0].function.arguments (a JSON string)
+  if (!body || typeof body !== "object") return body;
   const b = body as Record<string, unknown>;
+  const message = b.message as Record<string, unknown> | undefined;
+  if (message) {
+    const list = message.toolCallList as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(list) && list.length > 0) {
+      const fn = list[0].function as Record<string, unknown> | undefined;
+      if (fn && typeof fn.arguments === "string") {
+        try { return JSON.parse(fn.arguments); } catch { /* fall through */ }
+      }
+    }
+  }
+  return body; // direct POST fallback
+}
+
+function validateVapiOrder(body: unknown): { data: VapiOrderPayload } | { error: string } {
+  const args = extractVapiArgs(body);
+  if (!args || typeof args !== "object") return { error: "Invalid request body" };
+  const b = args as Record<string, unknown>;
   if (!b.customerName || typeof b.customerName !== "string" || !b.customerName.trim()) return { error: "customerName is required" };
   if (!b.customerPhone || typeof b.customerPhone !== "string" || !b.customerPhone.trim()) return { error: "customerPhone is required" };
   if (!Array.isArray(b.items) || b.items.length === 0) return { error: "items must be a non-empty array" };
@@ -85,8 +103,31 @@ function validateVapiOrder(body: unknown): { data: VapiOrderPayload } | { error:
   };
 }
 
+function extractToolCallId(body: unknown): string | null {
+  if (!body || typeof body !== "object") return null;
+  const b = body as Record<string, unknown>;
+  // Vapi sends: { message: { toolCallList: [{ id, function: { name, arguments } }] } }
+  const message = b.message as Record<string, unknown> | undefined;
+  if (message) {
+    const list = message.toolCallList as Array<Record<string, unknown>> | undefined;
+    if (Array.isArray(list) && list.length > 0) return String(list[0].id ?? "");
+  }
+  // Also try top-level toolCallId
+  if (b.toolCallId) return String(b.toolCallId);
+  return null;
+}
+
+function vapiResult(toolCallId: string | null, result: string): Record<string, unknown> {
+  if (toolCallId) {
+    return { results: [{ toolCallId, result }] };
+  }
+  // Fallback for direct GET or unknown callers
+  return { result };
+}
+
 router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
-  console.log(`[vapi/menu] ${req.method} called`);
+  const toolCallId = extractToolCallId(req.body);
+  console.log(`[vapi/menu] ${req.method} called, toolCallId=${toolCallId}`);
   try {
     const [categories, items, modifiers] = await Promise.all([
       db.select().from(menuCategoriesTable).orderBy(menuCategoriesTable.sortOrder),
@@ -127,8 +168,9 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
       menu: menuData,
     };
 
-    console.log(`[vapi/menu] returning ${menuData.length} items, payload size ~${JSON.stringify(payload).length} bytes`);
-    res.json({ result: JSON.stringify(payload) });
+    const resultStr = JSON.stringify(payload);
+    console.log(`[vapi/menu] returning ${menuData.length} items, ${resultStr.length} bytes`);
+    res.json(vapiResult(toolCallId, resultStr));
   } catch (err) {
     console.error("[vapi/menu] error:", err);
     res.status(500).json({ error: "Failed to load menu" });
@@ -136,6 +178,9 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
 });
 
 router.post("/vapi/order", async (req: Request, res: Response): Promise<void> => {
+  const toolCallId = extractToolCallId(req.body);
+  console.log(`[vapi/order] called, toolCallId=${toolCallId}, body keys=${Object.keys(req.body || {}).join(",")}`);
+
   const secretCheck = checkVapiSecret(req);
   if (secretCheck === "missing_secret_config") {
     res.status(503).json({ error: "Webhook secret not configured. Set VAPI_WEBHOOK_SECRET environment variable." });
@@ -148,7 +193,8 @@ router.post("/vapi/order", async (req: Request, res: Response): Promise<void> =>
 
   const validation = validateVapiOrder(req.body);
   if ("error" in validation) {
-    res.status(400).json({ error: validation.error });
+    console.log(`[vapi/order] validation error: ${validation.error}`);
+    res.status(400).json(vapiResult(toolCallId, `Error: ${validation.error}`));
     return;
   }
 
@@ -284,17 +330,15 @@ router.post("/vapi/order", async (req: Request, res: Response): Promise<void> =>
 
   console.log(`[vapi/order] Phone order created: ${confirmationCode} for ${customerName} (${customerPhone})`);
 
-  res.status(201).json({
-    result: JSON.stringify({
-      success: true,
-      confirmationCode,
-      total,
-      estimatedMinutes,
-      estimatedReadyAt: estimatedReadyAt.toISOString(),
-      estimatedReadyAtFormatted: estimatedTimeStr,
-      message: `Order placed! Confirmation code: ${confirmationCode}. Ready in about ${estimatedMinutes} minutes around ${estimatedTimeStr}. Pay at pickup.`,
-    }),
-  });
+  res.status(201).json(vapiResult(toolCallId, JSON.stringify({
+    success: true,
+    confirmationCode,
+    total,
+    estimatedMinutes,
+    estimatedReadyAt: estimatedReadyAt.toISOString(),
+    estimatedReadyAtFormatted: estimatedTimeStr,
+    message: `Order placed! Confirmation code: ${confirmationCode}. Ready in about ${estimatedMinutes} minutes around ${estimatedTimeStr}. Pay at pickup.`,
+  })));
 });
 
 export default router;
