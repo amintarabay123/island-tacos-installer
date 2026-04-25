@@ -38,6 +38,8 @@ app.use(
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(cors({ origin: true, credentials: true }));
+// Vapi sends the full call transcript in every tool-call request — needs a large limit
+app.use("/api/vapi", express.json({ limit: "10mb" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
