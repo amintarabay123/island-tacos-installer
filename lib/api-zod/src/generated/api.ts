@@ -244,7 +244,7 @@ export const CreateOrderBody = zod.object({
   deliveryAddress: zod.string().nullish(),
   paymentMethod: zod.enum(["card", "athmovil", "cash", "split", "complimentary"]),
   paymentStatus: zod.enum(["pending", "paid"]).optional(),
-  source: zod.enum(["online", "pos"]).optional(),
+  source: zod.enum(["online", "pos", "phone"]).optional(),
   discountAmount: zod.number().optional(),
   notes: zod.string().nullish(),
   scheduledPickupAt: zod.string().nullish(),
@@ -281,6 +281,7 @@ export const GetOrderResponse = zod.object({
   customerPhone: zod.string(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
+  source: zod.enum(["online", "pos", "phone"]).nullish(),
   status: zod.enum([
     "pending",
     "confirmed",
@@ -486,6 +487,7 @@ export const GetRecentOrdersResponseItem = zod.object({
   customerPhone: zod.string(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
+  source: zod.enum(["online", "pos", "phone"]).nullish(),
   status: zod.enum([
     "pending",
     "confirmed",
@@ -518,3 +520,70 @@ export const GetRecentOrdersResponseItem = zod.object({
   updatedAt: zod.coerce.date(),
 });
 export const GetRecentOrdersResponse = zod.array(GetRecentOrdersResponseItem);
+
+export const VapiModifierOption = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  price: zod.number(),
+});
+
+export const VapiModifier = zod.object({
+  name: zod.string(),
+  required: zod.boolean(),
+  minSelections: zod.number(),
+  maxSelections: zod.number().nullish(),
+  options: zod.array(VapiModifierOption),
+});
+
+export const VapiMenuItem = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  category: zod.string(),
+  description: zod.string().nullish(),
+  price: zod.number(),
+  available: zod.boolean(),
+  popular: zod.boolean(),
+  spicy: zod.boolean(),
+  vegetarian: zod.boolean(),
+  modifiers: zod.array(VapiModifier),
+});
+
+export const VapiMenu = zod.object({
+  restaurantName: zod.string(),
+  location: zod.string(),
+  currency: zod.string(),
+  menu: zod.array(VapiMenuItem),
+});
+
+export const VapiOrderItemInput = zod.object({
+  menuItemId: zod.number(),
+  quantity: zod.number().default(1),
+  notes: zod.string().nullish(),
+  modifierSelections: zod
+    .array(
+      zod.object({
+        modifierId: zod.string(),
+        optionId: zod.string(),
+        name: zod.string(),
+        price: zod.number(),
+      }),
+    )
+    .optional(),
+});
+
+export const VapiOrderBody = zod.object({
+  customerName: zod.string(),
+  customerPhone: zod.string(),
+  notes: zod.string().nullish(),
+  items: zod.array(VapiOrderItemInput),
+});
+
+export const VapiOrderResult = zod.object({
+  success: zod.boolean(),
+  confirmationCode: zod.string(),
+  total: zod.number(),
+  estimatedMinutes: zod.number(),
+  estimatedReadyAt: zod.string(),
+  estimatedReadyAtFormatted: zod.string(),
+  message: zod.string(),
+});

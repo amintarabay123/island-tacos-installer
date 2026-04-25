@@ -1041,8 +1041,8 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                           ⏰ {new Date(o.scheduledPickupAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" })}
                         </span>
                       )}
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-50 text-purple-600" : "bg-blue-50 text-blue-600"}`}>
-                        {o.source === "pos" ? "POS" : "Online"}
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-50 text-purple-600" : o.source === "phone" ? "bg-green-50 text-green-700 font-bold" : "bg-blue-50 text-blue-600"}`}>
+                        {o.source === "pos" ? "POS" : o.source === "phone" ? "📞 Phone" : "Online"}
                       </span>
                     </div>
                   </div>
@@ -1060,7 +1060,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                 </div>
                 {o.notes && <p className="text-gray-500 text-xs italic mb-2">"{o.notes}"</p>}
                 <div className="flex flex-wrap gap-2">
-                  {o.status === "pending" && o.source === "online" && (
+                  {o.status === "pending" && (o.source === "online" || o.source === "phone") && (
                     <>
                       <button onClick={() => updateStatus(o.id, "confirmed")} className="flex-1 h-10 rounded-lg bg-blue-600 hover:bg-blue-500 text-gray-900 text-sm font-semibold transition-colors">Accept</button>
                       <button onClick={() => updateStatus(o.id, "cancelled")} className="h-10 px-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold transition-colors">Reject</button>
@@ -2176,8 +2176,8 @@ export default function POS() {
         const r = await fetch("/api/orders", { credentials: "include" });
         const data: Order[] = await r.json();
 
-        // ── Online order notifications ──
-        const pending = data.filter(o => o.source === "online" && o.status === "pending");
+        // ── Online + phone order notifications ──
+        const pending = data.filter(o => (o.source === "online" || o.source === "phone") && o.status === "pending");
         if (isFirstOnlineFetchRef.current) {
           isFirstOnlineFetchRef.current = false;
           pending.forEach(o => seenOnlineIdsRef.current.add(o.id));
@@ -2187,7 +2187,7 @@ export default function POS() {
           if (newOrders.length > 0) {
             playChime();
             sendNotification(
-              `🔔 New Online Order${newOrders.length > 1 ? "s" : ""}!`,
+              `🔔 New Pending Order${newOrders.length > 1 ? "s" : ""}!`,
               `${newOrders.length} order${newOrders.length > 1 ? "s" : ""} waiting for approval`
             );
             setPopupOrders(prev => {
@@ -2498,7 +2498,7 @@ export default function POS() {
             {incomingOrders.length > 0 ? "🔔" : notifPerm === "granted" ? "🔔" : notifPerm === "denied" ? "🔕" : "🔔"}
             <span className="hidden sm:inline">
               {incomingOrders.length > 0
-                ? `${incomingOrders.length} Online`
+                ? `${incomingOrders.length} Pending`
                 : notifPerm === "granted"
                   ? "Alerts On"
                   : notifPerm === "denied"
@@ -2836,10 +2836,10 @@ export default function POS() {
         return (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-orange-500/40 overflow-hidden">
-              <div className="bg-orange-600 px-5 py-3 flex items-center justify-between">
+              <div className={`px-5 py-3 flex items-center justify-between ${order.source === "phone" ? "bg-green-600" : "bg-orange-600"}`}>
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">🔔</span>
-                  <span className="text-gray-900 font-bold text-lg">New Online Order</span>
+                  <span className="text-xl">{order.source === "phone" ? "📞" : "🔔"}</span>
+                  <span className="text-gray-900 font-bold text-lg">{order.source === "phone" ? "New Phone Order" : "New Online Order"}</span>
                 </div>
                 {popupOrders.length > 1 && (
                   <span className="bg-orange-800 text-orange-100 text-xs font-bold px-2 py-0.5 rounded-full">
