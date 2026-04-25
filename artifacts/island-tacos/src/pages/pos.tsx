@@ -954,9 +954,9 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     await fetch(`/api/orders/${chargeOrder.id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json" },
-      // Do NOT set status:"completed" here — the KDS owns order removal.
-      // Payment only marks the order as paid; kitchen staff clear it when done.
-      body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", ...(notes ? { notes } : {}) }),
+      // Set status:"completed" so the ticket is removed from held tickets.
+      // "Charge & Hold" (completeWithPaymentAndHold) intentionally omits this.
+      body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", status: "completed", ...(notes ? { notes } : {}) }),
     });
     // Update customer display to "completed" state
     fetch("/api/display", {
