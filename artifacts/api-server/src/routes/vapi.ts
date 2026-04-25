@@ -60,8 +60,14 @@ function extractVapiArgs(body: unknown): unknown {
     const list = message.toolCallList as Array<Record<string, unknown>> | undefined;
     if (Array.isArray(list) && list.length > 0) {
       const fn = list[0].function as Record<string, unknown> | undefined;
-      if (fn && typeof fn.arguments === "string") {
-        try { return JSON.parse(fn.arguments); } catch { /* fall through */ }
+      if (fn) {
+        // Vapi sends arguments as a plain object; some models send a JSON string
+        if (fn.arguments && typeof fn.arguments === "object") {
+          return fn.arguments;
+        }
+        if (typeof fn.arguments === "string") {
+          try { return JSON.parse(fn.arguments); } catch { /* fall through */ }
+        }
       }
     }
   }
@@ -179,7 +185,8 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
 
 router.post("/vapi/order", async (req: Request, res: Response): Promise<void> => {
   const toolCallId = extractToolCallId(req.body);
-  console.log(`[vapi/order] called, toolCallId=${toolCallId}, body keys=${Object.keys(req.body || {}).join(",")}`);
+  const extractedArgs = extractVapiArgs(req.body);
+  console.log(`[vapi/order] called, toolCallId=${toolCallId}, body keys=${Object.keys(req.body || {}).join(",")}, args=${JSON.stringify(extractedArgs).slice(0, 300)}`);
 
   const secretCheck = checkVapiSecret(req);
   if (secretCheck === "missing_secret_config") {
