@@ -726,7 +726,7 @@ export default function Kitchen() {
                                   ))}
                                 </div>
                               )}
-                              {(item.modifierSelections ?? []).length === 0 && item.notes && (
+                              {item.notes && (
                                 <div className="ml-6 mt-1 text-sm text-gray-400 font-medium line-through decoration-gray-400">{item.notes}</div>
                               )}
                             </div>
@@ -747,17 +747,18 @@ export default function Kitchen() {
                                   <span className={`text-xl font-bold leading-snug ${struck ? "text-gray-400" : "text-gray-900"}`}>{item.menuItemName}</span>
                                   {struck && <span className="text-xs text-gray-400 font-normal ml-1 no-underline">done</span>}
                                 </div>
-                                {!struck && (item.modifierSelections ?? []).length > 0 ? (
+                                {!struck && (item.modifierSelections ?? []).length > 0 && (
                                   <div className="text-amber-600 text-xl mt-2 leading-snug font-semibold space-y-1">
                                     {(item.modifierSelections ?? []).map((m, i) => (
                                       <div key={i}>+ {m.name}</div>
                                     ))}
                                   </div>
-                                ) : !struck && item.notes ? (
+                                )}
+                                {!struck && item.notes && (
                                   <div className="text-amber-600 text-xl mt-2 leading-snug whitespace-pre-line font-semibold">
                                     {item.notes}
                                   </div>
-                                ) : null}
+                                )}
                               </button>
                             );
                           })()
