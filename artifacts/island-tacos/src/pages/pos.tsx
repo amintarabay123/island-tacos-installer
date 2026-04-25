@@ -1538,6 +1538,23 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
 
 // ─── 86 List / Sold-Out Drawer ────────────────────────────────────────────────
 
+const SOLD_OUT_SHORTCUTS = [
+  { label: "Steak",      keywords: ["steak"],                      group: "protein" as const },
+  { label: "Salmon",     keywords: ["salmon"],                     group: "protein" as const },
+  { label: "Shrimp",     keywords: ["shrimp"],                     group: "protein" as const },
+  { label: "Veggie",     keywords: ["veggie"],                     group: "protein" as const },
+  { label: "Chicken",    keywords: ["chicken"],                    group: "protein" as const },
+  { label: "Cheese",     keywords: ["cheese"],                     group: "topping" as const },
+  { label: "Guacamole",  keywords: ["guac"],                       group: "topping" as const },
+  { label: "Pico/Salsa", keywords: ["pico", "salsa"],              group: "topping" as const },
+  { label: "Corn",       keywords: ["corn"],                       group: "topping" as const },
+  { label: "Black Beans",keywords: ["black bean", "black beans"],  group: "topping" as const },
+  { label: "Rice",       keywords: ["rice"],                       group: "topping" as const },
+  { label: "Sour Cream", keywords: ["sour cream"],                 group: "topping" as const },
+  { label: "Jalapeños",  keywords: ["jalap"],                      group: "topping" as const },
+] as const;
+type Shortcut = typeof SOLD_OUT_SHORTCUTS[number];
+
 type SoldOutItem = { id: number; name: string; categoryId: number; available: boolean };
 type SoldOutModifier = {
   id: number; name: string;
@@ -1552,6 +1569,7 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
   const [quickSearch, setQuickSearch] = useState("");
+  const [activeShortcut, setActiveShortcut] = useState<Shortcut | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -1620,14 +1638,21 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
   const totalSoldOut = soldOutItemCount + soldOutOptCount;
 
   // ── Bulk / Quick-mark helpers ──────────────────────────────────────────────
-  const qTerm = quickSearch.trim().toLowerCase();
-  const bulkMatchItems = qTerm && data
-    ? data.items.filter(i => i.name.toLowerCase().includes(qTerm))
+  // activeKeywords: from a preset shortcut OR from the free-text search box
+  const activeKeywords: string[] = activeShortcut
+    ? [...activeShortcut.keywords]
+    : quickSearch.trim() ? [quickSearch.trim().toLowerCase()] : [];
+
+  const matchesKeywords = (name: string) =>
+    activeKeywords.some(k => name.toLowerCase().includes(k.toLowerCase()));
+
+  const bulkMatchItems = activeKeywords.length && data
+    ? data.items.filter(i => matchesKeywords(i.name))
     : [];
-  const bulkMatchOptions: { mod: SoldOutModifier; optionId: string }[] = qTerm && data
+  const bulkMatchOptions: { mod: SoldOutModifier; optionId: string }[] = activeKeywords.length && data
     ? data.modifiers.flatMap(m =>
         (m.options as { id: string; name: string; price: number }[])
-          .filter(o => o.name.toLowerCase().includes(qTerm))
+          .filter(o => matchesKeywords(o.name))
           .map(o => ({ mod: m, optionId: o.id }))
       )
     : [];
@@ -1655,6 +1680,7 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
       ]);
       await load();
       setQuickSearch("");
+      setActiveShortcut(null);
     } finally { setBulkBusy(false); }
   };
 
@@ -1680,47 +1706,94 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
           >×</button>
         </div>
 
-        {/* Quick Mark by keyword */}
+        {/* Quick Mark shortcuts */}
         {!loading && data && (
-          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Quick Mark</p>
-            <div className="flex gap-2">
+          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 space-y-2.5">
+            {/* Protein row */}
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Proteins</p>
+              <div className="flex flex-wrap gap-1.5">
+                {SOLD_OUT_SHORTCUTS.filter(s => s.group === "protein").map(s => {
+                  const isActive = activeShortcut?.label === s.label;
+                  return (
+                    <button
+                      key={s.label}
+                      onClick={() => { setQuickSearch(""); setActiveShortcut(isActive ? null : s); }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-bold border transition-colors ${
+                        isActive
+                          ? "bg-red-500 text-white border-red-500"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-red-400 hover:text-red-600"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Toppings / Modifiers row */}
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Toppings / Modifiers</p>
+              <div className="flex flex-wrap gap-1.5">
+                {SOLD_OUT_SHORTCUTS.filter(s => s.group === "topping").map(s => {
+                  const isActive = activeShortcut?.label === s.label;
+                  return (
+                    <button
+                      key={s.label}
+                      onClick={() => { setQuickSearch(""); setActiveShortcut(isActive ? null : s); }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-bold border transition-colors ${
+                        isActive
+                          ? "bg-red-500 text-white border-red-500"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-red-400 hover:text-red-600"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Free-text fallback */}
+            <div className="flex gap-2 items-center">
               <input
                 type="text"
-                value={quickSearch}
-                onChange={e => setQuickSearch(e.target.value)}
-                placeholder='e.g. "Steak" or "Shrimp"'
+                value={activeShortcut ? "" : quickSearch}
+                onChange={e => { setActiveShortcut(null); setQuickSearch(e.target.value); }}
+                onFocus={() => setActiveShortcut(null)}
+                placeholder="Or type a custom keyword…"
                 className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
               />
             </div>
-            {qTerm && (
-              <div className="mt-2">
+            {/* Match preview + action buttons */}
+            {activeKeywords.length > 0 && (
+              <div>
                 {bulkTotal > 0 ? (
                   <>
                     <p className="text-xs text-gray-500 mb-2">
-                      Found <span className="font-bold text-gray-800">{bulkTotal}</span> match{bulkTotal !== 1 ? "es" : ""}
-                      {bulkMatchItems.length > 0 && ` (${bulkMatchItems.length} item${bulkMatchItems.length !== 1 ? "s" : ""})`}
+                      {activeShortcut ? <><span className="font-bold text-gray-800">{activeShortcut.label}</span>: </> : null}
+                      <span className="font-bold text-gray-800">{bulkTotal}</span> match{bulkTotal !== 1 ? "es" : ""}
+                      {bulkMatchItems.length > 0 && ` · ${bulkMatchItems.length} menu item${bulkMatchItems.length !== 1 ? "s" : ""}`}
                       {bulkMatchOptions.length > 0 && ` · ${bulkMatchOptions.length} modifier option${bulkMatchOptions.length !== 1 ? "s" : ""}`}
                     </p>
                     <div className="flex gap-2">
                       <button
                         disabled={bulkBusy}
                         onClick={() => bulkMark(false)}
-                        className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2 rounded-lg transition-colors disabled:opacity-40"
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2.5 rounded-xl transition-colors disabled:opacity-40"
                       >
                         {bulkBusy ? "Marking…" : "🚫 Mark All Sold Out"}
                       </button>
                       <button
                         disabled={bulkBusy}
                         onClick={() => bulkMark(true)}
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-bold py-2 rounded-lg transition-colors disabled:opacity-40"
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-bold py-2.5 rounded-xl transition-colors disabled:opacity-40"
                       >
                         {bulkBusy ? "…" : "✓ Restore All"}
                       </button>
                     </div>
                   </>
                 ) : (
-                  <p className="text-xs text-gray-400 italic">No items or options match "{qTerm}"</p>
+                  <p className="text-xs text-gray-400 italic">Nothing on the menu matches this keyword.</p>
                 )}
               </div>
             )}
