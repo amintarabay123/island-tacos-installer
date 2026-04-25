@@ -127,10 +127,12 @@ router.all("/vapi/menu", async (_req: Request, res: Response): Promise<void> => 
     });
 
     res.json({
-      restaurantName: "Island Tacos",
-      location: "Wickhams Cay 1, Road Town, BVI",
-      currency: "USD",
-      menu: menuData,
+      result: {
+        restaurantName: "Island Tacos",
+        location: "Wickhams Cay 1, Road Town, BVI",
+        currency: "USD",
+        menu: menuData,
+      },
     });
   } catch (err) {
     console.error("[vapi/menu] error:", err);
@@ -288,13 +290,15 @@ router.post("/vapi/order", async (req: Request, res: Response): Promise<void> =>
   console.log(`[vapi/order] Phone order created: ${confirmationCode} for ${customerName} (${customerPhone})`);
 
   res.status(201).json({
-    success: true,
-    confirmationCode,
-    total,
-    estimatedMinutes,
-    estimatedReadyAt: estimatedReadyAt.toISOString(),
-    estimatedReadyAtFormatted: estimatedTimeStr,
-    message: `Your order has been placed! Your confirmation code is ${confirmationCode}. Your order will be ready in about ${estimatedMinutes} minutes, around ${estimatedTimeStr}. Payment is collected at pickup.`,
+    result: {
+      success: true,
+      confirmationCode,
+      total,
+      estimatedMinutes,
+      estimatedReadyAt: estimatedReadyAt.toISOString(),
+      estimatedReadyAtFormatted: estimatedTimeStr,
+      message: `Your order has been placed! Your confirmation code is ${confirmationCode}. Your order will be ready in about ${estimatedMinutes} minutes, around ${estimatedTimeStr}. Payment is collected at pickup.`,
+    },
   });
 });
 
