@@ -144,7 +144,7 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
     const modifierMap = new Map(modifiers.map(m => [m.loyverseId, m]));
     const categoryMap = new Map(categories.map(c => [c.id, c.name]));
 
-    const menuData = items.map(item => {
+    const menuData = items.filter(item => item.available).map(item => {
       const itemModifiers = (item.loyverseModifierIds ?? [])
         .map(id => modifierMap.get(id))
         .filter((m): m is NonNullable<typeof m> => Boolean(m))
@@ -163,7 +163,6 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
         name: item.name,
         category: categoryMap.get(item.categoryId) ?? "Other",
         price: parseFloat(item.price as unknown as string),
-        available: item.available,
         modifiers: itemModifiers,
       };
     });
