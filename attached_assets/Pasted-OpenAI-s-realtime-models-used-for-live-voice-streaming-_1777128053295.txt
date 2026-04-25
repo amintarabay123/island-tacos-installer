@@ -1,0 +1,99 @@
+OpenAI’s realtime models (used for live voice, streaming, low-latency apps) are priced per token, with separate rates for text vs audio. Here’s the current (2026) breakdown:
+
+⸻
+
+💰 Core realtime model pricing
+
+🔊 gpt-realtime-1.5 (flagship)
+
+Text tokens
+
+* Input: $4.00 / 1M tokens
+* Output: $16.00 / 1M tokens
+* Cached input: $0.40 / 1M tokens  ￼
+
+Audio tokens (voice)
+
+* Input: $32.00 / 1M tokens
+* Output: $64.00 / 1M tokens
+* Cached input: $0.40 / 1M tokens  ￼
+
+👉 Audio is ~8× more expensive than text because it’s processing raw speech in real time.
+
+⸻
+
+⚡ gpt-realtime-mini (cheaper option)
+
+* Audio input: ~$10 / 1M tokens
+* Audio output: ~$20 / 1M tokens  ￼
+
+(Some variants also support cheaper text rates, but this model is mainly used for voice cost savings.)
+
+⸻
+
+⏱️ Rough “per minute” intuition
+
+Because voice uses tokens under the hood, cost varies—but typical estimates:
+
+* ~$0.03–$0.06 per minute of active speech (ballpark)  ￼
+* Silence usually isn’t billed (voice activity detection)
+
+👉 So a 10-minute voice session might cost roughly $0.30–$0.60
+
+⸻
+
+🧠 Key things to understand (important)
+
+* You pay for both directions:
+    * User speech (input)
+    * AI response (output)
+* Output is always more expensive than input
+* Cached/repeated context is much cheaper ($0.40 / 1M tokens)
+* Text-only realtime use is much cheaper than voice
+
+⸻
+
+🧾 Simple example
+
+A voice support agent:
+
+* 5 min user speaking
+* 5 min AI talking
+
+Rough cost:
+
+* Input (audio): ~$0.15
+* Output (audio): ~$0.30
+    👉 Total ≈ $0.45 per session
+
+⸻
+
+🧭 When to use each
+
+* gpt-realtime-1.5 → best for:
+    * customer support voice bots
+    * real-time assistants
+    * phone / kiosk systems
+* gpt-realtime-mini → best for:
+    * cost-sensitive apps
+    * high-volume usage
+    * simpler conversations
+
+⸻
+
+⚠️ Practical advice (for your use case)
+
+Since you run a restaurant (Island Tacos), realtime pricing matters if you’re thinking about:
+
+* Voice ordering kiosks
+* Phone AI assistant
+* Drive-thru automation
+
+👉 In those cases, cost is low enough to be viable, but:
+
+* Bad prompts = longer responses = higher cost
+* Voice UX design directly impacts your bill
+
+⸻
+
+If you want, I can estimate monthly cost for a real Island Tacos setup (like orders per day, call length, etc.)—that’s where this gets really practical.
