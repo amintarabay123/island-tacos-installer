@@ -85,7 +85,8 @@ function validateVapiOrder(body: unknown): { data: VapiOrderPayload } | { error:
   };
 }
 
-router.all("/vapi/menu", async (_req: Request, res: Response): Promise<void> => {
+router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
+  console.log(`[vapi/menu] ${req.method} called`);
   try {
     const [categories, items, modifiers] = await Promise.all([
       db.select().from(menuCategoriesTable).orderBy(menuCategoriesTable.sortOrder),
@@ -103,8 +104,6 @@ router.all("/vapi/menu", async (_req: Request, res: Response): Promise<void> => 
         .map(m => ({
           name: m.name,
           required: m.required,
-          minSelections: m.minSelections,
-          maxSelections: m.maxSelections,
           options: (m.options as { id: string; name: string; price: number }[]).map(o => ({
             id: o.id,
             name: o.name,
@@ -116,24 +115,20 @@ router.all("/vapi/menu", async (_req: Request, res: Response): Promise<void> => 
         id: item.id,
         name: item.name,
         category: categoryMap.get(item.categoryId) ?? "Other",
-        description: item.description ?? null,
         price: parseFloat(item.price as unknown as string),
         available: item.available,
-        popular: item.popular,
-        spicy: item.spicy,
-        vegetarian: item.vegetarian,
         modifiers: itemModifiers,
       };
     });
 
-    res.json({
-      result: {
-        restaurantName: "Island Tacos",
-        location: "Wickhams Cay 1, Road Town, BVI",
-        currency: "USD",
-        menu: menuData,
-      },
-    });
+    const payload = {
+      restaurantName: "Island Tacos",
+      currency: "USD",
+      menu: menuData,
+    };
+
+    console.log(`[vapi/menu] returning ${menuData.length} items, payload size ~${JSON.stringify(payload).length} bytes`);
+    res.json({ result: JSON.stringify(payload) });
   } catch (err) {
     console.error("[vapi/menu] error:", err);
     res.status(500).json({ error: "Failed to load menu" });
@@ -290,15 +285,15 @@ router.post("/vapi/order", async (req: Request, res: Response): Promise<void> =>
   console.log(`[vapi/order] Phone order created: ${confirmationCode} for ${customerName} (${customerPhone})`);
 
   res.status(201).json({
-    result: {
+    result: JSON.stringify({
       success: true,
       confirmationCode,
       total,
       estimatedMinutes,
       estimatedReadyAt: estimatedReadyAt.toISOString(),
       estimatedReadyAtFormatted: estimatedTimeStr,
-      message: `Your order has been placed! Your confirmation code is ${confirmationCode}. Your order will be ready in about ${estimatedMinutes} minutes, around ${estimatedTimeStr}. Payment is collected at pickup.`,
-    },
+      message: `Order placed! Confirmation code: ${confirmationCode}. Ready in about ${estimatedMinutes} minutes around ${estimatedTimeStr}. Pay at pickup.`,
+    }),
   });
 });
 
