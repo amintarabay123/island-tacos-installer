@@ -14,6 +14,7 @@ import printRouter, { bridgeScriptContent } from "./print";
 import customersRouter from "./customers";
 import uploadRouter from "./upload";
 import displayRouter from "./display";
+import posEventsRouter from "./pos-events";
 import settingsRouter from "./settings";
 import employeesRouter from "./employees";
 import imageProxyRouter from "./image-proxy";
@@ -48,6 +49,7 @@ router.use(paymentsRouter);
 router.use(webhooksRouter);
 router.use(uploadRouter);
 router.use(displayRouter);
+router.use(posEventsRouter);
 router.use(imageProxyRouter);
 router.use(settingsRouter); // GET is public; PATCH is guarded below
 router.use(syncRouter);    // /sync/receive uses own X-Sync-Secret auth; /sync/push is admin-guarded below

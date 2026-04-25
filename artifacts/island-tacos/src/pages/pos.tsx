@@ -878,6 +878,18 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
 
   useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, [load]);
 
+  // Real-time sync: any order change on another POS instance triggers an immediate reload
+  useEffect(() => {
+    const es = new EventSource("/api/pos/events", { withCredentials: true });
+    es.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data) as { type: string };
+        if (msg.type === "order_created" || msg.type === "order_updated") load();
+      } catch { /* ignore parse errors */ }
+    };
+    return () => es.close();
+  }, [load]);
+
   const resume = (o: Order) => {
     // All items from a saved ticket were already sent to the KDS when first created.
     // Mark them all alreadyMade so re-submitting doesn't re-fire them to the kitchen.
@@ -2139,6 +2151,8 @@ export default function POS() {
   const chimeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Timestamp of last "completed" push — prevents the debounced idle from wiping it too soon
   const displayCompletedAt = useRef<number>(0);
+  // Holds latest poll fn so the SSE effect can call it without re-subscribing
+  const mainPollRef = useRef<() => void>(() => {});
 
   // Silently unlock AudioContext on the first interaction — supports both click and touch (iOS/iPad)
   useEffect(() => {
@@ -2234,10 +2248,23 @@ export default function POS() {
         ).length);
       } catch {}
     };
+    mainPollRef.current = poll;
     poll();
     const t = setInterval(poll, 8000);
     return () => clearInterval(t);
   }, [playChime, sendNotification]);
+
+  // Real-time sync: fire the main poll immediately when any order changes on another instance
+  useEffect(() => {
+    const es = new EventSource("/api/pos/events", { withCredentials: true });
+    es.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data) as { type: string };
+        if (msg.type === "order_created" || msg.type === "order_updated") mainPollRef.current();
+      } catch { /* ignore parse errors */ }
+    };
+    return () => es.close();
+  }, []);
 
   // Repeat chime every 5s while there are new orders in the popup
   useEffect(() => {

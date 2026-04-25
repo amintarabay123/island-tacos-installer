@@ -3,6 +3,7 @@ import { eq, desc, and, inArray, count, or } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable, storeSettingsTable } from "@workspace/db";
 import { upsertCustomer } from "./customers";
 import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
+import { broadcastOrderEvent } from "./pos-events";
 import nodemailer from "nodemailer";
 
 const mailer = nodemailer.createTransport({
@@ -397,6 +398,7 @@ router.post("/orders", async (req, res): Promise<void> => {
     );
   }
 
+  broadcastOrderEvent("order_created", order.id);
   res.status(201).json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
 
@@ -498,6 +500,7 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     );
   }
 
+  broadcastOrderEvent("order_updated", order.id);
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
 
