@@ -131,6 +131,146 @@ function vapiResult(toolCallId: string | null, result: string): Record<string, u
   return { result };
 }
 
+/**
+ * POST /vapi/assistant-request
+ *
+ * Vapi calls this endpoint at the start of every phone call when the phone number
+ * is set to "Server URL" mode. We return the full assistant configuration with a
+ * dynamic firstMessage based on whether the store is currently open.
+ *
+ * To activate: In the Vapi dashboard → Phone Numbers → select your number →
+ * change the type from "Assistant" to "Server URL" and set the URL to:
+ *   https://order-direct-connect.replit.app/vapi/assistant-request
+ *
+ * IMPORTANT: Update VAPI_VOICE_PROVIDER and VAPI_VOICE_ID below to match your
+ * existing Vapi assistant's voice settings so the caller hears the same voice.
+ */
+const VAPI_MODEL_PROVIDER = "openai";
+const VAPI_MODEL = "gpt-4o";
+const VAPI_VOICE_PROVIDER = "openai"; // e.g. "11labs", "openai", "playht" — match your current assistant
+const VAPI_VOICE_ID = "shimmer";      // e.g. "nova", "alloy", "shimmer", or an 11labs voice ID
+
+const VAPI_SYSTEM_PROMPT = `You are a friendly, efficient phone ordering assistant for Island Tacos, a Mexican pickup restaurant in Road Town, BVI.
+
+Your job is to help callers place pickup orders over the phone. Always be warm, concise, and helpful.
+
+IMPORTANT RULES:
+- ALWAYS start by calling the get_menu tool immediately when the call starts to check menu and store status.
+- If isOpen is false in the menu response, do NOT take any order. Apologize and tell the caller we are closed, give our opening time, and end the call politely.
+- Only take orders for items that appear in the menu tool response.
+- Collect the caller's name and confirm their phone number (it may be pre-filled from the call).
+- Confirm the full order and total before placing it.
+- Use the place_order tool to submit confirmed orders.
+- Do not make up prices — always use prices from the menu tool.
+- Keep responses short and natural for a phone conversation.
+- If you need to look something up, say "Let me check that for you" before calling a tool.`;
+
+router.post("/vapi/assistant-request", async (req: Request, res: Response): Promise<void> => {
+  console.log(`[vapi/assistant-request] Call started`);
+  try {
+    const settingRows = await db.select().from(storeSettingsTable);
+    const settings: Record<string, string> = { ...SETTING_DEFAULTS };
+    for (const row of settingRows) settings[row.key] = row.value;
+    const { is_open } = computeStoreStatus(settings);
+
+    const formatTime = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      const ampm = h >= 12 ? "PM" : "AM";
+      const h12 = h % 12 || 12;
+      return m === 0 ? `${h12} ${ampm}` : `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+    };
+
+    const openTime = formatTime(settings.open_time ?? "11:00");
+    const closeTime = formatTime(settings.close_time ?? "19:00");
+
+    const firstMessage = is_open
+      ? "Thank you for calling Island Tacos! I can help you place a pickup order today. What would you like?"
+      : `Thank you for calling Island Tacos! Unfortunately we're closed right now. Our hours are ${openTime} to ${closeTime} Atlantic Standard Time. Please give us a call back when we're open. Have a great day!`;
+
+    const baseUrl = process.env.API_BASE_URL ?? "https://order-direct-connect.replit.app";
+
+    const assistant = {
+      firstMessage,
+      firstMessageMode: "assistant-speaks-first",
+      model: {
+        provider: VAPI_MODEL_PROVIDER,
+        model: VAPI_MODEL,
+        messages: [{ role: "system", content: VAPI_SYSTEM_PROMPT }],
+        tools: is_open ? [
+          {
+            type: "function",
+            async: false,
+            function: {
+              name: "get_menu",
+              description: "Fetch the current menu, prices, available modifiers, and store open/close status.",
+              parameters: { type: "object", properties: {}, required: [] },
+            },
+            server: { url: `${baseUrl}/vapi/menu` },
+          },
+          {
+            type: "function",
+            async: false,
+            function: {
+              name: "place_order",
+              description: "Submit the customer's confirmed order.",
+              parameters: {
+                type: "object",
+                required: ["customerName", "customerPhone", "items"],
+                properties: {
+                  customerName: { type: "string", description: "Customer's full name" },
+                  customerPhone: { type: "string", description: "Customer's phone number" },
+                  notes: { type: "string", description: "Any special instructions for the whole order" },
+                  items: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      required: ["menuItemId"],
+                      properties: {
+                        menuItemId: { type: "number", description: "The numeric ID from the menu" },
+                        quantity: { type: "number", description: "Number of this item (default 1)" },
+                        notes: { type: "string", description: "Special instructions for this item" },
+                        modifierSelections: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              modifierId: { type: "string" },
+                              optionId: { type: "string" },
+                              name: { type: "string" },
+                              price: { type: "number" },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            server: {
+              url: `${baseUrl}/vapi/order`,
+              headers: { "x-vapi-secret": process.env.VAPI_WEBHOOK_SECRET ?? "" },
+            },
+          },
+        ] : [],
+      },
+      voice: {
+        provider: VAPI_VOICE_PROVIDER,
+        voiceId: VAPI_VOICE_ID,
+      },
+      ...(is_open ? {} : {
+        endCallAfterSilence: 10,
+      }),
+    };
+
+    console.log(`[vapi/assistant-request] isOpen=${is_open}, firstMessage="${firstMessage.slice(0, 60)}..."`);
+    res.json({ assistant });
+  } catch (err) {
+    console.error("[vapi/assistant-request] error:", err);
+    res.status(500).json({ error: "Failed to build assistant config" });
+  }
+});
+
 router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
   const toolCallId = extractToolCallId(req.body);
   console.log(`[vapi/menu] ${req.method} called, toolCallId=${toolCallId}`);
