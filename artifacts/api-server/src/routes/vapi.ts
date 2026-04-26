@@ -460,9 +460,10 @@ router.post("/vapi/order", async (req: Request, res: Response): Promise<void> =>
   }
 
   const { customerName, notes, items } = validation.data;
-  const customerPhone = validation.data.customerPhone && validation.data.customerPhone !== "unknown"
-    ? formatBVIPhone(validation.data.customerPhone)
-    : (validation.data.customerPhone ?? "");
+  const rawPhone = validation.data.customerPhone ?? "";
+  const customerPhone = rawPhone && rawPhone !== "unknown"
+    ? formatBVIPhone(rawPhone)
+    : "";
 
   const settingRows = await db.select().from(storeSettingsTable);
   const settings: Record<string, string> = { ...SETTING_DEFAULTS };
