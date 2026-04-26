@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { gte, lte, and, eq, sql } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, refundsTable, loyverseDailySummaryTable } from "@workspace/db";
+import { pool } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -21,19 +22,11 @@ function getBVIEndOfDay(): Date {
   return new Date(bviNow.getTime() + BVI_OFFSET_MS);
 }
 
-/**
- * Parse a YYYY-MM-DD date string as the START of that day in BVI local time.
- * e.g. "2026-04-26" → 2026-04-26T04:00:00.000Z (midnight BVI = 4 AM UTC)
- */
 function parseBVIDateStart(dateStr: string): Date {
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d, BVI_OFFSET_HOURS, 0, 0, 0));
 }
 
-/**
- * Parse a YYYY-MM-DD date string as the END of that day in BVI local time.
- * e.g. "2026-04-26" → 2026-04-27T03:59:59.999Z (11:59 PM BVI)
- */
 function parseBVIDateEnd(dateStr: string): Date {
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d, BVI_OFFSET_HOURS + 23, 59, 59, 999));
@@ -45,7 +38,7 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
   const fromDate = from ? parseBVIDateStart(from) : getBVIMidnight();
   const toDate   = to   ? parseBVIDateEnd(to)     : getBVIEndOfDay();
 
-  // from/to as plain YYYY-MM-DD strings for DATE column comparisons
+  // YYYY-MM-DD strings for DATE column comparisons
   const fromDateStr = from ?? fromDate.toISOString().slice(0, 10);
   const toDateStr   = to   ?? toDate.toISOString().slice(0, 10);
 
@@ -54,6 +47,7 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
     lte(ordersTable.createdAt, toDate),
   ];
 
+  // ── Individual orders ──────────────────────────────────────────────────────
   const [paidOrders, allOrders, refunds] = await Promise.all([
     db.select().from(ordersTable).where(and(...conditions, eq(ordersTable.paymentStatus, "paid"))),
     db.select().from(ordersTable).where(and(...conditions)),
@@ -63,7 +57,6 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
     )),
   ]);
 
-  // ── Totals from individual orders ──────────────────────────────────────────
   const byMethod = { cash: 0, card: 0, athmovil: 0, split: 0, complimentary: 0 };
   let totalSales = 0;
   for (const o of paidOrders) {
@@ -72,10 +65,9 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
     const m = (o.paymentMethod ?? "cash") as keyof typeof byMethod;
     if (m in byMethod) byMethod[m] += amt;
   }
-
   let refundTotal = refunds.reduce((s, r) => s + parseDecimal(r.amount), 0);
 
-  // ── Daily chart map (seeded from individual orders) ────────────────────────
+  // Daily chart (seeded from individual orders)
   const dailyMap: Record<string, { date: string; sales: number; orders: number }> = {};
   for (const o of paidOrders) {
     const bviDate = new Date(o.createdAt.getTime() - BVI_OFFSET_MS);
@@ -85,53 +77,44 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
     dailyMap[d].orders += 1;
   }
 
-  // ── Daily summaries (historical data uploaded via CSV) ─────────────────────
-  // Pull rows in date range that are NOT already covered by any order in the
-  // orders table (any source), preventing double-counting the recent period.
-  let summaryGross   = 0;
-  let summaryRefunds = 0;
-
+  // ── Historical daily summaries (CSV import) ────────────────────────────────
+  // Use raw pg pool so we get plain rows without any Drizzle wrapping surprises.
+  // Only include days that have NO rows in the orders table for that BVI-local date
+  // (avoids double-counting the recent period already stored as individual orders).
   try {
-    // Get dates in the orders table (BVI local date) that fall in range
-    const coveredDatesResult = await db.execute<{ bvi_date: string }>(sql`
-      SELECT DISTINCT (created_at - INTERVAL '4 hours')::date::text AS bvi_date
-      FROM orders
-      WHERE created_at >= ${fromDate.toISOString()}
-        AND created_at <= ${toDate.toISOString()}
-    `);
-    const coveredDates = new Set((coveredDatesResult as unknown as { bvi_date: string }[]).map(r => r.bvi_date));
+    const summaryResult = await pool.query<{
+      date: string;
+      gross_sales: string;
+      refunds: string;
+    }>(`
+      SELECT date::text, gross_sales, refunds
+      FROM loyverse_daily_summary
+      WHERE date >= $1
+        AND date <= $2
+        AND date NOT IN (
+          SELECT DISTINCT (created_at - INTERVAL '4 hours')::date
+          FROM orders
+          WHERE created_at >= $3
+            AND created_at <= $4
+        )
+    `, [fromDateStr, toDateStr, fromDate.toISOString(), toDate.toISOString()]);
 
-    const summaryRows = await db
-      .select()
-      .from(loyverseDailySummaryTable)
-      .where(and(
-        gte(loyverseDailySummaryTable.date, fromDateStr),
-        lte(loyverseDailySummaryTable.date, toDateStr),
-      ));
+    for (const row of summaryResult.rows) {
+      const gross  = parseDecimal(row.gross_sales);
+      const refund = parseDecimal(row.refunds);
+      totalSales  += gross;
+      refundTotal += refund;
+      byMethod.cash += gross; // payment method unknown for historical summaries
 
-    for (const row of summaryRows) {
-      const dateStr = row.date as string; // YYYY-MM-DD
-      if (coveredDates.has(dateStr)) continue; // already accounted for by individual orders
-
-      const gross   = parseDecimal(row.grossSales);
-      const refund  = parseDecimal(row.refunds);
-      summaryGross   += gross;
-      summaryRefunds += refund;
-
-      // Add to daily chart (mark as historical — no individual order count)
-      if (!dailyMap[dateStr]) dailyMap[dateStr] = { date: dateStr, sales: 0, orders: 0 };
-      dailyMap[dateStr].sales += gross;
-      // orders count stays 0 for historical aggregate days (no receipt-level detail)
+      if (!dailyMap[row.date]) dailyMap[row.date] = { date: row.date, sales: 0, orders: 0 };
+      dailyMap[row.date].sales += gross;
     }
-  } catch {
-    // Table may not exist yet in dev — silently skip
+  } catch (err) {
+    console.error("[reports] Error fetching daily summaries:", err);
+    // Non-fatal — continue with individual orders only
   }
 
-  totalSales  += summaryGross;
-  refundTotal += summaryRefunds;
-  byMethod.cash += summaryGross; // historical: all attributed to cash (payment method unknown)
-
-  // ── Top items (individual orders only — no item detail in daily summaries) ─
+  // ── Top items (individual orders only — no item detail in summaries) ────────
   const orderIds = paidOrders.map(o => o.id);
   let topItems: { name: string; quantity: number; revenue: number }[] = [];
   if (orderIds.length > 0) {
