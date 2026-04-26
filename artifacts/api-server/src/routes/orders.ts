@@ -4,6 +4,7 @@ import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable, storeSe
 import { upsertCustomer } from "./customers";
 import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
+import { isBVIMobile } from "./vapi";
 import nodemailer from "nodemailer";
 
 const mailer = nodemailer.createTransport({
@@ -163,6 +164,56 @@ async function sendReadyEmail(order: OrderRow) {
     subject: `Your order is ready for pickup! 🌮 #${order.confirmationCode}`,
     html,
   });
+}
+
+/**
+ * Send an SMS via Vapi's outbound message API when an order is ready for pickup.
+ * Requires VAPI_API_KEY and VAPI_FROM_NUMBER env vars.
+ * The FROM number should be the Island Tacos Vapi number: +14245448088
+ */
+async function sendReadySMS(order: OrderRow) {
+  const apiKey = process.env.VAPI_API_KEY;
+  const fromNumber = process.env.VAPI_FROM_NUMBER ?? "+14245448088";
+
+  if (!apiKey) {
+    console.warn("[sms] VAPI_API_KEY not set — skipping SMS notification");
+    return;
+  }
+  if (!order.customerPhone) return;
+  if (!isBVIMobile(order.customerPhone)) {
+    console.log(`[sms] ${order.customerPhone} is not a BVI mobile — skipping`);
+    return;
+  }
+
+  const message =
+    `Hi ${order.customerName || "there"}! Your Island Tacos order` +
+    ` #${order.confirmationCode} is ready for pickup. Come on in! 🌮`;
+
+  try {
+    const resp = await fetch("https://api.vapi.ai/message", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "sms",
+        to: order.customerPhone,
+        from: fromNumber,
+        message,
+      }),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error(`[sms] Vapi SMS failed (${resp.status}): ${text}`);
+    } else {
+      console.log(`[sms] SMS sent to ${order.customerPhone} for order ${order.confirmationCode}`);
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[sms] SMS send error: ${msg}`);
+  }
 }
 
 router.get("/orders", async (req, res): Promise<void> => {
@@ -493,11 +544,18 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     .from(orderItemsTable)
     .where(eq(orderItemsTable.orderId, order.id));
 
-  // Send "ready for pickup" email when status transitions to ready
-  if (parsed.data.status === "ready" && order.customerEmail) {
-    sendReadyEmail(order).catch((err) =>
-      console.error("[email] ready notification failed:", err?.message)
-    );
+  // Send "ready for pickup" notifications when status transitions to ready
+  if (parsed.data.status === "ready") {
+    if (order.customerEmail) {
+      sendReadyEmail(order).catch((err) =>
+        console.error("[email] ready notification failed:", err?.message)
+      );
+    }
+    if (order.customerPhone) {
+      sendReadySMS(order).catch((err) =>
+        console.error("[sms] ready notification failed:", err?.message)
+      );
+    }
   }
 
   broadcastOrderEvent("order_updated", order.id);

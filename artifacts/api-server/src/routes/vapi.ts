@@ -25,36 +25,34 @@ export function formatBVIPhone(raw: string): string {
 }
 
 /**
- * Known BVI mobile NXX prefixes (3 digits after 284).
- * Sources: ITU BVI numbering plan (2008) + user-confirmed local knowledge.
+ * Known BVI *landline* NXX prefixes (3 digits after 284).
+ * We use a landline blocklist rather than a mobile allowlist so that any
+ * unrecognised prefix is treated as mobile (the safer default for SMS).
+ *
+ * Landline NXX: 229 (Road Town), 394 (C&W), 494 (Tortola), 495 (Virgin Gorda).
+ * Split block: 496-0000..5999 = C&W landline, 496-6000..9999 = CCT mobile.
  *
  * TO UPGRADE: swap this function for a Twilio Lookup call:
  *   const result = await twilioClient.lookups.v2.phoneNumbers(e164).fetch({ fields: "line_type_intelligence" });
  *   return result.lineTypeIntelligence?.type === "mobile";
  */
-const BVI_MOBILE_NXX = new Set([
-  "300","301","302","303",          // Digicel
-  "340","341","342","343",          // Flow/Digicel mobile
-  "344","345","346","347",
-  "440","441","442","443","444","445", // CCT mobile
-  "468",                            // CCT mobile
-  "499",                            // CCT mobile (user-confirmed)
-  "540","541","542","543","544","545","546","547", // Flow mobile
-]);
+const BVI_LANDLINE_NXX = new Set(["229", "394", "494", "495"]);
 
 /**
- * Returns true if the E.164 number (+1284XXXXXXX) is a known BVI mobile.
+ * Returns true if the E.164 number (+1284XXXXXXX) is likely a BVI mobile.
+ * Assumes mobile for any 284 prefix not in the known landline set.
  * The 496 prefix is a split block: 496-6000..9999 = CCT mobile, 496-0000..5999 = C&W landline.
  */
 export function isBVIMobile(e164: string): boolean {
   const digits = e164.replace(/\D/g, "");
   if (!digits.startsWith("1284") || digits.length !== 11) return false;
   const nxx = digits.slice(4, 7);
+  if (BVI_LANDLINE_NXX.has(nxx)) return false;
   if (nxx === "496") {
     const last4 = parseInt(digits.slice(7), 10);
     return last4 >= 6000;
   }
-  return BVI_MOBILE_NXX.has(nxx);
+  return true;
 }
 
 /** Extract the caller's phone number from a Vapi assistant-request payload. */
