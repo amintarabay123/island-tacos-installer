@@ -428,6 +428,7 @@ export default function AdminFinancials() {
   const [loadingDrafts, setLoadingDrafts] = useState(true);
   const [fetchingPOS, setFetchingPOS] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [inWizard, setInWizard] = useState(!!params.id);
 
   // Check auth
   useEffect(() => {
@@ -510,7 +511,7 @@ export default function AdminFinancials() {
     if (!confirm("Delete this draft? This cannot be undone.")) return;
     await fetch(`/api/financials/drafts/${id}`, { method: "DELETE", credentials: "include", headers: authHeaders() });
     await loadDrafts();
-    if (draftId === id) { setDraftId(null); setData({ ...EMPTY_DRAFT }); setStep(0); }
+    if (draftId === id) { setDraftId(null); setData({ ...EMPTY_DRAFT }); setStep(0); setInWizard(false); }
   };
 
   const openDraft = (d: Draft) => {
@@ -518,6 +519,7 @@ export default function AdminFinancials() {
     setPeriodStart(d.period_start);
     setPeriodEnd(d.period_end);
     setStep(0);
+    setInWizard(true);
   };
 
   const newDraft = () => {
@@ -526,6 +528,7 @@ export default function AdminFinancials() {
     setPeriodStart(`${new Date().getFullYear()}-01-01`);
     setPeriodEnd(new Date().toISOString().slice(0, 10));
     setStep(0);
+    setInWizard(true);
   };
 
   const totals = computeTotals(data, periodStart, periodEnd);
@@ -552,7 +555,7 @@ export default function AdminFinancials() {
   };
 
   // ── If no draft is open, show list ───────────────────────────────────────
-  if (draftId === null && step === 0 && !loadingDrafts) {
+  if (!inWizard) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b sticky top-0 z-10">
@@ -621,7 +624,7 @@ export default function AdminFinancials() {
       {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => { setDraftId(null); setStep(0); loadDrafts(); }}
+          <button onClick={() => { setInWizard(false); setDraftId(null); setStep(0); loadDrafts(); }}
             className="p-2 hover:bg-gray-100 rounded-lg">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
