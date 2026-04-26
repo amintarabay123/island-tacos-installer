@@ -54,6 +54,7 @@ SMTP_HOST = "smtp.gmail.com"
 SMTP_PORT = "587"
 SMTP_USER = "orders@islandtacosbvi.com"
 SMTP_FROM = "Island Tacos <orders@islandtacosbvi.com>"
+TWILIO_FROM_NUMBER = "+14245448088"
 
 [userenv.production]
 VITE_CLERK_PROXY_URL = "https://order-direct-connect.replit.app/api/__clerk"
