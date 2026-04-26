@@ -281,7 +281,9 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
         : `Thank you for calling Island Tacos! Unfortunately we're closed right now. Our hours are ${openTime} to ${closeTime} Atlantic Standard Time. Please give us a call back when we're open. Have a great day!`;
 
     const baseUrl = process.env.API_BASE_URL ?? "https://order-direct-connect.replit.app";
-    const systemPrompt = buildSystemPrompt(callerE164, callerIsMobile);
+    const systemPrompt = is_open
+      ? buildSystemPrompt(callerE164, callerIsMobile)
+      : `You are a polite phone greeter for Island Tacos. The store is currently closed. You have already delivered the closed message as your first message. If the caller says anything, politely repeat that you are closed and wish them a great day, then end the call. Do not offer to take any orders. Do not call any tools.`;
 
     const assistant = {
       firstMessage,
