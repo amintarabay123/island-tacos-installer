@@ -167,52 +167,55 @@ async function sendReadyEmail(order: OrderRow) {
 }
 
 /**
- * Send an SMS via Vapi's outbound message API when an order is ready for pickup.
- * Requires VAPI_API_KEY and VAPI_FROM_NUMBER env vars.
- * The FROM number should be the Island Tacos Vapi number: +14245448088
+ * Send an "order ready" SMS via Twilio's HTTP API.
+ * Requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER env vars.
  */
 async function sendReadySMS(order: OrderRow) {
-  const apiKey = process.env.VAPI_API_KEY;
-  const fromNumber = process.env.VAPI_FROM_NUMBER ?? "+14245448088";
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken  = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER ?? "+14245448088";
 
-  if (!apiKey) {
-    console.warn("[sms] VAPI_API_KEY not set — skipping SMS notification");
+  if (!accountSid || !authToken) {
+    console.warn("[sms] TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN not set — skipping");
     return;
   }
-  if (!order.customerPhone) return;
+  if (!order.customerPhone) {
+    console.log(`[sms] order ${order.confirmationCode} has no phone — skipping`);
+    return;
+  }
   if (!isBVIMobile(order.customerPhone)) {
     console.log(`[sms] ${order.customerPhone} is not a BVI mobile — skipping`);
     return;
   }
 
-  const message =
+  const body =
     `Hi ${order.customerName || "there"}! Your Island Tacos order` +
-    ` #${order.confirmationCode} is ready for pickup. Come on in! 🌮`;
+    ` #${order.confirmationCode} is ready for pickup. Come on in!`;
+
+  const params = new URLSearchParams({ To: order.customerPhone, From: fromNumber, Body: body });
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
 
   try {
-    const resp = await fetch("https://api.vapi.ai/message", {
+    const resp = await fetch(url, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+        "Authorization": `Basic ${credentials}`,
+        "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: JSON.stringify({
-        type: "sms",
-        to: order.customerPhone,
-        from: fromNumber,
-        message,
-      }),
+      body: params.toString(),
     });
 
+    const text = await resp.text();
     if (!resp.ok) {
-      const text = await resp.text();
-      console.error(`[sms] Vapi SMS failed (${resp.status}): ${text}`);
+      console.error(`[sms] Twilio failed (${resp.status}): ${text}`);
     } else {
-      console.log(`[sms] SMS sent to ${order.customerPhone} for order ${order.confirmationCode}`);
+      const data = JSON.parse(text);
+      console.log(`[sms] Sent to ${order.customerPhone} for ${order.confirmationCode} — SID: ${data.sid}`);
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[sms] SMS send error: ${msg}`);
+    console.error(`[sms] Send error: ${msg}`);
   }
 }
 

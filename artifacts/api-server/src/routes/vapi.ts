@@ -309,10 +309,18 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
               description: "Submit the customer's confirmed order.",
               parameters: {
                 type: "object",
-                required: ["customerName", "customerPhone", "items"],
+                // When caller's mobile is already known, customerPhone is pre-filled — not required
+                required: (callerE164 && callerIsMobile)
+                  ? ["customerName", "items"]
+                  : ["customerName", "customerPhone", "items"],
                 properties: {
                   customerName: { type: "string", description: "Customer's full name" },
-                  customerPhone: { type: "string", description: "Customer's phone number" },
+                  customerPhone: {
+                    type: "string",
+                    description: (callerE164 && callerIsMobile)
+                      ? `ALREADY KNOWN — use "${callerE164}" exactly. Do NOT ask the caller for this.`
+                      : "Customer's BVI mobile number for the SMS notification. Ask if they have one.",
+                  },
                   notes: { type: "string", description: "Any special instructions for the whole order" },
                   items: {
                     type: "array",
