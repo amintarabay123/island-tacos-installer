@@ -51,6 +51,9 @@ export default function Admin() {
   const [lastSync, setLastSync] = useState<string | null>(() => localStorage.getItem("lastMenuSync"));
   const [importState, setImportState] = useState<"idle" | "importing" | "success" | "error">("idle");
   const [importMessage, setImportMessage] = useState<string>("");
+  const [csvState, setCsvState] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [csvMessage, setCsvMessage] = useState<string>("");
+  const csvInputRef = useRef<HTMLInputElement>(null);
   const prevOrderIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
 
@@ -109,6 +112,28 @@ export default function Admin() {
     }
   };
 
+  const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvState("uploading");
+    setCsvMessage("Uploading & importing CSV — please wait…");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const r = await fetch("/api/loyverse/import-csv", { method: "POST", credentials: "include", headers: authHeaders(), body: form });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error ?? "CSV import failed");
+      const { imported, skipped, errors: errs } = data;
+      setCsvState("success");
+      setCsvMessage(`Imported ${imported} orders` + (skipped ? ` (${skipped} already existed)` : "") + (errs ? `, ${errs} row error(s)` : "") + ".");
+      setTimeout(() => { setCsvState("idle"); setCsvMessage(""); }, 8000);
+    } catch (e) {
+      setCsvState("error");
+      setCsvMessage(String(e));
+    } finally {
+      if (csvInputRef.current) csvInputRef.current.value = "";
+    }
+  };
 
   const { data: stats } = useGetAdminStats({ query: { refetchInterval: 5_000 } });
   const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 }, { query: { refetchInterval: 5_000 } });
@@ -384,30 +409,64 @@ export default function Admin() {
         </div>
 
         {/* Loyverse history import */}
-        <div className="rounded-xl border bg-card p-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><History className="h-5 w-5" /></div>
-            <div>
-              <p className="font-semibold text-sm">Import from Loyverse</p>
-              <p className="text-xs text-muted-foreground">
-                {importState === "idle"
-                  ? "Imports all customers + last 30 days of receipts (Loyverse API limit)"
-                  : importState === "importing"
-                  ? "Fetching from Loyverse — please wait…"
-                  : null}
-              </p>
-              {importMessage && (
-                <p className={`text-xs mt-0.5 ${importState === "error" ? "text-red-600" : "text-green-600"}`}>{importMessage}</p>
-              )}
+        <div className="rounded-xl border bg-card p-4 space-y-3">
+          {/* Row 1: API pull (last 30 days) */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><History className="h-5 w-5" /></div>
+              <div>
+                <p className="font-semibold text-sm">Import from Loyverse API</p>
+                <p className="text-xs text-muted-foreground">
+                  {importState === "idle"
+                    ? "Imports all customers + last 30 days of receipts"
+                    : importState === "importing"
+                    ? "Fetching from Loyverse — please wait…"
+                    : null}
+                </p>
+                {importMessage && (
+                  <p className={`text-xs mt-0.5 ${importState === "error" ? "text-red-600" : "text-green-600"}`}>{importMessage}</p>
+                )}
+              </div>
             </div>
+            <Button size="sm" variant="outline"
+              disabled={importState === "importing" || importState === "success"}
+              onClick={handleLoyverseImport}
+              className={importState === "success" ? "border-green-500 text-green-700" : importState === "error" ? "border-red-400 text-red-600" : "border-purple-300 text-purple-700 hover:bg-purple-50"}>
+              <History className={`h-4 w-4 mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
+              {importState === "importing" ? "Importing…" : importState === "success" ? "Imported!" : importState === "error" ? "Retry Import" : "Import Now"}
+            </Button>
           </div>
-          <Button size="sm" variant="outline"
-            disabled={importState === "importing" || importState === "success"}
-            onClick={handleLoyverseImport}
-            className={importState === "success" ? "border-green-500 text-green-700" : importState === "error" ? "border-red-400 text-red-600" : "border-purple-300 text-purple-700 hover:bg-purple-50"}>
-            <History className={`h-4 w-4 mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
-            {importState === "importing" ? "Importing…" : importState === "success" ? "Imported!" : importState === "error" ? "Retry Import" : "Import Now"}
-          </Button>
+
+          {/* Divider */}
+          <div className="border-t border-dashed" />
+
+          {/* Row 2: CSV upload for full history */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600"><CloudUpload className="h-5 w-5" /></div>
+              <div>
+                <p className="font-semibold text-sm">Upload Loyverse CSV (full history)</p>
+                <p className="text-xs text-muted-foreground">
+                  {csvState === "idle"
+                    ? 'Export receipts from Loyverse → Reports → Sales → Export, then upload here'
+                    : csvState === "uploading"
+                    ? "Importing rows — please wait…"
+                    : null}
+                </p>
+                {csvMessage && (
+                  <p className={`text-xs mt-0.5 ${csvState === "error" ? "text-red-600" : "text-green-600"}`}>{csvMessage}</p>
+                )}
+              </div>
+            </div>
+            <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCSVUpload} />
+            <Button size="sm" variant="outline"
+              disabled={csvState === "uploading"}
+              onClick={() => csvInputRef.current?.click()}
+              className={csvState === "success" ? "border-green-500 text-green-700" : csvState === "error" ? "border-red-400 text-red-600" : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"}>
+              <CloudUpload className={`h-4 w-4 mr-1.5 ${csvState === "uploading" ? "animate-pulse" : ""}`} />
+              {csvState === "uploading" ? "Uploading…" : csvState === "success" ? "Imported!" : csvState === "error" ? "Retry Upload" : "Upload CSV"}
+            </Button>
+          </div>
         </div>
 
         {stats?.popularItems && stats.popularItems.length > 0 && (
