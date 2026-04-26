@@ -290,7 +290,7 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
         provider: VAPI_MODEL_PROVIDER,
         model: VAPI_MODEL,
         messages: [{ role: "system", content: systemPrompt }],
-        tools: is_open ? [
+        ...(is_open ? { tools: [
           {
             type: "function",
             async: false,
@@ -354,7 +354,7 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
               headers: { "x-vapi-secret": process.env.VAPI_WEBHOOK_SECRET ?? "" },
             },
           },
-        ] : [],
+        ] } : {}),
       },
       voice: {
         provider: VAPI_VOICE_PROVIDER,
