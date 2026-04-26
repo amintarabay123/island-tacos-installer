@@ -6,12 +6,26 @@ const router: IRouter = Router();
 
 function parseDecimal(v: unknown) { return parseFloat((v as string) ?? "0") || 0; }
 
+// BVI is UTC-4 — shift now into BVI "local" coordinates, set midnight, shift back
+function getBVIMidnight(): Date {
+  const BVI_OFFSET_MS = 4 * 60 * 60 * 1000;
+  const bviNow = new Date(Date.now() - BVI_OFFSET_MS);
+  bviNow.setUTCHours(0, 0, 0, 0);
+  return new Date(bviNow.getTime() + BVI_OFFSET_MS);
+}
+
+function getBVIEndOfDay(): Date {
+  const BVI_OFFSET_MS = 4 * 60 * 60 * 1000;
+  const bviNow = new Date(Date.now() - BVI_OFFSET_MS);
+  bviNow.setUTCHours(23, 59, 59, 999);
+  return new Date(bviNow.getTime() + BVI_OFFSET_MS);
+}
+
 router.get("/reports/sales", async (req, res): Promise<void> => {
   const { from, to } = req.query as { from?: string; to?: string };
 
-  const fromDate = from ? new Date(from) : new Date(new Date().setHours(0, 0, 0, 0));
-  const toDate = to ? new Date(to) : new Date();
-  toDate.setHours(23, 59, 59, 999);
+  const fromDate = from ? new Date(from) : getBVIMidnight();
+  const toDate = to ? new Date(to) : getBVIEndOfDay();
 
   const conditions = [
     gte(ordersTable.createdAt, fromDate),
@@ -60,9 +74,11 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
   }
 
   // Daily breakdown for charts
+  const BVI_OFFSET_MS = 4 * 60 * 60 * 1000;
   const dailyMap: Record<string, { date: string; sales: number; orders: number }> = {};
   for (const o of paidOrders) {
-    const d = o.createdAt.toISOString().slice(0, 10);
+    const bviDate = new Date(o.createdAt.getTime() - BVI_OFFSET_MS);
+    const d = bviDate.toISOString().slice(0, 10);
     if (!dailyMap[d]) dailyMap[d] = { date: d, sales: 0, orders: 0 };
     dailyMap[d].sales += parseDecimal(o.total);
     dailyMap[d].orders += 1;

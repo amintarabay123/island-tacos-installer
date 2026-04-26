@@ -5,9 +5,16 @@ import { GetRecentOrdersQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
+// BVI is UTC-4 (America/Puerto_Rico) — calculate midnight in local BVI time
+function getBVIMidnight(): Date {
+  const BVI_OFFSET_MS = 4 * 60 * 60 * 1000;
+  const bviNow = new Date(Date.now() - BVI_OFFSET_MS);
+  bviNow.setUTCHours(0, 0, 0, 0);
+  return new Date(bviNow.getTime() + BVI_OFFSET_MS);
+}
+
 router.get("/admin/stats", async (_req, res): Promise<void> => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = getBVIMidnight();
 
   const todayOrders = await db
     .select()
