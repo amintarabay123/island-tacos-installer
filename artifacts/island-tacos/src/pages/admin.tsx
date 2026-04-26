@@ -6,7 +6,7 @@ import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdmin
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, Monitor, LogOut, XCircle, BarChart3, Users, CloudUpload, Menu, X, ChefHat, UtensilsCrossed, Store } from "lucide-react";
+import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, Monitor, LogOut, XCircle, BarChart3, Users, CloudUpload, Menu, X, ChefHat, UtensilsCrossed, Store, History } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,8 @@ export default function Admin() {
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "success" | "error">("idle");
   const [syncMessage, setSyncMessage] = useState<string>("");
   const [lastSync, setLastSync] = useState<string | null>(() => localStorage.getItem("lastMenuSync"));
+  const [importState, setImportState] = useState<"idle" | "importing" | "success" | "error">("idle");
+  const [importMessage, setImportMessage] = useState<string>("");
   const prevOrderIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
 
@@ -82,6 +84,26 @@ export default function Admin() {
       setTimeout(() => setSyncState("idle"), 4000);
     } catch (e) {
       setSyncState("error"); setSyncMessage(String(e));
+    }
+  };
+
+  const handleLoyverseImport = async () => {
+    if (importState === "importing") return;
+    setImportState("importing");
+    setImportMessage("Fetching data from Loyverse… this may take a minute.");
+    try {
+      const r = await fetch("/api/loyverse/import-history", { method: "POST", credentials: "include", headers: authHeaders() });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error ?? "Import failed");
+      const { customersImported, customersSkipped, ordersImported, ordersSkipped, errors } = data;
+      setImportState("success");
+      setImportMessage(
+        `Imported ${ordersImported} orders + ${customersImported} customers (${ordersSkipped} orders / ${customersSkipped} customers already existed).` +
+        (errors?.length ? ` ${errors.length} error(s): ${errors[0]}` : "")
+      );
+    } catch (e) {
+      setImportState("error");
+      setImportMessage(String(e));
     }
   };
 
@@ -356,6 +378,33 @@ export default function Admin() {
             className={syncState === "success" ? "border-green-500 text-green-700" : syncState === "error" ? "border-red-400 text-red-600" : ""}>
             <CloudUpload className={`h-4 w-4 mr-1.5 ${syncState === "syncing" ? "animate-pulse" : ""}`} />
             {syncState === "syncing" ? "Syncing…" : syncState === "success" ? "Synced!" : syncState === "error" ? "Retry Sync" : "Sync Now"}
+          </Button>
+        </div>
+
+        {/* Loyverse history import */}
+        <div className="rounded-xl border bg-card p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><History className="h-5 w-5" /></div>
+            <div>
+              <p className="font-semibold text-sm">Import Loyverse Sales History</p>
+              <p className="text-xs text-muted-foreground">
+                {importState === "idle"
+                  ? "One-time import of all past orders and customers from Loyverse"
+                  : importState === "importing"
+                  ? "Fetching from Loyverse — please wait…"
+                  : null}
+              </p>
+              {importMessage && (
+                <p className={`text-xs mt-0.5 ${importState === "error" ? "text-red-600" : "text-green-600"}`}>{importMessage}</p>
+              )}
+            </div>
+          </div>
+          <Button size="sm" variant="outline"
+            disabled={importState === "importing" || importState === "success"}
+            onClick={handleLoyverseImport}
+            className={importState === "success" ? "border-green-500 text-green-700" : importState === "error" ? "border-red-400 text-red-600" : "border-purple-300 text-purple-700 hover:bg-purple-50"}>
+            <History className={`h-4 w-4 mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
+            {importState === "importing" ? "Importing…" : importState === "success" ? "Imported!" : importState === "error" ? "Retry Import" : "Import Now"}
           </Button>
         </div>
 

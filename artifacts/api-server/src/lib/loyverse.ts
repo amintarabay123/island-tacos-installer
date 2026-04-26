@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { menuCategoriesTable, menuItemsTable, modifiersTable } from "@workspace/db/schema";
+import { menuCategoriesTable, menuItemsTable, modifiersTable, customersTable, ordersTable, orderItemsTable } from "@workspace/db/schema";
 import { eq, inArray } from "drizzle-orm";
 
 const LOYVERSE_API = "https://api.loyverse.com/v1.0";
@@ -246,6 +246,206 @@ export async function syncFromLoyverse(): Promise<SyncResult> {
       result.itemsUpserted++;
     } catch (err) {
       result.errors.push(`Item ${litem.item_name}: ${err}`);
+    }
+  }
+
+  return result;
+}
+
+// ── Loyverse Customer & Receipt types ─────────────────────────────────────────
+
+export interface LoyverseCustomer {
+  id: string;
+  name: string;
+  email: string | null;
+  phone_number: string | null;
+  total_visits: number;
+  total_spent: number;
+  note: string | null;
+  deleted_at: string | null;
+}
+
+export interface LoyverseReceiptLineItem {
+  item_name: string;
+  quantity: number;
+  price: number;
+  total_money: number;
+  gross_total_money: number;
+  variant_id: string | null;
+  item_id: string | null;
+}
+
+export interface LoyverseReceiptPayment {
+  payment_type_id: string;
+  name: string;
+  money_amount: number;
+}
+
+export interface LoyverseReceipt {
+  receipt_number: string;
+  receipt_type: string;
+  customer_id: string | null;
+  created_at: string;
+  total_money: number;
+  total_tax: number;
+  total_discounts: number;
+  payments: LoyverseReceiptPayment[];
+  line_items: LoyverseReceiptLineItem[];
+  note: string | null;
+}
+
+export async function fetchLoyverseCustomers(): Promise<LoyverseCustomer[]> {
+  const all: LoyverseCustomer[] = [];
+  let cursor: string | undefined;
+  do {
+    const params = new URLSearchParams({ limit: "250" });
+    if (cursor) params.set("cursor", cursor);
+    const data = await loyverseFetch<{ customers: LoyverseCustomer[]; cursor?: string }>(`/customers?${params}`);
+    all.push(...(data.customers ?? []));
+    cursor = data.cursor;
+  } while (cursor);
+  return all.filter((c) => !c.deleted_at);
+}
+
+export async function fetchLoyverseReceipts(): Promise<LoyverseReceipt[]> {
+  const all: LoyverseReceipt[] = [];
+  let cursor: string | undefined;
+  do {
+    const params = new URLSearchParams({ limit: "250", receipt_type: "SALE" });
+    if (cursor) params.set("cursor", cursor);
+    const data = await loyverseFetch<{ receipts: LoyverseReceipt[]; cursor?: string }>(`/receipts?${params}`);
+    all.push(...(data.receipts ?? []));
+    cursor = data.cursor;
+  } while (cursor);
+  return all.filter((r) => r.receipt_type === "SALE");
+}
+
+export interface ImportHistoryResult {
+  customersImported: number;
+  customersSkipped: number;
+  ordersImported: number;
+  ordersSkipped: number;
+  errors: string[];
+}
+
+export async function importLoyverseHistory(): Promise<ImportHistoryResult> {
+  const result: ImportHistoryResult = {
+    customersImported: 0,
+    customersSkipped: 0,
+    ordersImported: 0,
+    ordersSkipped: 0,
+    errors: [],
+  };
+
+  // Fetch everything from Loyverse in parallel
+  const [loyverseCustomers, loyverseReceipts] = await Promise.all([
+    fetchLoyverseCustomers(),
+    fetchLoyverseReceipts(),
+  ]);
+
+  // Build a map of loyverse customer_id → customer for receipt lookup
+  const customerById = new Map<string, LoyverseCustomer>(loyverseCustomers.map((c) => [c.id, c]));
+
+  // ── 1. Import customers ────────────────────────────────────────────────────
+  for (const lc of loyverseCustomers) {
+    try {
+      // Deduplicate by phone first, then email
+      const phone = lc.phone_number?.trim() || null;
+      const email = lc.email?.trim() || null;
+
+      if (phone) {
+        const existing = await db.query.customersTable.findFirst({
+          where: eq(customersTable.phone, phone),
+        });
+        if (existing) { result.customersSkipped++; continue; }
+      } else if (email) {
+        const existing = await db.query.customersTable.findFirst({
+          where: eq(customersTable.email, email),
+        });
+        if (existing) { result.customersSkipped++; continue; }
+      }
+
+      await db.insert(customersTable).values({
+        name: lc.name?.trim() || "Unknown",
+        email: email,
+        phone: phone,
+        notes: lc.note?.trim() || null,
+        visitCount: lc.total_visits ?? 1,
+        totalSpent: String(lc.total_spent ?? 0),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      result.customersImported++;
+    } catch (err) {
+      result.errors.push(`Customer ${lc.name}: ${err}`);
+    }
+  }
+
+  // ── 2. Import receipts as completed orders ─────────────────────────────────
+  for (const receipt of loyverseReceipts) {
+    try {
+      const confirmationCode = `LV-${receipt.receipt_number}`;
+
+      // Skip if already imported
+      const existing = await db.query.ordersTable.findFirst({
+        where: eq(ordersTable.confirmationCode, confirmationCode),
+      });
+      if (existing) { result.ordersSkipped++; continue; }
+
+      const customer = receipt.customer_id ? customerById.get(receipt.customer_id) : null;
+
+      // Determine payment method from the first payment name
+      const paymentName = (receipt.payments?.[0]?.name ?? "").toLowerCase();
+      const paymentMethod = paymentName.includes("ath") || paymentName.includes("móvil") || paymentName.includes("movil")
+        ? "athmovil"
+        : paymentName.includes("card") || paymentName.includes("credit") || paymentName.includes("visa")
+        ? "card"
+        : "cash";
+
+      const total = Math.round((receipt.total_money ?? 0) * 100) / 100;
+      const tax = Math.round((receipt.total_tax ?? 0) * 100) / 100;
+      const discount = Math.round((receipt.total_discounts ?? 0) * 100) / 100;
+      const subtotal = Math.round((total + discount - tax) * 100) / 100;
+
+      const [order] = await db
+        .insert(ordersTable)
+        .values({
+          confirmationCode,
+          customerName: customer?.name?.trim() || "Walk-in Customer",
+          customerEmail: customer?.email?.trim() || "",
+          customerPhone: customer?.phone_number?.trim() || "",
+          orderType: "pickup",
+          status: "completed",
+          paymentStatus: "paid",
+          paymentMethod,
+          source: "loyverse",
+          subtotal: String(subtotal > 0 ? subtotal : total),
+          discountAmount: String(discount),
+          tax: String(tax),
+          deliveryFee: "0",
+          total: String(total),
+          notes: receipt.note?.trim() || null,
+          createdAt: new Date(receipt.created_at),
+        })
+        .returning();
+
+      // Insert line items
+      if ((receipt.line_items ?? []).length > 0) {
+        await db.insert(orderItemsTable).values(
+          receipt.line_items.map((item) => ({
+            orderId: order.id,
+            menuItemName: item.item_name || "Item",
+            menuItemPrice: String(Math.round((item.price ?? 0) * 100) / 100),
+            quantity: item.quantity ?? 1,
+            subtotal: String(Math.round((item.total_money ?? 0) * 100) / 100),
+            alreadyMade: false,
+          }))
+        );
+      }
+
+      result.ordersImported++;
+    } catch (err) {
+      result.errors.push(`Receipt ${receipt.receipt_number}: ${err}`);
     }
   }
 

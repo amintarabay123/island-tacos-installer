@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable } from "@workspace/db";
-import { syncFromLoyverse, pushOrderToLoyverse } from "../lib/loyverse";
+import { syncFromLoyverse, pushOrderToLoyverse, importLoyverseHistory } from "../lib/loyverse";
 
 const router: IRouter = Router();
 
@@ -69,6 +69,20 @@ router.post("/loyverse/push/:orderId", async (req, res): Promise<void> => {
     res.json({ success: true, receiptNumber });
   } catch (err) {
     console.error("Loyverse push error:", err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// POST /loyverse/import-history — one-time import of all Loyverse customers + receipts
+// Protected by admin auth in routes/index.ts
+router.post("/loyverse/import-history", async (_req, res): Promise<void> => {
+  console.log("[loyverse/import-history] Starting one-time history import…");
+  try {
+    const result = await importLoyverseHistory();
+    console.log(`[loyverse/import-history] Done — customers: +${result.customersImported} skipped:${result.customersSkipped} | orders: +${result.ordersImported} skipped:${result.ordersSkipped} | errors:${result.errors.length}`);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error("[loyverse/import-history] Error:", err);
     res.status(500).json({ error: String(err) });
   }
 });
