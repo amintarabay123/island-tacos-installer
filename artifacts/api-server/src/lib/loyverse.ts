@@ -308,54 +308,41 @@ export async function fetchLoyverseCustomers(): Promise<LoyverseCustomer[]> {
 }
 
 /**
- * Fetch all Loyverse SALE receipts by walking backwards through time in 28-day windows.
- * This avoids the cursor-based 402 that occurs when a single cursor chain crosses the
- * 31-day boundary — each individual date-range request stays within that window.
+ * Fetch Loyverse SALE receipts. The Loyverse API restricts receipt history to the last
+ * 31 days on non-Unlimited plans. We fetch as much as possible within that window.
  */
 export async function fetchLoyverseReceipts(): Promise<{ receipts: LoyverseReceipt[]; truncated: boolean }> {
   const all: LoyverseReceipt[] = [];
-  const WINDOW_DAYS = 28;
-  const MAX_YEARS_BACK = 10;
+  const windowEnd = new Date();
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - 30); // stay safely within 31-day limit
 
-  let windowEnd = new Date();
-  const stopAt = new Date();
-  stopAt.setFullYear(stopAt.getFullYear() - MAX_YEARS_BACK);
+  let cursor: string | undefined;
+  do {
+    const params = new URLSearchParams({
+      limit: "250",
+      receipt_type: "SALE",
+      created_at_min: windowStart.toISOString(),
+      created_at_max: windowEnd.toISOString(),
+    });
+    if (cursor) params.set("cursor", cursor);
 
-  while (windowEnd > stopAt) {
-    const windowStart = new Date(windowEnd);
-    windowStart.setDate(windowStart.getDate() - WINDOW_DAYS);
-    if (windowStart < stopAt) windowStart.setTime(stopAt.getTime());
+    const res = await fetch(`${LOYVERSE_API}/receipts?${params}`, {
+      headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+    });
 
-    let cursor: string | undefined;
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Loyverse API /receipts → ${res.status}: ${body}`);
+    }
 
-    do {
-      const params = new URLSearchParams({
-        limit: "250",
-        receipt_type: "SALE",
-        created_at_min: windowStart.toISOString(),
-        created_at_max: windowEnd.toISOString(),
-      });
-      if (cursor) params.set("cursor", cursor);
+    const data = await res.json() as { receipts: LoyverseReceipt[]; cursor?: string };
+    all.push(...(data.receipts ?? []).filter((r) => r.receipt_type === "SALE"));
+    cursor = data.cursor;
+  } while (cursor);
 
-      const res = await fetch(`${LOYVERSE_API}/receipts?${params}`, {
-        headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
-      });
-
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`Loyverse API /receipts → ${res.status}: ${body}`);
-      }
-
-      const data = await res.json() as { receipts: LoyverseReceipt[]; cursor?: string };
-      all.push(...(data.receipts ?? []).filter((r) => r.receipt_type === "SALE"));
-      cursor = data.cursor;
-    } while (cursor);
-
-    // Move to next (older) window
-    windowEnd = new Date(windowStart);
-  }
-
-  return { receipts: all, truncated: false };
+  // truncated = true means only partial history was accessible (plan limitation)
+  return { receipts: all, truncated: true };
 }
 
 export interface ImportHistoryResult {

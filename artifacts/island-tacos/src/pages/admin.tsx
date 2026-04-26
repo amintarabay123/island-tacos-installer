@@ -388,10 +388,10 @@ export default function Admin() {
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><History className="h-5 w-5" /></div>
             <div>
-              <p className="font-semibold text-sm">Import Loyverse Sales History</p>
+              <p className="font-semibold text-sm">Import from Loyverse</p>
               <p className="text-xs text-muted-foreground">
                 {importState === "idle"
-                  ? "One-time import of all past orders and customers from Loyverse"
+                  ? "Imports all customers + last 30 days of receipts (Loyverse API limit)"
                   : importState === "importing"
                   ? "Fetching from Loyverse — please wait…"
                   : null}
