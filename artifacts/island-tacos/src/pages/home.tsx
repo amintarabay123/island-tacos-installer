@@ -53,8 +53,10 @@ export default function Home() {
   }, [items, activeCategory]);
 
   const [storeOpen, setStoreOpen] = useState(true);
+  const [openToday, setOpenToday] = useState(true);
   const [storeOpenTime, setStoreOpenTime] = useState("11:00 AM");
   const [storeCloseOrdersAt, setStoreCloseOrdersAt] = useState("6:45 PM");
+  const [closedTodayReason, setClosedTodayReason] = useState<string | null>(null);
 
   useEffect(() => {
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -62,6 +64,8 @@ export default function Home() {
       .then(r => r.json())
       .then((d: Record<string, string>) => {
         setStoreOpen(d.is_open !== "false");
+        setOpenToday(d.open_today !== "false");
+        setClosedTodayReason(d.closed_today_reason ?? null);
         const fmt = (hhmm: string) => {
           const [h, m] = hhmm.split(":").map(Number);
           const ampm = h >= 12 ? "PM" : "AM";
@@ -216,10 +220,12 @@ export default function Home() {
       {!storeOpen && (
         <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 text-center">
           <p className="text-sm font-semibold text-amber-800">
-            Online ordering is currently closed
+            {!openToday ? (closedTodayReason ?? "We're closed today") : "Online ordering is currently closed"}
           </p>
           <p className="text-xs text-amber-700 mt-0.5">
-            We're open {storeOpenTime} – {storeCloseOrdersAt} · You can still browse the menu
+            {!openToday
+              ? "You can still browse the menu and order on an open day"
+              : `We're open ${storeOpenTime} – ${storeCloseOrdersAt} · You can still browse the menu`}
           </p>
         </div>
       )}

@@ -36,9 +36,11 @@ export default function Checkout() {
   const [enabledMethods, setEnabledMethods] = useState<string[]>(["cash"]);
   const [athState, setAthState] = useState<AthState | null>(null);
   const [storeOpen, setStoreOpen] = useState(true);
+  const [openToday, setOpenToday] = useState(true);
   const [storeOpenTime, setStoreOpenTime] = useState("11:00 AM");
   const [storeCloseOrdersAt, setStoreCloseOrdersAt] = useState("6:45 PM");
   const [rawCloseTime, setRawCloseTime] = useState("19:00");
+  const [closedTodayReason, setClosedTodayReason] = useState<string | null>(null);
   const [pickupMode, setPickupMode] = useState<"asap" | "scheduled">("asap");
   const [scheduledTime, setScheduledTime] = useState<string>("");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -90,6 +92,8 @@ export default function Checkout() {
           return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
         };
         setStoreOpen(data.is_open !== "false");
+        setOpenToday(data.open_today !== "false");
+        setClosedTodayReason(data.closed_today_reason ?? null);
         setStoreOpenTime(fmt(data.open_time ?? "11:00"));
         setStoreCloseOrdersAt(fmt(data.closes_orders_at ?? "18:45"));
         setRawCloseTime(data.close_time ?? "19:00");
@@ -437,8 +441,14 @@ export default function Checkout() {
 
               {!storeOpen && (
                 <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-center">
-                  <p className="text-sm font-semibold text-amber-800">Online ordering is closed right now</p>
-                  <p className="text-xs text-amber-700 mt-1">We're open {storeOpenTime} – {storeCloseOrdersAt} AST · Last orders are 15 min before closing</p>
+                  <p className="text-sm font-semibold text-amber-800">
+                    {!openToday ? (closedTodayReason ?? "We're closed today") : "Online ordering is closed right now"}
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    {!openToday
+                      ? "We only accept orders on open days — check back then!"
+                      : `We're open ${storeOpenTime} – ${storeCloseOrdersAt} AST · Last orders are 15 min before closing`}
+                  </p>
                 </div>
               )}
               <Button

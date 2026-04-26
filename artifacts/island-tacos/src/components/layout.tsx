@@ -9,13 +9,14 @@ import { useState, useEffect } from "react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type StoreSettings = { hours: string; phone: string; address: string; payment_methods: string; is_open: string; open_time: string; closes_orders_at: string };
+type StoreSettings = { hours: string; phone: string; address: string; payment_methods: string; is_open: string; open_today: string; open_time: string; closes_orders_at: string; closed_today_reason?: string };
 const SETTING_DEFAULTS: StoreSettings = {
   hours: "11am – 7pm daily",
   phone: "284-544-8088",
   address: "Wickhams Cay 1, Road Town, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
   is_open: "true",
+  open_today: "true",
   open_time: "11:00",
   closes_orders_at: "18:45",
 };
@@ -177,8 +178,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     {settings.is_open === "false" ? (
                       <div className="space-y-2">
                         <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-center">
-                          <p className="text-xs font-semibold text-amber-800">Online ordering closed</p>
-                          <p className="text-xs text-amber-700 mt-0.5">Opens at {formatTime(settings.open_time)} · Last orders at {formatTime(settings.closes_orders_at)}</p>
+                          <p className="text-xs font-semibold text-amber-800">
+                            {settings.open_today === "false" ? (settings.closed_today_reason ?? "Closed today") : "Online ordering closed"}
+                          </p>
+                          <p className="text-xs text-amber-700 mt-0.5">
+                            {settings.open_today === "false"
+                              ? "We only take orders on open days"
+                              : `Opens at ${formatTime(settings.open_time)} · Last orders at ${formatTime(settings.closes_orders_at)}`}
+                          </p>
                         </div>
                         <Button
                           className="w-full h-11 font-semibold rounded-full"

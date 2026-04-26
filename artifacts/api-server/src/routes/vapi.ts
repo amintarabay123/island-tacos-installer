@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, inArray, count, or } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable, menuCategoriesTable, modifiersTable, storeSettingsTable } from "@workspace/db";
-import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
+import { SETTING_DEFAULTS, computeStoreStatus, formatOpenDays } from "./settings";
 
 const router: IRouter = Router();
 
@@ -263,7 +263,7 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
     const settingRows = await db.select().from(storeSettingsTable);
     const settings: Record<string, string> = { ...SETTING_DEFAULTS };
     for (const row of settingRows) settings[row.key] = row.value;
-    const { is_open } = computeStoreStatus(settings);
+    const { is_open, open_today } = computeStoreStatus(settings);
 
     const formatTime = (t: string) => {
       const [h, m] = t.split(":").map(Number);
@@ -274,10 +274,13 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
 
     const openTime = formatTime(settings.open_time ?? "11:00");
     const closeTime = formatTime(settings.close_time ?? "19:00");
+    const openDaysStr = formatOpenDays(settings.open_days);
 
     const firstMessage = is_open
       ? "Thank you for calling Island Tacos! I can help you place a pickup order today. What would you like?"
-      : `Thank you for calling Island Tacos! Unfortunately we're closed right now. Our hours are ${openTime} to ${closeTime} Atlantic Standard Time. Please give us a call back when we're open. Have a great day!`;
+      : !open_today
+        ? `Thank you for calling Island Tacos! We're closed today — we're open ${openDaysStr}, from ${openTime} to ${closeTime} Atlantic Standard Time. Please call us back on one of those days. Have a great day!`
+        : `Thank you for calling Island Tacos! Unfortunately we're closed right now. Our hours are ${openTime} to ${closeTime} Atlantic Standard Time. Please give us a call back when we're open. Have a great day!`;
 
     const baseUrl = process.env.API_BASE_URL ?? "https://order-direct-connect.replit.app";
     const systemPrompt = buildSystemPrompt(callerE164, callerIsMobile);
@@ -405,7 +408,7 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
     const settingRows = await db.select().from(storeSettingsTable);
     const settings: Record<string, string> = { ...SETTING_DEFAULTS };
     for (const row of settingRows) settings[row.key] = row.value;
-    const { is_open, closes_orders_at } = computeStoreStatus(settings);
+    const { is_open, closes_orders_at, open_today } = computeStoreStatus(settings);
 
     const formatTime = (t: string) => {
       const [h, m] = t.split(":").map(Number);
@@ -414,17 +417,23 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
       return m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2, "0")}${ampm}`;
     };
 
+    const openDaysStr = formatOpenDays(settings.open_days);
+    const hoursDisplay = settings.hours ?? `${formatTime(settings.open_time ?? "11:00")} – ${formatTime(settings.close_time ?? "19:00")} ${openDaysStr}`;
+
+    const closedMsg = !open_today
+      ? `IMPORTANT: Island Tacos is CLOSED TODAY. We are open ${openDaysStr}, ${formatTime(settings.open_time ?? "11:00")} to ${formatTime(settings.close_time ?? "19:00")} AST. You MUST NOT take any orders. Tell the caller to call back on an open day.`
+      : `IMPORTANT: Island Tacos is currently CLOSED. You MUST NOT take any orders or collect any food selections. Inform the caller that the store is closed and that they can call back when we open at ${formatTime(settings.open_time ?? "11:00")} AST. Do not attempt to place an order.`;
+
     const payload = {
       restaurantName: "Island Tacos",
       currency: "USD",
-      hours: settings.hours ?? `${formatTime(settings.open_time ?? "11:00")} – ${formatTime(settings.close_time ?? "19:00")} daily`,
+      hours: hoursDisplay,
       openTime: formatTime(settings.open_time ?? "11:00"),
       closeTime: formatTime(settings.close_time ?? "19:00"),
+      openDays: openDaysStr,
       isOpen: is_open,
       ordersClosedAt: formatTime(closes_orders_at),
-      ...(is_open ? {} : {
-        closedInstruction: `IMPORTANT: Island Tacos is currently CLOSED. You MUST NOT take any orders or collect any food selections. Inform the caller that the store is closed and that they can call back when we open at ${formatTime(settings.open_time ?? "11:00")} AST. Do not attempt to place an order.`,
-      }),
+      ...(is_open ? {} : { closedInstruction: closedMsg }),
       menu: menuData,
     };
 

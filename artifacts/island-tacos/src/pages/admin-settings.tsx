@@ -20,6 +20,7 @@ type Settings = {
   open_time: string;
   close_time: string;
   cutoff_minutes: string;
+  open_days: string;
 };
 
 const DEFAULTS: Settings = {
@@ -31,7 +32,18 @@ const DEFAULTS: Settings = {
   open_time: "11:00",
   close_time: "19:00",
   cutoff_minutes: "15",
+  open_days: "1,2,3,4,5,6",
 };
+
+const DAYS = [
+  { index: 0, short: "Sun", label: "Sunday"    },
+  { index: 1, short: "Mon", label: "Monday"    },
+  { index: 2, short: "Tue", label: "Tuesday"   },
+  { index: 3, short: "Wed", label: "Wednesday" },
+  { index: 4, short: "Thu", label: "Thursday"  },
+  { index: 5, short: "Fri", label: "Friday"    },
+  { index: 6, short: "Sat", label: "Saturday"  },
+];
 
 const ONLINE_METHODS = [
   { id: "cash", label: "Pay at Counter", description: "Customer pays cash or card when they pick up" },
@@ -79,11 +91,30 @@ export default function AdminSettings() {
           open_time: data.open_time ?? DEFAULTS.open_time,
           close_time: data.close_time ?? DEFAULTS.close_time,
           cutoff_minutes: data.cutoff_minutes ?? DEFAULTS.cutoff_minutes,
+          open_days: data.open_days ?? DEFAULTS.open_days,
         });
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const getOpenDays = (): Set<number> => {
+    const raw = form.open_days ?? DEFAULTS.open_days;
+    const nums = raw.split(",").map(s => parseInt(s.trim(), 10)).filter(n => n >= 0 && n <= 6);
+    return new Set(nums.length > 0 ? nums : [1, 2, 3, 4, 5, 6]);
+  };
+
+  const toggleDay = (index: number) => {
+    const current = getOpenDays();
+    if (current.has(index)) {
+      if (current.size <= 1) return; // must have at least one open day
+      current.delete(index);
+    } else {
+      current.add(index);
+    }
+    const sorted = [...current].sort((a, b) => a - b);
+    setForm(f => ({ ...f, open_days: sorted.join(",") }));
+  };
 
   const getOnlineMethods = (): string[] => {
     try { return JSON.parse(form.online_payment_methods); } catch { return ["cash"]; }
@@ -345,9 +376,40 @@ export default function AdminSettings() {
           <div>
             <h2 className="font-bold text-base">Online Ordering Hours</h2>
             <p className="text-xs text-muted-foreground mt-1">
-              All times are in Atlantic Standard Time (AST). Online orders are automatically blocked outside these hours.
+              All times are in Atlantic Standard Time (AST). Online orders are automatically blocked outside these hours and on closed days.
             </p>
           </div>
+
+          {/* Open days picker */}
+          <div className="space-y-2">
+            <Label>Open Days</Label>
+            <div className="flex gap-2 flex-wrap">
+              {DAYS.map(d => {
+                const open = getOpenDays().has(d.index);
+                const isLast = getOpenDays().size === 1 && open;
+                return (
+                  <button
+                    key={d.index}
+                    type="button"
+                    onClick={() => toggleDay(d.index)}
+                    disabled={loading || isLast}
+                    title={d.label}
+                    className={`h-9 w-12 rounded-lg border text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                      open
+                        ? "bg-primary border-primary text-primary-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {d.short}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tap a day to toggle it. At least one day must remain open.
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="open_time">Opens at</Label>
