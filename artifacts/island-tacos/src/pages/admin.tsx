@@ -263,6 +263,11 @@ export default function Admin() {
                   <BarChart3 className="h-5 w-5 text-purple-600" /> Reports
                 </div>
               </Link>
+              <Link href={adminRoutes.financials} onClick={() => setNavOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
+                  <History className="h-5 w-5 text-emerald-600" /> Financial Statements
+                </div>
+              </Link>
               <Link href={adminRoutes.customers} onClick={() => setNavOpen(false)}>
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
                   <Users className="h-5 w-5 text-blue-600" /> Customers
@@ -341,6 +346,11 @@ export default function Admin() {
               <Link href={adminRoutes.reports}>
                 <Button variant="outline" size="sm" className="shrink-0">
                   <BarChart3 className="h-4 w-4" /><span className="ml-1.5">Reports</span>
+                </Button>
+              </Link>
+              <Link href={adminRoutes.financials}>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <History className="h-4 w-4 text-emerald-600" /><span className="ml-1.5">Financials</span>
                 </Button>
               </Link>
               <Link href={adminRoutes.customers}>

@@ -21,6 +21,7 @@ const Admin = lazy(() => import("@/pages/admin"));
 const AdminMenu = lazy(() => import("@/pages/admin-menu"));
 const AdminModifiers = lazy(() => import("@/pages/admin-modifiers"));
 const AdminReports = lazy(() => import("@/pages/admin-reports"));
+const AdminFinancials = lazy(() => import("@/pages/admin-financials"));
 const AdminCustomers = lazy(() => import("@/pages/admin-customers"));
 const AdminSettings = lazy(() => import("@/pages/admin-settings"));
 const AccountPage = lazy(() => import("@/pages/account"));
@@ -97,6 +98,9 @@ function Router() {
       </Route>
       <Route path={adminRoutes.reports}>
         <ProtectedRoute><AdminReports /></ProtectedRoute>
+      </Route>
+      <Route path={`${adminRoutes.financials}/:id?`}>
+        <ProtectedRoute adminOnly><AdminFinancials /></ProtectedRoute>
       </Route>
       <Route path={adminRoutes.settings}>
         <ProtectedRoute adminOnly><AdminSettings /></ProtectedRoute>

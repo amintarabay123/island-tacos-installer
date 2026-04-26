@@ -21,6 +21,7 @@ import imageProxyRouter from "./image-proxy";
 import syncRouter from "./sync";
 import downloadsRouter from "./downloads";
 import vapiRouter from "./vapi";
+import financialsRouter from "./financials";
 
 const router: IRouter = Router();
 
@@ -84,5 +85,6 @@ router.use(adminRouter);
 router.use(loyverseRouter);
 router.use(reportsRouter);
 router.use(employeesRouter);
+router.use(financialsRouter);
 
 export default router;

@@ -31,6 +31,16 @@ async function runMigrations() {
         net_sales NUMERIC(10,2) NOT NULL DEFAULT 0
       )
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS financial_statement_drafts (
+        id SERIAL PRIMARY KEY,
+        period_start DATE NOT NULL,
+        period_end DATE NOT NULL,
+        data JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
   } finally {
     client.release();
   }
