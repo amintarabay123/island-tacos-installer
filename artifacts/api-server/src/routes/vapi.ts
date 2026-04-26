@@ -299,7 +299,7 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
               description: "Fetch the current menu, prices, available modifiers, and store open/close status.",
               parameters: { type: "object", properties: {}, required: [] },
             },
-            server: { url: `${baseUrl}/vapi/menu` },
+            server: { url: `${baseUrl}/api/vapi/menu` },
           },
           {
             type: "function",
@@ -350,7 +350,7 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
               },
             },
             server: {
-              url: `${baseUrl}/vapi/order`,
+              url: `${baseUrl}/api/vapi/order`,
               headers: { "x-vapi-secret": process.env.VAPI_WEBHOOK_SECRET ?? "" },
             },
           },
