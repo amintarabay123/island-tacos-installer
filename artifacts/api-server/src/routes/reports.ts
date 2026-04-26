@@ -6,26 +6,47 @@ const router: IRouter = Router();
 
 function parseDecimal(v: unknown) { return parseFloat((v as string) ?? "0") || 0; }
 
+const BVI_OFFSET_HOURS = 4; // BVI = UTC-4, no DST
+
 // BVI is UTC-4 — shift now into BVI "local" coordinates, set midnight, shift back
 function getBVIMidnight(): Date {
-  const BVI_OFFSET_MS = 4 * 60 * 60 * 1000;
+  const BVI_OFFSET_MS = BVI_OFFSET_HOURS * 60 * 60 * 1000;
   const bviNow = new Date(Date.now() - BVI_OFFSET_MS);
   bviNow.setUTCHours(0, 0, 0, 0);
   return new Date(bviNow.getTime() + BVI_OFFSET_MS);
 }
 
 function getBVIEndOfDay(): Date {
-  const BVI_OFFSET_MS = 4 * 60 * 60 * 1000;
+  const BVI_OFFSET_MS = BVI_OFFSET_HOURS * 60 * 60 * 1000;
   const bviNow = new Date(Date.now() - BVI_OFFSET_MS);
   bviNow.setUTCHours(23, 59, 59, 999);
   return new Date(bviNow.getTime() + BVI_OFFSET_MS);
 }
 
+/**
+ * Parse a YYYY-MM-DD date string as the START of that day in BVI local time.
+ * e.g. "2026-04-26" → 2026-04-26T04:00:00.000Z  (midnight BVI = 4 AM UTC)
+ */
+function parseBVIDateStart(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, BVI_OFFSET_HOURS, 0, 0, 0));
+}
+
+/**
+ * Parse a YYYY-MM-DD date string as the END of that day in BVI local time.
+ * e.g. "2026-04-26" → 2026-04-27T03:59:59.999Z  (23:59:59 BVI = 3:59 AM UTC next day)
+ */
+function parseBVIDateEnd(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  // BVI_OFFSET_HOURS + 23 = 27 — JS Date handles the overflow into the next calendar day
+  return new Date(Date.UTC(y, m - 1, d, BVI_OFFSET_HOURS + 23, 59, 59, 999));
+}
+
 router.get("/reports/sales", async (req, res): Promise<void> => {
   const { from, to } = req.query as { from?: string; to?: string };
 
-  const fromDate = from ? new Date(from) : getBVIMidnight();
-  const toDate = to ? new Date(to) : getBVIEndOfDay();
+  const fromDate = from ? parseBVIDateStart(from) : getBVIMidnight();
+  const toDate   = to   ? parseBVIDateEnd(to)     : getBVIEndOfDay();
 
   const conditions = [
     gte(ordersTable.createdAt, fromDate),
