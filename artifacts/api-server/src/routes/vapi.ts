@@ -281,9 +281,7 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
         : `Thank you for calling Island Tacos! Unfortunately we're closed right now. Our hours are ${openTime} to ${closeTime} Atlantic Standard Time. Please give us a call back when we're open. Have a great day!`;
 
     const baseUrl = process.env.API_BASE_URL ?? "https://order-direct-connect.replit.app";
-    const systemPrompt = is_open
-      ? buildSystemPrompt(callerE164, callerIsMobile)
-      : `You are a polite phone greeter for Island Tacos. The store is currently closed. You have already delivered the closed message as your first message. If the caller says anything, politely repeat that you are closed and wish them a great day, then end the call. Do not offer to take any orders. Do not call any tools.`;
+    const systemPrompt = buildSystemPrompt(callerE164, callerIsMobile);
 
     const assistant = {
       firstMessage,
@@ -292,7 +290,7 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
         provider: VAPI_MODEL_PROVIDER,
         model: VAPI_MODEL,
         messages: [{ role: "system", content: systemPrompt }],
-        ...(is_open ? { tools: [
+        tools: [
           {
             type: "function",
             async: false,
@@ -356,15 +354,12 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
               headers: { "x-vapi-secret": process.env.VAPI_WEBHOOK_SECRET ?? "" },
             },
           },
-        ] } : {}),
+        ],
       },
       voice: {
         provider: VAPI_VOICE_PROVIDER,
         voiceId: VAPI_VOICE_ID,
       },
-      ...(is_open ? {} : {
-        endCallAfterSilence: 10,
-      }),
     };
 
     console.log(`[vapi/assistant-request] isOpen=${is_open}, firstMessage="${firstMessage.slice(0, 60)}..."`);
