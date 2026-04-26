@@ -106,6 +106,7 @@ function buildReceiptLines(order: Order, tendered?: number): { text: string; bol
   lines.push({ divider: true, text: "" });
   lines.push({ text: `#${order.confirmationCode}  ${new Date(order.createdAt).toLocaleString()}` });
   lines.push({ text: `Customer: ${order.customerName || "Walk-in"}` });
+  if (order.customerPhone) lines.push({ text: `Phone: ${order.customerPhone}` });
   lines.push({ text: `Payment: ${PAY_LABEL[order.paymentMethod] ?? order.paymentMethod}` });
   lines.push({ divider: true, text: "" });
   for (const item of order.items) {

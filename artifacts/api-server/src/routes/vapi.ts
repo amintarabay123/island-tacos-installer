@@ -5,6 +5,69 @@ import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 
 const router: IRouter = Router();
 
+// ─── Phone utilities ──────────────────────────────────────────────────────────
+
+/**
+ * Normalise any BVI phone number to E.164 (+1284XXXXXXX).
+ * Handles:
+ *   - 7 digits  (local BVI format, e.g. "499-1234" or "4991234")
+ *   - 10 digits starting with 284
+ *   - 11 digits starting with 1284
+ *   - Already in +1284... format
+ */
+export function formatBVIPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("1284") && digits.length === 11) return `+${digits}`;
+  if (digits.startsWith("284") && digits.length === 10) return `+1${digits}`;
+  if (digits.length === 7) return `+1284${digits}`;
+  if (digits.startsWith("11284") && digits.length === 12) return `+${digits.slice(1)}`;
+  return `+${digits}`;
+}
+
+/**
+ * Known BVI mobile NXX prefixes (3 digits after 284).
+ * Sources: ITU BVI numbering plan (2008) + user-confirmed local knowledge.
+ *
+ * TO UPGRADE: swap this function for a Twilio Lookup call:
+ *   const result = await twilioClient.lookups.v2.phoneNumbers(e164).fetch({ fields: "line_type_intelligence" });
+ *   return result.lineTypeIntelligence?.type === "mobile";
+ */
+const BVI_MOBILE_NXX = new Set([
+  "300","301","302","303",          // Digicel
+  "340","341","342","343",          // Flow/Digicel mobile
+  "344","345","346","347",
+  "440","441","442","443","444","445", // CCT mobile
+  "468",                            // CCT mobile
+  "499",                            // CCT mobile (user-confirmed)
+  "540","541","542","543","544","545","546","547", // Flow mobile
+]);
+
+/**
+ * Returns true if the E.164 number (+1284XXXXXXX) is a known BVI mobile.
+ * The 496 prefix is a split block: 496-6000..9999 = CCT mobile, 496-0000..5999 = C&W landline.
+ */
+export function isBVIMobile(e164: string): boolean {
+  const digits = e164.replace(/\D/g, "");
+  if (!digits.startsWith("1284") || digits.length !== 11) return false;
+  const nxx = digits.slice(4, 7);
+  if (nxx === "496") {
+    const last4 = parseInt(digits.slice(7), 10);
+    return last4 >= 6000;
+  }
+  return BVI_MOBILE_NXX.has(nxx);
+}
+
+/** Extract the caller's phone number from a Vapi assistant-request payload. */
+function extractCallerPhone(body: unknown): string | null {
+  if (!body || typeof body !== "object") return null;
+  const b = body as Record<string, unknown>;
+  const msg = b.message as Record<string, unknown> | undefined;
+  const call = (msg?.call ?? b.call) as Record<string, unknown> | undefined;
+  const customer = call?.customer as Record<string, unknown> | undefined;
+  const num = customer?.number;
+  return typeof num === "string" && num.trim() ? num.trim() : null;
+}
+
 function getVapiSecret(): string | undefined {
   return process.env.VAPI_WEBHOOK_SECRET;
 }
@@ -150,23 +213,52 @@ const VAPI_MODEL = "gpt-4o";
 const VAPI_VOICE_PROVIDER = "openai"; // e.g. "11labs", "openai", "playht" — match your current assistant
 const VAPI_VOICE_ID = "shimmer";      // e.g. "nova", "alloy", "shimmer", or an 11labs voice ID
 
-const VAPI_SYSTEM_PROMPT = `You are a friendly, efficient phone ordering assistant for Island Tacos, a Mexican pickup restaurant in Road Town, BVI.
+function buildSystemPrompt(callerPhone: string | null, callerIsMobile: boolean): string {
+  let phoneSection: string;
+
+  if (callerPhone && callerIsMobile) {
+    phoneSection = `PHONE NUMBER:
+- The caller's mobile number has been detected automatically: ${callerPhone}
+- Do NOT ask the caller for their phone number.
+- Use ${callerPhone} as the customerPhone when placing the order.`;
+  } else if (callerPhone && !callerIsMobile) {
+    phoneSection = `PHONE NUMBER:
+- The caller is calling from a landline (${callerPhone}) which cannot receive text messages.
+- Ask the caller: "Can I get a mobile number to send you a text when your order is ready?"
+- If they provide one, format it as a BVI number: 7-digit numbers get +1284 added automatically (e.g. "499-1234" becomes "+12844991234").
+- If they decline or don't have one, use ${callerPhone} as the customerPhone.`;
+  } else {
+    phoneSection = `PHONE NUMBER:
+- No caller ID was detected (e.g. hidden number or VOIP).
+- Ask the caller: "Can I get a mobile number to send you a text when your order is ready?"
+- If they provide one, format it as a BVI number: 7-digit numbers get +1284 added (e.g. "499-1234" → "+12844991234").
+- If they decline, use "unknown" as the customerPhone.`;
+  }
+
+  return `You are a friendly, efficient phone ordering assistant for Island Tacos, a Mexican pickup restaurant in Road Town, BVI.
 
 Your job is to help callers place pickup orders over the phone. Always be warm, concise, and helpful.
+
+${phoneSection}
 
 IMPORTANT RULES:
 - ALWAYS start by calling the get_menu tool immediately when the call starts to check menu and store status.
 - If isOpen is false in the menu response, do NOT take any order. Apologize and tell the caller we are closed, give our opening time, and end the call politely.
 - Only take orders for items that appear in the menu tool response.
-- Collect the caller's name and confirm their phone number (it may be pre-filled from the call).
+- Always collect the caller's name before placing the order.
 - Confirm the full order and total before placing it.
 - Use the place_order tool to submit confirmed orders.
 - Do not make up prices — always use prices from the menu tool.
 - Keep responses short and natural for a phone conversation.
 - If you need to look something up, say "Let me check that for you" before calling a tool.`;
+}
 
 router.post("/vapi/assistant-request", async (req: Request, res: Response): Promise<void> => {
-  console.log(`[vapi/assistant-request] Call started`);
+  const rawCallerPhone = extractCallerPhone(req.body);
+  const callerE164 = rawCallerPhone ? formatBVIPhone(rawCallerPhone) : null;
+  const callerIsMobile = callerE164 ? isBVIMobile(callerE164) : false;
+  console.log(`[vapi/assistant-request] Call started — caller=${callerE164 ?? "unknown"} mobile=${callerIsMobile}`);
+
   try {
     const settingRows = await db.select().from(storeSettingsTable);
     const settings: Record<string, string> = { ...SETTING_DEFAULTS };
@@ -188,6 +280,7 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
       : `Thank you for calling Island Tacos! Unfortunately we're closed right now. Our hours are ${openTime} to ${closeTime} Atlantic Standard Time. Please give us a call back when we're open. Have a great day!`;
 
     const baseUrl = process.env.API_BASE_URL ?? "https://order-direct-connect.replit.app";
+    const systemPrompt = buildSystemPrompt(callerE164, callerIsMobile);
 
     const assistant = {
       firstMessage,
@@ -195,7 +288,7 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
       model: {
         provider: VAPI_MODEL_PROVIDER,
         model: VAPI_MODEL,
-        messages: [{ role: "system", content: VAPI_SYSTEM_PROMPT }],
+        messages: [{ role: "system", content: systemPrompt }],
         tools: is_open ? [
           {
             type: "function",
@@ -366,7 +459,10 @@ router.post("/vapi/order", async (req: Request, res: Response): Promise<void> =>
     return;
   }
 
-  const { customerName, customerPhone, notes, items } = validation.data;
+  const { customerName, notes, items } = validation.data;
+  const customerPhone = validation.data.customerPhone && validation.data.customerPhone !== "unknown"
+    ? formatBVIPhone(validation.data.customerPhone)
+    : (validation.data.customerPhone ?? "");
 
   const settingRows = await db.select().from(storeSettingsTable);
   const settings: Record<string, string> = { ...SETTING_DEFAULTS };
