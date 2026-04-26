@@ -85,248 +85,465 @@ export default function AdminReports() {
 
   const [pdfGenerating, setPdfGenerating] = useState(false);
 
+  /** Builds the shared summary HTML used by both print and PDF export */
+  const buildSummaryHTML = () => {
+    if (!report) return "";
+    const period = from === to ? from : `${from} — ${to}`;
+    const generated = new Date().toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
+    const methods = [
+      { label: "Cash",          value: report.byMethod.cash,          color: "#16a34a" },
+      { label: "Card",          value: report.byMethod.card,          color: "#2563eb" },
+      { label: "ATH Móvil",     value: report.byMethod.athmovil,      color: "#7c3aed" },
+      { label: "Split",         value: report.byMethod.split ?? 0,    color: "#d97706" },
+      { label: "Complimentary", value: report.byMethod.complimentary ?? 0, color: "#6b7280" },
+    ].filter(m => m.value > 0);
+
+    const pct = (v: number) => report.totalSales > 0 ? ((v / report.totalSales) * 100).toFixed(1) : "0.0";
+
+    return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; background:#fff; color:#1a1a1a; }
+  .page { max-width: 720px; margin: 0 auto; padding: 0; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 32px 40px 28px; color: #fff; display: flex; justify-content: space-between; align-items: flex-start; }
+  .header-left .brand { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; }
+  .header-left .subtitle { font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; opacity: 0.85; margin-top: 3px; }
+  .header-left .address { font-size: 11px; opacity: 0.7; margin-top: 10px; }
+  .header-right { text-align: right; }
+  .header-right .period { font-size: 15px; font-weight: 700; }
+  .header-right .generated { font-size: 10px; opacity: 0.75; margin-top: 4px; }
+
+  /* KPI row */
+  .kpi-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 0; border-bottom: 1px solid #f0f0f0; }
+  .kpi { padding: 22px 20px 18px; border-right: 1px solid #f0f0f0; position: relative; }
+  .kpi:last-child { border-right: none; }
+  .kpi-accent { position: absolute; top: 0; left: 0; width: 4px; height: 100%; border-radius: 0; }
+  .kpi-value { font-size: 22px; font-weight: 800; color: #111; letter-spacing: -0.5px; margin-bottom: 3px; }
+  .kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; }
+  .kpi-sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+  /* Two column body */
+  .body { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-bottom: 1px solid #f0f0f0; }
+  .col { padding: 28px 32px; }
+  .col:first-child { border-right: 1px solid #f0f0f0; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #9ca3af; margin-bottom: 16px; }
+
+  /* Payment bars */
+  .method { margin-bottom: 14px; }
+  .method-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .method-name { font-size: 13px; font-weight: 600; color: #374151; }
+  .method-amt { font-size: 13px; font-weight: 700; color: #111; }
+  .method-pct { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+  .bar-bg { background: #f3f4f6; border-radius: 4px; height: 7px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+
+  /* Summary rows */
+  .sum-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f9fafb; }
+  .sum-row:last-child { border-bottom: none; }
+  .sum-label { font-size: 13px; color: #4b5563; }
+  .sum-value { font-size: 13px; font-weight: 600; color: #111; }
+  .sum-row.indent .sum-label { padding-left: 12px; font-size: 12px; color: #9ca3af; }
+  .sum-row.indent .sum-value { font-size: 12px; color: #9ca3af; }
+  .sum-row.net { background: #fff7ed; border-radius: 8px; padding: 12px 14px; margin-top: 6px; border: none; }
+  .sum-row.net .sum-label { font-size: 14px; font-weight: 700; color: #ea580c; }
+  .sum-row.net .sum-value { font-size: 16px; font-weight: 800; color: #ea580c; }
+
+  /* Top items */
+  .items-section { padding: 24px 32px; border-bottom: 1px solid #f0f0f0; }
+  .item-row { display: grid; grid-template-columns: 20px 1fr 70px 80px 50px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #f9fafb; }
+  .item-row.header-row { padding-bottom: 6px; }
+  .item-row .num { font-size: 11px; color: #d1d5db; font-weight: 600; }
+  .item-row .name { font-size: 13px; font-weight: 600; color: #111; }
+  .item-row .qty { font-size: 12px; color: #6b7280; text-align: right; }
+  .item-row .rev { font-size: 13px; font-weight: 600; color: #111; text-align: right; }
+  .item-row .pct { font-size: 11px; color: #9ca3af; text-align: right; }
+  .item-row.header-row .num, .item-row.header-row .name,
+  .item-row.header-row .qty, .item-row.header-row .rev,
+  .item-row.header-row .pct { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; }
+
+  /* Footer */
+  .footer { display: flex; justify-content: space-between; align-items: center; padding: 16px 40px; background: #f9fafb; border-top: 1px solid #f0f0f0; }
+  .footer-brand { font-size: 11px; font-weight: 600; color: #9ca3af; }
+  .footer-note { font-size: 10px; color: #d1d5db; }
+
+  @media print {
+    @page { margin: 0; size: A4; }
+    body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    .page { max-width: 100%; }
+  }
+</style>
+</head><body>
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="brand">ISLAND TACOS</div>
+      <div class="subtitle">Sales Summary Report</div>
+      <div class="address">Wickhams Cay 1, Road Town, Tortola · BVI</div>
+    </div>
+    <div class="header-right">
+      <div class="period">${period}</div>
+      <div class="generated">Generated ${generated}</div>
+    </div>
+  </div>
+
+  <!-- KPI row -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-accent" style="background:#16a34a"></div>
+      <div class="kpi-value">${fmt(report.totalSales)}</div>
+      <div class="kpi-label">Gross Sales</div>
+    </div>
+    <div class="kpi"><div class="kpi-accent" style="background:#2563eb"></div>
+      <div class="kpi-value">${fmt(report.netSales)}</div>
+      <div class="kpi-label">Net Sales</div>
+      ${report.refundTotal > 0 ? `<div class="kpi-sub">after ${fmt(report.refundTotal)} in refunds</div>` : ""}
+    </div>
+    <div class="kpi"><div class="kpi-accent" style="background:#7c3aed"></div>
+      <div class="kpi-value">${report.paidOrders.toLocaleString()}</div>
+      <div class="kpi-label">Paid Orders</div>
+      ${report.cancelledOrders > 0 ? `<div class="kpi-sub">${report.cancelledOrders} cancelled</div>` : ""}
+    </div>
+    <div class="kpi"><div class="kpi-accent" style="background:#f97316"></div>
+      <div class="kpi-value">${fmt(report.avgOrderValue)}</div>
+      <div class="kpi-label">Avg Order Value</div>
+    </div>
+  </div>
+
+  <!-- Body: payment methods + financial summary -->
+  <div class="body">
+    <!-- Payment Methods -->
+    <div class="col">
+      <div class="section-title">Payment Breakdown</div>
+      ${methods.map(m => `
+        <div class="method">
+          <div class="method-header">
+            <span class="method-name">${m.label}</span>
+            <span class="method-amt">${fmt(m.value)}</span>
+          </div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${pct(m.value)}%;background:${m.color}"></div></div>
+          <div class="method-pct">${pct(m.value)}% of gross sales</div>
+        </div>`).join("")}
+    </div>
+
+    <!-- Financial Summary -->
+    <div class="col">
+      <div class="section-title">Financial Summary</div>
+      <div class="sum-row">
+        <span class="sum-label">Gross Sales</span>
+        <span class="sum-value">${fmt(report.totalSales)}</span>
+      </div>
+      ${report.byMethod.cash > 0 ? `<div class="sum-row indent"><span class="sum-label">Cash</span><span class="sum-value">${fmt(report.byMethod.cash)}</span></div>` : ""}
+      ${report.byMethod.card > 0 ? `<div class="sum-row indent"><span class="sum-label">Card</span><span class="sum-value">${fmt(report.byMethod.card)}</span></div>` : ""}
+      ${report.byMethod.athmovil > 0 ? `<div class="sum-row indent"><span class="sum-label">ATH M\u00F3vil</span><span class="sum-value">${fmt(report.byMethod.athmovil)}</span></div>` : ""}
+      ${(report.byMethod.split ?? 0) > 0 ? `<div class="sum-row indent"><span class="sum-label">Split</span><span class="sum-value">${fmt(report.byMethod.split)}</span></div>` : ""}
+      ${(report.byMethod.complimentary ?? 0) > 0 ? `<div class="sum-row indent"><span class="sum-label">Complimentary</span><span class="sum-value">${fmt(report.byMethod.complimentary)}</span></div>` : ""}
+      ${report.refundTotal > 0 ? `<div class="sum-row"><span class="sum-label">Total Refunds</span><span class="sum-value" style="color:#dc2626">− ${fmt(report.refundTotal)}</span></div>` : ""}
+      <div class="sum-row net">
+        <span class="sum-label">Net Sales</span>
+        <span class="sum-value">${fmt(report.netSales)}</span>
+      </div>
+    </div>
+  </div>
+
+  ${report.topItems.length > 0 ? `
+  <!-- Top Items -->
+  <div class="items-section">
+    <div class="section-title">Top Items (recent period)</div>
+    <div class="item-row header-row">
+      <span class="num">#</span><span class="name">Item</span>
+      <span class="qty">Qty</span><span class="rev">Revenue</span><span class="pct">% Sales</span>
+    </div>
+    ${report.topItems.slice(0, 10).map((item, i) => `
+      <div class="item-row">
+        <span class="num">${i + 1}</span>
+        <span class="name">${item.name}</span>
+        <span class="qty">${item.quantity.toLocaleString()}</span>
+        <span class="rev">${fmt(item.revenue)}</span>
+        <span class="pct">${pct(item.revenue)}%</span>
+      </div>`).join("")}
+  </div>` : ""}
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-brand">Island Tacos · Confidential</div>
+    <div class="footer-note">This report is generated from POS and online order data</div>
+  </div>
+</div>
+</body></html>`;
+  };
+
+  const handlePrint = () => {
+    const html = buildSummaryHTML();
+    if (!html) return;
+    const win = window.open("", "_blank", "width=800,height=700");
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  };
+
   const handleDownloadPDF = () => {
     if (!report) return;
     setPdfGenerating(true);
     try {
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const W = 210; // A4 width mm
-      const ML = 18; // left margin
-      const MR = W - 18; // right margin
-      let y = 20;
+      const W = 210;
+      const ML = 14;
+      const MR = W - 14;
+      const CW = MR - ML; // content width = 182mm
+      let y = 0;
 
-      const accent = [245, 120, 0] as [number, number, number];
-      const dark   = [30, 30, 30]  as [number, number, number];
-      const mid    = [100, 100, 100] as [number, number, number];
-      const light  = [200, 200, 200] as [number, number, number];
-      const bg     = [249, 250, 251] as [number, number, number];
+      // color palette
+      const orange  = [249, 115, 22]  as [number, number, number];
+      const orangeD = [234, 88,  12]  as [number, number, number];
+      const dark    = [17,  17,  17]  as [number, number, number];
+      const mid     = [107, 114, 128] as [number, number, number];
+      const faint   = [209, 213, 219] as [number, number, number];
+      const bg      = [249, 250, 251] as [number, number, number];
+      const green   = [22,  163, 74]  as [number, number, number];
+      const blue    = [37,  99,  235] as [number, number, number];
+      const purple  = [124, 58,  237] as [number, number, number];
+      const white   = [255, 255, 255] as [number, number, number];
 
-      const line   = () => { doc.setDrawColor(...light); doc.setLineWidth(0.3); doc.line(ML, y, MR, y); y += 4; };
-      const gap    = (n = 5) => { y += n; };
-      const checkPage = (needed = 12) => { if (y + needed > 275) { doc.addPage(); y = 20; } };
-
-      // ── Header ─────────────────────────────────────────────────────────
-      doc.setFillColor(...accent);
-      doc.rect(0, 0, W, 14, "F");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(14);
-      doc.setTextColor(255, 255, 255);
-      doc.text("🌮  ISLAND TACOS", ML, 9.5);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.text("Wickhams Cay 1, Road Town, Tortola · BVI", MR, 9.5, { align: "right" });
-      y = 22;
-
-      // ── Report title ────────────────────────────────────────────────────
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.setTextColor(...dark);
-      doc.text("Sales Report", ML, y);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.setTextColor(...mid);
-      const periodLabel = from === to ? from : `${from}  →  ${to}`;
-      doc.text(periodLabel, ML, y + 6);
-      doc.text(`Generated ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`, MR, y + 6, { align: "right" });
-      y += 14;
-      line();
-
-      // ── Summary row ─────────────────────────────────────────────────────
-      const cards = [
-        { label: "Gross Sales",  value: fmt(report.totalSales) },
-        { label: "Net Sales",    value: fmt(report.netSales) },
-        { label: "Paid Orders",  value: String(report.paidOrders) },
-        { label: "Avg Order",    value: fmt(report.avgOrderValue) },
-      ];
-      const cardW = (MR - ML) / 4;
-      cards.forEach((c, i) => {
-        const x = ML + i * cardW;
-        doc.setFillColor(...bg);
-        doc.roundedRect(x + 1, y, cardW - 2, 18, 2, 2, "F");
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
-        doc.setTextColor(...dark);
-        doc.text(c.value, x + cardW / 2, y + 9, { align: "center" });
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(7.5);
-        doc.setTextColor(...mid);
-        doc.text(c.label, x + cardW / 2, y + 14.5, { align: "center" });
-      });
-      y += 23;
-
-      // ── Payment Methods ──────────────────────────────────────────────────
-      checkPage(50);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(...dark);
-      doc.text("Payment Methods", ML, y);
-      y += 5;
-      const methods = [
-        { label: "Cash",          value: report.byMethod.cash },
-        { label: "Card",          value: report.byMethod.card },
-        { label: "ATH Móvil",     value: report.byMethod.athmovil },
-        { label: "Split",         value: report.byMethod.split ?? 0 },
-        { label: "Complimentary", value: report.byMethod.complimentary ?? 0 },
-      ].filter(m => m.value > 0);
-
-      const colX = [ML, ML + 50, ML + 85, ML + 120];
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...mid);
-      doc.text("Method", colX[0], y);
-      doc.text("Amount", colX[1], y, { align: "right" });
-      doc.text("% of Sales", colX[2], y, { align: "right" });
-      doc.text("Bar", colX[3], y);
-      y += 2;
-      doc.setDrawColor(...light); doc.setLineWidth(0.2); doc.line(ML, y, MR, y);
-      y += 4;
-
-      methods.forEach(m => {
-        checkPage(8);
-        const pct = report.totalSales > 0 ? (m.value / report.totalSales) * 100 : 0;
-        const barW = (MR - colX[3] - 2) * (pct / 100);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8.5);
-        doc.setTextColor(...dark);
-        doc.text(m.label, colX[0], y);
-        doc.text(fmt(m.value), colX[1], y, { align: "right" });
-        doc.setTextColor(...mid);
-        doc.text(`${pct.toFixed(1)}%`, colX[2], y, { align: "right" });
-        doc.setFillColor(...accent);
-        doc.roundedRect(colX[3], y - 3, Math.max(barW, 1), 3.5, 0.5, 0.5, "F");
-        y += 6.5;
-      });
-      gap(2);
-
-      // ── Daily Sales Table ────────────────────────────────────────────────
-      if (report.daily.length > 1) {
-        checkPage(20);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setTextColor(...dark);
-        doc.text("Daily Sales", ML, y);
-        y += 5;
-
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...mid);
-        doc.text("Date", ML, y);
-        doc.text("Sales", ML + 55, y, { align: "right" });
-        doc.text("Orders", ML + 85, y, { align: "right" });
-        y += 2;
-        doc.setDrawColor(...light); doc.setLineWidth(0.2); doc.line(ML, y, ML + 90, y);
-        y += 4;
-
-        report.daily.forEach(d => {
-          checkPage(6);
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8.5);
-          doc.setTextColor(...dark);
-          doc.text(d.date, ML, y);
-          doc.text(fmt(d.sales), ML + 55, y, { align: "right" });
-          doc.setTextColor(...mid);
-          doc.text(String(d.orders), ML + 85, y, { align: "right" });
-          y += 5.5;
-        });
-        gap(3);
-      }
-
-      // ── Top Items ────────────────────────────────────────────────────────
-      if (report.topItems.length > 0) {
-        checkPage(20);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setTextColor(...dark);
-        doc.text("Top Items", ML, y);
-        y += 5;
-
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(...mid);
-        doc.text("#", ML, y);
-        doc.text("Item", ML + 8, y);
-        doc.text("Qty", MR - 35, y, { align: "right" });
-        doc.text("Revenue", MR - 15, y, { align: "right" });
-        doc.text("% Sales", MR, y, { align: "right" });
-        y += 2;
-        doc.setDrawColor(...light); doc.setLineWidth(0.2); doc.line(ML, y, MR, y);
-        y += 4;
-
-        report.topItems.forEach((item, i) => {
-          checkPage(6);
-          const pct = report.totalSales > 0 ? ((item.revenue / report.totalSales) * 100).toFixed(1) : "0.0";
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8.5);
-          doc.setTextColor(...mid);
-          doc.text(String(i + 1), ML, y);
-          doc.setTextColor(...dark);
-          doc.text(item.name.slice(0, 38), ML + 8, y);
-          doc.setTextColor(...mid);
-          doc.text(String(item.quantity), MR - 35, y, { align: "right" });
-          doc.setTextColor(...dark);
-          doc.text(fmt(item.revenue), MR - 15, y, { align: "right" });
-          doc.setTextColor(...mid);
-          doc.text(`${pct}%`, MR, y, { align: "right" });
-          y += 5.5;
-        });
-        gap(3);
-      }
-
-      // ── Summary Totals ───────────────────────────────────────────────────
-      checkPage(60);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(...dark);
-      doc.text("Summary", ML, y);
-      y += 5;
-
-      const summaryRows: [string, string, boolean][] = [
-        ["Total Orders",        String(report.paidOrders),              false],
-        ["Gross Sales",         fmt(report.totalSales),                 false],
-        ["Cash Sales",          fmt(report.byMethod.cash),              false],
-        ["Card Sales",          fmt(report.byMethod.card),              false],
-        ["ATH Móvil Sales",     fmt(report.byMethod.athmovil),          false],
-        ...(report.byMethod.split > 0 ? [["Split Sales", fmt(report.byMethod.split), false] as [string,string,boolean]] : []),
-        ...(report.byMethod.complimentary > 0 ? [["Complimentary", fmt(report.byMethod.complimentary), false] as [string,string,boolean]] : []),
-        ["Total Refunds",       `− ${fmt(report.refundTotal)}`,        false],
-        ["Net Sales",           fmt(report.netSales),                   true ],
-      ];
-
-      const sumX = ML + 60;
-      summaryRows.forEach(([label, val, bold]) => {
-        checkPage(7);
-        if (bold) {
-          y += 1;
-          doc.setDrawColor(...light); doc.setLineWidth(0.3); doc.line(ML, y - 1, sumX + 25, y - 1);
-          y += 2;
-          doc.setFillColor(...accent);
-          doc.roundedRect(ML - 1, y - 4, sumX - ML + 27, 7, 1, 1, "F");
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(10);
-          doc.setTextColor(255, 255, 255);
-        } else {
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8.5);
-          doc.setTextColor(...dark);
+      const checkPage = (needed = 12) => {
+        if (y + needed > 278) {
+          doc.addPage();
+          // Thin orange top stripe on continuation pages
+          doc.setFillColor(...orange);
+          doc.rect(0, 0, W, 3, "F");
+          y = 10;
         }
-        doc.text(label, ML + 2, y);
-        doc.text(val, sumX + 24, y, { align: "right" });
-        if (!bold) { doc.setTextColor(...light); doc.setLineWidth(0.15); doc.line(ML, y + 1.5, sumX + 25, y + 1.5); }
-        y += 7;
-      });
+      };
 
-      // ── Footer ───────────────────────────────────────────────────────────
-      const pages = doc.getNumberOfPages();
-      for (let p = 1; p <= pages; p++) {
-        doc.setPage(p);
+      // ── HEADER BAR ───────────────────────────────────────────────────────
+      // Gradient-effect: two overlapping rects
+      doc.setFillColor(...orange);
+      doc.rect(0, 0, W, 38, "F");
+      doc.setFillColor(...orangeD);
+      doc.rect(W / 2, 0, W / 2, 38, "F");
+      // Brand
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(...white);
+      doc.text("ISLAND TACOS", ML, 14);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(255, 255, 255);
+      doc.text("SALES SUMMARY REPORT", ML, 21);
+      doc.setFontSize(8);
+      doc.setTextColor(255, 230, 200);
+      doc.text("Wickhams Cay 1, Road Town, Tortola \u00B7 BVI", ML, 32);
+      // Period + generated (right side)
+      const periodLabel = from === to ? from : `${from}  \u2192  ${to}`;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...white);
+      doc.text(periodLabel, MR, 15, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(255, 230, 200);
+      doc.text(`Generated ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`, MR, 22, { align: "right" });
+      y = 44;
+
+      // ── KPI CARDS ────────────────────────────────────────────────────────
+      const kpis = [
+        { label: "Gross Sales",     value: fmt(report.totalSales),    accent: green  },
+        { label: "Net Sales",       value: fmt(report.netSales),      accent: blue   },
+        { label: "Paid Orders",     value: String(report.paidOrders.toLocaleString()), accent: purple },
+        { label: "Avg Order Value", value: fmt(report.avgOrderValue), accent: orange },
+      ];
+      const kpiW = CW / 4;
+      kpis.forEach((k, i) => {
+        const x = ML + i * kpiW;
+        // Card shadow effect
+        doc.setFillColor(230, 230, 230);
+        doc.roundedRect(x + 1.5, y + 1.5, kpiW - 3, 24, 2, 2, "F");
+        // Card background
+        doc.setFillColor(...white);
+        doc.roundedRect(x + 1, y, kpiW - 2, 24, 2, 2, "F");
+        // Left accent bar
+        doc.setFillColor(...k.accent);
+        doc.roundedRect(x + 1, y, 3, 24, 1, 1, "F");
+        // Value
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(...dark);
+        doc.text(k.value, x + kpiW / 2 + 1, y + 10, { align: "center" });
+        // Label
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         doc.setTextColor(...mid);
-        doc.text("Island Tacos · Confidential", ML, 291);
+        doc.text(k.label.toUpperCase(), x + kpiW / 2 + 1, y + 18, { align: "center" });
+      });
+      y += 30;
+
+      // ── TWO-COLUMN SECTION ───────────────────────────────────────────────
+      // Payment breakdown (left col 0–88mm) | Financial Summary (right col 96–182mm)
+      const colMid = ML + CW / 2 + 4;
+      const colLeft = ML;
+      const colRight = colMid + 2;
+      const colW = CW / 2 - 6;
+      const sectionStartY = y;
+
+      // === LEFT: PAYMENT METHODS ===
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...mid);
+      doc.text("PAYMENT BREAKDOWN", colLeft, y);
+      y += 5;
+
+      const methods = [
+        { label: "Cash",          value: report.byMethod.cash,     color: green  },
+        { label: "Card",          value: report.byMethod.card,     color: blue   },
+        { label: "ATH M\u00F3vil",    value: report.byMethod.athmovil, color: purple },
+        { label: "Split",         value: report.byMethod.split ?? 0, color: [217, 119, 6] as [number,number,number] },
+        { label: "Complimentary", value: report.byMethod.complimentary ?? 0, color: [107,114,128] as [number,number,number] },
+      ].filter(m => m.value > 0);
+
+      let leftY = y;
+      methods.forEach(m => {
+        const pct = report.totalSales > 0 ? (m.value / report.totalSales) * 100 : 0;
+        const barMaxW = colW - 18;
+        const barW = barMaxW * (pct / 100);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(...dark);
+        doc.text(m.label, colLeft, leftY);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(...mid);
+        doc.text(fmt(m.value), colLeft + colW, leftY, { align: "right" });
+        leftY += 3.5;
+        // Bar track
+        doc.setFillColor(...faint);
+        doc.roundedRect(colLeft, leftY, barMaxW, 3, 1, 1, "F");
+        // Bar fill
+        doc.setFillColor(...m.color);
+        if (barW > 0) doc.roundedRect(colLeft, leftY, barW, 3, 1, 1, "F");
+        // Pct label
+        doc.setFontSize(7);
+        doc.setTextColor(...mid);
+        doc.text(`${pct.toFixed(1)}%`, colLeft + colW, leftY + 2.5, { align: "right" });
+        leftY += 8;
+      });
+
+      // === RIGHT: FINANCIAL SUMMARY ===
+      y = sectionStartY;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...mid);
+      doc.text("FINANCIAL SUMMARY", colRight, y);
+      y += 5;
+
+      const sumRows: [string, string, boolean, [number,number,number]?][] = [
+        ["Gross Sales",  fmt(report.totalSales),  false, undefined],
+        ...(report.byMethod.cash > 0 ? [["  Cash", fmt(report.byMethod.cash), false, mid] as [string,string,boolean,[number,number,number]?]] : []),
+        ...(report.byMethod.card > 0 ? [["  Card", fmt(report.byMethod.card), false, mid] as [string,string,boolean,[number,number,number]?]] : []),
+        ...(report.byMethod.athmovil > 0 ? [["  ATH M\u00F3vil", fmt(report.byMethod.athmovil), false, mid] as [string,string,boolean,[number,number,number]?]] : []),
+        ...((report.byMethod.split ?? 0) > 0 ? [["  Split", fmt(report.byMethod.split), false, mid] as [string,string,boolean,[number,number,number]?]] : []),
+        ...((report.byMethod.complimentary ?? 0) > 0 ? [["  Comps", fmt(report.byMethod.complimentary), false, mid] as [string,string,boolean,[number,number,number]?]] : []),
+        ...(report.refundTotal > 0 ? [["Total Refunds", `\u2212 ${fmt(report.refundTotal)}`, false, [220,38,38] as [number,number,number]] as [string,string,boolean,[number,number,number]?]] : []),
+        ["Net Sales", fmt(report.netSales), true, undefined],
+      ];
+
+      const sumRX = colRight + colW;
+      let rightY = y;
+      sumRows.forEach(([label, val, isNet, col]) => {
+        const textColor = col ?? dark;
+        if (isNet) {
+          rightY += 1;
+          doc.setFillColor(...orange);
+          doc.roundedRect(colRight - 1, rightY - 5, colW + 2, 9, 2, 2, "F");
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(10);
+          doc.setTextColor(...white);
+          doc.text(label, colRight + 2, rightY);
+          doc.text(val, sumRX, rightY, { align: "right" });
+          rightY += 8;
+        } else {
+          const isIndent = label.startsWith("  ");
+          doc.setFont("helvetica", isIndent ? "normal" : "normal");
+          doc.setFontSize(isIndent ? 7.5 : 8.5);
+          doc.setTextColor(...textColor);
+          doc.text(label.trim(), colRight + (isIndent ? 5 : 0), rightY);
+          doc.text(val, sumRX, rightY, { align: "right" });
+          doc.setDrawColor(...faint);
+          doc.setLineWidth(0.2);
+          doc.line(colRight, rightY + 2, sumRX, rightY + 2);
+          rightY += 7;
+        }
+      });
+
+      y = Math.max(leftY, rightY) + 4;
+
+      // ── DIVIDER ──────────────────────────────────────────────────────────
+      doc.setDrawColor(...faint);
+      doc.setLineWidth(0.4);
+      doc.line(ML, y, MR, y);
+      y += 6;
+
+      // ── TOP ITEMS ────────────────────────────────────────────────────────
+      if (report.topItems.length > 0) {
+        checkPage(20);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7.5);
+        doc.setTextColor(...mid);
+        doc.text("TOP ITEMS (RECENT PERIOD)", ML, y);
+        y += 5;
+
+        // Column positions
+        const itemCols = { num: ML, name: ML + 8, qty: MR - 42, rev: MR - 18, pct: MR };
+        doc.setFontSize(7);
+        doc.setTextColor(...mid);
+        ["#", "Item", "Qty", "Revenue", "% Sales"].forEach((h, i) => {
+          const xs = [itemCols.num, itemCols.name, itemCols.qty, itemCols.rev, itemCols.pct];
+          const aligns = ["left","left","right","right","right"] as const;
+          doc.text(h, xs[i], y, { align: aligns[i] });
+        });
+        y += 2;
+        doc.setDrawColor(...faint); doc.setLineWidth(0.3); doc.line(ML, y, MR, y);
+        y += 4;
+
+        report.topItems.slice(0, 10).forEach((item, i) => {
+          checkPage(7);
+          const pct = report.totalSales > 0 ? ((item.revenue / report.totalSales) * 100).toFixed(1) : "0.0";
+          const even = i % 2 === 0;
+          if (even) { doc.setFillColor(...bg); doc.rect(ML - 1, y - 4, CW + 2, 6, "F"); }
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8.5);
+          doc.setTextColor(...mid);
+          doc.text(String(i + 1), itemCols.num, y);
+          doc.setTextColor(...dark);
+          doc.text(item.name.slice(0, 40), itemCols.name, y);
+          doc.setTextColor(...mid);
+          doc.text(item.quantity.toLocaleString(), itemCols.qty, y, { align: "right" });
+          doc.setTextColor(...dark);
+          doc.text(fmt(item.revenue), itemCols.rev, y, { align: "right" });
+          doc.setTextColor(...mid);
+          doc.text(`${pct}%`, itemCols.pct, y, { align: "right" });
+          y += 6;
+        });
+        y += 4;
+      }
+
+      // ── FOOTER ───────────────────────────────────────────────────────────
+      const pages = doc.getNumberOfPages();
+      for (let p = 1; p <= pages; p++) {
+        doc.setPage(p);
+        doc.setFillColor(...bg);
+        doc.rect(0, 284, W, 13, "F");
+        doc.setDrawColor(...faint); doc.setLineWidth(0.3); doc.line(0, 284, W, 284);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...mid);
+        doc.text("Island Tacos \u00B7 Confidential \u00B7 For internal use only", ML, 291);
         doc.text(`Page ${p} of ${pages}`, MR, 291, { align: "right" });
       }
 
-      const filename = `island-tacos-report-${from}${from !== to ? `-to-${to}` : ""}.pdf`;
+      const filename = `island-tacos-summary-${from}${from !== to ? `-to-${to}` : ""}.pdf`;
       doc.save(filename);
     } finally {
       setPdfGenerating(false);
@@ -359,6 +576,11 @@ export default function AdminReports() {
             <button onClick={() => setShowPrinterSettings(s => !s)}
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
               <Printer className="w-4 h-4" /> <span className="hidden sm:inline">Printer</span>
+            </button>
+            <button onClick={handlePrint} disabled={!report}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+              <Printer className="w-4 h-4" />
+              <span className="hidden sm:inline">Print Summary</span>
             </button>
             <button onClick={handleDownloadPDF} disabled={!report || pdfGenerating}
               className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
