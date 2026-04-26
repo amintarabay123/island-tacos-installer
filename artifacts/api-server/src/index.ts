@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { registerAthMovilWebhook } from "./lib/athmovil-webhook-register";
 import { warmAllMenuImages } from "./routes/image-proxy";
+import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -17,6 +18,24 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+// Run lightweight startup migrations (idempotent — safe to re-run on every boot)
+async function runMigrations() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS loyverse_daily_summary (
+        date DATE PRIMARY KEY,
+        gross_sales NUMERIC(10,2) NOT NULL DEFAULT 0,
+        refunds NUMERIC(10,2) NOT NULL DEFAULT 0,
+        discounts NUMERIC(10,2) NOT NULL DEFAULT 0,
+        net_sales NUMERIC(10,2) NOT NULL DEFAULT 0
+      )
+    `);
+  } finally {
+    client.release();
+  }
+}
+
 app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -24,6 +43,9 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Ensure all tables exist (create any new ones added since last deploy)
+  runMigrations().catch(e => logger.error({ err: e }, "Migration error"));
 
   // Warm all menu images on startup — loads disk cache first (no network),
   // then fetches any missing images from Loyverse CDN in the background.

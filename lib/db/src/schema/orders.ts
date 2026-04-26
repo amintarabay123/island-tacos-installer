@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, numeric, jsonb, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, numeric, jsonb, boolean, index, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { menuItemsTable } from "./menu";
@@ -117,3 +117,13 @@ export const employeesTable = pgTable("employees", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 export type Employee = typeof employeesTable.$inferSelect;
+
+// One row per calendar day — used to store historical daily sales data imported from
+// a Loyverse CSV summary export, for dates not covered by individual order records.
+export const loyverseDailySummaryTable = pgTable("loyverse_daily_summary", {
+  date: date("date").primaryKey(),
+  grossSales: numeric("gross_sales", { precision: 10, scale: 2 }).notNull().default("0"),
+  refunds: numeric("refunds", { precision: 10, scale: 2 }).notNull().default("0"),
+  discounts: numeric("discounts", { precision: 10, scale: 2 }).notNull().default("0"),
+  netSales: numeric("net_sales", { precision: 10, scale: 2 }).notNull().default("0"),
+});
