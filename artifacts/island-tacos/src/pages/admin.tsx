@@ -95,10 +95,12 @@ export default function Admin() {
       const r = await fetch("/api/loyverse/import-history", { method: "POST", credentials: "include", headers: authHeaders() });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Import failed");
-      const { customersImported, customersSkipped, ordersImported, ordersSkipped, errors } = data;
+      const { customersImported, customersSkipped, ordersImported, ordersSkipped, truncated, errors } = data;
       setImportState("success");
       setImportMessage(
-        `Imported ${ordersImported} orders + ${customersImported} customers (${ordersSkipped} orders / ${customersSkipped} customers already existed).` +
+        `Imported ${ordersImported} orders + ${customersImported} customers` +
+        (ordersSkipped || customersSkipped ? ` (${ordersSkipped} orders / ${customersSkipped} customers already existed)` : "") +
+        (truncated ? " — receipts limited to last 31 days by your Loyverse plan." : ".") +
         (errors?.length ? ` ${errors.length} error(s): ${errors[0]}` : "")
       );
     } catch (e) {

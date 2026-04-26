@@ -307,17 +307,34 @@ export async function fetchLoyverseCustomers(): Promise<LoyverseCustomer[]> {
   return all.filter((c) => !c.deleted_at);
 }
 
-export async function fetchLoyverseReceipts(): Promise<LoyverseReceipt[]> {
+export async function fetchLoyverseReceipts(): Promise<{ receipts: LoyverseReceipt[]; truncated: boolean }> {
   const all: LoyverseReceipt[] = [];
   let cursor: string | undefined;
+  let truncated = false;
   do {
     const params = new URLSearchParams({ limit: "250", receipt_type: "SALE" });
     if (cursor) params.set("cursor", cursor);
-    const data = await loyverseFetch<{ receipts: LoyverseReceipt[]; cursor?: string }>(`/receipts?${params}`);
+    const url = `${LOYVERSE_API}/receipts?${params}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (res.status === 402) {
+      // Plan limitation: can't access receipts older than 31 days — stop paginating gracefully
+      truncated = true;
+      break;
+    }
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Loyverse API /receipts → ${res.status}: ${body}`);
+    }
+    const data = await res.json() as { receipts: LoyverseReceipt[]; cursor?: string };
     all.push(...(data.receipts ?? []));
     cursor = data.cursor;
   } while (cursor);
-  return all.filter((r) => r.receipt_type === "SALE");
+  return { receipts: all.filter((r) => r.receipt_type === "SALE"), truncated };
 }
 
 export interface ImportHistoryResult {
@@ -325,6 +342,7 @@ export interface ImportHistoryResult {
   customersSkipped: number;
   ordersImported: number;
   ordersSkipped: number;
+  truncated: boolean;
   errors: string[];
 }
 
@@ -334,14 +352,16 @@ export async function importLoyverseHistory(): Promise<ImportHistoryResult> {
     customersSkipped: 0,
     ordersImported: 0,
     ordersSkipped: 0,
+    truncated: false,
     errors: [],
   };
 
   // Fetch everything from Loyverse in parallel
-  const [loyverseCustomers, loyverseReceipts] = await Promise.all([
+  const [loyverseCustomers, { receipts: loyverseReceipts, truncated }] = await Promise.all([
     fetchLoyverseCustomers(),
     fetchLoyverseReceipts(),
   ]);
+  result.truncated = truncated;
 
   // Build a map of loyverse customer_id → customer for receipt lookup
   const customerById = new Map<string, LoyverseCustomer>(loyverseCustomers.map((c) => [c.id, c]));
