@@ -86,9 +86,18 @@ export default function AdminReports() {
   const [pdfGenerating, setPdfGenerating] = useState(false);
 
   /** Builds the shared summary HTML used by both print and PDF export */
+  // Strip emoji and non-Latin characters so PDF fonts render correctly
+  const stripEmoji = (s: string) =>
+    s.replace(/[\uD800-\uDFFF]/g, '')   // surrogate pairs (emoji above BMP)
+     .replace(/[\u2600-\u27BF]/g, '')   // misc symbols & dingbats
+     .replace(/[\uFE00-\uFE0F]/g, '')   // variation selectors
+     .replace(/\u200D/g, '')            // zero-width joiner
+     .replace(/\s+/g, ' ')
+     .trim();
+
   const buildSummaryHTML = () => {
     if (!report) return "";
-    const period = from === to ? from : `${from} — ${to}`;
+    const period = from === to ? from : `${from} to ${to}`;
     const generated = new Date().toLocaleString("en-US", { dateStyle: "long", timeStyle: "short" });
     const methods = [
       { label: "Cash",          value: report.byMethod.cash,          color: "#16a34a" },
@@ -239,7 +248,7 @@ export default function AdminReports() {
       ${report.byMethod.athmovil > 0 ? `<div class="sum-row indent"><span class="sum-label">ATH M\u00F3vil</span><span class="sum-value">${fmt(report.byMethod.athmovil)}</span></div>` : ""}
       ${(report.byMethod.split ?? 0) > 0 ? `<div class="sum-row indent"><span class="sum-label">Split</span><span class="sum-value">${fmt(report.byMethod.split)}</span></div>` : ""}
       ${(report.byMethod.complimentary ?? 0) > 0 ? `<div class="sum-row indent"><span class="sum-label">Complimentary</span><span class="sum-value">${fmt(report.byMethod.complimentary)}</span></div>` : ""}
-      ${report.refundTotal > 0 ? `<div class="sum-row"><span class="sum-label">Total Refunds</span><span class="sum-value" style="color:#dc2626">− ${fmt(report.refundTotal)}</span></div>` : ""}
+      ${report.refundTotal > 0 ? `<div class="sum-row"><span class="sum-label">Total Refunds</span><span class="sum-value" style="color:#dc2626">- ${fmt(report.refundTotal)}</span></div>` : ""}
       <div class="sum-row net">
         <span class="sum-label">Net Sales</span>
         <span class="sum-value">${fmt(report.netSales)}</span>
@@ -258,7 +267,7 @@ export default function AdminReports() {
     ${report.topItems.slice(0, 10).map((item, i) => `
       <div class="item-row">
         <span class="num">${i + 1}</span>
-        <span class="name">${item.name}</span>
+        <span class="name">${stripEmoji(item.name)}</span>
         <span class="qty">${item.quantity.toLocaleString()}</span>
         <span class="rev">${fmt(item.revenue)}</span>
         <span class="pct">${pct(item.revenue)}%</span>
