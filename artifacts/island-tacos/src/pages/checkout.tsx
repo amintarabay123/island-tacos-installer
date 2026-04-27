@@ -465,11 +465,15 @@ export default function Checkout() {
               <h2 className="text-xl font-bold">Order Summary</h2>
               <div className="bg-muted/30 rounded-xl border p-4 space-y-3">
                 {items.map((item) => (
-                  <div key={item.menuItem.id} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {item.quantity}x {item.menuItem.name}
-                    </span>
-                    <span>${((item.menuItem.price + (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * item.quantity).toFixed(2)}</span>
+                  <div key={item.menuItem.id} className="flex justify-between text-sm gap-2">
+                    <div className="min-w-0">
+                      <span className="text-muted-foreground">{item.quantity}x {item.menuItem.name}</span>
+                      {(item.modifierSelections ?? []).length > 0 && (
+                        <p className="text-xs text-muted-foreground/70 mt-0.5">{item.modifierSelections!.map(m => m.name).join(", ")}</p>
+                      )}
+                      {item.notes && <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{item.notes}</p>}
+                    </div>
+                    <span className="shrink-0">${((item.menuItem.price + (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
                 <Separator />
