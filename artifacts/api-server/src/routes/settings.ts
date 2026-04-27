@@ -28,15 +28,15 @@ export function parseOpenDays(raw: string | undefined): Set<number> {
 /** Returns a human-readable days string, e.g. "Mon – Sat" or "Mon, Wed, Fri". */
 export function formatOpenDays(raw: string | undefined): string {
   const days = [...parseOpenDays(raw)].sort((a, b) => a - b);
-  if (days.length === 7) return "daily";
+  if (days.length === 7) return "every day";
   if (days.length === 0) return "closed";
-  const SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   // Check if it's a contiguous range
   const isContiguous = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
   if (isContiguous && days.length > 2) {
-    return `${SHORT[days[0]]} – ${SHORT[days[days.length - 1]]}`;
+    return `${FULL[days[0]]} to ${FULL[days[days.length - 1]]}`;
   }
-  return days.map(d => SHORT[d]).join(", ");
+  return days.map(d => FULL[d]).join(", ");
 }
 
 /** Returns whether the store is currently accepting online orders, and the effective cutoff time. */
