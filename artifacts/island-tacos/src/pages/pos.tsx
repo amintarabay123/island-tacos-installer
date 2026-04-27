@@ -852,6 +852,13 @@ function DiscountModal({ subtotal, onApply, onClose }: { subtotal: number; onApp
 
 // ─── Tickets Drawer (Held + Live Queue tabs) ─────────────────────────────────
 
+function elapsedLabel(createdAt: string, now: number): { label: string; cls: string } {
+  const mins = Math.floor((now - new Date(createdAt).getTime()) / 60000);
+  const label = mins < 1 ? "just now" : mins < 60 ? `${mins} min ago` : `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
+  const cls = mins < 15 ? "text-green-600 bg-green-50" : mins < 30 ? "text-amber-600 bg-amber-50" : "text-red-600 bg-red-50";
+  return { label, cls };
+}
+
 function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   onResume: (items: CartItem[], name: string, note: string, discount: number, orderId: number) => void;
   onClose: () => void;
@@ -861,6 +868,8 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   const [loading, setLoading] = useState(true);
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [splitChargeOrder, setSplitChargeOrder] = useState<Order | null>(null);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
 
   const load = useCallback(async () => {
     try {
@@ -1052,6 +1061,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                       <span className={`text-xs px-1.5 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-50 text-purple-600" : o.source === "phone" ? "bg-green-50 text-green-700 font-bold" : "bg-blue-50 text-blue-600"}`}>
                         {o.source === "pos" ? "POS" : o.source === "phone" ? "📞 Phone" : "Online"}
                       </span>
+                      {(() => { const e = elapsedLabel(o.createdAt, now); return <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${e.cls}`}>⏱ {e.label}</span>; })()}
                     </div>
                   </div>
                   <span className="text-[#F5A623] font-bold shrink-0">{fmt(o.total)}</span>
