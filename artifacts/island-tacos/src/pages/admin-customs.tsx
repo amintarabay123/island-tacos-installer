@@ -1,6 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
-import { useLocation } from "wouter";
-import { authHeaders } from "@/lib/auth";
+import { useState, useCallback } from "react";
 import { adminRoutes } from "@/lib/admin-path";
 import { Printer, Plus, Trash2, ChevronLeft } from "lucide-react";
 import { Link } from "wouter";
@@ -111,18 +109,6 @@ function calcTotals(lines: LineItem[], freight: number, insurance: number) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 export default function AdminCustoms() {
-  const [, navigate] = useLocation();
-
-  useEffect(() => {
-    fetch("/api/me", { credentials: "include", headers: authHeaders() })
-      .then(r => r.json())
-      .then((d: { authed?: boolean; role?: string }) => {
-        if (!d.authed) navigate(adminRoutes.login);
-        else if (d.role !== "admin") navigate(adminRoutes.pos);
-      })
-      .catch(() => navigate(adminRoutes.login));
-  }, [navigate]);
-
   // Form state
   const [shipment, setShipment] = useState<Shipment>({ arrivalDate: "", manifestNo: "", bolNo: "", numPackages: "1", containerId: "" });
   const [supplier, setSupplier] = useState<Supplier>({ name: "Sysco Puerto Rico", street: "", city: "San Juan, PR", country: "United States", shipmentCity: "San Juan" });
