@@ -763,19 +763,27 @@ export default function AdminReports() {
               {report.daily.length > 1 && (
                 <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
                   <h2 className="font-bold text-gray-900 mb-4">Daily Sales</h2>
-                  <div className="flex items-end gap-1 h-32">
-                    {report.daily.map(d => (
-                      <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group">
-                        <div className="text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">{fmt(d.sales)}</div>
-                        <div className="w-full bg-orange-400 rounded-t transition-all hover:bg-orange-500 cursor-default"
-                          style={{ height: `${maxSales > 0 ? (d.sales / maxSales) * 112 : 0}px`, minHeight: d.sales > 0 ? "4px" : "0" }}
-                          title={`${d.date}: ${fmt(d.sales)}`} />
-                        <div className="text-xs text-gray-400 truncate w-full text-center"
-                          style={{ fontSize: "9px" }}>
-                          {d.date.slice(5)}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <div className="flex items-end gap-1 h-36 min-w-0"
+                      style={{ minWidth: `${Math.max(report.daily.length * 18, 200)}px` }}>
+                      {report.daily.map(d => {
+                        const showLabel = report.daily.length <= 31;
+                        return (
+                          <div key={d.date} className="flex-1 min-w-0 flex flex-col items-center gap-0.5 group">
+                            <div className="text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+                              style={{ fontSize: "9px" }}>{fmt(d.sales)}</div>
+                            <div className="w-full bg-orange-400 rounded-t transition-all hover:bg-orange-500 cursor-default"
+                              style={{ height: `${maxSales > 0 ? (d.sales / maxSales) * 112 : 0}px`, minHeight: d.sales > 0 ? "4px" : "0" }}
+                              title={`${d.date}: ${fmt(d.sales)}`} />
+                            {showLabel && (
+                              <div className="text-center overflow-hidden w-full" style={{ fontSize: "9px", color: "#9ca3af", lineHeight: 1.2 }}>
+                                {d.date.slice(5)}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
