@@ -269,27 +269,22 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
   };
 
   return (
-    // Outer backdrop is the scroll container — the iOS-reliable pattern.
-    // overflow-y-auto on a fixed inset-0 div scrolls correctly on every device
-    // including iPhone/iPad Safari/PWA. Inner overflow-y-auto inside a flex
-    // parent with overflow-hidden reliably breaks on iOS.
+    // Backdrop — flex column so card can be full height up to a max
     <div
-      className="fixed inset-0 z-50 overflow-y-auto bg-black/70"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 p-0 sm:p-4"
       onClick={onClose}
-      style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
     >
-      <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4">
         <div
-          className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-2xl shadow-2xl"
+          className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[88vh]"
           onClick={e => e.stopPropagation()}
         >
-          {/* Header — sticky inside the outer scroll */}
-          <div className="sticky top-0 z-10 bg-white rounded-t-2xl sm:rounded-t-2xl p-5 border-b border-gray-200">
+          {/* Header — always visible at top */}
+          <div className="flex-shrink-0 bg-white rounded-t-2xl sm:rounded-t-2xl p-5 border-b border-gray-200">
             <h2 className="text-gray-900 text-xl font-bold">{item.name}</h2>
             <p className="text-[#F5A623] text-lg font-semibold">{fmt(total)}</p>
           </div>
-          {/* Content — no overflow, flows naturally */}
-          <div className="p-5 space-y-6">
+          {/* Content — scrollable middle */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-6" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
           {modifiers.map(mod => {
             const groupTotal = totalSelForGroup(mod);
             const atMax = mod.maxSelections !== null && groupTotal >= mod.maxSelections;
@@ -360,8 +355,8 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
             <p className="text-red-600 text-sm text-center">{validationError}</p>
           )}
           </div>
-          {/* Special instructions + action buttons — at the bottom of the flow */}
-          <div className="px-5 pb-3 border-t border-gray-200 pt-4">
+          {/* Special instructions — pinned above buttons */}
+          <div className="flex-shrink-0 px-5 pb-3 border-t border-gray-200 pt-4">
             <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Special Instructions</p>
             <textarea
               value={note}
@@ -371,7 +366,8 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
               className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 text-sm placeholder-gray-400 resize-none focus:outline-none focus:border-amber-400/60 transition-colors"
             />
           </div>
-          <div className="p-5 pt-2 flex gap-3 pb-safe">
+          {/* Action buttons — always visible at bottom */}
+          <div className="flex-shrink-0 p-5 pt-2 flex gap-3 pb-safe">
             <button onClick={onClose} className="flex-1 h-12 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-100 transition-colors">Cancel</button>
             <button onClick={handleConfirm} disabled={!!validationError}
               className="flex-2 flex-grow h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-50 text-black font-bold transition-colors">
@@ -379,7 +375,6 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
             </button>
           </div>
         </div>
-      </div>
     </div>
   );
 }
