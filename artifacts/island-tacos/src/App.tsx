@@ -23,6 +23,7 @@ const AdminModifiers = lazy(() => import("@/pages/admin-modifiers"));
 const AdminReports = lazy(() => import("@/pages/admin-reports"));
 const AdminFinancials = lazy(() => import("@/pages/admin-financials"));
 const AdminCustomers = lazy(() => import("@/pages/admin-customers"));
+const AdminCustoms = lazy(() => import("@/pages/admin-customs"));
 const AdminSettings = lazy(() => import("@/pages/admin-settings"));
 const AccountPage = lazy(() => import("@/pages/account"));
 const Kitchen = lazy(() => import("@/pages/kitchen"));
@@ -107,6 +108,9 @@ function Router() {
       </Route>
       <Route path={adminRoutes.customers}>
         <ProtectedRoute><AdminCustomers /></ProtectedRoute>
+      </Route>
+      <Route path={adminRoutes.customs}>
+        <ProtectedRoute adminOnly><AdminCustoms /></ProtectedRoute>
       </Route>
       <Route path={adminRoutes.kitchen}>
         <ProtectedRoute><Kitchen /></ProtectedRoute>

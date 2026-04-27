@@ -6,7 +6,7 @@ import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdmin
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, Monitor, LogOut, XCircle, BarChart3, Users, CloudUpload, Menu, X, ChefHat, UtensilsCrossed, Store, History } from "lucide-react";
+import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, Monitor, LogOut, XCircle, BarChart3, Users, CloudUpload, Menu, X, ChefHat, UtensilsCrossed, Store, History, ScrollText } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -273,6 +273,11 @@ export default function Admin() {
                   <Users className="h-5 w-5 text-blue-600" /> Customers
                 </div>
               </Link>
+              <Link href={adminRoutes.customs} onClick={() => setNavOpen(false)}>
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
+                  <ScrollText className="h-5 w-5 text-amber-600" /> Customs (HMC-12)
+                </div>
+              </Link>
 
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pb-1 pt-4">More</p>
               <Link href="/" onClick={() => setNavOpen(false)}>
@@ -356,6 +361,11 @@ export default function Admin() {
               <Link href={adminRoutes.customers}>
                 <Button variant="outline" size="sm" className="shrink-0">
                   <Users className="h-4 w-4" /><span className="ml-1.5">Customers</span>
+                </Button>
+              </Link>
+              <Link href={adminRoutes.customs}>
+                <Button variant="outline" size="sm" className="shrink-0">
+                  <ScrollText className="h-4 w-4 text-amber-600" /><span className="ml-1.5">Customs</span>
                 </Button>
               </Link>
               <Link href={adminRoutes.settings}>

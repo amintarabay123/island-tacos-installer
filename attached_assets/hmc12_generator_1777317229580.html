@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HMC-12 Trade Declaration Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #151820;
+    --border: #252a35;
+    --accent: #00c896;
+    --accent2: #0088ff;
+    --warn: #ff6b35;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --label: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid var(--accent);
+    padding: 4px 8px;
+  }
+
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  header span {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    height: calc(100vh - 57px);
+  }
+
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .preview {
+    overflow-y: auto;
+    padding: 24px;
+    background: #1a1d25;
+  }
+
+  .section-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  label {
+    font-size: 11px;
+    color: var(--label);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    border-radius: 3px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+
+  select option { background: var(--bg); }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  /* Line items */
+  .line-items-header {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 0.8fr 0.8fr 0.7fr 30px;
+    gap: 6px;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 0 0 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .line-item {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 0.8fr 0.8fr 0.7fr 30px;
+    gap: 6px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #1e2330;
+  }
+
+  .line-item input {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .duty-badge {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+    text-align: center;
+    background: rgba(0,200,150,0.1);
+    border-radius: 2px;
+    padding: 2px 4px;
+  }
+
+  .duty-badge.free { color: #00c896; background: rgba(0,200,150,0.08); }
+  .duty-badge.taxed { color: var(--warn); background: rgba(255,107,53,0.08); }
+
+  .btn-add {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    border-radius: 3px;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .btn-add:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.2s;
+  }
+  .btn-remove:hover { color: #ff4444; }
+
+  .btn-generate {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    border: none;
+    color: #000;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+  }
+
+  .btn-generate:hover { background: #00e0aa; }
+
+  .totals-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+  }
+
+  .totals-box .tot-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--label);
+  }
+
+  .totals-box .tot-row:last-child {
+    border-bottom: none;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    padding-top: 8px;
+    margin-top: 4px;
+  }
+
+  /* PREVIEW - mimics the actual HMC-12 form */
+  .form-preview {
+    background: #fff;
+    color: #000;
+    width: 750px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9px;
+    box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+    border-radius: 2px;
+  }
+
+  .form-preview .form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 6px;
+  }
+
+  .form-preview h2 {
+    font-size: 16px;
+    font-weight: bold;
+  }
+
+  .form-preview .meta-fields {
+    text-align: right;
+    font-size: 8px;
+  }
+
+  .form-preview .meta-fields div {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+
+  .form-preview .meta-fields span {
+    border-bottom: 1px solid #000;
+    min-width: 80px;
+    display: inline-block;
+  }
+
+  .fp-grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid #000;
+    border-bottom: none;
+  }
+
+  .fp-cell {
+    border: 1px solid #000;
+    padding: 4px 6px;
+    min-height: 22px;
+  }
+
+  .fp-cell.header {
+    background: #ddd;
+    font-weight: bold;
+    font-size: 8px;
+  }
+
+  .fp-cell.no-border-right { border-right: none; }
+  .fp-cell.span2 { grid-column: span 2; }
+
+  .fp-label {
+    font-size: 7px;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 2px;
+    color: #333;
+  }
+
+  .fp-val {
+    font-size: 9px;
+    font-weight: normal;
+  }
+
+  .fp-checkboxes {
+    display: flex;
+    gap: 16px;
+    font-size: 9px;
+    margin-bottom: 8px;
+  }
+
+  .fp-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .fp-checkbox .box {
+    width: 10px;
+    height: 10px;
+    border: 1px solid #000;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+  }
+
+  .record-block {
+    border: 1px solid #000;
+    margin-top: 8px;
+    page-break-inside: avoid;
+  }
+
+  .record-header {
+    background: #222;
+    color: #fff;
+    font-weight: bold;
+    font-size: 9px;
+    padding: 3px 6px;
+  }
+
+  .record-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rec-cell {
+    border: 1px solid #ccc;
+    padding: 4px 6px;
+    min-height: 30px;
+  }
+
+  .rec-cell .fp-label { color: #333; }
+
+  .tax-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8px;
+    margin-top: 4px;
+  }
+
+  .tax-table th {
+    background: #eee;
+    border: 1px solid #ccc;
+    padding: 2px 4px;
+    text-align: left;
+    font-size: 7px;
+  }
+
+  .tax-table td {
+    border: 1px solid #ccc;
+    padding: 2px 4px;
+  }
+
+  .signature-block {
+    border: 1px solid #000;
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sig-left { padding: 8px; border-right: 1px solid #000; }
+  .sig-right { padding: 8px; background: #f5f5f5; }
+  .sig-line { border-bottom: 1px solid #000; margin: 16px 0 4px; }
+
+  @media print {
+    body { background: white; }
+    .layout { display: block; height: auto; }
+    .sidebar { display: none; }
+    .preview { padding: 0; background: white; }
+    .form-preview { box-shadow: none; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">HMC</div>
+  <div>
+    <h1>Trade Declaration Generator</h1>
+    <span>HMC-12 · CAPS · BVI Customs · Island Tacos</span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- SIDEBAR: INPUT FORM -->
+  <div class="sidebar">
+
+    <!-- SHIPMENT INFO -->
+    <div>
+      <div class="section-title">Shipment Details</div>
+      <div class="field-group">
+        <div class="row2">
+          <div>
+            <label>Arrival Date</label>
+            <input type="date" id="arrivalDate">
+          </div>
+          <div>
+            <label>Manifest No.</label>
+            <input type="text" id="manifestNo" placeholder="273">
+          </div>
+        </div>
+        <div class="row2">
+          <div>
+            <label>BOL / AWB No.</label>
+            <input type="text" id="bolNo" placeholder="ISA31C">
+          </div>
+          <div>
+            <label>No. of Packages</label>
+            <input type="number" id="numPackages" value="1" min="1">
+          </div>
+        </div>
+        <div>
+          <label>Container ID & Length</label>
+          <input type="text" id="containerId" placeholder="Leave blank if none">
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPLIER -->
+    <div>
+      <div class="section-title">Supplier Details</div>
+      <div class="field-group">
+        <div>
+          <label>Supplier Name</label>
+          <input type="text" id="supplierName" placeholder="e.g. Sysco Puerto Rico">
+        </div>
+        <div>
+          <label>Supplier Address</label>
+          <input type="text" id="supplierStreet" placeholder="Street address">
+        </div>
+        <div class="row2">
+          <div>
+            <label>City / State</label>
+            <input type="text" id="supplierCity" placeholder="San Juan, PR">
+          </div>
+          <div>
+            <label>Country</label>
+            <input type="text" id="supplierCountry" value="United States" placeholder="USA">
+          </div>
+        </div>
+        <div>
+          <label>City of Direct Shipment</label>
+          <input type="text" id="shipmentCity" placeholder="San Juan">
+        </div>
+      </div>
+    </div>
+
+    <!-- FREIGHT & INSURANCE -->
+    <div>
+      <div class="section-title">Freight & Insurance</div>
+      <div class="field-group">
+        <div class="row2">
+          <div>
+            <label>Total Freight (USD)</label>
+            <input type="number" id="freightCost" placeholder="0.00" step="0.01" value="0">
+          </div>
+          <div>
+            <label>Total Insurance (USD)</label>
+            <input type="number" id="insuranceCost" placeholder="0.00" step="0.01" value="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINE ITEMS -->
+    <div>
+      <div class="section-title">Line Items (Invoice Lines)</div>
+      <div class="line-items-header">
+        <span>Description</span>
+        <span>Tariff No.</span>
+        <span>FOB $</span>
+        <span>Weight lb</span>
+        <span>Duty</span>
+        <span></span>
+      </div>
+      <div id="lineItems"></div>
+      <button class="btn-add" onclick="addLine()">+ ADD LINE ITEM</button>
+    </div>
+
+    <!-- TOTALS -->
+    <div>
+      <div class="section-title">Summary</div>
+      <div class="totals-box" id="totalsBox">
+        <div class="tot-row"><span>Total FOB</span><span id="totFob">$0.00</span></div>
+        <div class="tot-row"><span>Freight</span><span id="totFreight">$0.00</span></div>
+        <div class="tot-row"><span>Insurance</span><span id="totIns">$0.00</span></div>
+        <div class="tot-row"><span>Total CIF</span><span id="totCif">$0.00</span></div>
+        <div class="tot-row"><span>Customs Duty</span><span id="totDuty">$0.00</span></div>
+        <div class="tot-row"><span>Wharfage (1% FOB)</span><span id="totWharf">$0.00</span></div>
+        <div class="tot-row"><span>TOTAL DUE</span><span id="totTotal">$0.00</span></div>
+      </div>
+    </div>
+
+    <button class="btn-generate" onclick="generatePreview()">▶ GENERATE DECLARATION</button>
+
+  </div>
+
+  <!-- PREVIEW PANEL -->
+  <div class="preview" id="previewPanel">
+    <div style="text-align:center; color: var(--muted); margin-top: 80px;">
+      <div style="font-size:40px; margin-bottom:16px;">📋</div>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">Fill in the details and click<br>GENERATE DECLARATION</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── PRE-FILLED DATA ──────────────────────────────────────────────
+const DECLARANT = {
+  name: 'Island Tacos',
+  id: '100494',
+  importerId: '113917',
+  importerName: 'Island Tacos',
+  importerAddress: 'PO Box 643',
+  importerTown: 'Road Town, Tortola',
+  carrierIdNo: 'ADP/273',
+  portOfArrival: 'PP'
+};
+
+// ── TARIFF LOOKUP TABLE ──────────────────────────────────────────
+// Key common items from the CMDA 2010 schedule
+const TARIFF_DB = {
+  // Poultry
+  '0207.10': { desc: 'Poultry not cut in pieces, fresh or chilled', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0207.21': { desc: 'Fowls Gallus domesticus, frozen whole', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0207.22': { desc: 'Turkeys, frozen whole', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0207.31': { desc: 'Fatty livers of geese or ducks, fresh/chilled', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0207.411': { desc: 'Chicken backs and necks, frozen', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0207.412': { desc: 'Chicken wings, frozen', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0207.419': { desc: 'Other chicken cuts, frozen', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0207.421': { desc: 'Turkey backs, necks and wings, frozen', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0207.429': { desc: 'Other turkey cuts, frozen', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0207.43':  { desc: 'Duck/geese/guinea fowl cuts, frozen', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0207.50':  { desc: 'Poultry livers, frozen', rate: 0.05, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  // Raw meats
+  '0201.10':  { desc: 'Beef carcases and half-carcases, fresh/chilled', rate: 0.05, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0202.10':  { desc: 'Beef carcases and half-carcases, frozen', rate: 0.05, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0203.10':  { desc: 'Pork carcases, fresh or chilled', rate: 0.05, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0203.20':  { desc: 'Pork, frozen', rate: 0.05, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  // Fish
+  '0302.10':  { desc: 'Salmon/trout, fresh or chilled', rate: 0.15, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0302.60':  { desc: 'Other fish (snapper, grouper, mahi etc.), fresh', rate: 0.15, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0303.70':  { desc: 'Other fish frozen (snapper, grouper etc.)', rate: 0.15, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0304.10':  { desc: 'Fish fillets, fresh or chilled', rate: 0.15, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0304.20':  { desc: 'Fish fillets, frozen', rate: 0.15, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0305.40':  { desc: 'Smoked fish/fillets', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0306.002': { desc: 'Shrimps and prawns, frozen', rate: 0.15, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '0306.003': { desc: 'Lobsters, frozen', rate: 0.15, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  // Rice
+  '1006.30':  { desc: 'Semi-milled or wholly milled rice', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '1006.40':  { desc: 'Broken rice', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  // Sugar
+  '1701.10':  { desc: 'Cane sugar, raw', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '1701.91':  { desc: 'Sugar, containing flavouring/colouring', rate: 0.15, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '1701.999': { desc: 'Other refined sugar', rate: 0, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  // Cooking oils
+  '1507.90':  { desc: 'Soya-bean oil, refined', rate: 0.10, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '1511.90':  { desc: 'Palm oil, refined', rate: 0.10, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '1512.19':  { desc: 'Sunflower/safflower oil, refined', rate: 0.10, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '1515.29':  { desc: 'Maize (corn) oil, other', rate: 0.10, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '1517.10':  { desc: 'Margarine', rate: 0.05, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  '1517.901': { desc: 'Imitation lard/shortening', rate: 0.05, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+  // Beverages
+  '2201.101': { desc: 'Mineral water', rate: 0, unit: 'kg & litre', cpc: 'C400', taxType: '01', base: '42' },
+  '2202.101': { desc: 'Aerated beverages (sodas)', rate: 0.15, unit: 'kg & litre', cpc: 'C400', taxType: '01', base: '42' },
+  '2203.001': { desc: 'Beer', rate: null, rateStr: '$1.10/gal', unit: 'gal', cpc: 'C400', taxType: '02', base: '07' },
+  '2204.201': { desc: 'Wine (table wine)', rate: null, rateStr: '$1.20/gal', unit: 'gal', cpc: 'C400', taxType: '02', base: '07' },
+  '2208.201': { desc: 'Brandy/Cognac, bottled ≤46%', rate: null, rateStr: '$2.30/gal', unit: 'gal', cpc: 'C400', taxType: '02', base: '07' },
+  '2208.301': { desc: 'Whisky, bottled ≤46%', rate: null, rateStr: '$2.30/gal', unit: 'gal', cpc: 'C400', taxType: '02', base: '07' },
+  '2208.401': { desc: 'Rum, bottled ≤46%', rate: null, rateStr: '$2.30/gal', unit: 'gal', cpc: 'C400', taxType: '02', base: '07' },
+  '2208.501': { desc: 'Gin, bottled ≤46%', rate: null, rateStr: '$2.30/gal', unit: 'gal', cpc: 'C400', taxType: '02', base: '07' },
+  '2208.901': { desc: 'Vodka', rate: null, rateStr: '$2.30/gal', unit: 'gal', cpc: 'C400', taxType: '02', base: '07' },
+  '2208.902': { desc: 'Cordials and liqueurs', rate: null, rateStr: '$2.30/gal', unit: 'gal', cpc: 'C400', taxType: '02', base: '07' },
+  // Tobacco
+  '2402.20':  { desc: 'Cigarettes containing tobacco', rate: null, rateStr: '$0.55/lb', unit: 'lb', cpc: 'C400', taxType: '01', base: '04' },
+  '2402.10':  { desc: 'Cigars and cigarillos', rate: null, rateStr: '$0.55/lb', unit: 'lb', cpc: 'C400', taxType: '01', base: '04' },
+  // Kitchen equipment
+  '8418.211': { desc: 'Refrigerator, frost-free electrical', rate: 0.15, unit: 'kg and No', cpc: 'C400', taxType: '01', base: '42' },
+  '8418.30':  { desc: 'Chest freezer, ≤800L', rate: 0.15, unit: 'kg and No', cpc: 'C400', taxType: '01', base: '42' },
+  '8418.40':  { desc: 'Upright freezer, ≤900L', rate: 0.15, unit: 'kg and No', cpc: 'C400', taxType: '01', base: '42' },
+  '8418.50':  { desc: 'Commercial display refrigeration', rate: 0.15, unit: 'kg and No', cpc: 'C400', taxType: '01', base: '42' },
+  '7321.101': { desc: 'Stoves, ranges, cookers and barbecues', rate: 0.15, unit: 'kg', cpc: 'C400', taxType: '01', base: '42' },
+};
+
+// ── LINE ITEM MANAGEMENT ─────────────────────────────────────────
+let lineCounter = 0;
+
+function addLine(desc='', tariff='', fob='', weight='', rate='') {
+  lineCounter++;
+  const id = lineCounter;
+  const div = document.createElement('div');
+  div.className = 'line-item';
+  div.id = `line_${id}`;
+  div.innerHTML = `
+    <input type="text" placeholder="e.g. Frozen Chicken Wings" id="desc_${id}" value="${desc}" oninput="updateLine(${id})">
+    <input type="text" placeholder="e.g. 0207.412" id="tariff_${id}" value="${tariff}" oninput="lookupTariff(${id})" list="tariffList">
+    <input type="number" placeholder="0.00" id="fob_${id}" value="${fob}" step="0.01" oninput="recalc()">
+    <input type="number" placeholder="0.0" id="weight_${id}" value="${weight}" step="0.1" oninput="recalc()">
+    <div class="duty-badge free" id="badge_${id}">FREE</div>
+    <button class="btn-remove" onclick="removeLine(${id})">×</button>
+  `;
+  document.getElementById('lineItems').appendChild(div);
+  if (tariff) lookupTariff(id);
+  recalc();
+}
+
+function removeLine(id) {
+  const el = document.getElementById(`line_${id}`);
+  if (el) el.remove();
+  recalc();
+}
+
+function lookupTariff(id) {
+  const tariffNo = document.getElementById(`tariff_${id}`).value.trim();
+  const badge = document.getElementById(`badge_${id}`);
+  const descField = document.getElementById(`desc_${id}`);
+  
+  const info = TARIFF_DB[tariffNo];
+  if (info) {
+    if (!descField.value) descField.value = info.desc;
+    if (info.rate === 0) {
+      badge.textContent = 'FREE';
+      badge.className = 'duty-badge free';
+    } else if (info.rate !== null) {
+      badge.textContent = (info.rate * 100).toFixed(0) + '%';
+      badge.className = 'duty-badge taxed';
+    } else {
+      badge.textContent = info.rateStr;
+      badge.className = 'duty-badge taxed';
+    }
+  } else if (tariffNo) {
+    badge.textContent = '20%';
+    badge.className = 'duty-badge taxed';
+  } else {
+    badge.textContent = '—';
+    badge.className = 'duty-badge';
+  }
+  recalc();
+}
+
+function updateLine(id) { recalc(); }
+
+function getLines() {
+  const lines = [];
+  document.querySelectorAll('.line-item').forEach(el => {
+    const id = el.id.replace('line_', '');
+    const tariffNo = document.getElementById(`tariff_${id}`).value.trim();
+    const info = TARIFF_DB[tariffNo] || null;
+    const fob = parseFloat(document.getElementById(`fob_${id}`).value) || 0;
+    const rate = info ? info.rate : 0.20;
+    lines.push({
+      id,
+      desc: document.getElementById(`desc_${id}`).value,
+      tariff: tariffNo,
+      fob,
+      weight: parseFloat(document.getElementById(`weight_${id}`).value) || 0,
+      rate,
+      rateStr: info ? (info.rateStr || (info.rate === 0 ? 'Free' : (info.rate * 100).toFixed(0) + '%')) : '20%',
+      cpc: info ? info.cpc : 'C400',
+      taxType: info ? info.taxType : '01',
+      base: info ? info.base : '42',
+      info
+    });
+  });
+  return lines;
+}
+
+function recalc() {
+  const lines = getLines();
+  const freight = parseFloat(document.getElementById('freightCost').value) || 0;
+  const insurance = parseFloat(document.getElementById('insuranceCost').value) || 0;
+  
+  let totalFob = lines.reduce((s,l) => s + l.fob, 0);
+  let totalCif = totalFob + freight + insurance;
+  
+  // Calculate duty per line
+  let totalDuty = 0;
+  lines.forEach(l => {
+    if (l.rate !== null && l.rate > 0) {
+      // CIF-based duty
+      const lineCif = l.fob + (l.fob / Math.max(totalFob, 1)) * (freight + insurance);
+      totalDuty += lineCif * l.rate;
+    }
+  });
+
+  const wharfage = totalFob * 0.01;
+  const grandTotal = totalDuty + wharfage;
+
+  document.getElementById('totFob').textContent = '$' + totalFob.toFixed(2);
+  document.getElementById('totFreight').textContent = '$' + freight.toFixed(2);
+  document.getElementById('totIns').textContent = '$' + insurance.toFixed(2);
+  document.getElementById('totCif').textContent = '$' + totalCif.toFixed(2);
+  document.getElementById('totDuty').textContent = '$' + totalDuty.toFixed(2);
+  document.getElementById('totWharf').textContent = '$' + wharfage.toFixed(2);
+  document.getElementById('totTotal').textContent = '$' + grandTotal.toFixed(2);
+}
+
+function fmt(n) { return n.toFixed(2); }
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+// ── GENERATE PREVIEW ─────────────────────────────────────────────
+function generatePreview() {
+  const lines = getLines();
+  if (!lines.length) { alert('Please add at least one line item.'); return; }
+
+  const freight = parseFloat(document.getElementById('freightCost').value) || 0;
+  const insurance = parseFloat(document.getElementById('insuranceCost').value) || 0;
+  const totalFob = lines.reduce((s,l) => s + l.fob, 0);
+  const totalCif = totalFob + freight + insurance;
+
+  let totalDuty = 0;
+  const lineCalcs = lines.map(l => {
+    const lineFobFrac = totalFob > 0 ? l.fob / totalFob : 0;
+    const lineCif = l.fob + lineFobFrac * (freight + insurance);
+    let duty = 0;
+    if (l.rate !== null && l.rate > 0) duty = lineCif * l.rate;
+    totalDuty += duty;
+    return { ...l, lineCif, duty };
+  });
+
+  const wharfage = totalFob * 0.01;
+  const grandTotal = totalDuty + wharfage;
+
+  const arrDate = fmtDate(document.getElementById('arrivalDate').value);
+  const manifest = document.getElementById('manifestNo').value;
+  const bol = document.getElementById('bolNo').value;
+  const pkgs = document.getElementById('numPackages').value;
+  const container = document.getElementById('containerId').value;
+  const supplierName = document.getElementById('supplierName').value;
+  const supplierStreet = document.getElementById('supplierStreet').value;
+  const supplierCity = document.getElementById('supplierCity').value;
+  const supplierCountry = document.getElementById('supplierCountry').value;
+  const shipmentCity = document.getElementById('shipmentCity').value;
+
+  // Build record blocks
+  let recordsHTML = '';
+  lineCalcs.forEach((l, i) => {
+    const recNo = String(i + 1).padStart(3, '0');
+    const cifVal = l.lineCif.toFixed(2);
+    const dutyAmt = l.duty.toFixed(2);
+    const wharfAmt = (l.fob * 0.01).toFixed(2);
+    recordsHTML += `
+      <div class="record-block">
+        <div class="record-header">11 RECORD NO.: ${recNo}</div>
+        <div class="record-grid">
+          <div class="rec-cell">
+            <span class="fp-label">12 CPC</span>
+            <span class="fp-val">${l.cpc}</span>
+          </div>
+          <div class="rec-cell">
+            <span class="fp-label">18 F.O.B. VALUE</span>
+            <span class="fp-val">$${l.fob.toFixed(2)}</span>
+          </div>
+          <div class="rec-cell">
+            <span class="fp-label">13 TARIFF NO.</span>
+            <span class="fp-val">${l.tariff}</span>
+          </div>
+          <div class="rec-cell">
+            <span class="fp-label">19 CHARGES / DEDUCTIONS</span>
+            <span class="fp-val">Freight: $${(l.fob/Math.max(totalFob,1)*freight).toFixed(2)} | Ins: $${(l.fob/Math.max(totalFob,1)*insurance).toFixed(2)}</span>
+          </div>
+          <div class="rec-cell">
+            <span class="fp-label">14 COUNTRY OF ORIGIN</span>
+            <span class="fp-val">${supplierCountry || 'United States'} / US</span>
+          </div>
+          <div class="rec-cell" style="background:#f9f9f9">
+            <span class="fp-label">20 C.I.F. VALUE</span>
+            <span class="fp-val" style="font-weight:bold">$${cifVal}</span>
+          </div>
+          <div class="rec-cell" style="grid-column:span 2">
+            <span class="fp-label">16 DESCRIPTION</span>
+            <span class="fp-val">${l.desc}</span>
+          </div>
+        </div>
+        <div style="padding:4px 6px; border-top:1px solid #ccc;">
+          <table class="tax-table">
+            <thead>
+              <tr><th>21 TAX</th><th>IND.</th><th>VALUE</th><th>RATE</th><th>AMOUNT</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>01 Import Duty</td>
+                <td>${l.base}</td>
+                <td>$${cifVal}</td>
+                <td>${l.rateStr}</td>
+                <td>$${dutyAmt}</td>
+              </tr>
+              <tr>
+                <td>03 Wharfage</td>
+                <td>25</td>
+                <td>$${l.fob.toFixed(2)}</td>
+                <td>1%</td>
+                <td>$${wharfAmt}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; border-top:1px solid #ccc;">
+          <div class="rec-cell">
+            <span class="fp-label">17a NET WEIGHT (LB)</span>
+            <span class="fp-val">${l.weight} lb</span>
+          </div>
+          <div class="rec-cell" style="text-align:right;">
+            <span class="fp-label">TOTAL</span>
+            <span class="fp-val" style="font-weight:bold">$${(l.duty + l.fob*0.01).toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  const today = new Date().toLocaleDateString('en-GB');
+  const html = `
+  <div class="form-preview" id="printArea">
+    <div class="form-header">
+      <div>
+        <div style="font-size:13px; font-weight:bold; margin-bottom:4px;">🛃 H.M. Customs Trade Declaration</div>
+        <div class="fp-checkboxes" style="margin-top:6px;">
+          <div class="fp-checkbox"><div class="box">✓</div> IMPORT</div>
+          <div class="fp-checkbox"><div class="box">&nbsp;</div> EXPORT</div>
+          <div class="fp-checkbox"><div class="box">&nbsp;</div> DEPOSIT</div>
+          <div class="fp-checkbox"><div class="box">&nbsp;</div> ADJUSTMENT</div>
+        </div>
+      </div>
+      <div class="meta-fields">
+        <div>Page No./Total: <span>1 / ${Math.ceil(lines.length/3)}</span></div>
+        <div>Trader Reference: <span>&nbsp;</span></div>
+        <div>Related TD No.: <span>&nbsp;</span></div>
+      </div>
+    </div>
+
+    <!-- SUPPLIER + SHIPMENT -->
+    <div class="fp-grid2">
+      <div class="fp-cell header">1 SUPPLIER DETAILS &nbsp;&nbsp; ID: ___________</div>
+      <div class="fp-cell header">5 SHIPMENT DETAILS</div>
+      <div class="fp-cell"><span class="fp-label">a. NAME</span><span class="fp-val">${supplierName}</span></div>
+      <div class="fp-cell"><span class="fp-label">a. CITY OF DIRECT SHIPMENT</span><span class="fp-val">${shipmentCity}</span></div>
+      <div class="fp-cell"><span class="fp-label">b. STREET</span><span class="fp-val">${supplierStreet}</span></div>
+      <div class="fp-cell"><span class="fp-label">b. COUNTRY OF DIRECT SHIPMENT</span><span class="fp-val">${supplierCountry}</span></div>
+      <div class="fp-cell"><span class="fp-label">c. CITY, STATE/PROV.</span><span class="fp-val">${supplierCity}</span></div>
+      <div class="fp-cell"><span class="fp-label">c. COUNTRY OF ORIGINAL SHIPMENT</span><span class="fp-val">${supplierCountry}</span></div>
+      <div class="fp-cell"><span class="fp-label">e. COUNTRY</span><span class="fp-val">${supplierCountry}</span></div>
+      <div class="fp-cell header">6 ADDITIONAL INFORMATION</div>
+
+      <div class="fp-cell header" style="grid-column:1">2 IMPORTER DETAILS &nbsp;&nbsp; ID: ${DECLARANT.importerId}</div>
+      <div class="fp-cell"><span class="fp-label">7 TOTAL NO. OF RECORDS</span><span class="fp-val">${lines.length}</span></div>
+      <div class="fp-cell"><span class="fp-label">a. NAME</span><span class="fp-val">${DECLARANT.importerName}</span></div>
+      <div class="fp-cell"><span class="fp-label">8 TOTAL FREIGHT</span><span class="fp-val">$${freight.toFixed(2)}</span></div>
+      <div class="fp-cell"><span class="fp-label">b. PO BOX, STREET</span><span class="fp-val">PO Box 643</span></div>
+      <div class="fp-cell">
+        <span class="fp-label">9 TOTAL INSURANCE</span><span class="fp-val">$${insurance.toFixed(2)}</span><br>
+        <span class="fp-label" style="margin-top:4px">Total Customs Duty</span><span class="fp-val">$${totalDuty.toFixed(2)}</span><br>
+        <span class="fp-label">Total Wharfage</span><span class="fp-val">$${wharfage.toFixed(2)}</span>
+      </div>
+      <div class="fp-cell"><span class="fp-label">c. TOWN, ISLAND</span><span class="fp-val">Road Town, Tortola</span></div>
+
+      <div class="fp-cell header">3 TRANSPORT DETAILS</div>
+      <div class="fp-cell" style="background:#fffde7; font-weight:bold;">
+        <span class="fp-label">10 TOTAL DUTY</span>
+        <span style="font-size:13px; font-weight:bold;">$${grandTotal.toFixed(2)}</span>
+      </div>
+
+      <div class="fp-cell"><span class="fp-label">a. CARRIER ID / NO.</span><span class="fp-val">${DECLARANT.carrierIdNo}</span></div>
+      <div></div>
+      <div class="fp-cell"><span class="fp-label">b. PORT OF ARRIVAL</span><span class="fp-val">${DECLARANT.portOfArrival}</span></div>
+      <div></div>
+      <div class="fp-cell"><span class="fp-label">c. ARRIVAL DATE</span><span class="fp-val">${arrDate}</span></div>
+      <div></div>
+
+      <div class="fp-cell header">4 MANIFEST DETAILS &nbsp;&nbsp; NO.: ${manifest}</div>
+      <div></div>
+      <div class="fp-cell"><span class="fp-label">a. NO. OF PACKAGES</span><span class="fp-val">${pkgs}</span></div>
+      <div></div>
+      <div class="fp-cell"><span class="fp-label">b. BILL OF LADING / AWB</span><span class="fp-val">${bol}</span></div>
+      <div></div>
+      <div class="fp-cell"><span class="fp-label">c. CONTAINER ID & LENGTH</span><span class="fp-val">${container || '—'}</span></div>
+      <div></div>
+    </div>
+
+    ${recordsHTML}
+
+    <!-- SIGNATURE BLOCK -->
+    <div class="signature-block" style="margin-top:10px">
+      <div class="sig-left">
+        <div><strong>DECLARANT NAME:</strong> ${DECLARANT.name}</div>
+        <div style="margin-top:6px"><strong>DECLARANT ID:</strong> ${DECLARANT.id}</div>
+        <div style="font-size:8px; margin-top:8px; font-style:italic">I/We declare that the above particulars are true and correct.</div>
+        <div style="display:flex; gap:24px; margin-top:8px;">
+          <div>
+            <div class="sig-line"></div>
+            <div style="font-size:7px">SIGNATURE</div>
+          </div>
+          <div>
+            <div class="sig-line" style="min-width:80px"></div>
+            <div style="font-size:7px">DATE</div>
+          </div>
+        </div>
+      </div>
+      <div class="sig-right">
+        <div style="font-size:8px; font-style:italic; color:#666;">Customs Use Only</div>
+      </div>
+    </div>
+    <div style="text-align:right; font-size:7px; margin-top:6px; color:#999;">HMC-12 (10/12)</div>
+  </div>
+
+  <div style="text-align:center; margin-top:20px;">
+    <button onclick="window.print()" style="padding:12px 32px; background:#00c896; border:none; color:#000; font-weight:bold; font-family:monospace; font-size:12px; letter-spacing:2px; cursor:pointer; border-radius:3px;">
+      🖨 PRINT / SAVE AS PDF
+    </button>
+  </div>
+  `;
+
+  document.getElementById('previewPanel').innerHTML = html;
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+// Set today's date
+document.getElementById('arrivalDate').value = new Date().toISOString().split('T')[0];
+
+// Add one blank line to start
+addLine();
+
+// Pre-fill manifest from last used
+document.getElementById('manifestNo').value = '273';
+document.getElementById('bolNo').value = 'ISA31C';
+</script>
+</body>
+</html>

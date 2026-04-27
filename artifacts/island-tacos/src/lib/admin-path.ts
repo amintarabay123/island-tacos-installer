@@ -13,6 +13,7 @@ export const adminRoutes = {
   reports: `${ADMIN_PATH}/reports`,
   financials: `${ADMIN_PATH}/financials`,
   customers: `${ADMIN_PATH}/customers`,
+  customs: `${ADMIN_PATH}/customs`,
   display: `${base}/display`,
   settings: `${ADMIN_PATH}/settings`,
 };
