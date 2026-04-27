@@ -509,6 +509,8 @@ export default function AdminCustoms() {
     } catch (err) {
       console.error('Invoice extraction failed:', err);
       setExtractError(`Could not auto-extract: ${String(err)}. Please add items manually.`);
+      // Clear stale defaults so user knows fields are not from the invoice
+      setFSuppName(''); setFSuppStreet(''); setFSuppCity(''); setFSuppZip(''); setFSuppCountry('');
       setScanRows(prev => prev.length === 0 ? [{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }] : prev);
       setNextScanId(2);
     } finally {
@@ -517,13 +519,14 @@ export default function AdminCustoms() {
   }, []);
 
   function applyExtractResult(result: any) {
-    // Auto-fill supplier details into Form tab
+    console.log('[Customs] AI extraction result:', JSON.stringify(result, null, 2));
+    // Always overwrite supplier fields — clear any stale defaults
     const s = result.supplier || {};
-    if (s.name)    setFSuppName(s.name);
-    if (s.street)  setFSuppStreet(s.street);
-    if (s.city)    setFSuppCity(s.city);
-    if (s.zip)     setFSuppZip(s.zip);
-    if (s.country) setFSuppCountry(s.country);
+    setFSuppName(s.name || '');
+    setFSuppStreet(s.street || '');
+    setFSuppCity(s.city || '');
+    setFSuppZip(s.zip || '');
+    setFSuppCountry(s.country || '');
     if (result.invoiceRef) setFRef(result.invoiceRef);
     if (result.freight && parseFloat(result.freight) > 0)   setScanFreight(result.freight);
     if (result.insurance && parseFloat(result.insurance) > 0) setScanInsurance(result.insurance);
