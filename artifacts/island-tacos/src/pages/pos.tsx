@@ -2439,26 +2439,7 @@ export default function POS() {
   const [discount, setDiscount] = useState(0);
   const [resumedOrderId, setResumedOrderId] = useState<number | null>(null);
 
-  // Customer autocomplete in cart
-  const [customerSuggestions, setCustomerSuggestions] = useState<CustomerSuggestion[]>([]);
-  const [customerSuggestionsOpen, setCustomerSuggestionsOpen] = useState(false);
   const API = import.meta.env.BASE_URL.replace(/\/$/, "");
-  useEffect(() => {
-    if (customerName.trim().length < 2) { setCustomerSuggestions([]); return; }
-    const controller = new AbortController();
-    const t = setTimeout(async () => {
-      try {
-        const r = await fetch(`${API}/api/customers?q=${encodeURIComponent(customerName.trim())}&limit=6`, {
-          headers: authHeaders(),
-          signal: controller.signal,
-        });
-        if (r.ok) { const d = await r.json(); setCustomerSuggestions(d); setCustomerSuggestionsOpen(true); }
-      } catch (e) {
-        if ((e as Error).name !== "AbortError") console.warn("Customer search failed", e);
-      }
-    }, 250);
-    return () => { clearTimeout(t); controller.abort(); };
-  }, [customerName, API]);
 
   // UI state
   const [mobileView, setMobileView] = useState<"menu" | "cart">("menu");
@@ -3042,38 +3023,6 @@ export default function POS() {
                 <button onClick={clearCart} className="text-gray-400 hover:text-red-600 text-xs font-semibold transition-colors">Clear</button>
               )}
             </div>
-            {/* Customer name with autocomplete */}
-            <div className="relative mb-2">
-              <input
-                value={customerName}
-                onChange={e => { setCustomerName(e.target.value); setCustomerSuggestionsOpen(true); }}
-                onBlur={() => setTimeout(() => setCustomerSuggestionsOpen(false), 150)}
-                onFocus={() => customerSuggestions.length > 0 && setCustomerSuggestionsOpen(true)}
-                placeholder="Customer name (optional)"
-                className="w-full bg-white border border-gray-200 focus:border-amber-400 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none transition-colors placeholder-gray-400"
-              />
-              {customerSuggestionsOpen && customerSuggestions.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-gray-100 border border-gray-200 rounded-xl shadow-2xl z-20 overflow-hidden">
-                  {customerSuggestions.map(c => (
-                    <button
-                      key={c.id}
-                      onMouseDown={() => { setCustomerName(c.name); setCustomerPhone(c.phone ?? ""); setCustomerSuggestions([]); setCustomerSuggestionsOpen(false); }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-gray-200 transition-colors border-b border-gray-200 last:border-b-0"
-                    >
-                      <p className="text-gray-900 text-sm font-semibold">{c.name}</p>
-                      {(c.phone || c.email) && <p className="text-gray-500 text-xs">{c.phone ?? c.email}</p>}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <input
-              value={customerPhone}
-              onChange={e => setCustomerPhone(e.target.value)}
-              placeholder="Phone (optional)"
-              type="tel"
-              className="w-full bg-white border border-gray-200 focus:border-amber-400 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none transition-colors placeholder-gray-400"
-            />
           </div>
 
           {/* Cart items */}
