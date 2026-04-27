@@ -2764,7 +2764,6 @@ export default function POS() {
 
   const clearCart = () => {
     setCart([]); setCustomerName(""); setCustomerPhone(""); setOrderNotes(""); setDiscount(0); setResumedOrderId(null);
-    setCustomerSuggestions([]); setCustomerSuggestionsOpen(false);
   };
 
   // Place order
