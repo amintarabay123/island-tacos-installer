@@ -367,11 +367,11 @@ export default function AdminCustoms() {
   const [fRef, setFRef] = useState('');
   const [fPage, setFPage] = useState('1/1');
   const [fRelTD, setFRelTD] = useState('');
-  const [fSuppName, setFSuppName] = useState('Sysco Puerto Rico');
+  const [fSuppName, setFSuppName] = useState('');
   const [fSuppStreet, setFSuppStreet] = useState('');
-  const [fSuppCity, setFSuppCity] = useState('San Juan, PR');
+  const [fSuppCity, setFSuppCity] = useState('');
   const [fSuppZip, setFSuppZip] = useState('');
-  const [fSuppCountry, setFSuppCountry] = useState('United States of America');
+  const [fSuppCountry, setFSuppCountry] = useState('');
   const [fImpName, setFImpName] = useState('Island Tacos');
   const [fImpId, setFImpId] = useState('113917');
   const [fImpStreet, setFImpStreet] = useState('PO Box 643');

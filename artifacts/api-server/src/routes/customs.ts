@@ -30,7 +30,7 @@ const EXTRACT_PROMPT = `You are an invoice data extraction assistant for "Island
 
 Rules:
 - Include EVERY line item from the invoice — do not skip any
-- For desc: include brand + product name + pack size (e.g. "Sysco Classic Chicken Breast 40 lb case")
+- For desc: include brand + product name + pack size (e.g. "Brand Name Black Beans 6/#10 can case")
 - For qty: format as "{number} {unit}" using the invoice's unit (e.g. "12 cs", "5 bags")
 - For fob: use the extended/total price for the line (not unit price), as a plain number
 - For wt: total weight for the line in pounds (convert kg × 2.205 if needed), or empty if not shown
