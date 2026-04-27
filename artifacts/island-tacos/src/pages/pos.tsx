@@ -280,7 +280,7 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
     >
       <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4">
         <div
-          className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md shadow-2xl"
+          className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-2xl shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
           {/* Header — sticky inside the outer scroll */}
@@ -311,29 +311,29 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
                     )}
                   </div>
                 </div>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
                   {mod.options.sort((a, b) => a.position - b.position).map(opt => {
                     const qty = qtys[mod.loyverseId]?.[opt.id] ?? 0;
                     const sel = qty > 0;
                     if (opt.allowMultiple) {
                       return (
-                        <div key={opt.id} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${sel ? "border-[#F5A623] bg-[#F5A623]/10" : "border-gray-200 bg-gray-100"}`}>
-                          <span className={`font-medium ${sel ? "text-gray-900" : "text-gray-700"}`}>{opt.name}</span>
-                          <div className="flex items-center gap-3">
-                            {opt.price > 0 && <span className="text-[#F5A623] text-sm font-semibold">+{fmt(opt.price)}</span>}
-                            <div className="flex items-center gap-2 bg-gray-50 rounded-full px-2 py-1">
-                              <button
-                                className="w-9 h-9 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 disabled:opacity-30 transition-colors active:bg-white/10"
-                                onClick={() => changeQty(mod, opt, -1)}
-                                disabled={qty === 0}
-                              ><span className="text-xl leading-none">−</span></button>
-                              <span className="w-5 text-center text-sm font-bold text-gray-900">{qty}</span>
-                              <button
-                                className="w-9 h-9 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 disabled:opacity-30 transition-colors active:bg-white/10"
-                                onClick={() => changeQty(mod, opt, 1)}
-                                disabled={atMax || qty >= (opt.maxQuantity ?? 1)}
-                              ><span className="text-xl leading-none">+</span></button>
-                            </div>
+                        <div key={opt.id} className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${sel ? "border-[#F5A623] bg-[#F5A623]/10" : "border-gray-200 bg-gray-100"}`}>
+                          <div className="flex flex-col min-w-0 mr-2">
+                            <span className={`font-medium text-sm leading-tight truncate ${sel ? "text-gray-900" : "text-gray-700"}`}>{opt.name}</span>
+                            {opt.price > 0 && <span className="text-[#F5A623] text-xs font-semibold">+{fmt(opt.price)}</span>}
+                          </div>
+                          <div className="flex items-center gap-1 bg-gray-50 rounded-full px-1 py-0.5 shrink-0">
+                            <button
+                              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 disabled:opacity-30 transition-colors"
+                              onClick={() => changeQty(mod, opt, -1)}
+                              disabled={qty === 0}
+                            ><span className="text-lg leading-none">−</span></button>
+                            <span className="w-4 text-center text-sm font-bold text-gray-900">{qty}</span>
+                            <button
+                              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 disabled:opacity-30 transition-colors"
+                              onClick={() => changeQty(mod, opt, 1)}
+                              disabled={atMax || qty >= (opt.maxQuantity ?? 1)}
+                            ><span className="text-lg leading-none">+</span></button>
                           </div>
                         </div>
                       );
@@ -341,14 +341,14 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
                     return (
                       <button key={opt.id} onClick={() => changeQty(mod, opt, sel ? -1 : 1)}
                         disabled={!sel && atMax}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all disabled:opacity-40 ${sel ? "border-[#F5A623] bg-[#F5A623]/10 text-gray-900" : "border-gray-200 bg-gray-100 text-gray-700 hover:border-gray-400"}`}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${sel ? "border-[#F5A623] bg-[#F5A623]" : "border-gray-400"}`}>
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all disabled:opacity-40 ${sel ? "border-[#F5A623] bg-[#F5A623]/10 text-gray-900" : "border-gray-200 bg-gray-100 text-gray-700 hover:border-gray-400"}`}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${sel ? "border-[#F5A623] bg-[#F5A623]" : "border-gray-400"}`}>
                             {sel && <div className="w-2 h-2 rounded-full bg-white" />}
                           </div>
-                          <span className="font-medium">{opt.name}</span>
+                          <span className="font-medium text-sm leading-tight text-left">{opt.name}</span>
                         </div>
-                        {opt.price > 0 && <span className="text-[#F5A623] text-sm font-semibold">+{fmt(opt.price)}</span>}
+                        {opt.price > 0 && <span className="text-[#F5A623] text-xs font-semibold ml-1 shrink-0">+{fmt(opt.price)}</span>}
                       </button>
                     );
                   })}
