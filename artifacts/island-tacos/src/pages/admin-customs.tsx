@@ -580,13 +580,15 @@ export default function AdminCustoms() {
         const e = await resp.json().catch(() => ({}));
         const d: string = e.details || '';
         if (resp.status === 403) throw new Error('Admin access required — please log back in with your admin PIN.');
+        if (resp.status === 503) throw new Error(e.error || 'AI service temporarily unavailable. Please try again later or use manual entry.');
         if (d.includes('429') || d.includes('quota')) throw new Error('OpenAI quota exceeded — add billing credits at platform.openai.com.');
         throw new Error(e.error || `Server error ${resp.status}`);
       }
       const result = await resp.json();
       applyExtractResult(result);
     } catch (err) {
-      setExtractError(`AI extraction failed: ${String(err)}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      setExtractError(`AI extraction failed: ${msg}`);
     } finally {
       setExtracting(false);
       setExtractProgress('');

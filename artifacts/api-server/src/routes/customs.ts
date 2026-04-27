@@ -2,7 +2,18 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import OpenAI from "openai";
 
 const router: IRouter = Router();
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+function makeOpenAIClient(): OpenAI {
+  if (process.env.AI_INTEGRATIONS_OPENAI_BASE_URL && process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+    return new OpenAI({
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      maxRetries: 0,
+      timeout: 45000,
+    });
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0, timeout: 45000 });
+}
 
 const EXTRACT_PROMPT = `You are an invoice data extraction assistant for "Island Tacos", a food importer in Road Town, British Virgin Islands. Extract ALL data from this supplier invoice and return a single valid JSON object with EXACTLY this structure:
 
@@ -44,6 +55,8 @@ router.post("/customs/extract-invoice", async (req: Request, res: Response): Pro
     return;
   }
 
+  const openai = makeOpenAIClient();
+
   try {
     let messageContent: OpenAI.Chat.ChatCompletionContentPart[];
 
@@ -59,25 +72,35 @@ router.post("/customs/extract-invoice", async (req: Request, res: Response): Pro
         },
       ];
     } else {
-      // PDF extracted text
       messageContent = [
         { type: "text", text: `${EXTRACT_PROMPT}\n\nInvoice text extracted from PDF:\n\n${data.slice(0, 12000)}` },
       ];
     }
 
+    const usingIntegration = !!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: usingIntegration ? "gpt-4o" : "gpt-4o",
       messages: [{ role: "user", content: messageContent }],
       response_format: { type: "json_object" },
       max_tokens: 3000,
     });
 
     const raw = response.choices[0]?.message?.content || "{}";
-    const result = JSON.parse(raw);
+    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) || raw.match(/(\{[\s\S]*\})/);
+    const jsonStr = jsonMatch ? jsonMatch[1].trim() : raw.trim();
+    const result = JSON.parse(jsonStr);
     res.json(result);
-  } catch (err) {
-    console.error("Invoice extraction error:", err);
-    res.status(500).json({ error: "Extraction failed", details: String(err) });
+  } catch (err: unknown) {
+    const e = err as { status?: number; message?: string };
+    console.error("Invoice extraction error:", e?.status, e?.message);
+
+    if (e?.status === 429) {
+      res.status(503).json({ error: "AI service quota exceeded. Please try again later or use manual entry." });
+    } else if (e?.status === 500) {
+      res.status(503).json({ error: "AI service temporarily unavailable. Please try again later or use manual entry." });
+    } else {
+      res.status(500).json({ error: "Extraction failed", details: String(err) });
+    }
   }
 });
 
