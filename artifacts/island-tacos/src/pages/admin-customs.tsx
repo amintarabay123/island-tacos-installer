@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
+import { createWorker } from "tesseract.js";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders } from "@/lib/auth";
 import { ChevronLeft, Printer } from "lucide-react";
@@ -360,6 +361,7 @@ export default function AdminCustoms() {
   const [nextScanId, setNextScanId] = useState(1);
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
+  const [extractProgress, setExtractProgress] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   // ── Form state ────────────────────────────────────────────────────────────
@@ -441,6 +443,34 @@ export default function AdminCustoms() {
   // ── Lookup computed ───────────────────────────────────────────────────────
   const lookupResults = useMemo(() => searchTariff(lookupQ), [lookupQ]);
 
+  // ── OCR helper ────────────────────────────────────────────────────────────
+  async function runOcr(source: HTMLCanvasElement | string): Promise<string> {
+    setExtractProgress('Loading OCR engine… (first use may take 10–15 s)');
+    const worker = await createWorker('eng', 1, {
+      logger: (m: any) => {
+        if (m.status === 'recognizing text') {
+          setExtractProgress(`Reading text… ${Math.round((m.progress || 0) * 100)}%`);
+        }
+      },
+    });
+    try {
+      const { data: { text } } = await worker.recognize(source);
+      return text;
+    } finally {
+      await worker.terminate();
+    }
+  }
+
+  // ── PDF page → canvas for OCR ─────────────────────────────────────────────
+  async function pdfPageToCanvas(page: any): Promise<HTMLCanvasElement> {
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    return canvas;
+  }
+
   // ── Scan handlers ─────────────────────────────────────────────────────────
   const handleFile = useCallback(async (file: File | null) => {
     if (!file) return;
@@ -452,112 +482,169 @@ export default function AdminCustoms() {
     setScanVisible(true);
     setExtracting(true);
     setExtractError(null);
+    setExtractProgress('Reading file…');
 
     if (isImage) {
       const reader = new FileReader();
       reader.onload = e => setScanPreview({ type: 'image', src: e.target?.result as string });
       reader.readAsDataURL(file);
     } else {
-      setScanPreview({ type: 'pdf', text: 'Extracting PDF text…' });
+      setScanPreview({ type: 'pdf', text: 'Scanning PDF…' });
     }
 
-    // Keep PDF text in scope so the catch block can fall back to local parsing
-    let pdfText = '';
-
     try {
-      let body: { type: 'image' | 'text'; data: string; mime?: string };
+      let extractedText = '';
 
       if (isImage) {
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = e => resolve(e.target?.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        body = { type: 'image', data: dataUrl.split(',')[1], mime: file.type };
+        // ── Image path: OCR directly ──────────────────────────────────────
+        extractedText = await runOcr(URL.createObjectURL(file));
+
       } else {
+        // ── PDF path ──────────────────────────────────────────────────────
         const lib = (window as any)['pdfjs-dist/build/pdf'];
-        if (!lib) throw new Error('PDF.js not loaded yet — please wait a moment and try again');
+        if (!lib) throw new Error('PDF renderer not loaded yet — wait a moment and try again');
+
+        setExtractProgress('Loading PDF…');
         const url = URL.createObjectURL(file);
         const pdf = await lib.getDocument(url).promise;
+
+        // First try embedded text (digital PDF)
+        let embeddedText = '';
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          pdfText += content.items.map((it: any) => it.str).join(' ') + '\n';
+          embeddedText += content.items.map((it: any) => it.str).join(' ') + '\n';
         }
+
+        const charsPerPage = embeddedText.trim().length / pdf.numPages;
+
+        if (charsPerPage > 80) {
+          // Digital PDF — use embedded text directly
+          extractedText = embeddedText;
+          setScanPreview({ type: 'pdf', text: embeddedText.slice(0, 4000) + (embeddedText.length > 4000 ? '\n\n[…truncated]' : '') });
+        } else {
+          // Scanned PDF — render each page to canvas, then OCR
+          setScanPreview({ type: 'pdf', text: 'Scanned PDF detected — running OCR on each page…' });
+          const ocrParts: string[] = [];
+          for (let i = 1; i <= pdf.numPages; i++) {
+            setExtractProgress(`OCR: page ${i} of ${pdf.numPages}…`);
+            const page = await pdf.getPage(i);
+            const canvas = await pdfPageToCanvas(page);
+            const pageText = await runOcr(canvas);
+            ocrParts.push(pageText);
+          }
+          extractedText = ocrParts.join('\n');
+          setScanPreview({ type: 'pdf', text: extractedText.slice(0, 4000) + (extractedText.length > 4000 ? '\n\n[…truncated]' : '') });
+        }
+
         URL.revokeObjectURL(url);
-        setScanPreview({ type: 'pdf', text: pdfText.slice(0, 4000) + (pdfText.length > 4000 ? '\n\n[…truncated]' : '') });
-        body = { type: 'text', data: pdfText };
       }
 
+      setExtractProgress('Parsing line items…');
+      parseInvoiceText(extractedText);
+      setExtractProgress('');
+
+    } catch (err) {
+      console.error('Extraction failed:', err);
+      setExtractError(`Could not read invoice: ${String(err)}. Please add items manually.`);
+      setFSuppName(''); setFSuppStreet(''); setFSuppCity(''); setFSuppZip(''); setFSuppCountry('');
+      setScanRows([{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]);
+      setNextScanId(2);
+    } finally {
+      setExtracting(false);
+      setExtractProgress('');
+    }
+  }, []);
+
+  // ── AI extraction (manual button) ─────────────────────────────────────────
+  async function handleAiExtract() {
+    if (!scanPreview) return;
+    setExtracting(true);
+    setExtractError(null);
+    setExtractProgress('Sending to AI…');
+    try {
+      let body: { type: 'image' | 'text'; data: string; mime?: string };
+      if (scanPreview.type === 'image') {
+        const dataUrl = scanPreview.src!;
+        body = { type: 'image', data: dataUrl.split(',')[1] || dataUrl, mime: 'image/jpeg' };
+      } else {
+        body = { type: 'text', data: scanPreview.text! };
+      }
       const resp = await fetch('/api/customs/extract-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
         credentials: 'include',
         body: JSON.stringify(body),
       });
-
       if (!resp.ok) {
-        const errBody = await resp.json().catch(() => ({}));
-        const details: string = errBody.details || '';
-        if (resp.status === 403) throw new Error('AUTH_FAIL');
-        if (resp.status === 429 || details.includes('429') || details.includes('quota')) throw new Error('QUOTA');
-        throw new Error(errBody.error || `Server error ${resp.status}`);
+        const e = await resp.json().catch(() => ({}));
+        const d: string = e.details || '';
+        if (resp.status === 403) throw new Error('Admin access required — please log back in with your admin PIN.');
+        if (d.includes('429') || d.includes('quota')) throw new Error('OpenAI quota exceeded — add billing credits at platform.openai.com.');
+        throw new Error(e.error || `Server error ${resp.status}`);
       }
-
       const result = await resp.json();
       applyExtractResult(result);
-
     } catch (err) {
-      const msg = String(err);
-      console.error('Invoice extraction failed:', msg);
-
-      // Clear stale supplier defaults
-      setFSuppName(''); setFSuppStreet(''); setFSuppCity(''); setFSuppZip(''); setFSuppCountry('');
-
-      if (msg.includes('AUTH_FAIL')) {
-        setExtractError('Not authorized — please log out and log back in with your admin PIN, then try again.');
-      } else if (msg.includes('QUOTA')) {
-        // API quota exceeded — fall back to local regex parsing for PDFs
-        if (pdfText) {
-          setExtractError('AI extraction quota reached. Used basic text parsing instead — please review and correct all fields.');
-          parseInvoiceText(pdfText);
-        } else {
-          setExtractError('AI extraction quota reached. Please enter line items manually below.');
-          setScanRows([{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]);
-          setNextScanId(2);
-        }
-      } else {
-        setExtractError(`Extraction failed: ${msg}. Please add items manually.`);
-        setScanRows(prev => prev.length === 0 ? [{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }] : prev);
-        setNextScanId(2);
-      }
+      setExtractError(`AI extraction failed: ${String(err)}`);
     } finally {
       setExtracting(false);
+      setExtractProgress('');
     }
-  }, []);
+  }
 
   function parseInvoiceText(text: string) {
-    const skipRe = /invoice|order\s*#|date|page|total|subtotal|freight|shipping|tax|bill\s*to|ship\s*to|po\s*#|account|phone|fax|address|customer|thank|payment|terms|due date/i;
+    // Preprocess OCR output: collapse multiple spaces, fix common OCR artifacts
+    const clean = text
+      .replace(/\r/g, '')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/(\d)\s+(\d)/g, '$1$2')    // rejoin split numbers: "1 8 . 5 0" → "18.50"
+      .replace(/(\d)\s*\.\s*(\d)/g, '$1.$2'); // fix "18 . 50" → "18.50"
+
+    const skipRe = /invoice|order\s*#|date|page\s+\d|total|subtotal|freight|shipping|handling|tax|bill\s*to|ship\s*to|po\s*#|account|phone|fax|address|customer|thank|payment|terms|due\s*date|remit|balance|amount\s*due/i;
     const items: ScanRow[] = [];
     let idC = 1;
-    for (const line of text.split(/\n/).map(l => l.trim()).filter(l => l.length > 3)) {
+
+    for (const raw of clean.split('\n')) {
+      const line = raw.trim();
+      if (line.length < 4) continue;
       if (skipRe.test(line)) continue;
+
+      // Must end with a price: optional $ then digits, optional decimal
       const mm = line.match(/\$?\s*([\d,]+\.?\d{0,2})\s*$/);
       if (!mm) continue;
       const fob = parseFloat(mm[1].replace(/,/g, ''));
       if (isNaN(fob) || fob <= 0 || fob > 99999) continue;
-      let desc = line.replace(/\$?\s*[\d,]+\.?\d{0,2}\s*$/, '').replace(/^\d+\s+/, '').replace(/[A-Z]{2,10}\d+\s*/, '').trim();
+
+      // Strip the price from the end to get the description part
+      let desc = line.slice(0, line.length - mm[0].length).trim();
+      // Strip leading item codes (e.g. "001234 " or "AB123 ")
+      desc = desc.replace(/^[A-Z0-9]{4,12}\s+/i, '').trim();
       if (desc.length < 3) continue;
+
+      // Weight
       const wm = line.match(/(\d+\.?\d*)\s*(lb|lbs|kg|kgs)/i);
-      const wt = wm ? (wm[2].toLowerCase().startsWith('kg') ? (parseFloat(wm[1]) * 2.205).toFixed(1) : wm[1]) : '';
-      const qm = line.match(/(\d+)\s*(cs|case|cases|ea|each|pcs|packs|boxes|box|bags|bag|ctn|carton)/i);
+      const wt = wm
+        ? (wm[2].toLowerCase().startsWith('kg') ? (parseFloat(wm[1]) * 2.205).toFixed(1) : wm[1])
+        : '';
+
+      // Quantity
+      const qm = line.match(/(\d+)\s*(cs|case|cases|ea|each|pcs|packs|boxes|box|bags|bag|ctn|carton|pk|pack)/i);
       const qty = qm ? `${qm[1]} ${qm[2]}` : '';
+
       const tariff = getBestTariff(desc);
       items.push({ id: idC++, desc, hs: tariff ? tariff[0] : '', qty, wt, fob: fob.toFixed(2), origin: 'US' });
     }
-    if (items.length === 0) { setScanRows([{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]); setNextScanId(2); }
-    else { setScanRows(items); setNextScanId(items.length + 1); }
+
+    if (items.length === 0) {
+      setScanRows([{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]);
+      setNextScanId(2);
+      setExtractError('No line items detected automatically. Please enter them manually — the OCR text is shown above for reference.');
+    } else {
+      setScanRows(items);
+      setNextScanId(items.length + 1);
+      setExtractError(`${items.length} item${items.length > 1 ? 's' : ''} extracted via OCR — please review all fields carefully before using the declaration form.`);
+    }
   }
 
   function applyExtractResult(result: any) {
@@ -623,7 +710,7 @@ export default function AdminCustoms() {
     setTab('form');
   }
 
-  function clearScan() { setScanPreview(null); setScanRows([]); setScanVisible(false); setScanFreight('0'); setScanInsurance('0'); setExtracting(false); setExtractError(null); if (fileRef.current) fileRef.current.value = ''; }
+  function clearScan() { setScanPreview(null); setScanRows([]); setScanVisible(false); setScanFreight('0'); setScanInsurance('0'); setExtracting(false); setExtractError(null); setExtractProgress(''); if (fileRef.current) fileRef.current.value = ''; }
 
   // ── Form handlers ─────────────────────────────────────────────────────────
   function addFormRecord(d: Partial<FormRecord> = {}) { setFormRecords(prev => [...prev, mkRec(nextRecId, d)]); setNextRecId(n => n + 1); }
@@ -740,16 +827,35 @@ export default function AdminCustoms() {
           {extracting && (
             <div style={{ background:'rgba(59,130,246,.08)', border:'1px solid rgba(59,130,246,.3)', borderRadius:10, padding:32, textAlign:'center', marginBottom:16 }}>
               <div style={{ fontSize:28, marginBottom:10, animation:'spin 1.2s linear infinite', display:'inline-block' }}>⏳</div>
-              <p style={{ fontSize:14, color:'#3b82f6', fontWeight:600, marginBottom:4 }}>Reading invoice with AI…</p>
-              <p style={{ fontSize:12, color:'#64748b' }}>GPT-4o is extracting supplier info, line items, weights and prices</p>
+              <p style={{ fontSize:14, color:'#3b82f6', fontWeight:600, marginBottom:4 }}>{extractProgress || 'Processing…'}</p>
+              <p style={{ fontSize:12, color:'#64748b' }}>Reading and parsing your invoice — please wait</p>
             </div>
           )}
 
-          {/* Extraction error */}
-          {extractError && !extracting && (
-            <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.35)', borderRadius:8, padding:'14px 18px', fontSize:13, color:'#fca5a5', marginBottom:16, lineHeight:1.5 }}>
-              <div style={{ fontWeight:700, marginBottom:4, color:'#ef4444' }}>⚠️ Extraction Notice</div>
-              {extractError}
+          {/* Extraction notice (info = items found, error = problem) */}
+          {extractError && !extracting && (() => {
+            const isInfo = /^\d+ item/.test(extractError);
+            return (
+              <div style={{ background: isInfo ? 'rgba(16,185,129,.08)' : 'rgba(239,68,68,.1)', border: `1px solid ${isInfo ? 'rgba(16,185,129,.3)' : 'rgba(239,68,68,.35)'}`, borderRadius:8, padding:'14px 18px', fontSize:13, color: isInfo ? '#6ee7b7' : '#fca5a5', marginBottom:16, lineHeight:1.5 }}>
+                <div style={{ fontWeight:700, marginBottom:4, color: isInfo ? '#10b981' : '#ef4444' }}>{isInfo ? '✓ OCR Complete' : '⚠️ Notice'}</div>
+                {extractError}
+                {scanPreview && !isInfo && (
+                  <div style={{ marginTop:10 }}>
+                    <button onClick={handleAiExtract} style={{ background:'#3b82f6', color:'#fff', border:'none', borderRadius:5, padding:'6px 14px', fontSize:12, cursor:'pointer', fontWeight:600 }}>
+                      Try AI Extraction instead
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Try AI button (after successful OCR, in case user wants better accuracy) */}
+          {extractError && !extracting && /^\d+ item/.test(extractError) && scanPreview && (
+            <div style={{ marginBottom:14, textAlign:'right' }}>
+              <button onClick={handleAiExtract} style={{ background:'transparent', color:'#64748b', border:'1px solid #2a3050', borderRadius:5, padding:'5px 12px', fontSize:11, cursor:'pointer' }}>
+                ✨ Re-extract with AI for better accuracy
+              </button>
             </div>
           )}
 
