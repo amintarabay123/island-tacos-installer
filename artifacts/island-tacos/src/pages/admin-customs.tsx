@@ -449,7 +449,6 @@ export default function AdminCustoms() {
     const isPdf = file.type === 'application/pdf';
     if (!isImage && !isPdf) { alert('Please upload a JPG, PNG, or PDF file.'); return; }
 
-    // Show preview immediately
     setScanVisible(true);
     setExtracting(true);
     setExtractError(null);
@@ -462,11 +461,13 @@ export default function AdminCustoms() {
       setScanPreview({ type: 'pdf', text: 'Extracting PDF text…' });
     }
 
+    // Keep PDF text in scope so the catch block can fall back to local parsing
+    let pdfText = '';
+
     try {
       let body: { type: 'image' | 'text'; data: string; mime?: string };
 
       if (isImage) {
-        // Convert to base64
         const dataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = e => resolve(e.target?.result as string);
@@ -475,20 +476,18 @@ export default function AdminCustoms() {
         });
         body = { type: 'image', data: dataUrl.split(',')[1], mime: file.type };
       } else {
-        // PDF: extract text with PDF.js
         const lib = (window as any)['pdfjs-dist/build/pdf'];
         if (!lib) throw new Error('PDF.js not loaded yet — please wait a moment and try again');
         const url = URL.createObjectURL(file);
         const pdf = await lib.getDocument(url).promise;
-        let text = '';
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const content = await page.getTextContent();
-          text += content.items.map((it: any) => it.str).join(' ') + '\n';
+          pdfText += content.items.map((it: any) => it.str).join(' ') + '\n';
         }
         URL.revokeObjectURL(url);
-        setScanPreview({ type: 'pdf', text: text.slice(0, 4000) + (text.length > 4000 ? '\n\n[…truncated]' : '') });
-        body = { type: 'text', data: text };
+        setScanPreview({ type: 'pdf', text: pdfText.slice(0, 4000) + (pdfText.length > 4000 ? '\n\n[…truncated]' : '') });
+        body = { type: 'text', data: pdfText };
       }
 
       const resp = await fetch('/api/customs/extract-invoice', {
@@ -499,24 +498,67 @@ export default function AdminCustoms() {
       });
 
       if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: resp.statusText }));
-        throw new Error(err.error || `Server error ${resp.status}`);
+        const errBody = await resp.json().catch(() => ({}));
+        const details: string = errBody.details || '';
+        if (resp.status === 403) throw new Error('AUTH_FAIL');
+        if (resp.status === 429 || details.includes('429') || details.includes('quota')) throw new Error('QUOTA');
+        throw new Error(errBody.error || `Server error ${resp.status}`);
       }
 
       const result = await resp.json();
       applyExtractResult(result);
 
     } catch (err) {
-      console.error('Invoice extraction failed:', err);
-      setExtractError(`Could not auto-extract: ${String(err)}. Please add items manually.`);
-      // Clear stale defaults so user knows fields are not from the invoice
+      const msg = String(err);
+      console.error('Invoice extraction failed:', msg);
+
+      // Clear stale supplier defaults
       setFSuppName(''); setFSuppStreet(''); setFSuppCity(''); setFSuppZip(''); setFSuppCountry('');
-      setScanRows(prev => prev.length === 0 ? [{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }] : prev);
-      setNextScanId(2);
+
+      if (msg.includes('AUTH_FAIL')) {
+        setExtractError('Not authorized — please log out and log back in with your admin PIN, then try again.');
+      } else if (msg.includes('QUOTA')) {
+        // API quota exceeded — fall back to local regex parsing for PDFs
+        if (pdfText) {
+          setExtractError('AI extraction quota reached. Used basic text parsing instead — please review and correct all fields.');
+          parseInvoiceText(pdfText);
+        } else {
+          setExtractError('AI extraction quota reached. Please enter line items manually below.');
+          setScanRows([{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]);
+          setNextScanId(2);
+        }
+      } else {
+        setExtractError(`Extraction failed: ${msg}. Please add items manually.`);
+        setScanRows(prev => prev.length === 0 ? [{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }] : prev);
+        setNextScanId(2);
+      }
     } finally {
       setExtracting(false);
     }
   }, []);
+
+  function parseInvoiceText(text: string) {
+    const skipRe = /invoice|order\s*#|date|page|total|subtotal|freight|shipping|tax|bill\s*to|ship\s*to|po\s*#|account|phone|fax|address|customer|thank|payment|terms|due date/i;
+    const items: ScanRow[] = [];
+    let idC = 1;
+    for (const line of text.split(/\n/).map(l => l.trim()).filter(l => l.length > 3)) {
+      if (skipRe.test(line)) continue;
+      const mm = line.match(/\$?\s*([\d,]+\.?\d{0,2})\s*$/);
+      if (!mm) continue;
+      const fob = parseFloat(mm[1].replace(/,/g, ''));
+      if (isNaN(fob) || fob <= 0 || fob > 99999) continue;
+      let desc = line.replace(/\$?\s*[\d,]+\.?\d{0,2}\s*$/, '').replace(/^\d+\s+/, '').replace(/[A-Z]{2,10}\d+\s*/, '').trim();
+      if (desc.length < 3) continue;
+      const wm = line.match(/(\d+\.?\d*)\s*(lb|lbs|kg|kgs)/i);
+      const wt = wm ? (wm[2].toLowerCase().startsWith('kg') ? (parseFloat(wm[1]) * 2.205).toFixed(1) : wm[1]) : '';
+      const qm = line.match(/(\d+)\s*(cs|case|cases|ea|each|pcs|packs|boxes|box|bags|bag|ctn|carton)/i);
+      const qty = qm ? `${qm[1]} ${qm[2]}` : '';
+      const tariff = getBestTariff(desc);
+      items.push({ id: idC++, desc, hs: tariff ? tariff[0] : '', qty, wt, fob: fob.toFixed(2), origin: 'US' });
+    }
+    if (items.length === 0) { setScanRows([{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]); setNextScanId(2); }
+    else { setScanRows(items); setNextScanId(items.length + 1); }
+  }
 
   function applyExtractResult(result: any) {
     console.log('[Customs] AI extraction result:', JSON.stringify(result, null, 2));
@@ -705,8 +747,9 @@ export default function AdminCustoms() {
 
           {/* Extraction error */}
           {extractError && !extracting && (
-            <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:6, padding:'10px 14px', fontSize:12, color:'#ef4444', marginBottom:14 }}>
-              ⚠️ {extractError}
+            <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.35)', borderRadius:8, padding:'14px 18px', fontSize:13, color:'#fca5a5', marginBottom:16, lineHeight:1.5 }}>
+              <div style={{ fontWeight:700, marginBottom:4, color:'#ef4444' }}>⚠️ Extraction Notice</div>
+              {extractError}
             </div>
           )}
 
