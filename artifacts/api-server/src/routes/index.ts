@@ -22,6 +22,7 @@ import syncRouter from "./sync";
 import downloadsRouter from "./downloads";
 import vapiRouter from "./vapi";
 import financialsRouter from "./financials";
+import customsRouter from "./customs";
 
 const router: IRouter = Router();
 
@@ -86,5 +87,9 @@ router.use(loyverseRouter);
 router.use(reportsRouter);
 router.use(employeesRouter);
 router.use(financialsRouter);
+
+// Customs invoice extraction (admin only — uses OpenAI API key)
+router.use("/customs", (req: Request, res: Response, next: NextFunction) => requireAdminAuth(req, res, next));
+router.use(customsRouter);
 
 export default router;

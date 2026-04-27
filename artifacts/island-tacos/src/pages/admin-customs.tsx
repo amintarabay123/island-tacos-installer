@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { adminRoutes } from "@/lib/admin-path";
+import { authHeaders } from "@/lib/auth";
 import { ChevronLeft, Printer } from "lucide-react";
 import { Link } from "wouter";
 
@@ -357,6 +358,8 @@ export default function AdminCustoms() {
   const [scanVisible, setScanVisible] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [nextScanId, setNextScanId] = useState(1);
+  const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // ── Form state ────────────────────────────────────────────────────────────
@@ -441,21 +444,40 @@ export default function AdminCustoms() {
   // ── Scan handlers ─────────────────────────────────────────────────────────
   const handleFile = useCallback(async (file: File | null) => {
     if (!file) return;
-    if (file.type.startsWith('image/')) {
+
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImage && !isPdf) { alert('Please upload a JPG, PNG, or PDF file.'); return; }
+
+    // Show preview immediately
+    setScanVisible(true);
+    setExtracting(true);
+    setExtractError(null);
+
+    if (isImage) {
       const reader = new FileReader();
-      reader.onload = e => {
-        setScanPreview({ type: 'image', src: e.target?.result as string });
-        setScanVisible(true);
-        setScanRows(prev => prev.length === 0 ? [{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }] : prev);
-        setNextScanId(2);
-      };
+      reader.onload = e => setScanPreview({ type: 'image', src: e.target?.result as string });
       reader.readAsDataURL(file);
-    } else if (file.type === 'application/pdf') {
+    } else {
       setScanPreview({ type: 'pdf', text: 'Extracting PDF text…' });
-      setScanVisible(true);
-      try {
+    }
+
+    try {
+      let body: { type: 'image' | 'text'; data: string; mime?: string };
+
+      if (isImage) {
+        // Convert to base64
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = e => resolve(e.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        body = { type: 'image', data: dataUrl.split(',')[1], mime: file.type };
+      } else {
+        // PDF: extract text with PDF.js
         const lib = (window as any)['pdfjs-dist/build/pdf'];
-        if (!lib) throw new Error('not loaded');
+        if (!lib) throw new Error('PDF.js not loaded yet — please wait a moment and try again');
         const url = URL.createObjectURL(file);
         const pdf = await lib.getDocument(url).promise;
         let text = '';
@@ -466,38 +488,69 @@ export default function AdminCustoms() {
         }
         URL.revokeObjectURL(url);
         setScanPreview({ type: 'pdf', text: text.slice(0, 4000) + (text.length > 4000 ? '\n\n[…truncated]' : '') });
-        parseInvoiceText(text);
-      } catch {
-        setScanPreview({ type: 'pdf', text: 'Could not extract PDF text automatically. Please add items manually below.' });
-        setScanRows(prev => prev.length === 0 ? [{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }] : prev);
-        setNextScanId(2);
+        body = { type: 'text', data: text };
       }
-    } else {
-      alert('Please upload a JPG, PNG, or PDF file.');
+
+      const resp = await fetch('/api/customs/extract-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: resp.statusText }));
+        throw new Error(err.error || `Server error ${resp.status}`);
+      }
+
+      const result = await resp.json();
+      applyExtractResult(result);
+
+    } catch (err) {
+      console.error('Invoice extraction failed:', err);
+      setExtractError(`Could not auto-extract: ${String(err)}. Please add items manually.`);
+      setScanRows(prev => prev.length === 0 ? [{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }] : prev);
+      setNextScanId(2);
+    } finally {
+      setExtracting(false);
     }
   }, []);
 
-  function parseInvoiceText(text: string) {
-    const skipRe = /invoice|order\s*#|date|page|total|subtotal|freight|shipping|tax|bill\s*to|ship\s*to|po\s*#|account|phone|fax|address|customer|thank|payment|terms|due date/i;
-    const items: ScanRow[] = [];
-    let idC = 1;
-    for (const line of text.split(/\n/).map(l => l.trim()).filter(l => l.length > 3)) {
-      if (skipRe.test(line)) continue;
-      const mm = line.match(/\$?\s*([\d,]+\.?\d{0,2})\s*$/);
-      if (!mm) continue;
-      const fob = parseFloat(mm[1].replace(/,/g, ''));
-      if (isNaN(fob) || fob <= 0 || fob > 99999) continue;
-      let desc = line.replace(/\$?\s*[\d,]+\.?\d{0,2}\s*$/, '').replace(/^\d+\s+/, '').replace(/[A-Z]{2,10}\d+\s*/, '').trim();
-      if (desc.length < 3) continue;
-      const wm = line.match(/(\d+\.?\d*)\s*(lb|lbs|kg|kgs)/i);
-      const wt = wm ? (wm[2].toLowerCase().startsWith('kg') ? (parseFloat(wm[1]) * 2.205).toFixed(1) : wm[1]) : '';
-      const qm = line.match(/(\d+)\s*(cs|case|cases|ea|each|pcs|packs|boxes|box|bags|bag|ctn|carton)/i);
-      const qty = qm ? `${qm[1]} ${qm[2]}` : '';
-      const tariff = getBestTariff(desc);
-      items.push({ id: idC++, desc, hs: tariff ? tariff[0] : '', qty, wt, fob: fob.toFixed(2), origin: 'US' });
+  function applyExtractResult(result: any) {
+    // Auto-fill supplier details into Form tab
+    const s = result.supplier || {};
+    if (s.name)    setFSuppName(s.name);
+    if (s.street)  setFSuppStreet(s.street);
+    if (s.city)    setFSuppCity(s.city);
+    if (s.zip)     setFSuppZip(s.zip);
+    if (s.country) setFSuppCountry(s.country);
+    if (result.invoiceRef) setFRef(result.invoiceRef);
+    if (result.freight && parseFloat(result.freight) > 0)   setScanFreight(result.freight);
+    if (result.insurance && parseFloat(result.insurance) > 0) setScanInsurance(result.insurance);
+
+    // Build scan rows from extracted items
+    const items: any[] = result.items || [];
+    if (items.length > 0) {
+      let idC = 1;
+      const rows: ScanRow[] = items.map(item => {
+        const tariff = getBestTariff(item.desc || '');
+        return {
+          id: idC++,
+          desc: item.desc || '',
+          hs: tariff ? tariff[0] : '',
+          qty: item.qty || '',
+          wt: item.wt || '',
+          fob: item.fob || '',
+          origin: 'US',
+        };
+      });
+      setScanRows(rows);
+      setNextScanId(items.length + 1);
+    } else {
+      setScanRows([{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]);
+      setNextScanId(2);
+      setExtractError('No line items found. Please add them manually.');
     }
-    if (items.length === 0) { setScanRows([{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]); setNextScanId(2); }
-    else { setScanRows(items); setNextScanId(items.length + 1); }
   }
 
   function addScanRow() { setScanRows(prev => [...prev, { id: nextScanId, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]); setNextScanId(n => n + 1); }
@@ -525,7 +578,7 @@ export default function AdminCustoms() {
     setTab('form');
   }
 
-  function clearScan() { setScanPreview(null); setScanRows([]); setScanVisible(false); setScanFreight('0'); setScanInsurance('0'); if (fileRef.current) fileRef.current.value = ''; }
+  function clearScan() { setScanPreview(null); setScanRows([]); setScanVisible(false); setScanFreight('0'); setScanInsurance('0'); setExtracting(false); setExtractError(null); if (fileRef.current) fileRef.current.value = ''; }
 
   // ── Form handlers ─────────────────────────────────────────────────────────
   function addFormRecord(d: Partial<FormRecord> = {}) { setFormRecords(prev => [...prev, mkRec(nextRecId, d)]); setNextRecId(n => n + 1); }
@@ -573,6 +626,7 @@ export default function AdminCustoms() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
         @media print { .no-print{display:none!important;} body{background:#fff;color:#000;} }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         .hmc-inp:focus { border-color:#3b82f6 !important; }
         .hmc-row:hover { background:rgba(255,255,255,.025); }
         .hmc-lkrow:hover { background:#1e243a !important; }
@@ -637,8 +691,24 @@ export default function AdminCustoms() {
             </div>
           )}
 
+          {/* Extracting spinner */}
+          {extracting && (
+            <div style={{ background:'rgba(59,130,246,.08)', border:'1px solid rgba(59,130,246,.3)', borderRadius:10, padding:32, textAlign:'center', marginBottom:16 }}>
+              <div style={{ fontSize:28, marginBottom:10, animation:'spin 1.2s linear infinite', display:'inline-block' }}>⏳</div>
+              <p style={{ fontSize:14, color:'#3b82f6', fontWeight:600, marginBottom:4 }}>Reading invoice with AI…</p>
+              <p style={{ fontSize:12, color:'#64748b' }}>GPT-4o is extracting supplier info, line items, weights and prices</p>
+            </div>
+          )}
+
+          {/* Extraction error */}
+          {extractError && !extracting && (
+            <div style={{ background:'rgba(239,68,68,.1)', border:'1px solid rgba(239,68,68,.3)', borderRadius:6, padding:'10px 14px', fontSize:12, color:'#ef4444', marginBottom:14 }}>
+              ⚠️ {extractError}
+            </div>
+          )}
+
           {/* Line items */}
-          {scanVisible && <>
+          {scanVisible && !extracting && <>
             <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
               <h2 style={{ fontSize:13, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'#94a3b8', margin:0 }}>Line Items</h2>
               <div style={{ flex:1, height:1, background:'#2a3050' }} />
