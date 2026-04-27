@@ -1,444 +1,906 @@
-import { useState, useCallback } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { adminRoutes } from "@/lib/admin-path";
-import { Printer, Plus, Trash2, ChevronLeft } from "lucide-react";
+import { ChevronLeft, Printer } from "lucide-react";
 import { Link } from "wouter";
 
-// ── Pre-filled Island Tacos declarant data ───────────────────────────────────
-const DECLARANT = {
-  name: "Island Tacos",
-  id: "100494",
-  importerId: "113917",
-  importerName: "Island Tacos",
-  importerAddress: "PO Box 643",
-  importerTown: "Road Town, Tortola",
-  carrierIdNo: "ADP/273",
-  portOfArrival: "PP",
+// ── Tariff Database (BVI CMDA 2010) ──────────────────────────────────────────
+// [hs, description, rateStr, rateType, unit]
+type TE = [string, string, string, string, string];
+const TARIFF_DB: TE[] = [
+  ['0105.11','Live poultry – fowls Gallus domesticus','Free','free','kg'],
+  ['0207.10','Whole chicken / poultry – fresh or chilled','Free','free','kg'],
+  ['0207.21','Whole frozen chicken (Gallus domesticus)','Free','free','kg'],
+  ['0207.22','Whole frozen turkey','Free','free','kg'],
+  ['0207.23','Whole frozen ducks / geese / guinea fowls','Free','free','kg'],
+  ['0207.411','Frozen chicken backs and necks','Free','free','kg'],
+  ['0207.412','Frozen chicken wings','Free','free','kg'],
+  ['0207.419','Frozen chicken cuts – breasts, thighs, legs, drumsticks','Free','free','kg'],
+  ['0207.421','Frozen turkey backs, necks, wings','Free','free','kg'],
+  ['0207.429','Frozen turkey – other cuts','Free','free','kg'],
+  ['0207.43','Frozen duck / goose / guinea fowl cuts','Free','free','kg'],
+  ['0207.31','Fatty livers of geese or ducks','5%','pct','kg'],
+  ['0207.39','Poultry cuts fresh/chilled – other (livers)','5%','pct','kg'],
+  ['0207.50','Frozen poultry livers','5%','pct','kg'],
+  ['0201','Beef – fresh or chilled (all cuts, ground, minced)','5%','pct','kg'],
+  ['0202','Beef – frozen (all cuts, ground, minced)','5%','pct','kg'],
+  ['0203','Pork – fresh, chilled or frozen','5%','pct','kg'],
+  ['0204','Lamb / mutton – fresh, chilled or frozen','5%','pct','kg'],
+  ['0206','Edible offal – bovine, swine, sheep','5%','pct','kg'],
+  ['0208','Other meat – rabbit, game, etc.','5%','pct','kg'],
+  ['0210.101','Ham – salted or smoked','5%','pct','kg'],
+  ['0210.102','Bacon – salted or smoked','5%','pct','kg'],
+  ['0210.20','Salted / dried / smoked beef','5%','pct','kg'],
+  ['0302','Fish – fresh or chilled (snapper, grouper, mahi, etc.)','15%','pct','kg'],
+  ['0303','Fish – frozen (salmon, tuna, tilapia, cod, etc.)','15%','pct','kg'],
+  ['0304','Fish fillets – fresh, chilled or frozen','15%','pct','kg'],
+  ['0305.30','Fish fillets – dried, salted or in brine','Free','free','kg'],
+  ['0305.40','Smoked fish – herrings, cod, mackerel, salmon','Free','free','kg'],
+  ['0305.50','Dried fish – cod, mackerel, herrings','Free','free','kg'],
+  ['0305.60','Fish salted but not dried or smoked','Free','free','kg'],
+  ['0306.002','Shrimps and prawns – frozen','15%','pct','kg'],
+  ['0306.003','Lobsters – frozen','15%','pct','kg'],
+  ['0306.004','Other crustaceans – frozen','15%','pct','kg'],
+  ['0307','Molluscs – squid, octopus, clams, oysters','15%','pct','kg'],
+  ['0401','Milk and cream (not concentrated)','5%','pct','kg'],
+  ['0402','Milk and cream – concentrated or sweetened (evaporated)','5%','pct','kg'],
+  ['0402.991','Condensed milk','5%','pct','kg'],
+  ['0403.10','Yogurt','5%','pct','kg'],
+  ['0405.002','Butter – fresh','15%','pct','kg'],
+  ['0405.003','Butter – salted','15%','pct','kg'],
+  ['0405.004','Ghee','15%','pct','kg'],
+  ['0406','Cheese and curd (all types)','5%','pct','kg'],
+  ['0407','Eggs – in shell','5%','pct','kg'],
+  ['0408','Egg yolks / eggs not in shell / frozen egg','5%','pct','kg'],
+  ['0409','Natural honey','5%','pct','kg'],
+  ['0701','Potatoes – fresh or chilled','5%','pct','kg'],
+  ['0702','Tomatoes – fresh or chilled','Free','free','kg'],
+  ['0703.101','Onions','5%','pct','kg'],
+  ['0703.102','Shallots (eschallots)','5%','pct','kg'],
+  ['0703.20','Garlic','5%','pct','kg'],
+  ['0703.90','Leeks and other alliaceous vegetables','Free','free','kg'],
+  ['0704','Cabbages, cauliflowers, broccoli, kale','Free','free','kg'],
+  ['0705','Lettuce / chicory','Free','free','kg'],
+  ['0706.001','Carrots – fresh or chilled','Free','free','kg'],
+  ['0707','Cucumbers and gherkins','Free','free','kg'],
+  ['0708.001','Pigeon peas – fresh','5%','pct','kg'],
+  ['0708.002','Blackeye peas – fresh','5%','pct','kg'],
+  ['0708.003','String beans / green beans','5%','pct','kg'],
+  ['0709.001','Aubergines / eggplant','Free','free','kg'],
+  ['0709.003','Ochroes / okra','Free','free','kg'],
+  ['0709.004','Pumpkins','Free','free','kg'],
+  ['0709.005','Sweet corn (corn on the cob)','5%','pct','kg'],
+  ['0709.006','Sweet peppers / bell peppers','Free','free','kg'],
+  ['0709.007','Mushrooms and truffles – fresh','Free','free','kg'],
+  ['0710','Vegetables – frozen (peas, beans, corn, mixed veg)','5%','pct','kg'],
+  ['0712','Dried vegetables – whole, cut, sliced or powdered','5%','pct','kg'],
+  ['0713.001','Red kidney beans – dried','5%','pct','kg'],
+  ['0713.002','Other beans dried – black, pinto, navy, etc.','5%','pct','kg'],
+  ['0713.006','Chickpeas (garbanzos) – dried','5%','pct','kg'],
+  ['0713.004','Split peas – dried','5%','pct','kg'],
+  ['0713.005','Blackeye peas – dried','5%','pct','kg'],
+  ['0714.10','Manioc / cassava','Free','free','kg'],
+  ['0714.20','Sweet potatoes','Free','free','kg'],
+  ['0714.904','Yams','Free','free','kg'],
+  ['0714.902','Dasheens / taro','Free','free','kg'],
+  ['0801.10','Coconuts','5%','pct','kg'],
+  ['0801.30','Cashew nuts','10%','pct','kg'],
+  ['0802.10','Almonds','10%','pct','kg'],
+  ['0802.30','Walnuts','10%','pct','kg'],
+  ['0802.90','Other nuts (pecans, peanuts, etc.)','10%','pct','kg'],
+  ['0803','Bananas / plantains – fresh or dried','5%','pct','kg'],
+  ['0804.40','Avocados','5%','pct','kg'],
+  ['0804.502','Mangoes','5%','pct','kg'],
+  ['0805.10','Oranges','5%','pct','kg'],
+  ['0805.302','Limes','5%','pct','kg'],
+  ['0805.40','Grapefruit','5%','pct','kg'],
+  ['0807.10','Melons / watermelons','5%','pct','kg'],
+  ['0807.20','Papaws / papayas','5%','pct','kg'],
+  ['0808.10','Apples','5%','pct','kg'],
+  ['0809','Apricots, cherries, peaches, plums','5%','pct','kg'],
+  ['0810','Berries, breadfruit, soursop, passion fruit','5%','pct','kg'],
+  ['0901.10','Coffee beans – not roasted','10%','pct','kg'],
+  ['0901.20','Coffee – roasted (whole bean or ground)','10%','pct','kg'],
+  ['0902','Tea','10%','pct','kg'],
+  ['0904.10','Pepper (black, white)','10%','pct','kg'],
+  ['0904.201','Paprika','10%','pct','kg'],
+  ['0905','Vanilla','10%','pct','kg'],
+  ['0906','Cinnamon','10%','pct','kg'],
+  ['0907','Cloves','10%','pct','kg'],
+  ['0908.10','Nutmeg','10%','pct','kg'],
+  ['0908.20','Mace','10%','pct','kg'],
+  ['0909','Anise, coriander, cumin, caraway, fennel seeds','10%','pct','kg'],
+  ['0910.10','Ginger','10%','pct','kg'],
+  ['0910.50','Curry powder','10%','pct','kg'],
+  ['0910.99','Mixed spices – other','10%','pct','kg'],
+  ['1001','Wheat / meslin','Free','free','kg'],
+  ['1003','Barley','Free','free','kg'],
+  ['1004','Oats','Free','free','kg'],
+  ['1005','Maize (corn) – grain','Free','free','kg'],
+  ['1006','Rice – all types (white, brown, parboiled, broken)','Free','free','kg'],
+  ['1101','Wheat flour / all-purpose flour / bread flour','Free','free','kg'],
+  ['1102.20','Maize (corn) flour / cornmeal','Free','free','kg'],
+  ['1102.30','Rice flour','Free','free','kg'],
+  ['1103','Cereal groats and meals (oat groats, grits, etc.)','Free','free','kg'],
+  ['1104','Rolled / flaked grains – oatmeal, rolled oats','Free','free','kg'],
+  ['1105','Potato flour, meal and flakes','Free','free','kg'],
+  ['1106.201','Manioc / cassava flour','Free','free','kg'],
+  ['1106.301','Banana flour','Free','free','kg'],
+  ['1507','Soya-bean oil','10%','pct','litre'],
+  ['1508','Ground-nut (peanut) oil','10%','pct','litre'],
+  ['1509','Olive oil (all grades, extra virgin)','10%','pct','litre'],
+  ['1511','Palm oil','10%','pct','litre'],
+  ['1512.11','Sunflower oil / safflower oil','10%','pct','litre'],
+  ['1513.11','Coconut (copra) oil','10%','pct','litre'],
+  ['1514','Rapeseed / canola / mustard oil','10%','pct','litre'],
+  ['1515.20','Corn (maize) oil','10%','pct','litre'],
+  ['1515.50','Sesame oil','10%','pct','litre'],
+  ['1517.10','Margarine (solid)','5%','pct','kg'],
+  ['1517.901','Shortening / imitation lard','5%','pct','kg'],
+  ['1601.001','Chicken sausages – canned','5%','pct','kg'],
+  ['1601.009','Other sausages (pork, beef, etc.)','5%','pct','kg'],
+  ['1602.39','Canned / prepared poultry (chicken)','5%','pct','kg'],
+  ['1602.401','Ham – canned or prepared','5%','pct','kg'],
+  ['1602.402','Bacon – canned or prepared','5%','pct','kg'],
+  ['1602.403','Luncheon meat (Spam, etc.)','5%','pct','kg'],
+  ['1602.501','Corned beef – canned','5%','pct','kg'],
+  ['1701.11','Raw cane sugar','Free','free','kg'],
+  ['1701.999','White sugar (granulated, table sugar)','Free','free','kg'],
+  ['1701.991','Icing sugar / powdered sugar','Free','free','kg'],
+  ['1702.001','Glucose / dextrose / lactose / maltose','15%','pct','kg'],
+  ['1702.003','Cane sugar syrup','15%','pct','litre'],
+  ['1702.009','Other sugars including invert sugar / brown sugar','15%','pct','kg'],
+  ['1704.10','Chewing gum','15%','pct','kg'],
+  ['1805','Cocoa powder – unsweetened','5%','pct','kg'],
+  ['1806','Chocolate, chocolate bars, cocoa preparations','15%','pct','kg'],
+  ['1901.90','Malt extract / flour mixes / food preparations NES','10%','pct','kg'],
+  ['1902.001','Uncooked pasta – spaghetti, penne, fettuccine, etc.','5%','pct','kg'],
+  ['1902.009','Other pasta – noodles, lasagne, macaroni, etc.','5%','pct','kg'],
+  ['1904.10','Breakfast cereals – corn flakes, granola, etc.','10%','pct','kg'],
+  ['1905','Bread, pastry, biscuits, wafers, crackers, tortillas','10%','pct','kg'],
+  ['2002.101','Canned tomatoes – whole or crushed (diced)','5%','pct','kg'],
+  ['2002.901','Tomato paste – bulk pack (commercial)','5%','pct','kg'],
+  ['2002.902','Tomato paste – retail can / tube','5%','pct','kg'],
+  ['2004.109','Frozen potato products – retail (french fries, etc.)','5%','pct','kg'],
+  ['2005.201','Canned / preserved potatoes – commercial bulk','15%','pct','kg'],
+  ['2005.501','Canned beans – commercial bulk','5%','pct','kg'],
+  ['2005.509','Canned beans (black, red, mixed) – retail','5%','pct','kg'],
+  ['2005.809','Canned sweet corn – retail','5%','pct','kg'],
+  ['2005.909','Other canned / preserved vegetables','5%','pct','kg'],
+  ['2008.003','Peanut butter','15%','pct','kg'],
+  ['2009.102','Orange juice – not concentrated (retail)','10%','pct','litre'],
+  ['2009.509','Tomato juice','10%','pct','litre'],
+  ['2009.909','Mixed fruit juice / fruit drink','10%','pct','litre'],
+  ['2101.10','Instant coffee / coffee extracts and concentrates','10%','pct','kg'],
+  ['2101.20','Tea extracts / concentrates / iced tea mix','10%','pct','kg'],
+  ['2102.30','Baking powder','10%','pct','kg'],
+  ['2103.10','Soya sauce (soy sauce)','5%','pct','kg'],
+  ['2103.201','Tomato ketchup / catsup','10%','pct','kg'],
+  ['2103.202','Other tomato sauces (pizza sauce, marinara)','5%','pct','kg'],
+  ['2103.302','Prepared mustard','10%','pct','kg'],
+  ['2103.901','Pepper sauce / hot sauce (Crystal, Tabasco, etc.)','10%','pct','kg'],
+  ['2103.902','Mayonnaise','10%','pct','kg'],
+  ['2103.909','Other sauces and condiments (BBQ, Worcestershire, etc.)','10%','pct','kg'],
+  ['2104.101','Soups and broths – liquid form','5%','pct','kg'],
+  ['2104.102','Soups and broths – powder / cube / solid form','5%','pct','kg'],
+  ['2105','Ice cream and edible ices','15%','pct','kg'],
+  ['2106.009','Food preparations not elsewhere specified','5%','pct','kg'],
+  ['2201.101','Mineral water (still)','Free','free','litre'],
+  ['2201.102','Aerated / sparkling water (plain)','15%','pct','litre'],
+  ['2202.101','Aerated beverages – sodas, soft drinks (Coke, Sprite)','15%','pct','litre'],
+  ['2202.902','Malt beverages – non-alcoholic','15%','pct','litre'],
+  ['2203.001','Beer (lager, ale, etc.)','$1.10 per gal','gal','per gallon'],
+  ['2203.002','Stout (Guinness, etc.)','$1.10 per gal','gal','per gallon'],
+  ['2204.10','Sparkling wine / champagne / prosecco','$1.20 per gal','gal','per gallon'],
+  ['2204.209','Still wine – red, white or rosé','$1.20 per gal','gal','per gallon'],
+  ['2205','Vermouth and flavoured wines','$1.20 per gal','gal','per gallon'],
+  ['2206','Cider, perry, mead, other fermented beverages','$0.90 per gal','gal','per gallon'],
+  ['2208.201','Brandy (≤46% vol, bottled)','$3.00 per gal','gal','per gallon'],
+  ['2208.301','Whisky / whiskey (≤46% vol, bottled)','$3.00 per gal','gal','per gallon'],
+  ['2208.401','Rum (≤46% vol, bottled)','$2.30 per gal','gal','per gallon'],
+  ['2208.409','Rum – other / bulk','$2.30 per gal','gal','per gallon'],
+  ['2208.501','Gin (≤46% vol, bottled)','$2.30 per gal','gal','per gallon'],
+  ['2208.901','Vodka','$2.30 per gal','gal','per gallon'],
+  ['2208.902','Cordials and liqueurs (Triple Sec, Kahlua, etc.)','$2.30 per gal','gal','per gallon'],
+  ['2208.909','Other spirits (tequila, mezcal, absinthe, etc.)','$3.00 per gal','gal','per gallon'],
+  ['2402.20','Cigarettes containing tobacco','$0.55 per lb','lb','per lb'],
+  ['2402.10','Cigars, cheroots and cigarillos','$0.55 per lb','lb','per lb'],
+  ['2401','Unmanufactured tobacco / tobacco refuse','$0.50 per lb','lb','per lb'],
+  ['8418.211','Household refrigerator – electrical (frost free)','15%','pct','No'],
+  ['8418.30','Chest freezer – commercial or household','15%','pct','No'],
+  ['8418.40','Upright freezer – commercial or household','15%','pct','No'],
+  ['8418.50','Commercial refrigerating / freezing equipment','15%','pct','No'],
+  ['8516','Electric stoves, ovens, hotplates, microwaves, toasters','20%','pct','No'],
+  ['8422','Dishwashers','20%','pct','No'],
+  ['8541.40','Solar panels / photovoltaic cells','Free','free','No'],
+  ['8504','Solar inverters / charge controllers','Free','free','No'],
+];
+
+// ── Aliases for auto-suggest ──────────────────────────────────────────────────
+const ALIASES: Record<string, string> = {
+  'chicken breast':'0207.419','chicken thigh':'0207.419','chicken leg':'0207.419','drumstick':'0207.419',
+  'chicken wing':'0207.412','wings':'0207.412','frozen chicken':'0207.21','whole chicken':'0207.21',
+  'whole bird':'0207.21','chicken parts':'0207.419','chicken quarters':'0207.419',
+  'ground beef':'0202','minced beef':'0202','burger':'0202','beef':'0202','steak':'0202',
+  'pork':'0203','fish fillet':'0304','fish':'0303','salmon':'0303','tilapia':'0304','cod':'0303',
+  'shrimp':'0306.002','prawn':'0306.002','lobster':'0306.003','seafood':'0306.004',
+  'cooking oil':'1512.11','vegetable oil':'1512.11','canola':'1514','olive oil':'1509',
+  'coconut oil':'1513.11','corn oil':'1515.20','sesame oil':'1515.50',
+  'white rice':'1006','rice':'1006','parboiled':'1006','brown rice':'1006',
+  'flour':'1101','wheat flour':'1101','all purpose flour':'1101','bread flour':'1101',
+  'cornmeal':'1102.20','masa':'1102.20','corn flour':'1102.20',
+  'sugar':'1701.999','raw sugar':'1701.11','icing sugar':'1701.991','powdered sugar':'1701.991',
+  'brown sugar':'1702.009',
+  'tomato paste':'2002.901','tomato sauce':'2103.202','diced tomatoes':'2002.101',
+  'canned tomatoes':'2002.101','ketchup':'2103.201','hot sauce':'2103.901',
+  'pepper sauce':'2103.901','soy sauce':'2103.10','soya sauce':'2103.10',
+  'mayonnaise':'2103.902','mayo':'2103.902','mustard':'2103.302',
+  'bbq sauce':'2103.909','worcestershire':'2103.909','condiment':'2103.909',
+  'beer':'2203.001','stout':'2203.002','wine':'2204.209','red wine':'2204.209',
+  'white wine':'2204.209','champagne':'2204.10','prosecco':'2204.10',
+  'rum':'2208.401','vodka':'2208.901','whisky':'2208.301','whiskey':'2208.301',
+  'gin':'2208.501','brandy':'2208.201','tequila':'2208.909','mezcal':'2208.909',
+  'liqueur':'2208.902','cordial':'2208.902','spirits':'2208.909','alcohol':'2208.909',
+  'soda':'2202.101','soft drink':'2202.101','cola':'2202.101',
+  'juice':'2009.909','orange juice':'2009.102','mineral water':'2201.101',
+  'sparkling water':'2201.102','water':'2201.101',
+  'cigarette':'2402.20','tobacco':'2401','cigar':'2402.10',
+  'pasta':'1902.001','spaghetti':'1902.001','penne':'1902.001','noodle':'1902.009',
+  'macaroni':'1902.009','lasagne':'1902.009',
+  'breakfast cereal':'1904.10','corn flakes':'1904.10','granola':'1904.10',
+  'oatmeal':'1104','rolled oats':'1104','oats':'1004',
+  'margarine':'1517.10','butter':'0405.002','ghee':'0405.004','shortening':'1517.901',
+  'egg':'0407','eggs':'0407','cheese':'0406','milk':'0401','yogurt':'0403.10',
+  'evaporated milk':'0402','condensed milk':'0402.991','honey':'0409',
+  'coffee':'0901.20','ground coffee':'0901.20','coffee beans':'0901.10',
+  'instant coffee':'2101.10','tea':'0902',
+  'pepper':'0904.10','black pepper':'0904.10','cinnamon':'0906','nutmeg':'0908.10',
+  'ginger':'0910.10','vanilla':'0905','curry':'0910.50','cloves':'0907',
+  'spice':'0910.99','seasoning':'0910.99','mixed spice':'0910.99',
+  'onion':'0703.101','garlic':'0703.20','tomato':'0702','lettuce':'0705',
+  'carrot':'0706.001','cabbage':'0704','broccoli':'0704','potato':'0701',
+  'french fries':'2004.109','frozen fries':'2004.109','frozen potato':'2004.109',
+  'sweet potato':'0714.20','yam':'0714.904','plantain':'0803','banana':'0803',
+  'avocado':'0804.40','mango':'0804.502','apple':'0808.10',
+  'orange':'0805.10','lime':'0805.302','lemon':'0805.302',
+  'bread':'1905','biscuit':'1905','cracker':'1905','tortilla':'1905','pita':'1905',
+  'chocolate':'1806','cocoa':'1805','ice cream':'2105',
+  'canned beans':'2005.509','kidney beans':'0713.001','chickpeas':'0713.006',
+  'split peas':'0713.004','blackeye peas':'0713.005',
+  'peanut butter':'2008.003','nuts':'0802.90','cashew':'0801.30',
+  'baking powder':'2102.30',
+  'soup':'2104.101','broth':'2104.101','bouillon':'2104.102','stock':'2104.102',
+  'luncheon meat':'1602.403','spam':'1602.403','corned beef':'1602.501',
+  'bacon':'1602.402','ham':'1602.401','sausage':'1601.009',
+  'freezer':'8418.40','refrigerator':'8418.211','fridge':'8418.211',
+  'chest freezer':'8418.30','upright freezer':'8418.40','commercial fridge':'8418.50',
+  'microwave':'8516','oven':'8516','stove':'8516','hotplate':'8516','grill':'8516',
+  'dishwasher':'8422','solar panel':'8541.40','solar':'8541.40','inverter':'8504',
 };
 
-// ── Tariff lookup ────────────────────────────────────────────────────────────
-type TariffInfo = { desc: string; rate: number | null; rateStr?: string; unit: string; cpc: string; taxType: string; base: string };
-const TARIFF_DB: Record<string, TariffInfo> = {
-  "0207.10":  { desc: "Poultry not cut in pieces, fresh or chilled", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0207.21":  { desc: "Fowls Gallus domesticus, frozen whole", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0207.22":  { desc: "Turkeys, frozen whole", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0207.411": { desc: "Chicken backs and necks, frozen", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0207.412": { desc: "Chicken wings, frozen", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0207.419": { desc: "Other chicken cuts, frozen", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0207.421": { desc: "Turkey backs, necks and wings, frozen", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0207.429": { desc: "Other turkey cuts, frozen", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0207.43":  { desc: "Duck/geese/guinea fowl cuts, frozen", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0207.50":  { desc: "Poultry livers, frozen", rate: 0.05, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0201.10":  { desc: "Beef carcases and half-carcases, fresh/chilled", rate: 0.05, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0202.10":  { desc: "Beef carcases and half-carcases, frozen", rate: 0.05, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0203.10":  { desc: "Pork carcases, fresh or chilled", rate: 0.05, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0203.20":  { desc: "Pork, frozen", rate: 0.05, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0302.10":  { desc: "Salmon/trout, fresh or chilled", rate: 0.15, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0302.60":  { desc: "Other fish (snapper, grouper, mahi etc.), fresh", rate: 0.15, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0303.70":  { desc: "Other fish frozen (snapper, grouper etc.)", rate: 0.15, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0304.10":  { desc: "Fish fillets, fresh or chilled", rate: 0.15, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0304.20":  { desc: "Fish fillets, frozen", rate: 0.15, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0305.40":  { desc: "Smoked fish/fillets", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0306.002": { desc: "Shrimps and prawns, frozen", rate: 0.15, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "0306.003": { desc: "Lobsters, frozen", rate: 0.15, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1006.30":  { desc: "Semi-milled or wholly milled rice", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1006.40":  { desc: "Broken rice", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1701.10":  { desc: "Cane sugar, raw", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1701.91":  { desc: "Sugar, containing flavouring/colouring", rate: 0.15, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1701.999": { desc: "Other refined sugar", rate: 0, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1507.90":  { desc: "Soya-bean oil, refined", rate: 0.10, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1511.90":  { desc: "Palm oil, refined", rate: 0.10, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1512.19":  { desc: "Sunflower/safflower oil, refined", rate: 0.10, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1515.29":  { desc: "Maize (corn) oil, other", rate: 0.10, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1517.10":  { desc: "Margarine", rate: 0.05, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "1517.901": { desc: "Imitation lard/shortening", rate: 0.05, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
-  "2201.101": { desc: "Mineral water", rate: 0, unit: "kg & litre", cpc: "C400", taxType: "01", base: "42" },
-  "2202.101": { desc: "Aerated beverages (sodas)", rate: 0.15, unit: "kg & litre", cpc: "C400", taxType: "01", base: "42" },
-  "2203.001": { desc: "Beer", rate: null, rateStr: "$1.10/gal", unit: "gal", cpc: "C400", taxType: "02", base: "07" },
-  "2204.201": { desc: "Wine (table wine)", rate: null, rateStr: "$1.20/gal", unit: "gal", cpc: "C400", taxType: "02", base: "07" },
-  "2208.201": { desc: "Brandy/Cognac, bottled ≤46%", rate: null, rateStr: "$2.30/gal", unit: "gal", cpc: "C400", taxType: "02", base: "07" },
-  "2208.301": { desc: "Whisky, bottled ≤46%", rate: null, rateStr: "$2.30/gal", unit: "gal", cpc: "C400", taxType: "02", base: "07" },
-  "2208.401": { desc: "Rum, bottled ≤46%", rate: null, rateStr: "$2.30/gal", unit: "gal", cpc: "C400", taxType: "02", base: "07" },
-  "2208.501": { desc: "Gin, bottled ≤46%", rate: null, rateStr: "$2.30/gal", unit: "gal", cpc: "C400", taxType: "02", base: "07" },
-  "2208.901": { desc: "Vodka", rate: null, rateStr: "$2.30/gal", unit: "gal", cpc: "C400", taxType: "02", base: "07" },
-  "2208.902": { desc: "Cordials and liqueurs", rate: null, rateStr: "$2.30/gal", unit: "gal", cpc: "C400", taxType: "02", base: "07" },
-  "2402.20":  { desc: "Cigarettes containing tobacco", rate: null, rateStr: "$0.55/lb", unit: "lb", cpc: "C400", taxType: "01", base: "04" },
-  "2402.10":  { desc: "Cigars and cigarillos", rate: null, rateStr: "$0.55/lb", unit: "lb", cpc: "C400", taxType: "01", base: "04" },
-  "8418.211": { desc: "Refrigerator, frost-free electrical", rate: 0.15, unit: "kg and No", cpc: "C400", taxType: "01", base: "42" },
-  "8418.30":  { desc: "Chest freezer, ≤800L", rate: 0.15, unit: "kg and No", cpc: "C400", taxType: "01", base: "42" },
-  "8418.40":  { desc: "Upright freezer, ≤900L", rate: 0.15, unit: "kg and No", cpc: "C400", taxType: "01", base: "42" },
-  "8418.50":  { desc: "Commercial display refrigeration", rate: 0.15, unit: "kg and No", cpc: "C400", taxType: "01", base: "42" },
-  "7321.101": { desc: "Stoves, ranges, cookers and barbecues", rate: 0.15, unit: "kg", cpc: "C400", taxType: "01", base: "42" },
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface ScanRow { id: number; desc: string; hs: string; qty: string; wt: string; fob: string; origin: string; }
+interface FormRecord {
+  id: number; cpc: string; hs: string; origin: string; pkgs: string; desc: string;
+  wt: string; qty: string; fob: string; cif: string; taxCif: string; rate: string;
+  wharfFob: string; additionalInfo: string;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const todayStr = new Date().toISOString().split('T')[0];
+
+function searchTariff(q: string): TE[] {
+  if (!q || q.trim().length < 2) return [];
+  const ql = q.toLowerCase().trim();
+  for (const [kw, hs] of Object.entries(ALIASES)) {
+    if (ql === kw || ql.includes(kw) || kw.includes(ql)) {
+      const match = TARIFF_DB.find(r => r[0] === hs);
+      if (match) return [match, ...TARIFF_DB.filter(r => r[0] !== hs && (r[0].toLowerCase().includes(ql) || r[1].toLowerCase().includes(ql))).slice(0, 8)];
+    }
+  }
+  return TARIFF_DB.filter(r => r[0].toLowerCase().includes(ql) || r[1].toLowerCase().includes(ql)).slice(0, 20);
+}
+
+function getBestTariff(desc: string): TE | null {
+  if (!desc) return null;
+  const d = desc.toLowerCase();
+  for (const [kw, hs] of Object.entries(ALIASES)) {
+    if (d.includes(kw)) { const m = TARIFF_DB.find(r => r[0] === hs); if (m) return m; }
+  }
+  const words = d.split(/[\s,/\-]+/).filter(w => w.length > 3);
+  for (const w of words) { const h = TARIFF_DB.find(r => r[1].toLowerCase().includes(w)); if (h) return h; }
+  return null;
+}
+
+function rateClass(r: string): 'free' | 'low' | 'mid' | 'high' | 'def' {
+  if (!r || r === 'Free') return 'free';
+  if (r.includes('$')) return 'mid';
+  const n = parseFloat(r);
+  if (n <= 5) return 'low';
+  if (n <= 10) return 'mid';
+  return 'high';
+}
+
+const RC: Record<string, { bg: string; color: string; border: string }> = {
+  free: { bg: 'rgba(16,185,129,.15)', color: '#10b981', border: 'rgba(16,185,129,.3)' },
+  low:  { bg: 'rgba(59,130,246,.12)', color: '#3b82f6', border: 'rgba(59,130,246,.3)' },
+  mid:  { bg: 'rgba(245,158,11,.12)', color: '#f59e0b', border: 'rgba(245,158,11,.3)' },
+  high: { bg: 'rgba(239,68,68,.12)',  color: '#ef4444', border: 'rgba(239,68,68,.3)' },
+  def:  { bg: '#1e243a', color: '#64748b', border: '#2a3050' },
 };
 
-// ── Types ────────────────────────────────────────────────────────────────────
-interface LineItem { id: number; desc: string; tariff: string; fob: string; weight: string }
-interface Shipment { arrivalDate: string; manifestNo: string; bolNo: string; numPackages: string; containerId: string }
-interface Supplier { name: string; street: string; city: string; country: string; shipmentCity: string }
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function fmtDate(d: string) {
-  if (!d) return "";
-  const [y, m, day] = d.split("-");
-  return `${day}/${m}/${y}`;
-}
-function getTariffInfo(tariff: string): TariffInfo | null { return TARIFF_DB[tariff.trim()] ?? null; }
-function getDutyRate(info: TariffInfo | null): number { return info ? (info.rate ?? 0) : 0.20; }
-function getRateStr(info: TariffInfo | null, tariff: string): string {
-  if (!tariff.trim()) return "—";
-  if (!info) return "20%";
-  if (info.rateStr) return info.rateStr;
-  return info.rate === 0 ? "FREE" : `${((info.rate ?? 0) * 100).toFixed(0)}%`;
+function computeDuty(rate: string, cif: number): number {
+  if (!rate || rate === 'Free' || rate === '—') return 0;
+  if (rate.endsWith('%')) return (cif * parseFloat(rate)) / 100;
+  return 0;
 }
 
-function calcTotals(lines: LineItem[], freight: number, insurance: number) {
-  const parsed = lines.map(l => ({ ...l, fobN: parseFloat(l.fob) || 0, weightN: parseFloat(l.weight) || 0, info: getTariffInfo(l.tariff) }));
-  const totalFob = parsed.reduce((s, l) => s + l.fobN, 0);
-  const totalCif = totalFob + freight + insurance;
-  let totalDuty = 0;
-  const lineCalcs = parsed.map(l => {
-    const frac = totalFob > 0 ? l.fobN / totalFob : 0;
-    const lineCif = l.fobN + frac * (freight + insurance);
-    const rate = getDutyRate(l.info);
-    const duty = (l.info?.rate !== null && rate > 0) ? lineCif * rate : 0;
-    totalDuty += duty;
-    return { ...l, lineCif, duty };
-  });
-  const wharfage = totalFob * 0.01;
-  return { totalFob, totalCif, totalDuty, wharfage, grandTotal: totalDuty + wharfage, lineCalcs, freight, insurance };
+function mkRec(id: number, d: Partial<FormRecord> = {}): FormRecord {
+  return { id, cpc: 'C400', hs: '', origin: 'US', pkgs: '', desc: '', wt: '', qty: '', fob: '', cif: '', taxCif: '', rate: '', wharfFob: '', additionalInfo: '', ...d };
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
+// ── Shared input style ────────────────────────────────────────────────────────
+const IS: React.CSSProperties = { background:'#1e243a', border:'1px solid #2a3050', color:'#e2e8f0', padding:'8px 10px', borderRadius:6, fontSize:13, fontFamily:'inherit', width:'100%', outline:'none' };
+const LS: React.CSSProperties = { fontSize:11, fontFamily:'monospace', color:'#64748b', letterSpacing:'.5px', textTransform:'uppercase', marginBottom:5, display:'block' };
+const CS: React.CSSProperties = { background:'#161b27', border:'1px solid #2a3050', borderRadius:10, padding:20, marginBottom:16 };
+const CT: React.CSSProperties = { fontSize:11, fontFamily:'monospace', color:'#3b82f6', letterSpacing:1, textTransform:'uppercase', marginBottom:14, paddingBottom:10, borderBottom:'1px solid #2a3050' };
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function AdminCustoms() {
-  // Form state
-  const [shipment, setShipment] = useState<Shipment>({ arrivalDate: "", manifestNo: "", bolNo: "", numPackages: "1", containerId: "" });
-  const [supplier, setSupplier] = useState<Supplier>({ name: "Sysco Puerto Rico", street: "", city: "San Juan, PR", country: "United States", shipmentCity: "San Juan" });
-  const [freight, setFreight] = useState("0");
-  const [insurance, setInsurance] = useState("0");
-  const [lines, setLines] = useState<LineItem[]>([{ id: 1, desc: "", tariff: "", fob: "", weight: "" }]);
-  const [nextId, setNextId] = useState(2);
-  const [showPreview, setShowPreview] = useState(false);
+  const [tab, setTab] = useState<'scan' | 'form' | 'lookup'>('scan');
 
-  const addLine = () => { setLines(prev => [...prev, { id: nextId, desc: "", tariff: "", fob: "", weight: "" }]); setNextId(n => n + 1); };
-  const removeLine = (id: number) => setLines(prev => prev.filter(l => l.id !== id));
-  const updateLine = (id: number, field: keyof LineItem, value: string) => {
-    setLines(prev => prev.map(l => {
-      if (l.id !== id) return l;
-      const updated = { ...l, [field]: value };
-      if (field === "tariff") {
-        const info = getTariffInfo(value);
-        if (info && !l.desc) updated.desc = info.desc;
-      }
-      return updated;
-    }));
-  };
+  // ── Scan state ────────────────────────────────────────────────────────────
+  const [scanPreview, setScanPreview] = useState<{ type: 'image'; src: string } | { type: 'pdf'; text: string } | null>(null);
+  const [scanRows, setScanRows] = useState<ScanRow[]>([]);
+  const [scanFreight, setScanFreight] = useState('0');
+  const [scanInsurance, setScanInsurance] = useState('0');
+  const [scanPkgCount, setScanPkgCount] = useState('1');
+  const [scanVisible, setScanVisible] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [nextScanId, setNextScanId] = useState(1);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const freightN = parseFloat(freight) || 0;
-  const insuranceN = parseFloat(insurance) || 0;
-  const { totalFob, totalCif, totalDuty, wharfage, grandTotal, lineCalcs } = calcTotals(lines, freightN, insuranceN);
+  // ── Form state ────────────────────────────────────────────────────────────
+  const [fType, setFType] = useState('IMPORT');
+  const [fRef, setFRef] = useState('');
+  const [fPage, setFPage] = useState('1/1');
+  const [fRelTD, setFRelTD] = useState('');
+  const [fSuppName, setFSuppName] = useState('Sysco Puerto Rico');
+  const [fSuppStreet, setFSuppStreet] = useState('');
+  const [fSuppCity, setFSuppCity] = useState('San Juan, PR');
+  const [fSuppZip, setFSuppZip] = useState('');
+  const [fSuppCountry, setFSuppCountry] = useState('United States of America');
+  const [fImpName, setFImpName] = useState('Island Tacos');
+  const [fImpId, setFImpId] = useState('113917');
+  const [fImpStreet, setFImpStreet] = useState('PO Box 643');
+  const [fImpTown, setFImpTown] = useState('Road Town, Tortola');
+  const [fCarrierId, setFCarrierId] = useState('ADP/273');
+  const [fPort, setFPort] = useState('PP');
+  const [fArrival, setFArrival] = useState(todayStr);
+  const [fManifest, setFManifest] = useState('273');
+  const [fBol, setFBol] = useState('ISA31C');
+  const [fContainer, setFContainer] = useState('');
+  const [fPkgCount, setFPkgCount] = useState('1');
+  const [fShipCity, setFShipCity] = useState('');
+  const [fShipCountry, setFShipCountry] = useState('United States of America');
+  const [fOrigCountry, setFOrigCountry] = useState('United States of America');
+  const [fFreight, setFFreight] = useState('0');
+  const [fInsurance, setFInsurance] = useState('0');
+  const [fAlcohol, setFAlcohol] = useState('0');
+  const [fFossil, setFFossil] = useState('0');
+  const [fDeclName, setFDeclName] = useState('Island Tacos');
+  const [fDeclId, setFDeclId] = useState('100494');
+  const [fDeclDate, setFDeclDate] = useState(todayStr);
+  const [formRecords, setFormRecords] = useState<FormRecord[]>([]);
+  const [nextRecId, setNextRecId] = useState(1);
+  const [formOutput, setFormOutput] = useState('');
 
-  const handlePrint = () => {
-    setShowPreview(true);
-    setTimeout(() => window.print(), 300);
-  };
+  // ── Lookup state ──────────────────────────────────────────────────────────
+  const [lookupQ, setLookupQ] = useState('');
 
-  // ── Input field style ────────────────────────────────────────────────────
-  const inp = "w-full bg-[#0d0f14] border border-[#252a35] text-[#e2e8f0] rounded px-2.5 py-2 text-xs font-mono focus:outline-none focus:border-[#00c896] transition-colors placeholder-[#64748b]";
-  const lbl = "block text-[10px] text-[#94a3b8] uppercase tracking-wider mb-1 font-mono";
-  const sec = "text-[10px] text-[#00c896] uppercase tracking-[2px] font-mono border-b border-[#252a35] pb-2 mb-3";
+  // ── Load PDF.js from CDN ──────────────────────────────────────────────────
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => {
+      const lib = (window as any)['pdfjs-dist/build/pdf'];
+      if (lib) lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    };
+    document.head.appendChild(script);
+    return () => { try { document.head.removeChild(script); } catch {} };
+  }, []);
 
-  return (
-    <div className="min-h-screen bg-[#0d0f14] text-[#e2e8f0] flex flex-col">
-      {/* Print styles injected globally */}
-      <style>{`
-        @media print {
-          body * { visibility: hidden !important; }
-          #hmc-print-area, #hmc-print-area * { visibility: visible !important; }
-          #hmc-print-area { position: fixed; top: 0; left: 0; width: 100%; }
+  // ── Scan computed ─────────────────────────────────────────────────────────
+  const sfN = parseFloat(scanFreight) || 0;
+  const siN = parseFloat(scanInsurance) || 0;
+  const perRow = scanRows.length > 0 ? (sfN + siN) / scanRows.length : 0;
+  const scanTotals = useMemo(() => {
+    let fobT = 0, dutyT = 0;
+    for (const row of scanRows) {
+      const fob = parseFloat(row.fob) || 0;
+      const tariff = TARIFF_DB.find(r => r[0] === row.hs);
+      dutyT += computeDuty(tariff ? tariff[2] : '', fob + (scanRows.length > 0 ? (sfN + siN) / scanRows.length : 0));
+      fobT += fob;
+    }
+    const cifT = fobT + sfN + siN;
+    return { fobT, cifT, dutyT, wharf: fobT * 0.01, total: dutyT + fobT * 0.01 };
+  }, [scanRows, sfN, siN]);
+
+  // ── Form computed ─────────────────────────────────────────────────────────
+  const formTotals = useMemo(() => {
+    let d = 0, w = 0;
+    for (const r of formRecords) {
+      d += computeDuty(r.rate, parseFloat(r.taxCif) || parseFloat(r.cif) || 0);
+      w += (parseFloat(r.wharfFob) || parseFloat(r.fob) || 0) * 0.01;
+    }
+    return { d, w, total: d + w };
+  }, [formRecords]);
+
+  // ── Lookup computed ───────────────────────────────────────────────────────
+  const lookupResults = useMemo(() => searchTariff(lookupQ), [lookupQ]);
+
+  // ── Scan handlers ─────────────────────────────────────────────────────────
+  const handleFile = useCallback(async (file: File | null) => {
+    if (!file) return;
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        setScanPreview({ type: 'image', src: e.target?.result as string });
+        setScanVisible(true);
+        setScanRows(prev => prev.length === 0 ? [{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }] : prev);
+        setNextScanId(2);
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type === 'application/pdf') {
+      setScanPreview({ type: 'pdf', text: 'Extracting PDF text…' });
+      setScanVisible(true);
+      try {
+        const lib = (window as any)['pdfjs-dist/build/pdf'];
+        if (!lib) throw new Error('not loaded');
+        const url = URL.createObjectURL(file);
+        const pdf = await lib.getDocument(url).promise;
+        let text = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map((it: any) => it.str).join(' ') + '\n';
         }
-        .fp-grid2 { display: grid; grid-template-columns: 1fr 1fr; }
-        .fp-cell { border: 1px solid #000; padding: 4px 6px; min-height: 22px; font-size: 9px; }
-        .fp-cell.hdr { background: #ddd; font-weight: bold; font-size: 8px; }
-        .fp-lbl { font-size: 7px; font-weight: bold; display: block; margin-bottom: 2px; color: #333; }
-        .fp-val { font-size: 9px; }
-        .rec-block { border: 1px solid #000; margin-top: 8px; }
-        .rec-hdr { background: #222; color: #fff; font-weight: bold; font-size: 9px; padding: 3px 6px; }
-        .rec-grid { display: grid; grid-template-columns: 1fr 1fr; }
-        .rec-cell { border: 1px solid #ccc; padding: 4px 6px; min-height: 30px; }
-        .tax-tbl { width: 100%; border-collapse: collapse; font-size: 8px; margin-top: 4px; }
-        .tax-tbl th { background: #eee; border: 1px solid #ccc; padding: 2px 4px; text-align: left; font-size: 7px; }
-        .tax-tbl td { border: 1px solid #ccc; padding: 2px 4px; }
-        .sig-block { border: 1px solid #000; margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; }
-        .sig-left { padding: 8px; border-right: 1px solid #000; }
-        .sig-right { padding: 8px; background: #f5f5f5; }
-        .sig-line { border-bottom: 1px solid #000; margin: 16px 0 4px; }
+        URL.revokeObjectURL(url);
+        setScanPreview({ type: 'pdf', text: text.slice(0, 4000) + (text.length > 4000 ? '\n\n[…truncated]' : '') });
+        parseInvoiceText(text);
+      } catch {
+        setScanPreview({ type: 'pdf', text: 'Could not extract PDF text automatically. Please add items manually below.' });
+        setScanRows(prev => prev.length === 0 ? [{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }] : prev);
+        setNextScanId(2);
+      }
+    } else {
+      alert('Please upload a JPG, PNG, or PDF file.');
+    }
+  }, []);
+
+  function parseInvoiceText(text: string) {
+    const skipRe = /invoice|order\s*#|date|page|total|subtotal|freight|shipping|tax|bill\s*to|ship\s*to|po\s*#|account|phone|fax|address|customer|thank|payment|terms|due date/i;
+    const items: ScanRow[] = [];
+    let idC = 1;
+    for (const line of text.split(/\n/).map(l => l.trim()).filter(l => l.length > 3)) {
+      if (skipRe.test(line)) continue;
+      const mm = line.match(/\$?\s*([\d,]+\.?\d{0,2})\s*$/);
+      if (!mm) continue;
+      const fob = parseFloat(mm[1].replace(/,/g, ''));
+      if (isNaN(fob) || fob <= 0 || fob > 99999) continue;
+      let desc = line.replace(/\$?\s*[\d,]+\.?\d{0,2}\s*$/, '').replace(/^\d+\s+/, '').replace(/[A-Z]{2,10}\d+\s*/, '').trim();
+      if (desc.length < 3) continue;
+      const wm = line.match(/(\d+\.?\d*)\s*(lb|lbs|kg|kgs)/i);
+      const wt = wm ? (wm[2].toLowerCase().startsWith('kg') ? (parseFloat(wm[1]) * 2.205).toFixed(1) : wm[1]) : '';
+      const qm = line.match(/(\d+)\s*(cs|case|cases|ea|each|pcs|packs|boxes|box|bags|bag|ctn|carton)/i);
+      const qty = qm ? `${qm[1]} ${qm[2]}` : '';
+      const tariff = getBestTariff(desc);
+      items.push({ id: idC++, desc, hs: tariff ? tariff[0] : '', qty, wt, fob: fob.toFixed(2), origin: 'US' });
+    }
+    if (items.length === 0) { setScanRows([{ id: 1, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]); setNextScanId(2); }
+    else { setScanRows(items); setNextScanId(items.length + 1); }
+  }
+
+  function addScanRow() { setScanRows(prev => [...prev, { id: nextScanId, desc: '', hs: '', qty: '', wt: '', fob: '', origin: 'US' }]); setNextScanId(n => n + 1); }
+
+  function updateScanRow(id: number, field: keyof ScanRow, value: string) {
+    setScanRows(prev => prev.map(r => {
+      if (r.id !== id) return r;
+      const upd = { ...r, [field]: value };
+      if (field === 'desc' && !r.hs) { const t = getBestTariff(value); if (t) upd.hs = t[0]; }
+      return upd;
+    }));
+  }
+
+  function sendToForm() {
+    const fN = parseFloat(scanFreight) || 0, iN = parseFloat(scanInsurance) || 0;
+    const pr = scanRows.length > 0 ? (fN + iN) / scanRows.length : 0;
+    let id = nextRecId;
+    const recs: FormRecord[] = scanRows.map(row => {
+      const fob = parseFloat(row.fob) || 0, cif = fob + pr;
+      const tariff = TARIFF_DB.find(r => r[0] === row.hs);
+      const rate = tariff ? tariff[2] : '';
+      return mkRec(id++, { hs: row.hs, origin: row.origin, pkgs: row.qty, desc: row.desc, wt: row.wt, qty: row.qty, fob: fob.toFixed(2), cif: cif.toFixed(2), taxCif: cif.toFixed(2), rate, wharfFob: fob.toFixed(2) });
+    });
+    setFormRecords(recs); setNextRecId(id); setFFreight(scanFreight); setFInsurance(scanInsurance); setFPkgCount(scanPkgCount);
+    setTab('form');
+  }
+
+  function clearScan() { setScanPreview(null); setScanRows([]); setScanVisible(false); setScanFreight('0'); setScanInsurance('0'); if (fileRef.current) fileRef.current.value = ''; }
+
+  // ── Form handlers ─────────────────────────────────────────────────────────
+  function addFormRecord(d: Partial<FormRecord> = {}) { setFormRecords(prev => [...prev, mkRec(nextRecId, d)]); setNextRecId(n => n + 1); }
+  function removeFormRecord(id: number) { setFormRecords(prev => prev.filter(r => r.id !== id)); }
+  function updateRec(id: number, updates: Partial<FormRecord>) {
+    setFormRecords(prev => prev.map(r => {
+      if (r.id !== id) return r;
+      const upd = { ...r, ...updates };
+      if ('hs' in updates) { const t = TARIFF_DB.find(e => e[0] === (updates.hs ?? '').trim()); if (t) upd.rate = t[2]; }
+      return upd;
+    }));
+  }
+
+  function generateOutput() {
+    const today = new Date().toLocaleDateString('en-GB');
+    let out = 'H.M. CUSTOMS TRADE DECLARATION (HMC-12)\n' + '═'.repeat(62) + '\n';
+    out += `TYPE: ${fType}   REF: ${fRef}   PAGE: ${fPage}\n\n`;
+    out += `1. SUPPLIER\n   ${fSuppName}, ${fSuppStreet}, ${fSuppCity} ${fSuppZip}, ${fSuppCountry}\n\n`;
+    out += `2. IMPORTER   ID: ${fImpId}\n   ${fImpName}, ${fImpStreet}, ${fImpTown}\n\n`;
+    out += `3. TRANSPORT\n   Carrier: ${fCarrierId}   Port: ${fPort}   Arrival: ${fArrival}\n   Manifest: ${fManifest}   BOL/AWB: ${fBol}   Packages: ${fPkgCount}\n\n`;
+    out += `5. SHIPMENT   From: ${fShipCity}, ${fShipCountry}\n\n`;
+    out += `7. TOTAL RECORDS: ${formRecords.length}\n8. FREIGHT: $${fFreight}\n9. INSURANCE: $${fInsurance}\n\n`;
+    formRecords.forEach((r, i) => {
+      const taxCif = parseFloat(r.taxCif) || parseFloat(r.cif) || 0;
+      const wf = parseFloat(r.wharfFob) || parseFloat(r.fob) || 0;
+      const duty = computeDuty(r.rate, taxCif), wharf = wf * 0.01;
+      out += `${'─'.repeat(62)}\nRECORD ${String(i + 1).padStart(3, '0')}\n`;
+      out += `  12 CPC: ${r.cpc}   13 Tariff: ${r.hs}   14 Origin: ${r.origin}\n`;
+      out += `  15 Packages: ${r.pkgs}\n  16 Description: ${r.desc}\n  17 Net Wt: ${r.wt} lb\n`;
+      out += `  18 FOB: $${r.fob}   20 CIF: $${r.cif}\n`;
+      out += `  21  01/42 CIF $${String(taxCif.toFixed(2)).padEnd(12)} ${String(r.rate).padEnd(8)} $${duty.toFixed(2)}\n`;
+      out += `       03/25 FOB $${String(wf.toFixed(2)).padEnd(12)} 1%       $${wharf.toFixed(2)}\n`;
+      out += `  Record Total: $${(duty + wharf).toFixed(2)}\n`;
+    });
+    out += `${'═'.repeat(62)}\n10. TOTAL DUTY: $${formTotals.d.toFixed(2)}\n    WHARFAGE:  $${formTotals.w.toFixed(2)}\n    TOTAL DUE: $${formTotals.total.toFixed(2)}\n\n`;
+    out += `DECLARANT: ${fDeclName}   ID: ${fDeclId}   DATE: ${fDeclDate || today}\n`;
+    out += `I/We declare that the above particulars are true and correct.\n`;
+    out += `SIGNATURE: ___________________________   DATE: ___________\n`;
+    setFormOutput(out);
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <div style={{ background:'#0d1117', color:'#e2e8f0', minHeight:'100vh', fontFamily:"'IBM Plex Sans',system-ui,sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+        @media print { .no-print{display:none!important;} body{background:#fff;color:#000;} }
+        .hmc-inp:focus { border-color:#3b82f6 !important; }
+        .hmc-row:hover { background:rgba(255,255,255,.025); }
+        .hmc-lkrow:hover { background:#1e243a !important; }
+        .hmc-tab-btn:hover { color:#e2e8f0; }
+        .hmc-dz:hover { border-color:#3b82f6 !important; background:rgba(59,130,246,.04) !important; }
+        .hmc-addrow:hover { border-color:#3b82f6 !important; color:#3b82f6 !important; }
+        .hmc-del:hover { background:rgba(239,68,68,.15); }
       `}</style>
 
-      {/* Header */}
-      <header className="bg-[#151820] border-b border-[#252a35] px-6 py-4 flex items-center gap-4 shrink-0 print:hidden">
+      {/* ── Header ── */}
+      <header className="no-print" style={{ background:'#161b27', borderBottom:'1px solid #2a3050', padding:'14px 24px', display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
         <Link href={adminRoutes.dashboard}>
-          <button className="text-[#64748b] hover:text-[#e2e8f0] transition-colors flex items-center gap-1.5 text-sm">
-            <ChevronLeft className="w-4 h-4" /> Dashboard
+          <button style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', display:'flex', alignItems:'center', gap:6, fontSize:13, fontFamily:'inherit' }}>
+            <ChevronLeft style={{ width:16, height:16 }} /> Back
           </button>
         </Link>
-        <div className="flex items-center gap-3 ml-2">
-          <span className="font-mono text-xs text-[#00c896] border border-[#00c896] px-2 py-1 tracking-widest">HMC</span>
-          <div>
-            <p className="text-sm font-semibold">Trade Declaration Generator</p>
-            <p className="text-xs text-[#64748b] font-mono">HMC-12 · CAPS · BVI Customs · Island Tacos</p>
-          </div>
-        </div>
-        <div className="ml-auto flex gap-2">
-          <button onClick={() => setShowPreview(v => !v)} className="px-4 py-2 text-xs font-mono uppercase tracking-wider border border-[#252a35] text-[#94a3b8] hover:border-[#00c896] hover:text-[#00c896] rounded transition-colors">
-            {showPreview ? "Hide Preview" : "Preview"}
-          </button>
-          <button onClick={handlePrint} className="px-4 py-2 text-xs font-mono uppercase tracking-wider bg-[#00c896] text-black font-bold rounded hover:bg-[#00e0aa] transition-colors flex items-center gap-2">
-            <Printer className="w-3.5 h-3.5" /> Print / Save PDF
-          </button>
-        </div>
+        <span style={{ fontFamily:'monospace', fontSize:10, color:'#3b82f6', letterSpacing:3, textTransform:'uppercase', background:'rgba(59,130,246,.1)', padding:'4px 10px', borderRadius:4, border:'1px solid rgba(59,130,246,.3)' }}>BVI · CUSTOMS</span>
+        <h1 style={{ fontSize:15, fontWeight:600, flex:1, margin:0 }}>HMC-12 Trade Declaration Generator</h1>
+        <span style={{ background:'#10b981', color:'#fff', fontSize:10, padding:'2px 8px', borderRadius:20, fontFamily:'monospace' }}>ISLAND TACOS</span>
+        <button onClick={() => window.print()} style={{ display:'flex', alignItems:'center', gap:7, padding:'8px 14px', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', border:'1px solid #2a3050', background:'none', color:'#94a3b8', fontFamily:'inherit' }}>
+          <Printer style={{ width:14, height:14 }} /> Print / PDF
+        </button>
       </header>
 
-      <div className="flex flex-1 overflow-hidden print:block">
-        {/* ── SIDEBAR FORM ── */}
-        <div className="w-[380px] shrink-0 bg-[#151820] border-r border-[#252a35] overflow-y-auto p-5 space-y-6 print:hidden">
+      {/* ── Tabs ── */}
+      <div className="no-print" style={{ display:'flex', background:'#161b27', borderBottom:'1px solid #2a3050', padding:'0 24px', gap:4, overflowX:'auto' }}>
+        {(['scan','📄 Invoice Scanner'],['form','📋 Declaration Form'],['lookup','🔍 Tariff Lookup']).length && (
+          [['scan','📄 Invoice Scanner'],['form','📋 Declaration Form'],['lookup','🔍 Tariff Lookup']] as [string,string][]
+        ).map(([id,label]) => (
+          <button key={id} className="hmc-tab-btn" onClick={() => setTab(id as 'scan'|'form'|'lookup')}
+            style={{ padding:'13px 18px', fontSize:13, fontWeight:600, cursor:'pointer', color: tab===id ? '#3b82f6' : '#64748b', background:'none', border:'none', borderBottom: tab===id ? '2px solid #3b82f6' : '2px solid transparent', whiteSpace:'nowrap', fontFamily:'inherit', transition:'all .15s' }}>
+            {label}
+          </button>
+        ))}
+      </div>
 
-          {/* Shipment details */}
-          <div>
-            <p className={sec}>Shipment Details</p>
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div><label className={lbl}>Arrival Date</label><input type="date" className={inp} value={shipment.arrivalDate} onChange={e => setShipment(s => ({ ...s, arrivalDate: e.target.value }))} /></div>
-                <div><label className={lbl}>Manifest No.</label><input type="text" className={inp} placeholder="273" value={shipment.manifestNo} onChange={e => setShipment(s => ({ ...s, manifestNo: e.target.value }))} /></div>
+      {/* ════════ SCAN TAB ════════ */}
+      {tab === 'scan' && (
+        <div style={{ padding:24, maxWidth:1200, margin:'0 auto' }}>
+          <div style={{ background:'rgba(59,130,246,.1)', border:'1px solid rgba(59,130,246,.3)', borderRadius:6, padding:'10px 14px', fontSize:12, color:'#3b82f6', marginBottom:14 }}>
+            Upload your supplier invoice (JPG, PNG, or PDF). For images the tool shows a preview and lets you enter items manually. For text PDFs, it auto-extracts line items and looks up tariff numbers.
+          </div>
+
+          {/* Drop zone */}
+          <div className="hmc-dz" onClick={() => fileRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
+            style={{ border:`2px dashed ${dragOver?'#3b82f6':'#2a3050'}`, borderRadius:10, padding:40, textAlign:'center', cursor:'pointer', background: dragOver?'rgba(59,130,246,.04)':'#161b27', marginBottom:16, transition:'all .2s' }}>
+            <div style={{ fontSize:36, marginBottom:10 }}>📦</div>
+            <h3 style={{ fontSize:14, marginBottom:6 }}>Drop invoice here or click to upload</h3>
+            <p style={{ fontSize:12, color:'#64748b' }}>JPG · PNG · PDF &nbsp;|&nbsp; max 20 MB</p>
+          </div>
+          <input type="file" ref={fileRef} accept=".jpg,.jpeg,.png,.pdf,.webp" style={{ display:'none' }} onChange={e => handleFile(e.target.files?.[0] ?? null)} />
+
+          {/* Preview */}
+          {scanPreview && (
+            <div style={CS}>
+              <div style={CT}>Invoice Preview</div>
+              {scanPreview.type === 'image' && <img src={scanPreview.src} style={{ maxWidth:'100%', maxHeight:320, borderRadius:8, border:'1px solid #2a3050' }} alt="invoice" />}
+              {scanPreview.type === 'pdf'   && <div style={{ background:'#1e243a', border:'1px solid #2a3050', borderRadius:8, padding:12, fontSize:12, fontFamily:'monospace', color:'#94a3b8', maxHeight:240, overflowY:'auto', whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{scanPreview.text}</div>}
+            </div>
+          )}
+
+          {/* Line items */}
+          {scanVisible && <>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+              <h2 style={{ fontSize:13, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'#94a3b8', margin:0 }}>Line Items</h2>
+              <div style={{ flex:1, height:1, background:'#2a3050' }} />
+            </div>
+            <div style={{ background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.3)', borderRadius:6, padding:'10px 14px', fontSize:12, color:'#f59e0b', marginBottom:14 }}>
+              Review each line. Tariff numbers are auto-suggested from the CMDA 2010 schedule — verify them. Edit anything before sending to the Declaration form.
+            </div>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, marginBottom:14 }}>
+              <div><label style={LS}>Freight Cost $</label><input className="hmc-inp" style={IS} type="number" value={scanFreight} onChange={e => setScanFreight(e.target.value)} min="0" step="0.01" /></div>
+              <div><label style={LS}>Insurance Cost $</label><input className="hmc-inp" style={IS} type="number" value={scanInsurance} onChange={e => setScanInsurance(e.target.value)} min="0" step="0.01" /></div>
+              <div><label style={LS}>No. of Packages</label><input className="hmc-inp" style={IS} type="number" value={scanPkgCount} onChange={e => setScanPkgCount(e.target.value)} min="1" /></div>
+            </div>
+
+            <div style={{ ...CS, padding:0, overflow:'hidden' }}>
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                  <thead>
+                    <tr>{['#','Description','HS Tariff No.','Rate','Qty / Units','Net Wt (lb)','FOB Value $','CIF Value $','Duty $','Origin',''].map(h => (
+                      <th key={h} style={{ background:'#252d47', padding:'10px 8px', textAlign:'left', fontFamily:'monospace', fontSize:10, color:'#64748b', letterSpacing:'.5px', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
+                    ))}</tr>
+                  </thead>
+                  <tbody>
+                    {scanRows.map((row, idx) => {
+                      const tariff = TARIFF_DB.find(r => r[0] === row.hs);
+                      const rate = tariff ? tariff[2] : (row.hs ? '—' : '');
+                      const rc = rate ? rateClass(rate) : 'def';
+                      const fob = parseFloat(row.fob) || 0;
+                      const cif = (fob + perRow).toFixed(2);
+                      const duty = rate ? computeDuty(rate, fob + perRow).toFixed(2) : '0.00';
+                      const tis: React.CSSProperties = { background:'#1e243a', border:'1px solid #2a3050', color:'#e2e8f0', padding:'5px 7px', borderRadius:4, fontSize:12, fontFamily:'inherit', outline:'none', width:'100%' };
+                      return (
+                        <tr key={row.id} className="hmc-row" style={{ borderBottom:'1px solid #2a3050' }}>
+                          <td style={{ padding:8, color:'#64748b', fontFamily:'monospace', textAlign:'center', width:32 }}>{idx+1}</td>
+                          <td style={{ padding:8, minWidth:220 }}><input className="hmc-inp" style={tis} type="text" placeholder="Description" value={row.desc} onChange={e => updateScanRow(row.id,'desc',e.target.value)} /></td>
+                          <td style={{ padding:8, minWidth:110 }}><input className="hmc-inp" style={{ ...tis, fontFamily:'monospace' }} type="text" placeholder="0207.419" value={row.hs} onChange={e => updateScanRow(row.id,'hs',e.target.value)} /></td>
+                          <td style={{ padding:8 }}>
+                            {rate ? <span style={{ display:'inline-flex', alignItems:'center', gap:4, background:RC[rc].bg, color:RC[rc].color, border:`1px solid ${RC[rc].border}`, borderRadius:4, padding:'2px 7px', fontSize:10, fontFamily:'monospace', whiteSpace:'nowrap' }}>{rate}</span>
+                                   : <span style={{ color:'#64748b', fontSize:11 }}>—</span>}
+                          </td>
+                          <td style={{ padding:8, minWidth:90 }}><input className="hmc-inp" style={tis} type="text" placeholder="10 cs" value={row.qty} onChange={e => updateScanRow(row.id,'qty',e.target.value)} /></td>
+                          <td style={{ padding:8, minWidth:90 }}><input className="hmc-inp" style={tis} type="number" placeholder="0" min="0" step="0.1" value={row.wt} onChange={e => updateScanRow(row.id,'wt',e.target.value)} /></td>
+                          <td style={{ padding:8, minWidth:100 }}><input className="hmc-inp" style={tis} type="number" placeholder="0.00" min="0" step="0.01" value={row.fob} onChange={e => updateScanRow(row.id,'fob',e.target.value)} /></td>
+                          <td style={{ padding:8, minWidth:100 }}><input style={{ ...tis, color:'#94a3b8' }} type="number" value={cif} readOnly /></td>
+                          <td style={{ padding:8, minWidth:90 }}><input style={{ ...tis, color:'#f59e0b' }} type="number" value={duty} readOnly /></td>
+                          <td style={{ padding:8, minWidth:50 }}><input className="hmc-inp" style={tis} type="text" value={row.origin} onChange={e => updateScanRow(row.id,'origin',e.target.value)} /></td>
+                          <td style={{ padding:8 }}><button className="hmc-del" onClick={() => setScanRows(p => p.filter(r => r.id !== row.id))} style={{ background:'none', border:'none', color:'#ef4444', cursor:'pointer', fontSize:16, padding:'2px 6px', borderRadius:4 }}>✕</button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><label className={lbl}>BOL / AWB No.</label><input type="text" className={inp} placeholder="ISA31C" value={shipment.bolNo} onChange={e => setShipment(s => ({ ...s, bolNo: e.target.value }))} /></div>
-                <div><label className={lbl}>No. of Packages</label><input type="number" className={inp} min="1" value={shipment.numPackages} onChange={e => setShipment(s => ({ ...s, numPackages: e.target.value }))} /></div>
-              </div>
-              <div><label className={lbl}>Container ID & Length</label><input type="text" className={inp} placeholder="Leave blank if none" value={shipment.containerId} onChange={e => setShipment(s => ({ ...s, containerId: e.target.value }))} /></div>
+            </div>
+            <button className="hmc-addrow" onClick={addScanRow} style={{ background:'none', border:'1px dashed #2a3050', color:'#64748b', padding:8, width:'100%', borderRadius:6, cursor:'pointer', fontSize:12, marginTop:4, fontFamily:'inherit', transition:'all .15s' }}>+ Add line item</button>
+
+            {/* Totals strip */}
+            <div style={{ display:'flex', gap:16, flexWrap:'wrap', background:'#252d47', border:'1px solid #2a3050', borderRadius:8, padding:'14px 18px', marginTop:14, marginBottom:16 }}>
+              {([['FOB Total',`$${scanTotals.fobT.toFixed(2)}`,''],['Freight',`$${sfN.toFixed(2)}`,''],['Insurance',`$${siN.toFixed(2)}`,''],['CIF Total',`$${scanTotals.cifT.toFixed(2)}`,''],['Customs Duty',`$${scanTotals.dutyT.toFixed(2)}`,'#f59e0b'],['Wharfage (1%)',`$${scanTotals.wharf.toFixed(2)}`,''],['Total Due',`$${scanTotals.total.toFixed(2)}`,'#10b981']] as [string,string,string][]).map(([lbl,val,col]) => (
+                <div key={lbl} style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                  <label style={{ fontSize:10, fontFamily:'monospace', color:'#64748b', textTransform:'uppercase' }}>{lbl}</label>
+                  <span style={{ fontSize:15, fontWeight:700, fontFamily:'monospace', color: col||'#e2e8f0' }}>{val}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+              <button onClick={sendToForm} style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:7, fontSize:13, fontWeight:600, cursor:'pointer', border:'none', fontFamily:'inherit', background:'#10b981', color:'#fff' }}>✅ Send to Declaration Form</button>
+              <button onClick={clearScan} style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:7, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background:'none', border:'1px solid #2a3050', color:'#94a3b8' }}>🗑 Clear</button>
+            </div>
+          </>}
+        </div>
+      )}
+
+      {/* ════════ FORM TAB ════════ */}
+      {tab === 'form' && (
+        <div style={{ padding:24, maxWidth:1200, margin:'0 auto' }}>
+
+          {/* Header */}
+          <div style={CS}><div style={CT}>Header</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12 }}>
+              <div><label style={LS}>Type</label><select className="hmc-inp" style={IS} value={fType} onChange={e => setFType(e.target.value)}>{['IMPORT','EXPORT','DEPOSIT','ADJUSTMENT'].map(t=><option key={t}>{t}</option>)}</select></div>
+              <div><label style={LS}>Trader Reference</label><input className="hmc-inp" style={IS} type="text" placeholder="e.g. IT-2026-001" value={fRef} onChange={e=>setFRef(e.target.value)} /></div>
+              <div><label style={LS}>Page / Total</label><input className="hmc-inp" style={IS} type="text" value={fPage} onChange={e=>setFPage(e.target.value)} /></div>
+              <div><label style={LS}>Related TD No.</label><input className="hmc-inp" style={IS} type="text" value={fRelTD} onChange={e=>setFRelTD(e.target.value)} /></div>
             </div>
           </div>
 
           {/* Supplier */}
-          <div>
-            <p className={sec}>Supplier Details</p>
-            <div className="space-y-3">
-              <div><label className={lbl}>Supplier Name</label><input type="text" className={inp} placeholder="e.g. Sysco Puerto Rico" value={supplier.name} onChange={e => setSupplier(s => ({ ...s, name: e.target.value }))} /></div>
-              <div><label className={lbl}>Supplier Address</label><input type="text" className={inp} placeholder="Street address" value={supplier.street} onChange={e => setSupplier(s => ({ ...s, street: e.target.value }))} /></div>
-              <div className="grid grid-cols-2 gap-2">
-                <div><label className={lbl}>City / State</label><input type="text" className={inp} placeholder="San Juan, PR" value={supplier.city} onChange={e => setSupplier(s => ({ ...s, city: e.target.value }))} /></div>
-                <div><label className={lbl}>Country</label><input type="text" className={inp} value={supplier.country} onChange={e => setSupplier(s => ({ ...s, country: e.target.value }))} /></div>
-              </div>
-              <div><label className={lbl}>City of Direct Shipment</label><input type="text" className={inp} placeholder="San Juan" value={supplier.shipmentCity} onChange={e => setSupplier(s => ({ ...s, shipmentCity: e.target.value }))} /></div>
+          <div style={CS}><div style={CT}>1 · Supplier Details</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:10 }}>
+              <div><label style={LS}>Supplier Name</label><input className="hmc-inp" style={IS} type="text" value={fSuppName} onChange={e=>setFSuppName(e.target.value)} /></div>
+              <div><label style={LS}>Street</label><input className="hmc-inp" style={IS} type="text" value={fSuppStreet} onChange={e=>setFSuppStreet(e.target.value)} /></div>
+              <div><label style={LS}>City / State</label><input className="hmc-inp" style={IS} type="text" value={fSuppCity} onChange={e=>setFSuppCity(e.target.value)} /></div>
+              <div><label style={LS}>ZIP</label><input className="hmc-inp" style={IS} type="text" value={fSuppZip} onChange={e=>setFSuppZip(e.target.value)} /></div>
+            </div>
+            <div><label style={LS}>Country</label><input className="hmc-inp" style={IS} type="text" value={fSuppCountry} onChange={e=>setFSuppCountry(e.target.value)} /></div>
+          </div>
+
+          {/* Importer */}
+          <div style={CS}><div style={CT}>2 · Importer Details</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div><label style={LS}>Importer Name</label><input className="hmc-inp" style={IS} type="text" value={fImpName} onChange={e=>setFImpName(e.target.value)} /></div>
+              <div><label style={LS}>Importer ID</label><input className="hmc-inp" style={IS} type="text" value={fImpId} onChange={e=>setFImpId(e.target.value)} /></div>
+              <div><label style={LS}>PO Box / Street</label><input className="hmc-inp" style={IS} type="text" value={fImpStreet} onChange={e=>setFImpStreet(e.target.value)} /></div>
+              <div><label style={LS}>Town / Island</label><input className="hmc-inp" style={IS} type="text" value={fImpTown} onChange={e=>setFImpTown(e.target.value)} /></div>
             </div>
           </div>
 
-          {/* Freight & Insurance */}
-          <div>
-            <p className={sec}>Freight & Insurance</p>
-            <div className="grid grid-cols-2 gap-2">
-              <div><label className={lbl}>Total Freight (USD)</label><input type="number" className={inp} step="0.01" placeholder="0.00" value={freight} onChange={e => setFreight(e.target.value)} /></div>
-              <div><label className={lbl}>Total Insurance (USD)</label><input type="number" className={inp} step="0.01" placeholder="0.00" value={insurance} onChange={e => setInsurance(e.target.value)} /></div>
+          {/* Transport */}
+          <div style={CS}><div style={CT}>3 & 4 · Transport & Manifest</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:10 }}>
+              <div><label style={LS}>Carrier ID / No.</label><input className="hmc-inp" style={IS} type="text" value={fCarrierId} onChange={e=>setFCarrierId(e.target.value)} /></div>
+              <div><label style={LS}>Port of Arrival</label><input className="hmc-inp" style={IS} type="text" value={fPort} onChange={e=>setFPort(e.target.value)} /></div>
+              <div><label style={LS}>Arrival Date</label><input className="hmc-inp" style={IS} type="date" value={fArrival} onChange={e=>setFArrival(e.target.value)} /></div>
+              <div><label style={LS}>Manifest No.</label><input className="hmc-inp" style={IS} type="text" value={fManifest} onChange={e=>setFManifest(e.target.value)} /></div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+              <div><label style={LS}>Bill of Lading / AWB</label><input className="hmc-inp" style={IS} type="text" value={fBol} onChange={e=>setFBol(e.target.value)} /></div>
+              <div><label style={LS}>Container ID & Length</label><input className="hmc-inp" style={IS} type="text" value={fContainer} onChange={e=>setFContainer(e.target.value)} /></div>
+              <div><label style={LS}>No. of Packages</label><input className="hmc-inp" style={IS} type="number" value={fPkgCount} onChange={e=>setFPkgCount(e.target.value)} /></div>
             </div>
           </div>
 
-          {/* Line items */}
-          <div>
-            <p className={sec}>Line Items (Invoice Lines)</p>
-            <div className="grid grid-cols-[2fr_1.2fr_0.7fr_0.7fr_24px] gap-1.5 pb-2 border-b border-[#252a35] mb-2">
-              {["Description", "Tariff No.", "FOB $", "Weight lb", ""].map(h => (
-                <span key={h} className="text-[9px] text-[#64748b] uppercase tracking-wider font-mono">{h}</span>
-              ))}
-            </div>
-            <div className="space-y-2">
-              {lines.map(line => {
-                const info = getTariffInfo(line.tariff);
-                const rateStr = getRateStr(info, line.tariff);
-                const isFree = line.tariff && info && info.rate === 0;
-                const isTaxed = line.tariff && (!info || (info.rate !== null && (info.rate ?? 0) > 0) || info.rate === null);
-                return (
-                  <div key={line.id} className="grid grid-cols-[2fr_1.2fr_0.7fr_0.7fr_24px] gap-1.5 items-center">
-                    <input type="text" className={inp} placeholder="e.g. Frozen Chicken Wings" value={line.desc} onChange={e => updateLine(line.id, "desc", e.target.value)} />
-                    <input type="text" list="tariff-list" className={inp} placeholder="0207.412" value={line.tariff} onChange={e => updateLine(line.id, "tariff", e.target.value)} />
-                    <input type="number" className={inp} placeholder="0.00" step="0.01" value={line.fob} onChange={e => updateLine(line.id, "fob", e.target.value)} />
-                    <input type="number" className={inp} placeholder="0.0" step="0.1" value={line.weight} onChange={e => updateLine(line.id, "weight", e.target.value)} />
-                    <button onClick={() => removeLine(line.id)} className="text-[#64748b] hover:text-red-400 transition-colors flex items-center justify-center">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                    {line.tariff && (
-                      <div className="col-span-5 -mt-1">
-                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${isFree ? "bg-green-950 text-green-400" : isTaxed ? "bg-orange-950 text-orange-400" : "bg-[#252a35] text-[#94a3b8]"}`}>
-                          {rateStr}{info ? ` — ${info.desc.substring(0, 50)}` : " (unknown tariff — defaulting to 20%)"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <button onClick={addLine} className="mt-3 w-full py-2.5 border border-dashed border-[#252a35] text-[#64748b] hover:border-[#00c896] hover:text-[#00c896] text-xs font-mono uppercase tracking-wider rounded transition-colors flex items-center justify-center gap-2">
-              <Plus className="w-3.5 h-3.5" /> Add Line Item
-            </button>
-            <datalist id="tariff-list">
-              {Object.keys(TARIFF_DB).map(k => <option key={k} value={k}>{TARIFF_DB[k].desc}</option>)}
-            </datalist>
-          </div>
-
-          {/* Totals summary */}
-          <div>
-            <p className={sec}>Summary</p>
-            <div className="bg-[#0d0f14] border border-[#252a35] rounded p-3 font-mono text-xs space-y-1">
-              {[
-                ["Total FOB", `$${totalFob.toFixed(2)}`],
-                ["Freight", `$${freightN.toFixed(2)}`],
-                ["Insurance", `$${insuranceN.toFixed(2)}`],
-                ["Total CIF", `$${totalCif.toFixed(2)}`],
-                ["Customs Duty", `$${totalDuty.toFixed(2)}`],
-                ["Wharfage (1% FOB)", `$${wharfage.toFixed(2)}`],
-              ].map(([label, val]) => (
-                <div key={label} className="flex justify-between text-[#94a3b8] border-b border-[#252a35] py-1 last:border-0">
-                  <span>{label}</span><span>{val}</span>
-                </div>
-              ))}
-              <div className="flex justify-between text-[#00c896] font-bold text-sm pt-2 border-t border-[#252a35]">
-                <span>TOTAL DUE</span><span>${grandTotal.toFixed(2)}</span>
-              </div>
+          {/* Shipment */}
+          <div style={CS}><div style={CT}>5 · Shipment Details</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+              <div><label style={LS}>City of Direct Shipment</label><input className="hmc-inp" style={IS} type="text" value={fShipCity} onChange={e=>setFShipCity(e.target.value)} /></div>
+              <div><label style={LS}>Country of Direct Shipment</label><input className="hmc-inp" style={IS} type="text" value={fShipCountry} onChange={e=>setFShipCountry(e.target.value)} /></div>
+              <div><label style={LS}>Country of Origin</label><input className="hmc-inp" style={IS} type="text" value={fOrigCountry} onChange={e=>setFOrigCountry(e.target.value)} /></div>
             </div>
           </div>
 
-          <button onClick={() => setShowPreview(true)} className="w-full py-3 bg-[#00c896] text-black font-bold font-mono text-xs uppercase tracking-widest rounded hover:bg-[#00e0aa] transition-colors">
-            ▶ Generate Declaration
-          </button>
-        </div>
-
-        {/* ── PREVIEW PANEL ── */}
-        <div className="flex-1 overflow-y-auto bg-[#1a1d25] p-6 print:p-0 print:bg-white">
-          {!showPreview ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-[#64748b]">
-              <div className="text-5xl mb-4">📋</div>
-              <p className="font-mono text-xs">Fill in the details and click<br />Generate Declaration</p>
+          {/* Financials */}
+          <div style={CS}><div style={CT}>8–10 · Freight, Insurance & Duty Summary</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:10 }}>
+              <div><label style={LS}>Total Freight $</label><input className="hmc-inp" style={IS} type="number" step="0.01" value={fFreight} onChange={e=>setFFreight(e.target.value)} /></div>
+              <div><label style={LS}>Total Insurance $</label><input className="hmc-inp" style={IS} type="number" step="0.01" value={fInsurance} onChange={e=>setFInsurance(e.target.value)} /></div>
+              <div><label style={LS}>Total Customs Duty $</label><input style={{ ...IS, color:'#f59e0b' }} type="number" value={formTotals.d.toFixed(2)} readOnly /></div>
+              <div><label style={LS}>Total Wharfage $</label><input style={IS} type="number" value={formTotals.w.toFixed(2)} readOnly /></div>
             </div>
-          ) : (
-            <div id="hmc-print-area" style={{ background: "#fff", color: "#000", maxWidth: 780, margin: "0 auto", padding: 20, fontFamily: "Arial, Helvetica, sans-serif", fontSize: 9, boxShadow: "0 4px 40px rgba(0,0,0,0.5)", borderRadius: 2 }}>
-              {/* Form header */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8, borderBottom: "2px solid #000", paddingBottom: 6 }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: "bold", marginBottom: 4 }}>🛃 H.M. Customs Trade Declaration</div>
-                  <div style={{ display: "flex", gap: 16, fontSize: 9, marginTop: 6 }}>
-                    {["IMPORT", "EXPORT", "DEPOSIT", "ADJUSTMENT"].map((t, i) => (
-                      <div key={t} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <div style={{ width: 10, height: 10, border: "1px solid #000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 8 }}>{i === 0 ? "✓" : "\u00a0"}</div>
-                        {t}
-                      </div>
-                    ))}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+              <div><label style={LS}>Total Alcohol $</label><input className="hmc-inp" style={IS} type="number" value={fAlcohol} onChange={e=>setFAlcohol(e.target.value)} /></div>
+              <div><label style={LS}>Total Fossil Fuel $</label><input className="hmc-inp" style={IS} type="number" value={fFossil} onChange={e=>setFFossil(e.target.value)} /></div>
+              <div><label style={LS}>TOTAL DUE $</label><input style={{ ...IS, color:'#10b981', fontWeight:700, fontSize:15 }} type="number" value={formTotals.total.toFixed(2)} readOnly /></div>
+            </div>
+          </div>
+
+          {/* Declarant */}
+          <div style={CS}><div style={CT}>Declarant</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12 }}>
+              <div><label style={LS}>Declarant Name</label><input className="hmc-inp" style={IS} type="text" value={fDeclName} onChange={e=>setFDeclName(e.target.value)} /></div>
+              <div><label style={LS}>Declarant ID</label><input className="hmc-inp" style={IS} type="text" value={fDeclId} onChange={e=>setFDeclId(e.target.value)} /></div>
+              <div><label style={LS}>Date</label><input className="hmc-inp" style={IS} type="date" value={fDeclDate} onChange={e=>setFDeclDate(e.target.value)} /></div>
+            </div>
+          </div>
+
+          {/* Records */}
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+            <h2 style={{ fontSize:13, fontWeight:700, letterSpacing:1, textTransform:'uppercase', color:'#94a3b8', margin:0 }}>Records (Line Items)</h2>
+            <div style={{ flex:1, height:1, background:'#2a3050' }} />
+          </div>
+
+          {formRecords.map((r, idx) => {
+            const taxCif = parseFloat(r.taxCif) || parseFloat(r.cif) || 0;
+            const wf = parseFloat(r.wharfFob) || parseFloat(r.fob) || 0;
+            const dutyAmt = computeDuty(r.rate, taxCif);
+            const wharfAmt = wf * 0.01;
+            const tis: React.CSSProperties = { background:'#1e243a', border:'1px solid #2a3050', color:'#e2e8f0', padding:'6px', borderRadius:4, fontFamily:'inherit', fontSize:12, outline:'none', width:'100%' };
+            return (
+              <div key={r.id} style={{ ...CS, borderLeft:'3px solid #3b82f6' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', ...CT }}>
+                  <span>Record No. {String(idx+1).padStart(3,'0')}</span>
+                  <button onClick={() => removeFormRecord(r.id)} style={{ background:'none', border:'1px solid #ef4444', color:'#ef4444', cursor:'pointer', padding:'4px 10px', borderRadius:4, fontSize:12, fontFamily:'inherit' }}>Remove</button>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:10 }}>
+                  <div><label style={LS}>12 · CPC</label><input className="hmc-inp" style={IS} type="text" value={r.cpc} onChange={e=>updateRec(r.id,{cpc:e.target.value})} /></div>
+                  <div><label style={LS}>13 · Tariff No.</label><input className="hmc-inp" style={{ ...IS, fontFamily:'monospace' }} type="text" placeholder="e.g. 0207.419" value={r.hs} onChange={e=>updateRec(r.id,{hs:e.target.value})} /></div>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:10 }}>
+                  <div><label style={LS}>14 · Country of Origin</label><input className="hmc-inp" style={IS} type="text" value={r.origin} onChange={e=>updateRec(r.id,{origin:e.target.value})} /></div>
+                  <div><label style={LS}>15 · No. and Type of Packages</label><input className="hmc-inp" style={IS} type="text" placeholder="e.g. 5 Cartons" value={r.pkgs} onChange={e=>updateRec(r.id,{pkgs:e.target.value})} /></div>
+                </div>
+                <div style={{ marginBottom:10 }}><label style={LS}>16 · Description of Goods</label><textarea className="hmc-inp" style={{ ...IS, resize:'vertical', minHeight:60 }} value={r.desc} onChange={e=>updateRec(r.id,{desc:e.target.value})} /></div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, marginBottom:10 }}>
+                  <div><label style={LS}>17a · Net Wt (lb)</label><input className="hmc-inp" style={IS} type="number" min="0" step="0.1" value={r.wt} onChange={e=>updateRec(r.id,{wt:e.target.value})} /></div>
+                  <div><label style={LS}>17b · Qty / Units</label><input className="hmc-inp" style={IS} type="text" value={r.qty} onChange={e=>updateRec(r.id,{qty:e.target.value})} /></div>
+                  <div><label style={LS}>18 · FOB Value $</label><input className="hmc-inp" style={IS} type="number" min="0" step="0.01" value={r.fob} onChange={e=>updateRec(r.id,{fob:e.target.value,wharfFob:e.target.value})} /></div>
+                  <div><label style={LS}>20 · CIF Value $</label><input className="hmc-inp" style={IS} type="number" min="0" step="0.01" value={r.cif} onChange={e=>updateRec(r.id,{cif:e.target.value,taxCif:e.target.value})} /></div>
+                </div>
+                {/* Tax calculation */}
+                <div style={{ background:'#252d47', padding:12, borderRadius:6 }}>
+                  <div style={{ fontSize:10, fontFamily:'monospace', color:'#3b82f6', letterSpacing:1, textTransform:'uppercase', marginBottom:10 }}>21 · Tax Calculation</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'90px 90px 1fr 100px 100px', gap:8, fontSize:10, fontFamily:'monospace', color:'#64748b', marginBottom:4, padding:'0 2px' }}>
+                    <span>TAX</span><span>IND.</span><span>VALUE</span><span>RATE</span><span>AMOUNT</span>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'90px 90px 1fr 100px 100px', gap:8, alignItems:'center', marginBottom:6 }}>
+                    <input style={{ ...tis, fontFamily:'monospace', fontSize:11 }} defaultValue="01 Imp." readOnly />
+                    <input style={{ ...tis, fontFamily:'monospace', fontSize:11 }} defaultValue="42 CIF" readOnly />
+                    <input className="hmc-inp" style={tis} type="number" step="0.01" value={r.taxCif} onChange={e=>updateRec(r.id,{taxCif:e.target.value})} />
+                    <input className="hmc-inp" style={{ ...tis, fontFamily:'monospace', fontSize:11 }} type="text" value={r.rate} onChange={e=>updateRec(r.id,{rate:e.target.value})} />
+                    <input style={{ ...tis, color:'#f59e0b', fontWeight:600 }} type="number" value={dutyAmt.toFixed(2)} readOnly />
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'90px 90px 1fr 100px 100px', gap:8, alignItems:'center' }}>
+                    <input style={{ ...tis, fontFamily:'monospace', fontSize:11 }} defaultValue="03 Whf" readOnly />
+                    <input style={{ ...tis, fontFamily:'monospace', fontSize:11 }} defaultValue="25 FOB" readOnly />
+                    <input className="hmc-inp" style={tis} type="number" step="0.01" value={r.wharfFob || r.fob} onChange={e=>updateRec(r.id,{wharfFob:e.target.value})} />
+                    <input style={{ ...tis, fontFamily:'monospace', fontSize:11 }} defaultValue="1%" readOnly />
+                    <input style={tis} type="number" value={wharfAmt.toFixed(2)} readOnly />
                   </div>
                 </div>
-                <div style={{ textAlign: "right", fontSize: 8 }}>
-                  <div>Page No./Total: <span style={{ borderBottom: "1px solid #000", minWidth: 60, display: "inline-block" }}>1 / {Math.ceil(lines.length / 3)}</span></div>
-                  <div>Trader Reference: <span style={{ borderBottom: "1px solid #000", minWidth: 80, display: "inline-block" }}>&nbsp;</span></div>
-                  <div>Related TD No.: <span style={{ borderBottom: "1px solid #000", minWidth: 80, display: "inline-block" }}>&nbsp;</span></div>
-                </div>
+                <div style={{ marginTop:10 }}><label style={LS}>22 · Additional Information</label><input className="hmc-inp" style={IS} type="text" placeholder="e.g. see attached commercial invoice" value={r.additionalInfo} onChange={e=>updateRec(r.id,{additionalInfo:e.target.value})} /></div>
               </div>
+            );
+          })}
 
-              {/* Supplier + Importer grid */}
-              <div className="fp-grid2">
-                <div className="fp-cell hdr">1 SUPPLIER DETAILS &nbsp;&nbsp; ID: ___________</div>
-                <div className="fp-cell hdr">5 SHIPMENT DETAILS</div>
-                <div className="fp-cell"><span className="fp-lbl">a. NAME</span><span className="fp-val">{supplier.name}</span></div>
-                <div className="fp-cell"><span className="fp-lbl">a. CITY OF DIRECT SHIPMENT</span><span className="fp-val">{supplier.shipmentCity}</span></div>
-                <div className="fp-cell"><span className="fp-lbl">b. STREET</span><span className="fp-val">{supplier.street}</span></div>
-                <div className="fp-cell"><span className="fp-lbl">b. COUNTRY OF DIRECT SHIPMENT</span><span className="fp-val">{supplier.country}</span></div>
-                <div className="fp-cell"><span className="fp-lbl">c. CITY, STATE/PROV.</span><span className="fp-val">{supplier.city}</span></div>
-                <div className="fp-cell"><span className="fp-lbl">c. COUNTRY OF ORIGINAL SHIPMENT</span><span className="fp-val">{supplier.country}</span></div>
-                <div className="fp-cell"><span className="fp-lbl">e. COUNTRY</span><span className="fp-val">{supplier.country}</span></div>
-                <div className="fp-cell hdr">6 ADDITIONAL INFORMATION</div>
+          <button className="hmc-addrow" onClick={() => addFormRecord()} style={{ background:'none', border:'1px dashed #2a3050', color:'#64748b', padding:8, width:'100%', borderRadius:6, cursor:'pointer', fontSize:12, fontFamily:'inherit', marginBottom:16, transition:'all .15s' }}>+ Add Record</button>
 
-                <div className="fp-cell hdr">2 IMPORTER DETAILS &nbsp;&nbsp; ID: {DECLARANT.importerId}</div>
-                <div className="fp-cell"><span className="fp-lbl">7 TOTAL NO. OF RECORDS</span><span className="fp-val">{lines.length}</span></div>
-                <div className="fp-cell"><span className="fp-lbl">a. NAME</span><span className="fp-val">{DECLARANT.importerName}</span></div>
-                <div className="fp-cell"><span className="fp-lbl">8 TOTAL FREIGHT</span><span className="fp-val">${freightN.toFixed(2)}</span></div>
-                <div className="fp-cell"><span className="fp-lbl">b. PO BOX, STREET</span><span className="fp-val">{DECLARANT.importerAddress}</span></div>
-                <div className="fp-cell">
-                  <span className="fp-lbl">9 TOTAL INSURANCE</span><span className="fp-val">${insuranceN.toFixed(2)}</span><br />
-                  <span className="fp-lbl" style={{ marginTop: 4 }}>Total Customs Duty</span><span className="fp-val">${totalDuty.toFixed(2)}</span><br />
-                  <span className="fp-lbl">Total Wharfage</span><span className="fp-val">${wharfage.toFixed(2)}</span>
-                </div>
-                <div className="fp-cell"><span className="fp-lbl">c. TOWN, ISLAND</span><span className="fp-val">{DECLARANT.importerTown}</span></div>
+          <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:16 }}>
+            <button onClick={generateOutput} style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:7, fontSize:13, fontWeight:600, cursor:'pointer', border:'none', fontFamily:'inherit', background:'#3b82f6', color:'#fff' }}>📄 Generate Declaration Text</button>
+            <button onClick={() => window.print()} style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:7, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background:'none', border:'1px solid #2a3050', color:'#94a3b8' }}><Printer style={{ width:14, height:14 }} /> Print</button>
+            <button onClick={() => { setFormRecords([]); setFormOutput(''); }} style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'6px 12px', borderRadius:7, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background:'none', border:'1px solid #2a3050', color:'#94a3b8' }}>🗑 Clear Records</button>
+          </div>
 
-                <div className="fp-cell hdr">3 TRANSPORT DETAILS</div>
-                <div className="fp-cell" style={{ background: "#fffde7", fontWeight: "bold" }}>
-                  <span className="fp-lbl">10 TOTAL DUTY</span>
-                  <span style={{ fontSize: 13, fontWeight: "bold" }}>${grandTotal.toFixed(2)}</span>
-                </div>
-
-                <div className="fp-cell"><span className="fp-lbl">a. CARRIER ID / NO.</span><span className="fp-val">{DECLARANT.carrierIdNo}</span></div>
-                <div />
-                <div className="fp-cell"><span className="fp-lbl">b. PORT OF ARRIVAL</span><span className="fp-val">{DECLARANT.portOfArrival}</span></div>
-                <div />
-                <div className="fp-cell"><span className="fp-lbl">c. ARRIVAL DATE</span><span className="fp-val">{fmtDate(shipment.arrivalDate)}</span></div>
-                <div />
-
-                <div className="fp-cell hdr">4 MANIFEST DETAILS &nbsp;&nbsp; NO.: {shipment.manifestNo}</div>
-                <div />
-                <div className="fp-cell"><span className="fp-lbl">a. NO. OF PACKAGES</span><span className="fp-val">{shipment.numPackages}</span></div>
-                <div />
-                <div className="fp-cell"><span className="fp-lbl">b. BILL OF LADING / AWB</span><span className="fp-val">{shipment.bolNo}</span></div>
-                <div />
-                <div className="fp-cell"><span className="fp-lbl">c. CONTAINER ID & LENGTH</span><span className="fp-val">{shipment.containerId || "—"}</span></div>
-                <div />
-              </div>
-
-              {/* Record blocks */}
-              {lineCalcs.map((l, i) => {
-                const recNo = String(i + 1).padStart(3, "0");
-                const rateStr = getRateStr(l.info, l.tariff);
-                const wharfAmt = (l.fobN * 0.01).toFixed(2);
-                const fobFrac = totalFob > 0 ? l.fobN / totalFob : 0;
-                return (
-                  <div key={l.id} className="rec-block">
-                    <div className="rec-hdr">11 RECORD NO.: {recNo}</div>
-                    <div className="rec-grid">
-                      <div className="rec-cell"><span className="fp-lbl">12 CPC</span><span className="fp-val">{l.info?.cpc ?? "C400"}</span></div>
-                      <div className="rec-cell"><span className="fp-lbl">18 F.O.B. VALUE</span><span className="fp-val">${l.fobN.toFixed(2)}</span></div>
-                      <div className="rec-cell"><span className="fp-lbl">13 TARIFF NO.</span><span className="fp-val">{l.tariff}</span></div>
-                      <div className="rec-cell"><span className="fp-lbl">19 CHARGES / DEDUCTIONS</span><span className="fp-val">Freight: ${(fobFrac * freightN).toFixed(2)} | Ins: ${(fobFrac * insuranceN).toFixed(2)}</span></div>
-                      <div className="rec-cell"><span className="fp-lbl">14 COUNTRY OF ORIGIN</span><span className="fp-val">{supplier.country || "United States"} / US</span></div>
-                      <div className="rec-cell" style={{ background: "#f9f9f9" }}><span className="fp-lbl">20 C.I.F. VALUE</span><span className="fp-val" style={{ fontWeight: "bold" }}>${l.lineCif.toFixed(2)}</span></div>
-                      <div className="rec-cell" style={{ gridColumn: "span 2" }}><span className="fp-lbl">16 DESCRIPTION</span><span className="fp-val">{l.desc}</span></div>
-                    </div>
-                    <div style={{ padding: "4px 6px", borderTop: "1px solid #ccc" }}>
-                      <table className="tax-tbl">
-                        <thead><tr><th>21 TAX</th><th>IND.</th><th>VALUE</th><th>RATE</th><th>AMOUNT</th></tr></thead>
-                        <tbody>
-                          <tr><td>01 Import Duty</td><td>{l.info?.base ?? "42"}</td><td>${l.lineCif.toFixed(2)}</td><td>{rateStr}</td><td>${l.duty.toFixed(2)}</td></tr>
-                          <tr><td>03 Wharfage</td><td>25</td><td>${l.fobN.toFixed(2)}</td><td>1%</td><td>${wharfAmt}</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderTop: "1px solid #ccc" }}>
-                      <div className="rec-cell"><span className="fp-lbl">17a NET WEIGHT (LB)</span><span className="fp-val">{l.weightN} lb</span></div>
-                      <div className="rec-cell" style={{ textAlign: "right" }}><span className="fp-lbl">TOTAL</span><span className="fp-val" style={{ fontWeight: "bold" }}>${(l.duty + l.fobN * 0.01).toFixed(2)}</span></div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Signature block */}
-              <div className="sig-block">
-                <div className="sig-left">
-                  <div><strong>DECLARANT NAME:</strong> {DECLARANT.name}</div>
-                  <div style={{ marginTop: 6 }}><strong>DECLARANT ID:</strong> {DECLARANT.id}</div>
-                  <div style={{ fontSize: 8, marginTop: 8, fontStyle: "italic" }}>I/We declare that the above particulars are true and correct.</div>
-                  <div style={{ display: "flex", gap: 24, marginTop: 8 }}>
-                    <div><div className="sig-line" /><div style={{ fontSize: 7 }}>SIGNATURE</div></div>
-                    <div><div className="sig-line" style={{ minWidth: 80 }} /><div style={{ fontSize: 7 }}>DATE</div></div>
-                  </div>
-                </div>
-                <div className="sig-right"><div style={{ fontSize: 8, fontStyle: "italic", color: "#666" }}>Customs Use Only</div></div>
-              </div>
-              <div style={{ textAlign: "right", fontSize: 7, marginTop: 6, color: "#999" }}>HMC-12 (10/12)</div>
+          {formOutput && (
+            <div style={{ background:'#161b27', border:'1px solid #2a3050', borderRadius:8, padding:16, fontFamily:'monospace', fontSize:11, color:'#94a3b8', whiteSpace:'pre-wrap', maxHeight:500, overflowY:'auto', marginTop:16 }}>
+              {formOutput}
             </div>
           )}
         </div>
-      </div>
+      )}
+
+      {/* ════════ LOOKUP TAB ════════ */}
+      {tab === 'lookup' && (
+        <div style={{ padding:24, maxWidth:1200, margin:'0 auto' }}>
+          <div style={{ background:'rgba(59,130,246,.1)', border:'1px solid rgba(59,130,246,.3)', borderRadius:6, padding:'10px 14px', fontSize:12, color:'#3b82f6', marginBottom:14 }}>
+            Search the full BVI CMDA 2010 tariff schedule. Click any result to copy the HS code to clipboard.
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <input className="hmc-inp" type="text" placeholder="e.g. chicken, rice, cooking oil, beer, rum, cigarettes, refrigerator…" value={lookupQ} onChange={e => setLookupQ(e.target.value)}
+              style={{ width:'100%', background:'#1e243a', border:'1px solid #2a3050', color:'#e2e8f0', padding:'10px 14px', borderRadius:8, fontSize:14, fontFamily:'inherit', outline:'none' }} />
+          </div>
+          <div style={{ background:'#161b27', border:'1px solid #2a3050', borderRadius:8, overflow:'hidden' }}>
+            {lookupQ.trim().length < 2 ? (
+              <div style={{ padding:20, textAlign:'center', color:'#64748b', fontSize:13 }}>Type at least 2 characters to search…</div>
+            ) : lookupResults.length === 0 ? (
+              <div style={{ padding:20, textAlign:'center', color:'#64748b', fontSize:13 }}>No results. Try different keywords.</div>
+            ) : lookupResults.map((r, i) => {
+              const rc = rateClass(r[2]);
+              return (
+                <div key={i} className="hmc-lkrow" onClick={() => navigator.clipboard.writeText(r[0]).catch(() => {})} title="Click to copy HS code"
+                  style={{ padding:'12px 16px', borderBottom: i < lookupResults.length-1 ? '1px solid #2a3050' : 'none', display:'flex', alignItems:'center', gap:12, cursor:'pointer', transition:'background .12s' }}>
+                  <span style={{ fontFamily:'monospace', fontSize:12, color:'#3b82f6', minWidth:90 }}>{r[0]}</span>
+                  <span style={{ flex:1, fontSize:13 }}>{r[1]}</span>
+                  <span style={{ fontFamily:'monospace', fontSize:12, fontWeight:700, minWidth:100, textAlign:'right', color:RC[rc].color }}>{r[2]}</span>
+                  <span style={{ fontSize:10, color:'#64748b', fontFamily:'monospace' }}>{r[4]}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
