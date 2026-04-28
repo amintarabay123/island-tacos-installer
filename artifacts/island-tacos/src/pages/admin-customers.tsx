@@ -437,7 +437,7 @@ export default function AdminCustomers() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           {[
             { label: "Total Customers", value: stats ? stats.totalCustomers.toLocaleString() : "—", icon: Users, color: "text-blue-600" },
-            { label: "Total Orders", value: stats ? stats.totalOrders.toLocaleString() : "—", icon: ShoppingBag, color: "text-orange-600" },
+            { label: "Orders Placed", value: stats ? stats.totalOrders.toLocaleString() : "—", icon: ShoppingBag, color: "text-orange-600" },
             { label: "Total Revenue", value: stats ? `$${stats.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—", icon: DollarSign, color: "text-green-600" },
           ].map(({ label, value, icon: Icon, color }) => (
             <div key={label} className="rounded-xl border bg-card p-4 flex items-center gap-3">

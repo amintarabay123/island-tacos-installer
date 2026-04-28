@@ -5,15 +5,17 @@ import { eq, ilike, or, desc, sql, count, sum } from "drizzle-orm";
 const router: IRouter = Router();
 
 router.get("/customers/stats", async (_req: Request, res: Response): Promise<void> => {
-  const [row] = await db.select({
-    totalCustomers: count(),
-    totalOrders: sum(customersTable.visitCount),
-    totalRevenue: sum(sql<number>`${customersTable.totalSpent}::numeric`),
-  }).from(customersTable);
+  const [[custRow], [ordRow]] = await Promise.all([
+    db.select({ totalCustomers: count() }).from(customersTable),
+    db.select({
+      totalOrders: count(),
+      totalRevenue: sum(sql<number>`${ordersTable.total}::numeric`),
+    }).from(ordersTable).where(sql`${ordersTable.status} != 'cancelled'`),
+  ]);
   res.json({
-    totalCustomers: Number(row?.totalCustomers ?? 0),
-    totalOrders: Number(row?.totalOrders ?? 0),
-    totalRevenue: parseFloat(String(row?.totalRevenue ?? "0")),
+    totalCustomers: Number(custRow?.totalCustomers ?? 0),
+    totalOrders: Number(ordRow?.totalOrders ?? 0),
+    totalRevenue: parseFloat(String(ordRow?.totalRevenue ?? "0")),
   });
 });
 
