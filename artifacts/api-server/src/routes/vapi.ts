@@ -223,8 +223,9 @@ function buildSystemPrompt(callerPhone: string | null, callerIsMobile: boolean):
     phoneSection = `PHONE NUMBER:
 - The caller is calling from a landline (${callerPhone}) which cannot receive text messages.
 - Ask the caller: "Can I get a mobile number to send you a text when your order is ready?"
-- If they provide one, format it as a BVI number: 7-digit numbers get +1284 added automatically (e.g. "499-1234" becomes "+12844991234").
-- If they decline or don't have one, use ${callerPhone} as the customerPhone.`;
+- If they provide one, format it as a BVI number: 7-digit numbers get +1284 added automatically (e.g. "499-1234" becomes "+12844991234"). Use that mobile as customerPhone.
+- If they decline or don't have one, use ${callerPhone} as the customerPhone.
+- ALWAYS include "Caller landline: ${callerPhone}" in the order notes, regardless of whether they provide a mobile number.`;
   } else {
     phoneSection = `PHONE NUMBER:
 - No caller ID was detected (e.g. hidden number or VOIP).
