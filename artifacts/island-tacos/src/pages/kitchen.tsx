@@ -229,91 +229,95 @@ export default function Kitchen() {
   }, []);
 
   const playChime = useCallback(() => {
-    try {
-      // Only chime in the active foreground tab
-      if (document.visibilityState !== "visible") return;
-      if (!audioCtxRef.current) return;
-      const ctx = audioCtxRef.current;
-      ctx.resume();
+    // Only chime in the active foreground tab
+    if (document.visibilityState !== "visible") return;
+    if (!audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
 
-      // Dynamics compressor maximizes perceived loudness
-      const comp = ctx.createDynamicsCompressor();
-      comp.threshold.value = -24;
-      comp.knee.value = 6;
-      comp.ratio.value = 20;
-      comp.attack.value = 0.003;
-      comp.release.value = 0.15;
-      comp.connect(ctx.destination);
+    // resume() is async — wait for the context to be running before scheduling audio.
+    // Without this, oscillators scheduled while the context is still suspended are dropped silently.
+    ctx.resume().then(() => {
+      try {
+        // Dynamics compressor maximizes perceived loudness
+        const comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -24;
+        comp.knee.value = 6;
+        comp.ratio.value = 20;
+        comp.attack.value = 0.003;
+        comp.release.value = 0.15;
+        comp.connect(ctx.destination);
 
-      const notes = [
-        { freq: 523.25, t: 0 },
-        { freq: 659.25, t: 0.14 },
-        { freq: 783.99, t: 0.28 },
-        { freq: 1046.5, t: 0.42 },
-        { freq: 783.99, t: 0.60 },
-        { freq: 1046.5, t: 0.74 },
-      ];
-      notes.forEach(({ freq, t }) => {
-        // Layer square + sine at octave for rich, loud tone
-        ["square", "sine"].forEach((type, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(comp);
-          osc.type = type as OscillatorType;
-          osc.frequency.value = i === 0 ? freq : freq * 2;
-          gain.gain.setValueAtTime(0, ctx.currentTime + t);
-          gain.gain.linearRampToValueAtTime(i === 0 ? 0.8 : 0.4, ctx.currentTime + t + 0.03);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.55);
-          osc.start(ctx.currentTime + t);
-          osc.stop(ctx.currentTime + t + 0.6);
+        const notes = [
+          { freq: 523.25, t: 0 },
+          { freq: 659.25, t: 0.14 },
+          { freq: 783.99, t: 0.28 },
+          { freq: 1046.5, t: 0.42 },
+          { freq: 783.99, t: 0.60 },
+          { freq: 1046.5, t: 0.74 },
+        ];
+        notes.forEach(({ freq, t }) => {
+          // Layer square + sine at octave for rich, loud tone
+          ["square", "sine"].forEach((type, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(comp);
+            osc.type = type as OscillatorType;
+            osc.frequency.value = i === 0 ? freq : freq * 2;
+            gain.gain.setValueAtTime(0, ctx.currentTime + t);
+            gain.gain.linearRampToValueAtTime(i === 0 ? 0.8 : 0.4, ctx.currentTime + t + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.55);
+            osc.start(ctx.currentTime + t);
+            osc.stop(ctx.currentTime + t + 0.6);
+          });
         });
-      });
-    } catch {}
+      } catch {}
+    }).catch(() => {});
   }, []);
 
   const playUrgentChime = useCallback(() => {
-    try {
-      // Only chime in the active foreground tab
-      if (document.visibilityState !== "visible") return;
-      if (!audioCtxRef.current) return;
-      const ctx = audioCtxRef.current;
-      ctx.resume();
+    // Only chime in the active foreground tab
+    if (document.visibilityState !== "visible") return;
+    if (!audioCtxRef.current) return;
+    const ctx = audioCtxRef.current;
 
-      // Dynamics compressor maximizes perceived loudness
-      const comp = ctx.createDynamicsCompressor();
-      comp.threshold.value = -24;
-      comp.knee.value = 6;
-      comp.ratio.value = 20;
-      comp.attack.value = 0.003;
-      comp.release.value = 0.15;
-      comp.connect(ctx.destination);
+    ctx.resume().then(() => {
+      try {
+        // Dynamics compressor maximizes perceived loudness
+        const comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -24;
+        comp.knee.value = 6;
+        comp.ratio.value = 20;
+        comp.attack.value = 0.003;
+        comp.release.value = 0.15;
+        comp.connect(ctx.destination);
 
-      // Descending tones — urgent / different from the "new order" chime
-      const notes = [
-        { freq: 880, t: 0 },
-        { freq: 660, t: 0.22 },
-        { freq: 440, t: 0.44 },
-        { freq: 880, t: 0.80 },
-        { freq: 660, t: 1.02 },
-        { freq: 440, t: 1.24 },
-      ];
-      notes.forEach(({ freq, t }) => {
-        ["square", "sawtooth"].forEach((type, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(comp);
-          osc.type = type as OscillatorType;
-          osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0, ctx.currentTime + t);
-          gain.gain.linearRampToValueAtTime(i === 0 ? 0.9 : 0.3, ctx.currentTime + t + 0.03);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.45);
-          osc.start(ctx.currentTime + t);
-          osc.stop(ctx.currentTime + t + 0.5);
+        // Descending tones — urgent / different from the "new order" chime
+        const notes = [
+          { freq: 880, t: 0 },
+          { freq: 660, t: 0.22 },
+          { freq: 440, t: 0.44 },
+          { freq: 880, t: 0.80 },
+          { freq: 660, t: 1.02 },
+          { freq: 440, t: 1.24 },
+        ];
+        notes.forEach(({ freq, t }) => {
+          ["square", "sawtooth"].forEach((type, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(comp);
+            osc.type = type as OscillatorType;
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, ctx.currentTime + t);
+            gain.gain.linearRampToValueAtTime(i === 0 ? 0.9 : 0.3, ctx.currentTime + t + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.45);
+            osc.start(ctx.currentTime + t);
+            osc.stop(ctx.currentTime + t + 0.5);
+          });
         });
-      });
-    } catch {}
+      } catch {}
+    }).catch(() => {});
   }, []);
 
   const fetchOrders = useCallback(async () => {
