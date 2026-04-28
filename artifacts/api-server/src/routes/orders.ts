@@ -219,6 +219,56 @@ async function sendReadySMS(order: OrderRow) {
   }
 }
 
+/**
+ * Send a cancellation SMS via Twilio when a phone/online order is rejected by the POS.
+ * Sent to any phone number (not restricted to BVI mobiles) so tourists are also notified.
+ */
+async function sendCancellationSMS(order: OrderRow, reason: string | null) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken  = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER ?? "+14245448088";
+
+  if (!accountSid || !authToken) {
+    console.warn("[sms] TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN not set — skipping cancellation SMS");
+    return;
+  }
+  if (!order.customerPhone) {
+    console.log(`[sms] order ${order.confirmationCode} has no phone — skipping cancellation SMS`);
+    return;
+  }
+
+  const reasonLine = reason ? ` Reason: ${reason}.` : "";
+  const body =
+    `Hi ${order.customerName || "there"}! Unfortunately we had to cancel your Island Tacos order` +
+    ` #${order.confirmationCode}.${reasonLine}` +
+    ` We're sorry for the inconvenience. Please call us at (284) 544-8088 if you have any questions.`;
+
+  const params = new URLSearchParams({ To: order.customerPhone, From: fromNumber, Body: body });
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${credentials}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    });
+    const text = await resp.text();
+    if (!resp.ok) {
+      console.error(`[sms] Twilio cancellation failed (${resp.status}): ${text}`);
+    } else {
+      const data = JSON.parse(text);
+      console.log(`[sms] Cancellation SMS sent to ${order.customerPhone} for ${order.confirmationCode} — SID: ${data.sid}`);
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[sms] Cancellation send error: ${msg}`);
+  }
+}
+
 router.get("/orders", async (req, res): Promise<void> => {
   const queryParsed = ListOrdersQueryParams.safeParse(req.query);
   if (!queryParsed.success) {
@@ -559,6 +609,17 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
         console.error("[sms] ready notification failed:", err?.message)
       );
     }
+  }
+
+  // Send cancellation SMS for phone/online orders that have a customer phone
+  if (
+    parsed.data.status === "cancelled" &&
+    (order.source === "phone" || order.source === "online") &&
+    order.customerPhone
+  ) {
+    sendCancellationSMS(order, parsed.data.cancellationReason ?? null).catch((err) =>
+      console.error("[sms] cancellation notification failed:", err?.message)
+    );
   }
 
   broadcastOrderEvent("order_updated", order.id);
