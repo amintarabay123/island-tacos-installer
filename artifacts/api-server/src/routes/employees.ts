@@ -89,7 +89,7 @@ export async function verifyPin(pin: string): Promise<{ valid: boolean; role: st
   const employees = await db.select().from(employeesTable).where(eq(employeesTable.active, true));
   for (const emp of employees) {
     const match = await bcrypt.compare(pin, emp.pinHash);
-    if (match) return { valid: true, role: emp.role === "owner" ? "admin" : "staff", name: emp.name };
+    if (match) return { valid: true, role: emp.role, name: emp.name };
   }
   return null;
 }
