@@ -4,35 +4,19 @@ import { eq, ilike, or, desc, sql, count, sum } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-// JOIN condition: match orders to customers by email (case-insensitive) or phone.
-// Phone normalisation: strip all non-digits and compare the last 10 digits so that
-// "2845448581", "+12845448581", "(284) 544-8581" all resolve to the same number.
-const ORDER_JOIN_ON = sql.raw(`
-  ON o.status != 'cancelled'
-  AND (
-    (c.email != '' AND lower(o.customer_email) = lower(c.email))
-    OR (
-      c.phone != '' AND o.customer_phone != ''
-      AND right(regexp_replace(o.customer_phone, '[^0-9]', '', 'g'), 10)
-        = right(regexp_replace(c.phone,          '[^0-9]', '', 'g'), 10)
-    )
-  )
-`);
-
 router.get("/customers/stats", async (_req: Request, res: Response): Promise<void> => {
-  const rows = await db.execute<{ total_customers: string; total_orders: string; total_revenue: string }>(sql`
-    SELECT
-      (SELECT COUNT(*) FROM customers)::int                    AS total_customers,
-      COALESCE(COUNT(o.id), 0)::int                           AS total_orders,
-      COALESCE(SUM(o.total::numeric), 0)                      AS total_revenue
-    FROM customers c
-    LEFT JOIN orders o ${ORDER_JOIN_ON}
-  `);
-  const row = rows.rows?.[0];
+  // Stats cards show real business totals from the orders table
+  const [[custRow], [ordRow]] = await Promise.all([
+    db.select({ totalCustomers: count() }).from(customersTable),
+    db.select({
+      totalOrders:  count(),
+      totalRevenue: sum(sql<number>`${ordersTable.total}::numeric`),
+    }).from(ordersTable).where(sql`${ordersTable.status} != 'cancelled'`),
+  ]);
   res.json({
-    totalCustomers: Number(row?.total_customers ?? 0),
-    totalOrders:    Number(row?.total_orders    ?? 0),
-    totalRevenue:   parseFloat(String(row?.total_revenue ?? "0")),
+    totalCustomers: Number(custRow?.totalCustomers ?? 0),
+    totalOrders:    Number(ordRow?.totalOrders    ?? 0),
+    totalRevenue:   parseFloat(String(ordRow?.totalRevenue ?? "0")),
   });
 });
 
@@ -41,35 +25,35 @@ router.get("/customers", async (req: Request, res: Response): Promise<void> => {
   const limit  = Math.min(parseInt((req.query as Record<string, string>).limit  ?? "50",  10) || 50,  500);
   const offset = Math.max(parseInt((req.query as Record<string, string>).offset ?? "0",   10) || 0,   0);
 
-  const searchWhere = q
-    ? sql`AND (c.name ILIKE ${'%' + q + '%'} OR c.email ILIKE ${'%' + q + '%'} OR c.phone ILIKE ${'%' + q + '%'})`
-    : sql``;
+  // Per-customer order count and spend come from the denormalized visitCount / totalSpent
+  // columns, which are updated by upsertCustomer each time an identified customer orders.
+  // This is more reliable than a JOIN because 92 % of POS orders have no contact info stored
+  // on the order record, so a JOIN would miss them entirely.
+  const customers = q
+    ? await db.select().from(customersTable)
+        .where(or(
+          ilike(customersTable.name,  `%${q}%`),
+          ilike(customersTable.email, `%${q}%`),
+          ilike(customersTable.phone, `%${q}%`),
+        ))
+        .orderBy(desc(customersTable.visitCount), desc(customersTable.totalSpent))
+        .limit(limit)
+        .offset(offset)
+    : await db.select().from(customersTable)
+        .orderBy(desc(customersTable.visitCount), desc(customersTable.totalSpent))
+        .limit(limit)
+        .offset(offset);
 
-  const rows = await db.execute<{
-    id: number; name: string; email: string | null; phone: string | null; notes: string | null;
-    created_at: string; updated_at: string; order_count: number; total_spent: string;
-  }>(sql`
-    SELECT c.id, c.name, c.email, c.phone, c.notes, c.created_at, c.updated_at,
-           COUNT(o.id)::int                   AS order_count,
-           COALESCE(SUM(o.total::numeric), 0) AS total_spent
-    FROM customers c
-    LEFT JOIN orders o ${ORDER_JOIN_ON}
-    WHERE true ${searchWhere}
-    GROUP BY c.id
-    ORDER BY c.updated_at DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `);
-
-  res.json(rows.rows.map(c => ({
+  res.json(customers.map(c => ({
     id:         c.id,
     name:       c.name,
     email:      c.email,
     phone:      c.phone,
     notes:      c.notes,
-    visitCount: Number(c.order_count  ?? 0),
-    totalSpent: parseFloat(String(c.total_spent ?? "0")),
-    createdAt:  c.created_at,
-    updatedAt:  c.updated_at,
+    visitCount: c.visitCount ?? 0,
+    totalSpent: parseFloat(c.totalSpent ?? "0"),
+    createdAt:  c.createdAt,
+    updatedAt:  c.updatedAt,
   })));
 });
 
