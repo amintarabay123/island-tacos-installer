@@ -59,7 +59,7 @@ router.post("/employees", requireAdminAuth, async (req, res): Promise<void> => {
 
 // PATCH /api/employees/:id — update name, role, pin, active (admin only)
 router.patch("/employees/:id", requireAdminAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params["id"] as string);
   const { name, role, pin, active } = req.body as { name?: string; role?: string; pin?: string; active?: boolean };
   if (role && !["owner", "staff"].includes(role)) { res.status(400).json({ error: "role must be owner or staff" }); return; }
   if (pin && !/^\d{4,8}$/.test(pin)) { res.status(400).json({ error: "PIN must be 4–8 digits" }); return; }
@@ -78,7 +78,7 @@ router.patch("/employees/:id", requireAdminAuth, async (req, res): Promise<void>
 
 // DELETE /api/employees/:id (admin only)
 router.delete("/employees/:id", requireAdminAuth, async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params["id"] as string);
   await db.delete(employeesTable).where(eq(employeesTable.id, id));
   res.json({ ok: true });
 });

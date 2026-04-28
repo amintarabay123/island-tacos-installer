@@ -137,6 +137,10 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
 
   const daily = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
 
+  const roundedByMethod = Object.fromEntries(
+    Object.entries(byMethod).map(([k, v]) => [k, Math.round(v * 100) / 100])
+  ) as typeof byMethod;
+
   res.json({
     from: fromDate.toISOString(),
     to: toDate.toISOString(),
@@ -144,7 +148,7 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
     paidOrders: paidOrders.length,
     cancelledOrders: allOrders.filter(o => o.status === "cancelled").length,
     totalSales: Math.round(totalSales * 100) / 100,
-    byMethod,
+    byMethod: roundedByMethod,
     refundTotal: Math.round(refundTotal * 100) / 100,
     netSales: Math.round((totalSales - refundTotal) * 100) / 100,
     avgOrderValue: paidOrders.length > 0 ? Math.round(totalSales / paidOrders.length * 100) / 100 : 0,

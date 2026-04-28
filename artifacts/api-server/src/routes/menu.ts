@@ -338,8 +338,9 @@ router.patch("/menu/items/:id", async (req, res): Promise<void> => {
   if (parsed.data.popular !== undefined) updates.popular = parsed.data.popular;
   if (parsed.data.spicy !== undefined) updates.spicy = parsed.data.spicy;
   if (parsed.data.vegetarian !== undefined) updates.vegetarian = parsed.data.vegetarian;
-  if (parsed.data.sortOrder !== undefined) updates.sortOrder = parsed.data.sortOrder;
-  if (parsed.data.loyverseModifierIds !== undefined) updates.loyverseModifierIds = parsed.data.loyverseModifierIds ?? null;
+  const body = req.body as Record<string, unknown>;
+  if (body["sortOrder"] !== undefined) updates.sortOrder = body["sortOrder"];
+  if (body["loyverseModifierIds"] !== undefined) updates.loyverseModifierIds = body["loyverseModifierIds"] ?? null;
 
   const [item] = await db
     .update(menuItemsTable)

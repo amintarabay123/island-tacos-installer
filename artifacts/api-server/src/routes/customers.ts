@@ -100,7 +100,7 @@ router.get("/customers/lookup", async (req: Request, res: Response): Promise<voi
 });
 
 router.get("/customers/:id", async (req: Request, res: Response): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(req.params["id"] as string, 10);
   if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, id)).limit(1);
@@ -146,7 +146,7 @@ router.get("/customers/:id", async (req: Request, res: Response): Promise<void> 
 });
 
 router.delete("/customers/:id", async (req: Request, res: Response): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(req.params["id"] as string, 10);
   if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
   const [existing] = await db.select({ id: customersTable.id }).from(customersTable).where(eq(customersTable.id, id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Not found" }); return; }
@@ -155,7 +155,7 @@ router.delete("/customers/:id", async (req: Request, res: Response): Promise<voi
 });
 
 router.patch("/customers/:id/notes", async (req: Request, res: Response): Promise<void> => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(req.params["id"] as string, 10);
   const { notes } = req.body as { notes?: string };
   if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
   await db.update(customersTable).set({ notes: notes ?? null, updatedAt: new Date() }).where(eq(customersTable.id, id));

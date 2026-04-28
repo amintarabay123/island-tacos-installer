@@ -787,9 +787,7 @@ export default function AdminCustoms() {
 
       {/* ── Tabs ── */}
       <div className="no-print" style={{ display:'flex', background:'#161b27', borderBottom:'1px solid #2a3050', padding:'0 24px', gap:4, overflowX:'auto' }}>
-        {(['scan','📄 Invoice Scanner'],['form','📋 Declaration Form'],['lookup','🔍 Tariff Lookup']).length && (
-          [['scan','📄 Invoice Scanner'],['form','📋 Declaration Form'],['lookup','🔍 Tariff Lookup']] as [string,string][]
-        ).map(([id,label]) => (
+        {([['scan','📄 Invoice Scanner'],['form','📋 Declaration Form'],['lookup','🔍 Tariff Lookup']] as [string,string][]).map(([id,label]) => (
           <button key={id} className="hmc-tab-btn" onClick={() => setTab(id as 'scan'|'form'|'lookup')}
             style={{ padding:'13px 18px', fontSize:13, fontWeight:600, cursor:'pointer', color: tab===id ? '#3b82f6' : '#64748b', background:'none', border:'none', borderBottom: tab===id ? '2px solid #3b82f6' : '2px solid transparent', whiteSpace:'nowrap', fontFamily:'inherit', transition:'all .15s' }}>
             {label}

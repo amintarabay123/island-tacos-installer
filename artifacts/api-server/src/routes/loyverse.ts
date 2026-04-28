@@ -47,6 +47,8 @@ router.post("/loyverse/push/:orderId", async (req, res): Promise<void> => {
         name: orderItemsTable.menuItemName,
         quantity: orderItemsTable.quantity,
         price: orderItemsTable.menuItemPrice,
+        notes: orderItemsTable.notes,
+        modifierSelections: orderItemsTable.modifierSelections,
         loyverseItemId: menuItemsTable.loyverseItemId,
         loyverseVariantId: menuItemsTable.loyverseVariantId,
       })
@@ -57,12 +59,17 @@ router.post("/loyverse/push/:orderId", async (req, res): Promise<void> => {
     const receiptNumber = await pushOrderToLoyverse({
       id: order.id,
       customerName: order.customerName,
+      customerPhone: order.customerPhone,
       confirmationCode: order.confirmationCode,
       notes: order.notes,
+      total: parseFloat(order.total as string),
+      paymentMethod: order.paymentMethod ?? "cash",
       items: items.map((i) => ({
         name: i.name,
         quantity: i.quantity,
         price: parseFloat(i.price as string),
+        notes: i.notes ?? null,
+        modifierSelections: (i.modifierSelections as { modifierId: string; optionId: string; name: string; price: number }[] | null) ?? null,
         loyverseItemId: i.loyverseItemId ?? null,
         loyverseVariantId: i.loyverseVariantId ?? null,
       })),
@@ -287,12 +294,14 @@ router.post("/loyverse/import-csv", upload.single("file"), async (req, res): Pro
 
       try {
         await db.insert(ordersTable).values({
-          source: "loyverse",
+          source: "pos",
           status: "completed",
           paymentStatus: "paid",
           paymentMethod: mapPaymentMethod(paymentRaw),
           confirmationCode,
           customerName: customer || "Guest",
+          subtotal: total.toFixed(2),
+          tax: "0",
           total: total.toFixed(2),
           notes: null,
           createdAt,

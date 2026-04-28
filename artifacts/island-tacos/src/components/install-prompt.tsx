@@ -67,6 +67,8 @@ export default function InstallPrompt() {
       const timer = setTimeout(() => setVisible(true), 3000);
       return () => clearTimeout(timer);
     }
+
+    return undefined;
   }, []);
 
   const dismiss = useCallback(() => {

@@ -89,6 +89,13 @@ export interface UpdateMenuItemBody {
   vegetarian?: boolean;
 }
 
+export interface OrderItemModifierSelection {
+  modifierId: string;
+  optionId: string;
+  name: string;
+  price: number;
+}
+
 export interface OrderItem {
   id: number;
   orderId: number;
@@ -99,6 +106,8 @@ export interface OrderItem {
   /** @nullable */
   notes?: string | null;
   subtotal: number;
+  /** @nullable */
+  modifierSelections?: OrderItemModifierSelection[] | null;
 }
 
 export type OrderOrderType =
@@ -137,6 +146,8 @@ export const OrderPaymentMethod = {
   card: "card",
   athmovil: "athmovil",
   cash: "cash",
+  split: "split",
+  complimentary: "complimentary",
 } as const;
 
 export interface Order {
@@ -157,9 +168,13 @@ export interface Order {
   total: number;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  cancellationReason?: string | null;
   items: OrderItem[];
   /** @nullable */
   estimatedReadyAt?: string | null;
+  /** @nullable */
+  scheduledPickupAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -196,8 +211,13 @@ export interface CreateOrderBody {
   /** @nullable */
   deliveryAddress?: string | null;
   paymentMethod: CreateOrderBodyPaymentMethod;
+  paymentStatus?: "pending" | "paid";
+  source?: "online" | "pos" | "phone";
+  discountAmount?: number;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  scheduledPickupAt?: string | null;
   items: CreateOrderItemInput[];
 }
 
@@ -214,9 +234,16 @@ export const UpdateOrderStatusBodyStatus = {
 } as const;
 
 export interface UpdateOrderStatusBody {
-  status: UpdateOrderStatusBodyStatus;
+  status?: UpdateOrderStatusBodyStatus;
+  kdsCleared?: boolean;
   /** @nullable */
   estimatedReadyAt?: string | null;
+  actualPaymentMethod?: string;
+  paymentStatus?: "pending" | "paid";
+  /** @nullable */
+  cancellationReason?: string | null;
+  /** @nullable */
+  notes?: string | null;
 }
 
 export type InitiatePaymentBodyPaymentMethod =

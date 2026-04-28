@@ -3,9 +3,9 @@ import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders } from "@/lib/auth";
 
-type Props = { children: React.ReactNode };
+type Props = { children: React.ReactNode; adminOnly?: boolean };
 
-export default function ProtectedRoute({ children }: Props) {
+export default function ProtectedRoute({ children, adminOnly }: Props) {
   const [status, setStatus] = useState<"loading" | "authed" | "unauthed">("loading");
   const [location, navigate] = useLocation();
 
@@ -13,7 +13,7 @@ export default function ProtectedRoute({ children }: Props) {
     fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => {
-        if (d.authed) {
+        if (d.authed && (!adminOnly || d.role === "admin")) {
           setStatus("authed");
         } else {
           setStatus("unauthed");
@@ -24,7 +24,7 @@ export default function ProtectedRoute({ children }: Props) {
         setStatus("unauthed");
         navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(location)}`);
       });
-  }, [navigate, location]);
+  }, [navigate, location, adminOnly]);
 
   if (status === "loading") {
     return (

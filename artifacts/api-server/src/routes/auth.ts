@@ -21,7 +21,7 @@ router.post("/auth/login", async (req: Request, res: Response): Promise<void> =>
   // Check against employee database (seeds from env vars on first run)
   const result = await verifyPin(pin);
   if (result) {
-    const token = createToken(result.role);
+    const token = createToken(result.role === "owner" ? "admin" : "staff");
     res.setHeader("Set-Cookie", makeSetCookieHeader(token));
     res.json({ ok: true, role: result.role, name: result.name, token });
     return;

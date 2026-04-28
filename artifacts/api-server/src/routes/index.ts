@@ -72,7 +72,7 @@ router.use(shiftsRouter);
 router.use(printRouter);
 
 // Admin + Loyverse + Settings PATCH + Sync push/export: owner only
-router.use(/^\/(admin|loyverse|reports|employees)/, (req: Request, res: Response, next: NextFunction) => {
+router.use(/^\/(admin|loyverse|reports|employees|financials)/, (req: Request, res: Response, next: NextFunction) => {
   requireAdminAuth(req, res, next);
 });
 router.use("/sync/push",   (req: Request, res: Response, next: NextFunction) => requireAdminAuth(req, res, next));

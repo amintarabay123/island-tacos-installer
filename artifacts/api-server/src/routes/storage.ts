@@ -1,11 +1,16 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { Readable } from "stream";
-import {
-  RequestUploadUrlBody,
-  RequestUploadUrlResponse,
-} from "@workspace/api-zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { ObjectPermission } from "../lib/objectAcl";
+
+type RequestUploadUrlBodyType = { name: string; size: number; contentType: string };
+function parseRequestUploadUrlBody(body: unknown): { success: true; data: RequestUploadUrlBodyType } | { success: false } {
+  const b = body as Record<string, unknown>;
+  if (typeof b?.name !== "string" || typeof b?.size !== "number" || typeof b?.contentType !== "string") {
+    return { success: false };
+  }
+  return { success: true, data: { name: b.name, size: b.size, contentType: b.contentType } };
+}
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -18,7 +23,7 @@ const objectStorageService = new ObjectStorageService();
  * Then uploads the file directly to the returned presigned URL.
  */
 router.post("/storage/uploads/request-url", async (req: Request, res: Response) => {
-  const parsed = RequestUploadUrlBody.safeParse(req.body);
+  const parsed = parseRequestUploadUrlBody(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Missing or invalid required fields" });
     return;
@@ -30,13 +35,7 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
 
-    res.json(
-      RequestUploadUrlResponse.parse({
-        uploadURL,
-        objectPath,
-        metadata: { name, size, contentType },
-      }),
-    );
+    res.json({ uploadURL, objectPath, metadata: { name, size, contentType } });
   } catch (error) {
     req.log.error({ err: error }, "Error generating upload URL");
     res.status(500).json({ error: "Failed to generate upload URL" });

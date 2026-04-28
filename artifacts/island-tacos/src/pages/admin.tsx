@@ -135,8 +135,8 @@ export default function Admin() {
     }
   };
 
-  const { data: stats } = useGetAdminStats({ query: { refetchInterval: 5_000 } });
-  const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 }, { query: { refetchInterval: 5_000 } });
+  const { data: stats } = useGetAdminStats({ query: { queryKey: getGetAdminStatsQueryKey(), refetchInterval: 5_000 } });
+  const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 }, { query: { queryKey: getGetRecentOrdersQueryKey(), refetchInterval: 5_000 } });
 
   // Refresh immediately when KDS changes an order (same tab or other tab via BroadcastChannel)
   useEffect(() => {
@@ -667,7 +667,7 @@ export default function Admin() {
                       </td>
                       <td className="p-3 hidden md:table-cell text-muted-foreground">
                         <div className="space-y-0.5">
-                          {order.items?.map((i: { id: number; quantity: number; menuItemName: string; notes?: string }) => (
+                          {order.items?.map((i) => (
                             <div key={i.id}>
                               <span>{i.quantity}x {i.menuItemName}</span>
                               {i.notes && <span className="block text-xs pl-2 text-muted-foreground/70 italic">{i.notes}</span>}
