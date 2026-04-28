@@ -291,35 +291,58 @@ function CustomerDrawer({ customerId, onClose, onDelete }: { customerId: number;
   );
 }
 
+const PAGE_SIZE = 100;
+
+interface CustomerStats {
+  totalCustomers: number;
+  totalOrders: number;
+  totalRevenue: number;
+}
+
 export default function AdminCustomers() {
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set());
   const [bulkConfirm, setBulkConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [stats, setStats] = useState<CustomerStats | null>(null);
 
-  const fetchCustomers = useCallback((q: string) => {
-    setLoading(true);
-    const url = q
-      ? `${API}/api/customers?q=${encodeURIComponent(q)}&limit=100`
-      : `${API}/api/customers?limit=100`;
-    fetch(url, { headers: authHeaders() })
+  // Fetch aggregate stats once
+  useEffect(() => {
+    fetch(`${API}/api/customers/stats`, { headers: authHeaders() })
       .then(r => r.json())
-      .then((data: CustomerSummary[]) => { setCustomers(data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .then((d: CustomerStats) => setStats(d))
+      .catch(() => {});
   }, []);
 
-  useEffect(() => { fetchCustomers(""); }, [fetchCustomers]);
+  const fetchCustomers = useCallback((q: string, pageOffset = 0, append = false) => {
+    if (append) setLoadingMore(true);
+    else setLoading(true);
+    const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(pageOffset) });
+    if (q) params.set("q", q);
+    fetch(`${API}/api/customers?${params}`, { headers: authHeaders() })
+      .then(r => r.json())
+      .then((data: CustomerSummary[]) => {
+        setCustomers(prev => append ? [...prev, ...data] : data);
+        setHasMore(data.length === PAGE_SIZE);
+        setOffset(pageOffset + data.length);
+        if (append) setLoadingMore(false);
+        else setLoading(false);
+      })
+      .catch(() => { setLoading(false); setLoadingMore(false); });
+  }, []);
+
+  useEffect(() => { fetchCustomers("", 0, false); }, [fetchCustomers]);
 
   useEffect(() => {
-    const t = setTimeout(() => fetchCustomers(query), 300);
+    const t = setTimeout(() => { fetchCustomers(query, 0, false); setOffset(0); }, 300);
     return () => clearTimeout(t);
   }, [query, fetchCustomers]);
-
-  const totalSpent = customers.reduce((s, c) => s + c.totalSpent, 0);
-  const totalOrders = customers.reduce((s, c) => s + c.visitCount, 0);
 
   const toggleCheck = (id: number) => {
     setCheckedIds(prev => {
@@ -350,12 +373,26 @@ export default function AdminCustomers() {
     setBulkDeleting(false);
     setBulkConfirm(false);
     setCheckedIds(new Set());
-    fetchCustomers(query);
+    fetchCustomers(query, 0, false);
+    // Refresh stats
+    fetch(`${API}/api/customers/stats`, { headers: authHeaders() })
+      .then(r => r.json()).then((d: CustomerStats) => setStats(d)).catch(() => {});
   };
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
+    // Fetch all customers for export (not just the loaded page)
+    const allPages: CustomerSummary[] = [];
+    let off = 0;
+    while (true) {
+      const params = new URLSearchParams({ limit: "500", offset: String(off) });
+      if (query) params.set("q", query);
+      const data: CustomerSummary[] = await fetch(`${API}/api/customers?${params}`, { headers: authHeaders() }).then(r => r.json());
+      allPages.push(...data);
+      if (data.length < 500) break;
+      off += data.length;
+    }
     const header = ["Name", "Email", "Phone", "Total Orders", "Total Spent ($)", "Customer Since"];
-    const rows = customers.map(c => [
+    const rows = allPages.map(c => [
       `"${c.name.replace(/"/g, '""')}"`,
       `"${(c.email ?? "").replace(/"/g, '""')}"`,
       `"${(c.phone ?? "").replace(/"/g, '""')}"`,
@@ -399,9 +436,9 @@ export default function AdminCustomers() {
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           {[
-            { label: "Total Customers", value: customers.length, icon: Users, color: "text-blue-600" },
-            { label: "Total Orders", value: totalOrders, icon: ShoppingBag, color: "text-orange-600" },
-            { label: "Total Revenue", value: `$${totalSpent.toFixed(2)}`, icon: DollarSign, color: "text-green-600" },
+            { label: "Total Customers", value: stats ? stats.totalCustomers.toLocaleString() : "—", icon: Users, color: "text-blue-600" },
+            { label: "Total Orders", value: stats ? stats.totalOrders.toLocaleString() : "—", icon: ShoppingBag, color: "text-orange-600" },
+            { label: "Total Revenue", value: stats ? `$${stats.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—", icon: DollarSign, color: "text-green-600" },
           ].map(({ label, value, icon: Icon, color }) => (
             <div key={label} className="rounded-xl border bg-card p-4 flex items-center gap-3">
               <div className={`rounded-lg bg-muted p-2 ${color}`}><Icon className="w-5 h-5" /></div>
@@ -463,6 +500,18 @@ export default function AdminCustomers() {
                   onSelect={() => setSelectedId(c.id)}
                 />
               ))}
+              {hasMore && (
+                <div className="px-5 py-4 flex justify-center border-t">
+                  <button
+                    onClick={() => fetchCustomers(query, offset, true)}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 text-sm font-semibold text-primary hover:underline disabled:opacity-50"
+                  >
+                    {loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    {loadingMore ? "Loading…" : `Load more (showing ${customers.length.toLocaleString()} of ${stats?.totalCustomers.toLocaleString() ?? "…"})`}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -514,7 +563,12 @@ export default function AdminCustomers() {
         <CustomerDrawer
           customerId={selectedId}
           onClose={() => setSelectedId(null)}
-          onDelete={() => { setSelectedId(null); fetchCustomers(query); }}
+          onDelete={() => {
+            setSelectedId(null);
+            fetchCustomers(query, 0, false);
+            fetch(`${API}/api/customers/stats`, { headers: authHeaders() })
+              .then(r => r.json()).then((d: CustomerStats) => setStats(d)).catch(() => {});
+          }}
         />
       )}
     </div>

@@ -1,12 +1,26 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, customersTable, ordersTable, orderItemsTable } from "@workspace/db";
-import { eq, ilike, or, desc, sql } from "drizzle-orm";
+import { eq, ilike, or, desc, sql, count, sum } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+router.get("/customers/stats", async (_req: Request, res: Response): Promise<void> => {
+  const [row] = await db.select({
+    totalCustomers: count(),
+    totalOrders: sum(customersTable.visitCount),
+    totalRevenue: sum(sql<number>`${customersTable.totalSpent}::numeric`),
+  }).from(customersTable);
+  res.json({
+    totalCustomers: Number(row?.totalCustomers ?? 0),
+    totalOrders: Number(row?.totalOrders ?? 0),
+    totalRevenue: parseFloat(String(row?.totalRevenue ?? "0")),
+  });
+});
+
 router.get("/customers", async (req: Request, res: Response): Promise<void> => {
   const q = ((req.query as Record<string, string>).q ?? "").trim();
-  const limit = Math.min(parseInt((req.query as Record<string, string>).limit ?? "50", 10) || 50, 200);
+  const limit = Math.min(parseInt((req.query as Record<string, string>).limit ?? "50", 10) || 50, 500);
+  const offset = Math.max(parseInt((req.query as Record<string, string>).offset ?? "0", 10) || 0, 0);
 
   const customers = q
     ? await db.select().from(customersTable)
@@ -17,9 +31,11 @@ router.get("/customers", async (req: Request, res: Response): Promise<void> => {
         ))
         .orderBy(desc(customersTable.updatedAt))
         .limit(limit)
+        .offset(offset)
     : await db.select().from(customersTable)
         .orderBy(desc(customersTable.updatedAt))
-        .limit(limit);
+        .limit(limit)
+        .offset(offset);
 
   res.json(customers.map(c => ({
     id: c.id,
