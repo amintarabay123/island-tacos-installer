@@ -4,12 +4,18 @@ import { eq, ilike, or, desc, sql, count, sum } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-// JOIN condition: match orders to customers by email (case-insensitive) or phone
+// JOIN condition: match orders to customers by email (case-insensitive) or phone.
+// Phone normalisation: strip all non-digits and compare the last 10 digits so that
+// "2845448581", "+12845448581", "(284) 544-8581" all resolve to the same number.
 const ORDER_JOIN_ON = sql.raw(`
   ON o.status != 'cancelled'
   AND (
     (c.email != '' AND lower(o.customer_email) = lower(c.email))
-    OR (c.phone != '' AND o.customer_phone = c.phone)
+    OR (
+      c.phone != '' AND o.customer_phone != ''
+      AND right(regexp_replace(o.customer_phone, '[^0-9]', '', 'g'), 10)
+        = right(regexp_replace(c.phone,          '[^0-9]', '', 'g'), 10)
+    )
   )
 `);
 
