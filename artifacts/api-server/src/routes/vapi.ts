@@ -295,6 +295,17 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
           {
             type: "function",
             async: false,
+            messages: [
+              {
+                type: "request-start",
+                content: "Let me bring that up for you.",
+              },
+              {
+                type: "request-response-delayed",
+                content: "Alright, just a moment.",
+                timingMilliseconds: 2000,
+              },
+            ],
             function: {
               name: "get_menu",
               description: "Fetch the current menu, prices, available modifiers, and store open/close status.",
@@ -305,6 +316,17 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
           {
             type: "function",
             async: false,
+            messages: [
+              {
+                type: "request-start",
+                content: "Let me go ahead and place that for you.",
+              },
+              {
+                type: "request-response-delayed",
+                content: "Almost there, just one more second.",
+                timingMilliseconds: 2000,
+              },
+            ],
             function: {
               name: "place_order",
               description: "Submit the customer's confirmed order.",
