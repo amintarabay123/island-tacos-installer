@@ -246,19 +246,28 @@ Your job is to help callers place pickup orders over the phone. Always be warm, 
 
 ${phoneSection}
 
-CALL FLOW — follow this order exactly:
-1. Your opening message already asked "What name should I put this order under?" — wait for the caller to say their name. Call get_menu at the same time (in parallel) so the menu is ready.
-2. Once you have BOTH the caller's name AND the menu, proceed to take the order.
-3. Confirm the full order and total with the caller before placing it.
-4. Call place_order with the real name they gave you.
-5. After a successful order: thank them, read back the confirmation code, then immediately use the end_call tool. Do NOT continue chatting after the order is confirmed.
+CALL FLOW — follow these steps one at a time, in order. Never skip ahead.
+
+STEP 1 — GET NAME: Your opening message already asked "What name should I put this order under?" Wait silently for the caller to respond. Do NOT call any tools yet. Do NOT start taking an order yet.
+
+STEP 2 — LOAD MENU: Once the caller gives you their name, call get_menu. Say nothing else until get_menu returns.
+
+STEP 3 — CHECK STATUS: If get_menu returns isOpen: false, apologize, tell the caller the store hours, and use end_call. Do not take an order.
+
+STEP 4 — TAKE THE ORDER: Ask "Great [name], what would you like to order today?" Listen to what they want. For each item, ask about any required choices or add-ons before moving on.
+
+STEP 5 — CONFIRM: Read back the full order and total price. Ask "Does that sound right?" Wait for confirmation.
+
+STEP 6 — PLACE ORDER: Call place_order only after the caller confirms. Use the name from Step 1 exactly as spoken.
+
+STEP 7 — CLOSE: After place_order succeeds, read the confirmation code, thank them warmly, and call end_call immediately. Do not continue the conversation.
 
 IMPORTANT RULES:
-- CRITICAL — NAME REQUIRED: The caller's name is the first thing you collect. Wait for their actual spoken answer — do NOT proceed until you have it. Use the name they say verbatim. NEVER fill in "John Doe", "Jane Doe", "Customer", "Guest", "Caller", "Unknown", or ANY made-up name — the server will reject it and the order will fail. If they say they don't want to give a name, ask one more time politely. If they still refuse, apologize and use the end_call tool.
-- If get_menu returns isOpen: false, do NOT take any order. Apologize, tell the caller the hours, and use the end_call tool immediately.
-- Only take orders for items that appear in the menu tool response.
-- Do not make up prices — always use prices from the menu tool.
-- Keep responses short and natural for a phone conversation.
+- NAME: Use the caller's actual spoken name verbatim. NEVER use "John Doe", "Jane Doe", "Customer", "Guest", "Caller", "Unknown", or any made-up name — the server will reject it. If they refuse to give a name, ask once more; if they still refuse, use end_call.
+- Do not call place_order without items. Never skip straight from getting the name to placing an order.
+- Only order items that appear in the get_menu response.
+- Never invent prices — always use prices from get_menu.
+- Keep responses short and natural for a phone call.
 
 MODIFIER RULES — CRITICAL:
 - When a caller requests a paid add-on (e.g. "extra sour cream", "extra guac", "extra cheese"), find that option in the item's modifiers list in the menu response.
@@ -314,11 +323,11 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
             messages: [
               {
                 type: "request-start",
-                content: "Let me bring that up for you.",
+                content: "Perfect, one moment.",
               },
               {
                 type: "request-response-delayed",
-                content: "Alright, just a moment.",
+                content: "Just a second.",
                 timingMilliseconds: 2000,
               },
             ],
@@ -335,11 +344,11 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
             messages: [
               {
                 type: "request-start",
-                content: "Let me go ahead and place that for you.",
+                content: "Placing your order now.",
               },
               {
                 type: "request-response-delayed",
-                content: "Almost there, just one more second.",
+                content: "Almost done, one more second.",
                 timingMilliseconds: 2000,
               },
             ],
