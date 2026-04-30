@@ -108,52 +108,32 @@ export default function CustomerDisplay() {
   }, []);
 
   useEffect(() => {
-    let es: EventSource | null = null;
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    // Poll the database-backed endpoint every 1 s.
+    // SSE is unreliable through the Replit reverse proxy (buffering), so we use
+    // plain HTTP polling which works through every proxy and across server instances.
     let active = true;
+    let lastSeen = 0;
 
-    const applyData = (data: DisplayState) => {
+    const poll = async () => {
       if (!active) return;
-      setState(prev => (data.updatedAt === prev.updatedAt ? prev : data));
-    };
-
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const connectSSE = () => {
-      if (!active) return;
-      es = new EventSource("/api/display/stream");
-      es.onmessage = (e) => {
-        try { applyData(JSON.parse(e.data) as DisplayState); } catch {}
-      };
-      es.onerror = () => {
-        es?.close();
-        es = null;
-        if (!pollInterval) {
-          pollInterval = setInterval(async () => {
-            try {
-              const r = await fetch("/api/display", { cache: "no-store" });
-              if (!r.ok) return;
-              applyData(await r.json() as DisplayState);
-            } catch {}
-          }, 2_000);
+      try {
+        const r = await fetch("/api/display", { cache: "no-store" });
+        if (!r.ok) return;
+        const data = await r.json() as DisplayState;
+        if (!active) return;
+        if (data.updatedAt !== lastSeen) {
+          lastSeen = data.updatedAt;
+          setState(data);
         }
-        if (reconnectTimer) clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(() => {
-          reconnectTimer = null;
-          if (!active) return;
-          if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
-          connectSSE();
-        }, 3_000);
-      };
+      } catch {}
     };
 
-    connectSSE();
+    poll(); // fire immediately on mount
+    const interval = setInterval(poll, 1_000);
 
     return () => {
       active = false;
-      es?.close();
-      if (pollInterval) clearInterval(pollInterval);
-      if (reconnectTimer) clearTimeout(reconnectTimer);
+      clearInterval(interval);
     };
   }, []);
 
