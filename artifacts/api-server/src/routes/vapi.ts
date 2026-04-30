@@ -140,8 +140,12 @@ function validateVapiOrder(body: unknown): { data: VapiOrderPayload } | { error:
   if (!args || typeof args !== "object") return { error: "Invalid request body" };
   const b = args as Record<string, unknown>;
   if (!b.customerName || typeof b.customerName !== "string" || !b.customerName.trim()) return { error: "customerName is required" };
-  const genericNames = ["customer", "guest", "caller", "unknown", "n/a", "user", "anonymous", "name", "customer name"];
-  if (genericNames.includes((b.customerName as string).trim().toLowerCase())) return { error: "customerName must be the caller's real name, not a placeholder like 'Customer' or 'Guest'. Ask the caller for their name." };
+  const genericNames = [
+    "customer", "guest", "caller", "unknown", "n/a", "user", "anonymous",
+    "name", "customer name", "john doe", "john", "doe", "jane doe", "jane",
+    "test", "test customer", "placeholder", "sir", "ma'am", "madam",
+  ];
+  if (genericNames.includes((b.customerName as string).trim().toLowerCase())) return { error: "customerName must be the caller's actual name. NEVER use 'John Doe', 'Jane Doe', 'Customer', 'Guest', or any other placeholder. You MUST ask the caller for their real name before placing the order." };
   if (!b.customerPhone || typeof b.customerPhone !== "string" || !b.customerPhone.trim()) return { error: "customerPhone is required" };
   if (!Array.isArray(b.items) || b.items.length === 0) return { error: "items must be a non-empty array" };
   for (const item of b.items) {
@@ -246,9 +250,11 @@ IMPORTANT RULES:
 - ALWAYS start by calling the get_menu tool immediately when the call starts to check menu and store status.
 - If isOpen is false in the menu response, do NOT take any order. Apologize and tell the caller we are closed, give our opening time, and end the call politely.
 - Only take orders for items that appear in the menu tool response.
-- CRITICAL — NAME REQUIRED: You MUST ask the caller "What name should I put this order under?" before calling place_order. Wait for their answer. Use the name they give you. NEVER use "Customer", "Guest", "Caller", "Unknown", or any placeholder as the customerName — the server will reject it. If they do not give a name, ask again before proceeding.
+- CRITICAL — NAME REQUIRED: You MUST ask the caller "What name should I put this order under?" before calling place_order. Wait for their actual answer. Use the name they give you verbatim. NEVER use "John Doe", "Jane Doe", "Customer", "Guest", "Caller", "Unknown", or ANY placeholder — the server will reject it and the order will fail. If they refuse to give a name, ask one more time. If they still refuse, politely tell them you cannot place an order without a name, apologize, and use the end_call tool.
 - Confirm the full order and total before placing it.
 - Use the place_order tool to submit confirmed orders.
+- AFTER placing an order successfully: thank the caller warmly, tell them their order is confirmed and give them the confirmation code, then immediately use the end_call tool to hang up. Do NOT keep chatting.
+- If the store is closed: apologize, give the hours, then immediately use the end_call tool. Do NOT wait for the caller to say goodbye.
 - Do not make up prices — always use prices from the menu tool.
 - Keep responses short and natural for a phone conversation.
 - If you need to look something up, say "Let me check that for you" before calling a tool.
@@ -388,6 +394,8 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
               headers: { "x-vapi-secret": process.env.VAPI_WEBHOOK_SECRET ?? "" },
             },
           },
+          // Built-in Vapi tool — lets the agent hang up the call gracefully
+          { type: "endCall" },
         ],
       },
       voice: {
