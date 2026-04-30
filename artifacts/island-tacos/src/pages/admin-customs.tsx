@@ -747,47 +747,103 @@ export default function AdminCustoms() {
 
   // ── BOL parser ────────────────────────────────────────────────────────────
   function parseBolText(text: string) {
-    const t = text.replace(/\r/g, '').replace(/[ \t]{2,}/g, ' ');
+    // Normalise: preserve newlines, collapse only horizontal whitespace
+    const lines = text
+      .replace(/\r/g, '')
+      .split('\n')
+      .map(l => l.replace(/[ \t]+/g, ' ').trim())
+      .filter(l => l.length > 0);
+    const full = lines.join('\n');
 
-    // BOL number — typically 5–10 alphanumeric chars after "Bill of Lading Number", "B/L NO", or standalone on a line near the header
+    // ── BOL number ───────────────────────────────────────────────────────────
+    // Try labelled patterns first, then fall back to a short alphanumeric code
+    // near the top of the document.
     let bolNum = '';
-    const bolPatterns = [
+    for (const re of [
       /bill\s+of\s+lading\s+(?:number|no\.?|#)[\s:]*([A-Z0-9]{4,12})/i,
-      /b\/?l\s+(?:number|no\.?|#)[\s:]*([A-Z0-9]{4,12})/i,
-      /\b([A-Z]{2,4}\d{2,6}[A-Z]?)\b/,  // e.g. ISA31C, MBOL12345
-    ];
-    for (const re of bolPatterns) {
-      const m = t.match(re);
+      /b\/?l\s*(?:number|no\.?|#)[\s:]*([A-Z0-9]{4,12})/i,
+      /b\/?l\s+number\s*[\n:]\s*([A-Z0-9]{4,12})/i,
+    ]) {
+      const m = full.match(re);
       if (m) { bolNum = m[1].trim(); break; }
     }
-
-    // Freight — look for "GRAND TOTAL" or "TOTAL FREIGHT" followed by USD amount
-    let freight = '';
-    const freightPatterns = [
-      /grand\s+total[\s\S]{0,40}?U\.?S\.?\$?\s*([\d,]+\.?\d{0,2})/i,
-      /grand\s+total[\s\S]{0,60}?([\d,]+\.\d{2})\s*$/im,
-      /total\s+freight[\s:]*\$?\s*([\d,]+\.?\d{0,2})/i,
-      /ocean\s+freight[\s\S]{0,200}?grand\s+total[\s\S]{0,60}?([\d,]+\.\d{2})/i,
-    ];
-    for (const re of freightPatterns) {
-      const m = t.match(re);
-      if (m) { freight = parseFloat(m[1].replace(/,/g, '')).toFixed(2); break; }
+    if (!bolNum) {
+      // Scan the first 25 lines for a standalone alphanumeric code like ISA31C
+      for (const line of lines.slice(0, 25)) {
+        const m = line.match(/\b([A-Z]{2,4}\d{2,6}[A-Z]?)\b/);
+        if (m) { bolNum = m[1]; break; }
+      }
     }
 
-    // Vessel name
+    // ── Freight (Grand Total) ────────────────────────────────────────────────
+    // Strategy: find the line(s) containing "grand total", then grab the
+    // LAST decimal number on that line.  If the amount is in the right-hand
+    // column (separate line), check the next 3 lines for a bare number.
+    let freight = '';
+    for (let i = 0; i < lines.length; i++) {
+      if (!/grand\s*total/i.test(lines[i])) continue;
+
+      // All decimal numbers on this line
+      const nums = lines[i].match(/[\d,]+\.\d{2}/g);
+      if (nums && nums.length > 0) {
+        freight = parseFloat(nums[nums.length - 1].replace(/,/g, '')).toFixed(2);
+        break;
+      }
+
+      // Amount may be on the next 1–3 lines (right column of the table)
+      for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+        const nm = lines[j].match(/^[\d,]+\.\d{2}$/) || lines[j].match(/[\d,]+\.\d{2}/);
+        if (nm) { freight = parseFloat(nm[0].replace(/,/g, '')).toFixed(2); break; }
+      }
+      break;
+    }
+    // Fallback patterns
+    if (!freight) {
+      for (const re of [
+        /total\s+freight[^0-9]*([0-9,]+\.[0-9]{2})/i,
+        /freight\s+collect[^0-9]*([0-9,]+\.[0-9]{2})/i,
+        /grand\s+total[^0-9]{0,60}([0-9,]+\.[0-9]{2})/i,
+      ]) {
+        const m = full.match(re);
+        if (m) { freight = parseFloat(m[1].replace(/,/g, '')).toFixed(2); break; }
+      }
+    }
+
+    // ── Vessel ───────────────────────────────────────────────────────────────
+    // The "Vessel" label and the vessel name may be on the same or adjacent lines.
     let vessel = '';
-    const vm = t.match(/vessel[\s:]+([A-Z][A-Z\s]{2,30}?)(?:\n|voyage|port|$)/i);
-    if (vm) vessel = vm[1].trim();
+    for (let i = 0; i < lines.length; i++) {
+      if (!/\bvessel\b/i.test(lines[i])) continue;
+      // Try to extract name from same line, after "vessel" and before "voyage"
+      const same = lines[i].match(/\bvessel\b[^A-Z]*([A-Z][A-Z\s]{3,30}?)(?=\s*(?:voyage|$))/i);
+      if (same && !/^voyage/i.test(same[1].trim())) { vessel = same[1].trim(); break; }
+      // Try next line — if it looks like an all-caps vessel name
+      if (i + 1 < lines.length) {
+        const next = lines[i + 1];
+        if (/^[A-Z][A-Z\s]{3,}$/.test(next)) { vessel = next.trim(); break; }
+        // Or after "Vessel" / "Voyage Number" label row, the name follows
+        const after = next.match(/^([A-Z][A-Z\s]{3,30}?)(?:\s{2,}|$)/);
+        if (after && !/voyage|port|pier|lading/i.test(after[1])) { vessel = after[1].trim(); break; }
+      }
+      break;
+    }
 
-    // Port of discharge
+    // ── Port of discharge ────────────────────────────────────────────────────
     let portDischarge = '';
-    const pm = t.match(/port\s+of\s+discharge[\s:]+([A-Za-z\s]{3,30}?)(?:\n|for|pier|$)/i);
-    if (pm) portDischarge = pm[1].trim();
+    for (const line of lines) {
+      const m = line.match(/port\s+of\s+dis(?:charge)?[\s:]+([A-Za-z][A-Za-z\s,]{2,25}?)(?:\s{2,}|for\s+trans|\s*$)/i);
+      if (m) { portDischarge = m[1].trim(); break; }
+    }
 
-    // Weight in lb
+    // ── Gross weight in lb ───────────────────────────────────────────────────
     let weightLb = '';
-    const wm = t.match(/(\d+\.?\d*)\s*lb/i);
-    if (wm) weightLb = wm[1];
+    const lbHits = [...full.matchAll(/(\d+\.?\d*)\s*lb\b/gi)];
+    if (lbHits.length > 0) {
+      // Take the largest lb value (gross weight, not tare)
+      weightLb = lbHits.reduce((best, m) =>
+        parseFloat(m[1]) > parseFloat(best[1]) ? m : best
+      )[1];
+    }
 
     const extracted = { bolNum, freight, vessel, portDischarge, weightLb };
     setBolData(extracted);
@@ -798,7 +854,7 @@ export default function AdminCustoms() {
 
     const found = [bolNum && 'BOL number', freight && 'freight', vessel && 'vessel', portDischarge && 'port'].filter(Boolean);
     if (found.length === 0) {
-      setBolError('Could not auto-extract BOL details. Please verify the Freight field manually.');
+      setBolError('Could not auto-extract BOL details — the text may be too blurry. Please enter the Freight and BOL # manually.');
     } else {
       setBolError(`✓ Extracted from BOL: ${found.join(', ')} — verify before submitting.`);
     }
