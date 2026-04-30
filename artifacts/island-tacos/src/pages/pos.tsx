@@ -2913,7 +2913,7 @@ export default function POS() {
             }`}
           >
             {incomingOrders.length > 0 ? "🔔" : notifPerm === "granted" ? "🔔" : notifPerm === "denied" ? "🔕" : "🔔"}
-            <span className="hidden sm:inline">
+            <span>
               {incomingOrders.length > 0
                 ? `${incomingOrders.length} Pending`
                 : notifPerm === "granted"
