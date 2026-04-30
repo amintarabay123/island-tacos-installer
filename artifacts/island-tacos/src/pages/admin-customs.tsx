@@ -612,6 +612,25 @@ export default function AdminCustoms() {
       .replace(/(\d)\s+(\d)/g, '$1$2')    // rejoin split numbers: "1 8 . 5 0" → "18.50"
       .replace(/(\d)\s*\.\s*(\d)/g, '$1.$2'); // fix "18 . 50" → "18.50"
 
+    // ── Detect foreign-currency invoices and compute an FX rate to USD ───────
+    // Some suppliers (e.g. Prime Cash & Carry) price in NAF/ANG but show a USD total.
+    // Pattern: "Total (NAF): 1,737.00" and "Total (US$): 965.00" → fxRate = 1737/965 ≈ 1.8
+    let fxRate = 1;
+    let fxNote = '';
+    const nafM = clean.match(/total\s*\(?\s*n\.?a\.?f\.?\s*\)?[\s:]*([0-9,]+\.?\d{0,2})/i)
+               || clean.match(/([0-9,]+\.?\d{2})\s*naf\b/i);
+    const usdM = clean.match(/total\s*\(?\s*us\$?\s*\)?[\s:]*([0-9,]+\.?\d{0,2})/i)
+               || clean.match(/tender.*?us\s*dollars?\s*([0-9,]+\.?\d{0,2})/i)
+               || clean.match(/([0-9,]+\.?\d{2})\s*usd\b/i);
+    if (nafM && usdM) {
+      const naf = parseFloat(nafM[1].replace(/,/g, ''));
+      const usd = parseFloat(usdM[1].replace(/,/g, ''));
+      if (naf > 0 && usd > 0 && Math.abs(naf - usd) > 0.5) {
+        fxRate = naf / usd;
+        fxNote = ` (converted from NAF at 1 USD = ${fxRate.toFixed(4)} NAF)`;
+      }
+    }
+
     const skipRe = /invoice|order\s*#|date|page\s+\d|total|subtotal|freight|shipping|handling|tax|bill\s*to|ship\s*to|po\s*#|account|phone|fax|address|customer|thank|payment|terms|due\s*date|remit|balance|amount\s*due/i;
     const items: ScanRow[] = [];
     let idC = 1;
@@ -624,8 +643,11 @@ export default function AdminCustoms() {
       // Must end with a price: optional $ then digits, optional decimal
       const mm = line.match(/\$?\s*([\d,]+\.?\d{0,2})\s*$/);
       if (!mm) continue;
-      const fob = parseFloat(mm[1].replace(/,/g, ''));
-      if (isNaN(fob) || fob <= 0 || fob > 99999) continue;
+      const rawPrice = parseFloat(mm[1].replace(/,/g, ''));
+      if (isNaN(rawPrice) || rawPrice <= 0 || rawPrice > 9999999) continue;
+      // Convert to USD using detected exchange rate
+      const fob = rawPrice / fxRate;
+      if (fob > 99999) continue;
 
       // Strip the price from the end to get the description part
       let desc = line.slice(0, line.length - mm[0].length).trim();
@@ -654,7 +676,7 @@ export default function AdminCustoms() {
     } else {
       setScanRows(items);
       setNextScanId(items.length + 1);
-      setExtractError(`${items.length} item${items.length > 1 ? 's' : ''} extracted via OCR — please review all fields carefully before using the declaration form.`);
+      setExtractError(`${items.length} item${items.length > 1 ? 's' : ''} extracted via OCR${fxNote} — please review all fields carefully before using the declaration form.`);
     }
   }
 
