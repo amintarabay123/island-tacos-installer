@@ -436,7 +436,7 @@ export default function AdminCustoms() {
       fobT += fob;
     }
     const cifT = fobT + sfN + siN;
-    return { fobT, cifT, dutyT, wharf: fobT * 0.01, total: dutyT + fobT * 0.01 };
+    return { fobT, cifT, dutyT, wharf: fobT * 0.02, total: dutyT + fobT * 0.02 };
   }, [scanRows, sfN, siN]);
 
   // ── Form computed ─────────────────────────────────────────────────────────
@@ -444,7 +444,7 @@ export default function AdminCustoms() {
     let d = 0, w = 0;
     for (const r of formRecords) {
       d += computeDuty(r.rate, parseFloat(r.taxCif) || parseFloat(r.cif) || 0);
-      w += (parseFloat(r.wharfFob) || parseFloat(r.fob) || 0) * 0.01;
+      w += (parseFloat(r.wharfFob) || parseFloat(r.fob) || 0) * 0.02;
     }
     return { d, w, total: d + w };
   }, [formRecords]);
@@ -675,7 +675,7 @@ export default function AdminCustoms() {
       const qty = qm ? `${qm[1]} ${qm[2]}` : '';
 
       const tariff = getBestTariff(desc);
-      items.push({ id: idC++, desc, hs: tariff ? tariff[0] : '', qty, wt, fob: fob.toFixed(2), origin: 'US' });
+      items.push({ id: idC++, desc, hs: tariff ? tariff[0] : '', qty, wt, fob: String(fob), origin: 'US' });
     }
 
     if (items.length === 0) {
@@ -746,7 +746,7 @@ export default function AdminCustoms() {
       const fob = parseFloat(row.fob) || 0, cif = fob + pr;
       const tariff = TARIFF_DB.find(r => r[0] === row.hs);
       const rate = tariff ? tariff[2] : '';
-      return mkRec(id++, { hs: row.hs, origin: row.origin, pkgs: row.qty, desc: row.desc, wt: row.wt, qty: row.qty, fob: fob.toFixed(2), cif: cif.toFixed(2), taxCif: cif.toFixed(2), rate, wharfFob: fob.toFixed(2) });
+      return mkRec(id++, { hs: row.hs, origin: row.origin, pkgs: row.qty, desc: row.desc, wt: row.wt, qty: row.qty, fob: String(fob), cif: String(cif), taxCif: String(cif), rate, wharfFob: String(fob) });
     });
     setFormRecords(recs); setNextRecId(id); setFFreight(scanFreight); setFInsurance(scanInsurance); setFPkgCount(scanPkgCount);
     setTab('form');
@@ -976,13 +976,13 @@ export default function AdminCustoms() {
     formRecords.forEach((r, i) => {
       const taxCif = parseFloat(r.taxCif) || parseFloat(r.cif) || 0;
       const wf = parseFloat(r.wharfFob) || parseFloat(r.fob) || 0;
-      const duty = computeDuty(r.rate, taxCif), wharf = wf * 0.01;
+      const duty = computeDuty(r.rate, taxCif), wharf = wf * 0.02;
       out += `${'─'.repeat(62)}\nRECORD ${String(i + 1).padStart(3, '0')}\n`;
       out += `  12 CPC: ${r.cpc}   13 Tariff: ${r.hs}   14 Origin: ${r.origin}\n`;
       out += `  15 Packages: ${r.pkgs}\n  16 Description: ${r.desc}\n  17 Net Wt: ${r.wt} lb\n`;
       out += `  18 FOB: $${r.fob}   20 CIF: $${r.cif}\n`;
       out += `  21  01/42 CIF $${String(taxCif.toFixed(2)).padEnd(12)} ${String(r.rate).padEnd(8)} $${duty.toFixed(2)}\n`;
-      out += `       03/25 FOB $${String(wf.toFixed(2)).padEnd(12)} 1%       $${wharf.toFixed(2)}\n`;
+      out += `       03/25 FOB $${String(wf.toFixed(2)).padEnd(12)} 2%       $${wharf.toFixed(2)}\n`;
       out += `  Record Total: $${(duty + wharf).toFixed(2)}\n`;
     });
     out += `${'═'.repeat(62)}\n10. TOTAL DUTY: $${formTotals.d.toFixed(2)}\n    WHARFAGE:  $${formTotals.w.toFixed(2)}\n    TOTAL DUE: $${formTotals.total.toFixed(2)}\n\n`;
@@ -1245,7 +1245,7 @@ export default function AdminCustoms() {
 
             {/* Totals strip */}
             <div style={{ display:'flex', gap:16, flexWrap:'wrap', background:'#252d47', border:'1px solid #2a3050', borderRadius:8, padding:'14px 18px', marginTop:14, marginBottom:16 }}>
-              {([['FOB Total',`$${scanTotals.fobT.toFixed(2)}`,''],['Freight',`$${sfN.toFixed(2)}`,''],['Insurance',`$${siN.toFixed(2)}`,''],['CIF Total',`$${scanTotals.cifT.toFixed(2)}`,''],['Customs Duty',`$${scanTotals.dutyT.toFixed(2)}`,'#f59e0b'],['Wharfage (1%)',`$${scanTotals.wharf.toFixed(2)}`,''],['Total Due',`$${scanTotals.total.toFixed(2)}`,'#10b981']] as [string,string,string][]).map(([lbl,val,col]) => (
+              {([['FOB Total',`$${scanTotals.fobT.toFixed(2)}`,''],['Freight',`$${sfN.toFixed(2)}`,''],['Insurance',`$${siN.toFixed(2)}`,''],['CIF Total',`$${scanTotals.cifT.toFixed(2)}`,''],['Customs Duty',`$${scanTotals.dutyT.toFixed(2)}`,'#f59e0b'],['Wharfage (2%)',`$${scanTotals.wharf.toFixed(2)}`,''],['Total Due',`$${scanTotals.total.toFixed(2)}`,'#10b981']] as [string,string,string][]).map(([lbl,val,col]) => (
                 <div key={lbl} style={{ display:'flex', flexDirection:'column', gap:3 }}>
                   <label style={{ fontSize:10, fontFamily:'monospace', color:'#64748b', textTransform:'uppercase' }}>{lbl}</label>
                   <span style={{ fontSize:15, fontWeight:700, fontFamily:'monospace', color: col||'#e2e8f0' }}>{val}</span>
@@ -1354,7 +1354,7 @@ export default function AdminCustoms() {
             const taxCif = parseFloat(r.taxCif) || parseFloat(r.cif) || 0;
             const wf = parseFloat(r.wharfFob) || parseFloat(r.fob) || 0;
             const dutyAmt = computeDuty(r.rate, taxCif);
-            const wharfAmt = wf * 0.01;
+            const wharfAmt = wf * 0.02;
             const tis: React.CSSProperties = { background:'#1e243a', border:'1px solid #2a3050', color:'#e2e8f0', padding:'6px', borderRadius:4, fontFamily:'inherit', fontSize:12, outline:'none', width:'100%' };
             return (
               <div key={r.id} style={{ ...CS, borderLeft:'3px solid #3b82f6' }}>
