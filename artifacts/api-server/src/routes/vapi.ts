@@ -251,7 +251,14 @@ IMPORTANT RULES:
 - Use the place_order tool to submit confirmed orders.
 - Do not make up prices — always use prices from the menu tool.
 - Keep responses short and natural for a phone conversation.
-- If you need to look something up, say "Let me check that for you" before calling a tool.`;
+- If you need to look something up, say "Let me check that for you" before calling a tool.
+
+MODIFIER RULES — CRITICAL:
+- When a caller requests a paid add-on (e.g. "extra sour cream", "extra guac", "extra cheese"), find that option in the item's modifiers list in the menu response.
+- Use the exact option "id" from the menu as the optionId, and include the correct price from the menu.
+- NEVER put paid add-ons in the notes field — they MUST be in modifierSelections so the price is charged.
+- Free modifications (e.g. "no tomato", "no cheese") should also be in modifierSelections using the correct modifierId and optionId, with price 0.
+- Always confirm the total price including any paid add-ons before placing the order.`;
 }
 
 router.post("/vapi/assistant-request", async (req: Request, res: Response): Promise<void> => {
@@ -358,13 +365,15 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
                         notes: { type: "string", description: "Special instructions for this item" },
                         modifierSelections: {
                           type: "array",
+                          description: "Modifier choices for this item. For PAID add-ons (extra sour cream, extra guac, etc.), you MUST include the exact optionId from the menu response and the correct price — do NOT put paid add-ons in notes.",
                           items: {
                             type: "object",
+                            required: ["modifierId", "optionId", "name", "price"],
                             properties: {
-                              modifierId: { type: "string" },
-                              optionId: { type: "string" },
-                              name: { type: "string" },
-                              price: { type: "number" },
+                              modifierId: { type: "string", description: "The modifier's loyverseId from the menu" },
+                              optionId: { type: "string", description: "The exact option id from the menu's modifier options array" },
+                              name: { type: "string", description: "Human-readable option name (e.g. 'Extra Sour Cream')" },
+                              price: { type: "number", description: "Price from the menu (0 for free modifications like 'no tomato')" },
                             },
                           },
                         },
@@ -521,15 +530,19 @@ router.post("/vapi/order", async (req: Request, res: Response): Promise<void> =>
   }
 
   const menuItemIds = items.map(i => i.menuItemId);
-  const menuItems = await db
-    .select()
-    .from(menuItemsTable)
-    .where(menuItemIds.length === 1
-      ? eq(menuItemsTable.id, menuItemIds[0])
-      : inArray(menuItemsTable.id, menuItemIds)
-    );
+  const [menuItems, allModifiers] = await Promise.all([
+    db.select()
+      .from(menuItemsTable)
+      .where(menuItemIds.length === 1
+        ? eq(menuItemsTable.id, menuItemIds[0])
+        : inArray(menuItemsTable.id, menuItemIds)
+      ),
+    db.select().from(modifiersTable),
+  ]);
 
   const menuItemMap = new Map(menuItems.map(m => [m.id, m]));
+  // Map loyverseId → modifier row for authoritative price lookups
+  const modifierLookup = new Map(allModifiers.map(m => [m.loyverseId, m]));
 
   let subtotal = 0;
   const orderItemsData: {
@@ -553,7 +566,18 @@ router.post("/vapi/order", async (req: Request, res: Response): Promise<void> =>
       return;
     }
     const price = parseFloat(menuItem.price as unknown as string);
-    const modifierTotal = (item.modifierSelections ?? []).reduce((s, m) => s + (m.price ?? 0), 0);
+
+    // Look up each modifier's price from the database — do NOT trust the AI-reported price.
+    // If the optionId matches a known option, use the DB price. Otherwise fall back to AI price.
+    const modifierTotal = (item.modifierSelections ?? []).reduce((s, m) => {
+      const mod = modifierLookup.get(m.modifierId);
+      if (mod) {
+        const options = mod.options as { id: string; name: string; price: number }[];
+        const opt = options.find(o => o.id === m.optionId);
+        if (opt) return s + (opt.price ?? 0);
+      }
+      return s + (m.price ?? 0);
+    }, 0);
     const qty = item.quantity ?? 1;
     const itemSubtotal = (price + modifierTotal) * qty;
     subtotal += itemSubtotal;
