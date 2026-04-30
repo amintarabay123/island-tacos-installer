@@ -214,8 +214,8 @@ function vapiResult(toolCallId: string | null, result: string): Record<string, u
  */
 const VAPI_MODEL_PROVIDER = "google";
 const VAPI_MODEL = "gemini-2.0-flash";
-const VAPI_VOICE_PROVIDER = "openai"; // e.g. "11labs", "openai", "playht" — match your current assistant
-const VAPI_VOICE_ID = "nova";         // e.g. "nova", "alloy", "shimmer", or an 11labs voice ID
+const VAPI_VOICE_PROVIDER = "azure"; // e.g. "11labs", "openai", "azure"
+const VAPI_VOICE_ID = "en-US-JennyNeural"; // energetic, upbeat female
 
 function buildSystemPrompt(callerPhone: string | null, callerIsMobile: boolean): string {
   let phoneSection: string;
