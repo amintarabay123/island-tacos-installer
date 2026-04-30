@@ -364,6 +364,15 @@ export default function AdminCustoms() {
   const [extractProgress, setExtractProgress] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // ── BOL state ─────────────────────────────────────────────────────────────
+  const [bolPreview, setBolPreview] = useState<{ type: 'image'; src: string } | { type: 'pdf'; text: string } | null>(null);
+  const [bolDragOver, setBolDragOver] = useState(false);
+  const [bolExtracting, setBolExtracting] = useState(false);
+  const [bolError, setBolError] = useState<string | null>(null);
+  const [bolProgress, setBolProgress] = useState('');
+  const [bolData, setBolData] = useState<{ bolNum: string; freight: string; vessel: string; portDischarge: string; weightLb: string } | null>(null);
+  const bolFileRef = useRef<HTMLInputElement>(null);
+
   // ── Form state ────────────────────────────────────────────────────────────
   const [fType, setFType] = useState('IMPORT');
   const [fRef, setFRef] = useState('');
@@ -714,6 +723,128 @@ export default function AdminCustoms() {
 
   function clearScan() { setScanPreview(null); setScanRows([]); setScanVisible(false); setScanFreight('0'); setScanInsurance('0'); setExtracting(false); setExtractError(null); setExtractProgress(''); if (fileRef.current) fileRef.current.value = ''; }
 
+  // ── BOL parser ────────────────────────────────────────────────────────────
+  function parseBolText(text: string) {
+    const t = text.replace(/\r/g, '').replace(/[ \t]{2,}/g, ' ');
+
+    // BOL number — typically 5–10 alphanumeric chars after "Bill of Lading Number", "B/L NO", or standalone on a line near the header
+    let bolNum = '';
+    const bolPatterns = [
+      /bill\s+of\s+lading\s+(?:number|no\.?|#)[\s:]*([A-Z0-9]{4,12})/i,
+      /b\/?l\s+(?:number|no\.?|#)[\s:]*([A-Z0-9]{4,12})/i,
+      /\b([A-Z]{2,4}\d{2,6}[A-Z]?)\b/,  // e.g. ISA31C, MBOL12345
+    ];
+    for (const re of bolPatterns) {
+      const m = t.match(re);
+      if (m) { bolNum = m[1].trim(); break; }
+    }
+
+    // Freight — look for "GRAND TOTAL" or "TOTAL FREIGHT" followed by USD amount
+    let freight = '';
+    const freightPatterns = [
+      /grand\s+total[\s\S]{0,40}?U\.?S\.?\$?\s*([\d,]+\.?\d{0,2})/i,
+      /grand\s+total[\s\S]{0,60}?([\d,]+\.\d{2})\s*$/im,
+      /total\s+freight[\s:]*\$?\s*([\d,]+\.?\d{0,2})/i,
+      /ocean\s+freight[\s\S]{0,200}?grand\s+total[\s\S]{0,60}?([\d,]+\.\d{2})/i,
+    ];
+    for (const re of freightPatterns) {
+      const m = t.match(re);
+      if (m) { freight = parseFloat(m[1].replace(/,/g, '')).toFixed(2); break; }
+    }
+
+    // Vessel name
+    let vessel = '';
+    const vm = t.match(/vessel[\s:]+([A-Z][A-Z\s]{2,30}?)(?:\n|voyage|port|$)/i);
+    if (vm) vessel = vm[1].trim();
+
+    // Port of discharge
+    let portDischarge = '';
+    const pm = t.match(/port\s+of\s+discharge[\s:]+([A-Za-z\s]{3,30}?)(?:\n|for|pier|$)/i);
+    if (pm) portDischarge = pm[1].trim();
+
+    // Weight in lb
+    let weightLb = '';
+    const wm = t.match(/(\d+\.?\d*)\s*lb/i);
+    if (wm) weightLb = wm[1];
+
+    const extracted = { bolNum, freight, vessel, portDischarge, weightLb };
+    setBolData(extracted);
+
+    // Auto-fill CAPS form fields
+    if (bolNum) setFBol(bolNum);
+    if (freight && parseFloat(freight) > 0) setScanFreight(freight);
+
+    const found = [bolNum && 'BOL number', freight && 'freight', vessel && 'vessel', portDischarge && 'port'].filter(Boolean);
+    if (found.length === 0) {
+      setBolError('Could not auto-extract BOL details. Please verify the Freight field manually.');
+    } else {
+      setBolError(`✓ Extracted from BOL: ${found.join(', ')} — verify before submitting.`);
+    }
+  }
+
+  const handleBolFile = useCallback(async (file: File | null) => {
+    if (!file) return;
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImage && !isPdf) { alert('Please upload a JPG, PNG, or PDF file.'); return; }
+
+    setBolExtracting(true);
+    setBolError(null);
+    setBolProgress('Reading file…');
+    setBolData(null);
+
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = e => setBolPreview({ type: 'image', src: e.target?.result as string });
+      reader.readAsDataURL(file);
+    } else {
+      setBolPreview({ type: 'pdf', text: 'Reading Bill of Lading…' });
+    }
+
+    try {
+      let extractedText = '';
+      if (isImage) {
+        extractedText = await runOcr(URL.createObjectURL(file));
+      } else {
+        const lib = (window as any)['pdfjs-dist/build/pdf'];
+        if (!lib) throw new Error('PDF renderer not loaded yet — wait a moment and try again');
+        setBolProgress('Loading PDF…');
+        const url = URL.createObjectURL(file);
+        const pdf = await lib.getDocument(url).promise;
+        let embeddedText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          embeddedText += content.items.map((it: any) => it.str).join(' ') + '\n';
+        }
+        const charsPerPage = embeddedText.trim().length / pdf.numPages;
+        if (charsPerPage > 80) {
+          extractedText = embeddedText;
+          setBolPreview({ type: 'pdf', text: embeddedText.slice(0, 3000) + (embeddedText.length > 3000 ? '\n\n[…truncated]' : '') });
+        } else {
+          setBolPreview({ type: 'pdf', text: 'Scanned PDF — running OCR…' });
+          const parts: string[] = [];
+          for (let i = 1; i <= pdf.numPages; i++) {
+            setBolProgress(`OCR: page ${i} of ${pdf.numPages}…`);
+            const page = await pdf.getPage(i);
+            const canvas = await pdfPageToCanvas(page);
+            parts.push(await runOcr(canvas));
+          }
+          extractedText = parts.join('\n');
+          setBolPreview({ type: 'pdf', text: extractedText.slice(0, 3000) });
+        }
+        URL.revokeObjectURL(url);
+      }
+      setBolProgress('Parsing BOL fields…');
+      parseBolText(extractedText);
+    } catch (err) {
+      setBolError(`Could not read Bill of Lading: ${String(err)}`);
+    } finally {
+      setBolExtracting(false);
+      setBolProgress('');
+    }
+  }, []);
+
   // ── Form handlers ─────────────────────────────────────────────────────────
   function addFormRecord(d: Partial<FormRecord> = {}) { setFormRecords(prev => [...prev, mkRec(nextRecId, d)]); setNextRecId(n => n + 1); }
   function removeFormRecord(id: number) { setFormRecords(prev => prev.filter(r => r.id !== id)); }
@@ -787,7 +918,7 @@ export default function AdminCustoms() {
 
       {/* ── Tabs ── */}
       <div className="no-print" style={{ display:'flex', background:'#161b27', borderBottom:'1px solid #2a3050', padding:'0 24px', gap:4, overflowX:'auto' }}>
-        {([['scan','📄 Invoice Scanner'],['form','📋 Declaration Form'],['lookup','🔍 Tariff Lookup']] as [string,string][]).map(([id,label]) => (
+        {([['scan','📄 Upload Documents'],['form','📋 Declaration Form'],['lookup','🔍 Tariff Lookup']] as [string,string][]).map(([id,label]) => (
           <button key={id} className="hmc-tab-btn" onClick={() => setTab(id as 'scan'|'form'|'lookup')}
             style={{ padding:'13px 18px', fontSize:13, fontWeight:600, cursor:'pointer', color: tab===id ? '#3b82f6' : '#64748b', background:'none', border:'none', borderBottom: tab===id ? '2px solid #3b82f6' : '2px solid transparent', whiteSpace:'nowrap', fontFamily:'inherit', transition:'all .15s' }}>
             {label}
@@ -799,29 +930,117 @@ export default function AdminCustoms() {
       {tab === 'scan' && (
         <div style={{ padding:24, maxWidth:1200, margin:'0 auto' }}>
           <div style={{ background:'rgba(59,130,246,.1)', border:'1px solid rgba(59,130,246,.3)', borderRadius:6, padding:'10px 14px', fontSize:12, color:'#3b82f6', marginBottom:14 }}>
-            Upload your supplier invoice (JPG, PNG, or PDF). For images the tool shows a preview and lets you enter items manually. For text PDFs, it auto-extracts line items and looks up tariff numbers.
+            Upload your <strong>Invoice</strong> and <strong>Bill of Lading</strong> together. The invoice provides item descriptions and FOB values; the BOL provides the BOL number and freight charges. Both are combined to complete the CAPS declaration.
           </div>
 
-          {/* Drop zone */}
-          <div className="hmc-dz" onClick={() => fileRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
-            style={{ border:`2px dashed ${dragOver?'#3b82f6':'#2a3050'}`, borderRadius:10, padding:40, textAlign:'center', cursor:'pointer', background: dragOver?'rgba(59,130,246,.04)':'#161b27', marginBottom:16, transition:'all .2s' }}>
-            <div style={{ fontSize:36, marginBottom:10 }}>📦</div>
-            <h3 style={{ fontSize:14, marginBottom:6 }}>Drop invoice here or click to upload</h3>
-            <p style={{ fontSize:12, color:'#64748b' }}>JPG · PNG · PDF &nbsp;|&nbsp; max 20 MB</p>
-          </div>
-          <input type="file" ref={fileRef} accept=".jpg,.jpeg,.png,.pdf,.webp" style={{ display:'none' }} onChange={e => handleFile(e.target.files?.[0] ?? null)} />
+          {/* Two upload zones side by side */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
 
-          {/* Preview */}
-          {scanPreview && (
-            <div style={CS}>
-              <div style={CT}>Invoice Preview</div>
-              {scanPreview.type === 'image' && <img src={scanPreview.src} style={{ maxWidth:'100%', maxHeight:320, borderRadius:8, border:'1px solid #2a3050' }} alt="invoice" />}
-              {scanPreview.type === 'pdf'   && <div style={{ background:'#1e243a', border:'1px solid #2a3050', borderRadius:8, padding:12, fontSize:12, fontFamily:'monospace', color:'#94a3b8', maxHeight:240, overflowY:'auto', whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{scanPreview.text}</div>}
+            {/* ── Invoice upload ── */}
+            <div>
+              <div style={{ fontSize:11, fontFamily:'monospace', color:'#f59e0b', letterSpacing:1, textTransform:'uppercase', marginBottom:8 }}>📄 Invoice</div>
+              <div className="hmc-dz" onClick={() => fileRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
+                style={{ border:`2px dashed ${dragOver?'#f59e0b':'#2a3050'}`, borderRadius:10, padding:28, textAlign:'center', cursor:'pointer', background: dragOver?'rgba(245,158,11,.04)':'#161b27', transition:'all .2s', minHeight:120 }}>
+                {scanPreview ? (
+                  <div>
+                    <div style={{ fontSize:22, marginBottom:6 }}>✅</div>
+                    <p style={{ fontSize:12, color:'#10b981', fontWeight:600, marginBottom:4 }}>Invoice loaded</p>
+                    <p style={{ fontSize:11, color:'#64748b' }}>Click to replace</p>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize:28, marginBottom:8 }}>🧾</div>
+                    <h3 style={{ fontSize:13, marginBottom:4 }}>Drop invoice or click to upload</h3>
+                    <p style={{ fontSize:11, color:'#64748b' }}>JPG · PNG · PDF</p>
+                  </div>
+                )}
+              </div>
+              <input type="file" ref={fileRef} accept=".jpg,.jpeg,.png,.pdf,.webp" style={{ display:'none' }} onChange={e => handleFile(e.target.files?.[0] ?? null)} />
+
+              {scanPreview && (
+                <div style={{ ...CS, marginTop:10, marginBottom:0 }}>
+                  <div style={CT}>Invoice Preview</div>
+                  {scanPreview.type === 'image' && <img src={scanPreview.src} style={{ maxWidth:'100%', maxHeight:220, borderRadius:8, border:'1px solid #2a3050' }} alt="invoice" />}
+                  {scanPreview.type === 'pdf'   && <div style={{ background:'#1e243a', border:'1px solid #2a3050', borderRadius:8, padding:12, fontSize:11, fontFamily:'monospace', color:'#94a3b8', maxHeight:180, overflowY:'auto', whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{scanPreview.text}</div>}
+                </div>
+              )}
             </div>
-          )}
+
+            {/* ── Bill of Lading upload ── */}
+            <div>
+              <div style={{ fontSize:11, fontFamily:'monospace', color:'#10b981', letterSpacing:1, textTransform:'uppercase', marginBottom:8 }}>🚢 Bill of Lading</div>
+              <div className="hmc-dz" onClick={() => bolFileRef.current?.click()}
+                onDragOver={e => { e.preventDefault(); setBolDragOver(true); }}
+                onDragLeave={() => setBolDragOver(false)}
+                onDrop={e => { e.preventDefault(); setBolDragOver(false); handleBolFile(e.dataTransfer.files[0]); }}
+                style={{ border:`2px dashed ${bolDragOver?'#10b981':'#2a3050'}`, borderRadius:10, padding:28, textAlign:'center', cursor:'pointer', background: bolDragOver?'rgba(16,185,129,.04)':'#161b27', transition:'all .2s', minHeight:120 }}>
+                {bolPreview ? (
+                  <div>
+                    <div style={{ fontSize:22, marginBottom:6 }}>✅</div>
+                    <p style={{ fontSize:12, color:'#10b981', fontWeight:600, marginBottom:4 }}>BOL loaded</p>
+                    <p style={{ fontSize:11, color:'#64748b' }}>Click to replace</p>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize:28, marginBottom:8 }}>🚢</div>
+                    <h3 style={{ fontSize:13, marginBottom:4 }}>Drop Bill of Lading or click to upload</h3>
+                    <p style={{ fontSize:11, color:'#64748b' }}>JPG · PNG · PDF</p>
+                  </div>
+                )}
+              </div>
+              <input type="file" ref={bolFileRef} accept=".jpg,.jpeg,.png,.pdf,.webp" style={{ display:'none' }} onChange={e => handleBolFile(e.target.files?.[0] ?? null)} />
+
+              {/* BOL spinner */}
+              {bolExtracting && (
+                <div style={{ background:'rgba(16,185,129,.08)', border:'1px solid rgba(16,185,129,.3)', borderRadius:10, padding:20, textAlign:'center', marginTop:10 }}>
+                  <div style={{ fontSize:22, marginBottom:6, animation:'spin 1.2s linear infinite', display:'inline-block' }}>⏳</div>
+                  <p style={{ fontSize:13, color:'#10b981', fontWeight:600 }}>{bolProgress || 'Reading BOL…'}</p>
+                </div>
+              )}
+
+              {/* BOL result */}
+              {bolError && !bolExtracting && (() => {
+                const isOk = bolError.startsWith('✓');
+                return (
+                  <div style={{ background: isOk?'rgba(16,185,129,.08)':'rgba(239,68,68,.1)', border:`1px solid ${isOk?'rgba(16,185,129,.3)':'rgba(239,68,68,.35)'}`, borderRadius:8, padding:'12px 14px', fontSize:12, color: isOk?'#6ee7b7':'#fca5a5', marginTop:10 }}>
+                    {bolError}
+                  </div>
+                );
+              })()}
+
+              {/* BOL extracted data summary */}
+              {bolData && !bolExtracting && (
+                <div style={{ ...CS, marginTop:10, marginBottom:0 }}>
+                  <div style={CT}>Extracted from BOL</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                    {[
+                      ['BOL Number', bolData.bolNum || '—'],
+                      ['Freight (USD)', bolData.freight ? `$${bolData.freight}` : '—'],
+                      ['Vessel', bolData.vessel || '—'],
+                      ['Port of Discharge', bolData.portDischarge || '—'],
+                      ['Gross Weight', bolData.weightLb ? `${bolData.weightLb} lb` : '—'],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <span style={{ fontSize:10, fontFamily:'monospace', color:'#64748b', textTransform:'uppercase', display:'block', marginBottom:2 }}>{label}</span>
+                        <span style={{ fontSize:13, fontWeight:600, color: value==='—'?'#64748b':'#e2e8f0' }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {bolPreview && (
+                    <details style={{ marginTop:12 }}>
+                      <summary style={{ fontSize:11, color:'#64748b', cursor:'pointer' }}>Show raw BOL text</summary>
+                      <div style={{ background:'#1e243a', border:'1px solid #2a3050', borderRadius:8, padding:10, fontSize:11, fontFamily:'monospace', color:'#94a3b8', maxHeight:160, overflowY:'auto', whiteSpace:'pre-wrap', wordBreak:'break-word', marginTop:8 }}>
+                        {bolPreview.type === 'pdf' ? bolPreview.text : '(image — OCR text not shown)'}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Extracting spinner */}
           {extracting && (
@@ -929,7 +1148,7 @@ export default function AdminCustoms() {
 
             <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
               <button onClick={sendToForm} style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:7, fontSize:13, fontWeight:600, cursor:'pointer', border:'none', fontFamily:'inherit', background:'#10b981', color:'#fff' }}>✅ Send to Declaration Form</button>
-              <button onClick={clearScan} style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:7, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background:'none', border:'1px solid #2a3050', color:'#94a3b8' }}>🗑 Clear</button>
+              <button onClick={() => { clearScan(); setBolPreview(null); setBolData(null); setBolError(null); setBolProgress(''); setBolExtracting(false); if (bolFileRef.current) bolFileRef.current.value = ''; }} style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:7, fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', background:'none', border:'1px solid #2a3050', color:'#94a3b8' }}>🗑 Clear All</button>
             </div>
           </>}
         </div>
