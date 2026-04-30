@@ -213,7 +213,7 @@ function vapiResult(toolCallId: string | null, result: string): Record<string, u
  * existing Vapi assistant's voice settings so the caller hears the same voice.
  */
 const VAPI_MODEL_PROVIDER = "google";
-const VAPI_MODEL = "gemini-2.0-flash-001";
+const VAPI_MODEL = "gemini-2.0-flash";
 const VAPI_VOICE_PROVIDER = "openai"; // e.g. "11labs", "openai", "playht" — match your current assistant
 const VAPI_VOICE_ID = "shimmer";      // e.g. "nova", "alloy", "shimmer", or an 11labs voice ID
 
@@ -325,7 +325,6 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
         tools: [
           {
             type: "function",
-            async: false,
             messages: [
               {
                 type: "request-start",
@@ -346,7 +345,6 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
           },
           {
             type: "function",
-            async: false,
             messages: [
               {
                 type: "request-start",
