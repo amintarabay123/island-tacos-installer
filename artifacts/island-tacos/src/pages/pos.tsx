@@ -2691,7 +2691,7 @@ export default function POS() {
     }).catch(() => {});
   }, []);
 
-  // Broadcast cart state to customer display tablet (debounced 400ms)
+  // Broadcast cart state to customer display tablet (debounced 50ms)
   useEffect(() => {
     const t = setTimeout(() => {
       const showingAthMovil = paymentModal && paymentTab === "athmovil";
@@ -2703,8 +2703,9 @@ export default function POS() {
             items: cart.map(c => ({
               name: c.name,
               quantity: c.quantity,
-              unitPrice: c.price + c.modifierSelections.reduce((s, m) => s + m.price, 0),
-              modifiers: c.modifierSelections.map(m => m.name),
+              // Number() coercion: DB may return price as string — prevent "12.50" + 2 = "12.502"
+              unitPrice: Number(c.price) + (c.modifierSelections ?? []).reduce((s, m) => s + m.price, 0),
+              modifiers: (c.modifierSelections ?? []).map(m => m.name),
             })),
             subtotal,
             tax: 0,
@@ -2718,7 +2719,7 @@ export default function POS() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }).catch(() => {});
-    }, 400);
+    }, 50);
     return () => clearTimeout(t);
   }, [cart, subtotal, total, discount, paymentModal, paymentTab]);
 

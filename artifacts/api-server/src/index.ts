@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { registerAthMovilWebhook } from "./lib/athmovil-webhook-register";
 import { warmAllMenuImages } from "./routes/image-proxy";
+import { startMidnightResetScheduler } from "./lib/midnight-reset";
 import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
@@ -60,6 +61,10 @@ app.listen(port, (err) => {
   // Warm all menu images on startup — loads disk cache first (no network),
   // then fetches any missing images from Loyverse CDN in the background.
   warmAllMenuImages().catch(() => {});
+
+  // Restore sold-out items to available every night at midnight BVI time.
+  // Items in the MISC category are never auto-reset (they're POS-only by design).
+  startMidnightResetScheduler();
 
   // Register ATH Móvil webhook URL in production only (non-blocking)
   if (process.env["NODE_ENV"] === "production") {
