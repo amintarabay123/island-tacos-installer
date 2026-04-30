@@ -140,6 +140,8 @@ function validateVapiOrder(body: unknown): { data: VapiOrderPayload } | { error:
   if (!args || typeof args !== "object") return { error: "Invalid request body" };
   const b = args as Record<string, unknown>;
   if (!b.customerName || typeof b.customerName !== "string" || !b.customerName.trim()) return { error: "customerName is required" };
+  const genericNames = ["customer", "guest", "caller", "unknown", "n/a", "user", "anonymous", "name", "customer name"];
+  if (genericNames.includes((b.customerName as string).trim().toLowerCase())) return { error: "customerName must be the caller's real name, not a placeholder like 'Customer' or 'Guest'. Ask the caller for their name." };
   if (!b.customerPhone || typeof b.customerPhone !== "string" || !b.customerPhone.trim()) return { error: "customerPhone is required" };
   if (!Array.isArray(b.items) || b.items.length === 0) return { error: "items must be a non-empty array" };
   for (const item of b.items) {
@@ -244,7 +246,7 @@ IMPORTANT RULES:
 - ALWAYS start by calling the get_menu tool immediately when the call starts to check menu and store status.
 - If isOpen is false in the menu response, do NOT take any order. Apologize and tell the caller we are closed, give our opening time, and end the call politely.
 - Only take orders for items that appear in the menu tool response.
-- Always collect the caller's name before placing the order.
+- CRITICAL — NAME REQUIRED: You MUST ask the caller "What name should I put this order under?" before calling place_order. Wait for their answer. Use the name they give you. NEVER use "Customer", "Guest", "Caller", "Unknown", or any placeholder as the customerName — the server will reject it. If they do not give a name, ask again before proceeding.
 - Confirm the full order and total before placing it.
 - Use the place_order tool to submit confirmed orders.
 - Do not make up prices — always use prices from the menu tool.

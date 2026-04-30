@@ -2582,6 +2582,11 @@ export default function POS() {
           isFirstOnlineFetchRef.current = false;
           pending.forEach(o => seenOnlineIdsRef.current.add(o.id));
           setIncomingOrders(pending);
+          // Show popup + chime for any pending orders already waiting when the page loads
+          if (pending.length > 0) {
+            setPopupOrders(pending);
+            playChime();
+          }
         } else {
           const newOrders = pending.filter(o => !seenOnlineIdsRef.current.has(o.id));
           if (newOrders.length > 0) {
