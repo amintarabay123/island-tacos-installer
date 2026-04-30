@@ -212,8 +212,8 @@ function vapiResult(toolCallId: string | null, result: string): Record<string, u
  * IMPORTANT: Update VAPI_VOICE_PROVIDER and VAPI_VOICE_ID below to match your
  * existing Vapi assistant's voice settings so the caller hears the same voice.
  */
-const VAPI_MODEL_PROVIDER = "groq";
-const VAPI_MODEL = "llama-3.3-70b-versatile";
+const VAPI_MODEL_PROVIDER = "google";
+const VAPI_MODEL = "gemini-2.0-flash-001";
 const VAPI_VOICE_PROVIDER = "openai"; // e.g. "11labs", "openai", "playht" — match your current assistant
 const VAPI_VOICE_ID = "shimmer";      // e.g. "nova", "alloy", "shimmer", or an 11labs voice ID
 
