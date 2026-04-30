@@ -614,14 +614,22 @@ export default function AdminCustoms() {
 
     // ── Detect foreign-currency invoices and compute an FX rate to USD ───────
     // Some suppliers (e.g. Prime Cash & Carry) price in NAF/ANG but show a USD total.
-    // Pattern: "Total (NAF): 1,737.00" and "Total (US$): 965.00" → fxRate = 1737/965 ≈ 1.8
+    // Invoice format: "Total: (NAF) 1,737.00"  and  "Total: (US$) 965.00"
+    // Note: `[\s:]*` is required — a colon separates "Total" from "(NAF)" / "(US$)".
     let fxRate = 1;
     let fxNote = '';
-    const nafM = clean.match(/total\s*\(?\s*n\.?a\.?f\.?\s*\)?[\s:]*([0-9,]+\.?\d{0,2})/i)
-               || clean.match(/([0-9,]+\.?\d{2})\s*naf\b/i);
-    const usdM = clean.match(/total\s*\(?\s*us\$?\s*\)?[\s:]*([0-9,]+\.?\d{0,2})/i)
-               || clean.match(/tender.*?us\s*dollars?\s*([0-9,]+\.?\d{0,2})/i)
-               || clean.match(/([0-9,]+\.?\d{2})\s*usd\b/i);
+
+    // NAF total — handles: "Total: (NAF) 1737", "Total (NAF): 1737", "1737 NAF", "ANG 1737"
+    const nafM = clean.match(/total[\s:]*\(?n\.?a\.?f\.?\)?[\s:]*([0-9,]+\.?\d{0,2})/i)
+               || clean.match(/total[\s:]*\(?ang\)?[\s:]*([0-9,]+\.?\d{0,2})/i)
+               || clean.match(/([0-9,]+\.?\d{2})\s*(?:naf|ang)\b/i);
+
+    // USD total — handles: "Total: (US$) 965", "Total (US$): 965", "Tender: US Dollars 965", "US$ 965"
+    const usdM = clean.match(/total[\s:]*\(?us[\s.]?\$?\)?[\s:]*([0-9,]+\.?\d{0,2})/i)
+               || clean.match(/tender[^0-9]{0,30}us\s*dollars?\s*([0-9,]+\.?\d{0,2})/i)
+               || clean.match(/us[\s.]?\$\s*([0-9,]+\.?\d{0,2})/i)
+               || clean.match(/([0-9,]+\.?\d{2})\s*us[\s.]?\$/i);
+
     if (nafM && usdM) {
       const naf = parseFloat(nafM[1].replace(/,/g, ''));
       const usd = parseFloat(usdM[1].replace(/,/g, ''));
