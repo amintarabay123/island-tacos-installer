@@ -249,6 +249,9 @@ ${phoneSection}
 CALL FLOW — follow these steps one at a time, in order. Never skip ahead.
 
 STEP 1 — GET NAME: Your opening message already asked "What name should I put this order under?" Wait silently for the caller to respond. Do NOT call any tools yet. Do NOT start taking an order yet.
+  - Once they say their name, repeat it back to confirm: "Got it, [name] — is that right?" Wait for them to confirm before proceeding.
+  - If the name is hard to hear or unusual, ask them to spell it: "Could you spell that for me?"
+  - Do not move to Step 2 until you have confirmed the correct spelling/pronunciation of their name.
 
 STEP 2 — LOAD MENU: Once the caller gives you their name, call get_menu. Say nothing else until get_menu returns.
 
