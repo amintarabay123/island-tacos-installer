@@ -639,7 +639,7 @@ export default function AdminCustoms() {
       }
     }
 
-    const skipRe = /invoice|order\s*#|date|page\s+\d|total|subtotal|freight|shipping|handling|tax|bill\s*to|ship\s*to|po\s*#|account|phone|fax|address|customer|thank|payment|terms|due\s*date|remit|balance|amount\s*due/i;
+    const skipRe = /invoice|order\s*#|date|page\s+\d|total|subtotal|freight|shipping|handling|tax|bill\s*to|ship\s*to|po\s*#|account|phone|fax|address|customer|thank|payment|terms|due\s*date|remit|balance|amount\s*due|tender|net\s+tender|station|ticket|working\s+hours|mon\s+to\s+sat|sunday|sale\s+sub|discount|you\s+saved|cash\s+refund/i;
     const items: ScanRow[] = [];
     let idC = 1;
 
@@ -648,8 +648,9 @@ export default function AdminCustoms() {
       if (line.length < 4) continue;
       if (skipRe.test(line)) continue;
 
-      // Must end with a price: optional $ then digits, optional decimal
-      const mm = line.match(/\$?\s*([\d,]+\.?\d{0,2})\s*$/);
+      // Must end with a price that has cents (require decimal point to avoid
+      // catching plain integers like station/item codes: "5", "3", "273")
+      const mm = line.match(/\$?\s*([\d,]+\.\d{2})\s*$/);
       if (!mm) continue;
       const rawPrice = parseFloat(mm[1].replace(/,/g, ''));
       if (isNaN(rawPrice) || rawPrice <= 0 || rawPrice > 9999999) continue;
@@ -818,29 +819,49 @@ export default function AdminCustoms() {
     }
 
     // ── Vessel ───────────────────────────────────────────────────────────────
-    // The "Vessel" label and the vessel name may be on the same or adjacent lines.
+    // In scanned BOL tables the "Vessel" label and the vessel name are often on
+    // separate lines (header row vs. data row), so we check same + next 3 lines.
     let vessel = '';
     for (let i = 0; i < lines.length; i++) {
       if (!/\bvessel\b/i.test(lines[i])) continue;
-      // Try to extract name from same line, after "vessel" and before "voyage"
-      const same = lines[i].match(/\bvessel\b[^A-Z]*([A-Z][A-Z\s]{3,30}?)(?=\s*(?:voyage|$))/i);
-      if (same && !/^voyage/i.test(same[1].trim())) { vessel = same[1].trim(); break; }
-      // Try next line — if it looks like an all-caps vessel name
-      if (i + 1 < lines.length) {
-        const next = lines[i + 1];
-        if (/^[A-Z][A-Z\s]{3,}$/.test(next)) { vessel = next.trim(); break; }
-        // Or after "Vessel" / "Voyage Number" label row, the name follows
-        const after = next.match(/^([A-Z][A-Z\s]{3,30}?)(?:\s{2,}|$)/);
-        if (after && !/voyage|port|pier|lading/i.test(after[1])) { vessel = after[1].trim(); break; }
+      // Try same line first: text after "vessel" and before "voyage"
+      const same = lines[i].match(/\bvessel\b\s*(?:voyage\s+number)?\s*([A-Za-z][A-Za-z\s]{3,30}?)(?=\s*(?:voyage|\s{3,}|$))/i);
+      if (same) {
+        const candidate = same[1].trim();
+        if (candidate.length > 3 && !/^voyage/i.test(candidate)) { vessel = candidate; break; }
+      }
+      // Try next 1–3 lines — vessel name typically stands alone or starts the row
+      for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+        const next = lines[j].trim();
+        if (next.length < 3) continue;
+        if (/vessel|voyage|port|pier|loading|lading|shipper|consignee/i.test(next)) break;
+        // Accept a line that looks like a proper name (letters + spaces only, no digits)
+        if (/^[A-Za-z][A-Za-z\s]{3,30}$/.test(next)) { vessel = next; break; }
+        // Or extract the leading name portion before whitespace/numbers
+        const lead = next.match(/^([A-Za-z][A-Za-z\s]{3,25})(?:\s{2,}|\s*\d)/);
+        if (lead) { vessel = lead[1].trim(); break; }
       }
       break;
     }
 
     // ── Port of discharge ────────────────────────────────────────────────────
+    // Same pattern: label on one row, port name on the next row in the table.
     let portDischarge = '';
-    for (const line of lines) {
-      const m = line.match(/port\s+of\s+dis(?:charge)?[\s:]+([A-Za-z][A-Za-z\s,]{2,25}?)(?:\s{2,}|for\s+trans|\s*$)/i);
-      if (m) { portDischarge = m[1].trim(); break; }
+    for (let i = 0; i < lines.length; i++) {
+      if (!/port\s+of\s+dis/i.test(lines[i])) continue;
+      // Try same line first
+      const same = lines[i].match(/port\s+of\s+dis(?:charge)?[\s:]+([A-Za-z][A-Za-z\s,]{2,25}?)(?:\s{2,}|for\s+trans|\s*$)/i);
+      if (same) { portDischarge = same[1].trim(); break; }
+      // Try next 1–3 lines
+      for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
+        const next = lines[j].trim();
+        if (next.length < 2) continue;
+        if (/port|pier|loading|discharge|vessel|voyage|tranship/i.test(next)) break;
+        // Accept a simple place name (letters only, possibly multi-word)
+        const place = next.match(/^([A-Za-z][A-Za-z\s,]{1,25}?)(?:\s{2,}|for\s+trans|\s*$)/i);
+        if (place) { portDischarge = place[1].trim(); break; }
+      }
+      break;
     }
 
     // ── Gross weight in lb ───────────────────────────────────────────────────
