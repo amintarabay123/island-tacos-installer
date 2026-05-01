@@ -13,6 +13,7 @@ export interface AdminStats {
   todayRevenue: number;
   pendingOrders: number;
   completedOrders: number;
+  cancelledOrders: number;
   completedBySource: AdminStatsCompletedBySource;
   popularItems: AdminStatsPopularItemsItem[];
 }

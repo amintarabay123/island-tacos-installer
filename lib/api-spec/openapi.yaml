@@ -1098,6 +1098,8 @@ components:
           type: integer
         completedOrders:
           type: integer
+        cancelledOrders:
+          type: integer
         completedBySource:
           type: object
           properties:
@@ -1128,6 +1130,7 @@ components:
         - todayRevenue
         - pendingOrders
         - completedOrders
+        - cancelledOrders
         - completedBySource
         - popularItems
 

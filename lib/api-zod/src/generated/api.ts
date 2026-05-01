@@ -527,6 +527,7 @@ export const GetAdminStatsResponse = zod.object({
   todayRevenue: zod.number(),
   pendingOrders: zod.number(),
   completedOrders: zod.number(),
+  cancelledOrders: zod.number(),
   completedBySource: zod.object({
     online: zod.number(),
     phone: zod.number(),

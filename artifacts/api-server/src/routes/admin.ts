@@ -70,6 +70,10 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
     (o) => o.status === "completed"
   ).length;
 
+  const cancelledOrders = rangeOrders.filter(
+    (o) => o.status === "cancelled"
+  ).length;
+
   const completedBySource = { online: 0, phone: 0, pos: 0 };
   for (const o of rangeOrders) {
     if (o.status === "completed") {
@@ -105,6 +109,7 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
     todayRevenue: Math.round(todayRevenue * 100) / 100,
     pendingOrders,
     completedOrders,
+    cancelledOrders,
     completedBySource,
     popularItems,
   });
