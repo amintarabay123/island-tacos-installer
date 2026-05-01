@@ -4,7 +4,7 @@ import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable, storeSe
 import { upsertCustomer } from "./customers";
 import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
-import { isBVIMobile } from "./vapi";
+import { isBVIMobile, formatBVIPhone } from "./vapi";
 import nodemailer from "nodemailer";
 
 const mailer = nodemailer.createTransport({
@@ -183,8 +183,9 @@ async function sendReadySMS(order: OrderRow) {
     console.log(`[sms] order ${order.confirmationCode} has no phone — skipping`);
     return;
   }
-  if (!isBVIMobile(order.customerPhone)) {
-    console.log(`[sms] ${order.customerPhone} is not a BVI mobile — skipping`);
+  const normalizedPhone = formatBVIPhone(order.customerPhone);
+  if (!isBVIMobile(normalizedPhone)) {
+    console.log(`[sms] ${order.customerPhone} (normalized: ${normalizedPhone}) is not a BVI mobile — skipping`);
     return;
   }
 
@@ -192,7 +193,7 @@ async function sendReadySMS(order: OrderRow) {
     `Hi ${order.customerName || "there"}! Your Island Tacos order` +
     ` #${order.confirmationCode} is ready for pickup. Come on in!`;
 
-  const params = new URLSearchParams({ To: order.customerPhone, From: fromNumber, Body: body });
+  const params = new URLSearchParams({ To: normalizedPhone, From: fromNumber, Body: body });
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
   const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
 
@@ -211,7 +212,7 @@ async function sendReadySMS(order: OrderRow) {
       console.error(`[sms] Twilio failed (${resp.status}): ${text}`);
     } else {
       const data = JSON.parse(text);
-      console.log(`[sms] Sent to ${order.customerPhone} for ${order.confirmationCode} — SID: ${data.sid}`);
+      console.log(`[sms] Sent to ${normalizedPhone} for ${order.confirmationCode} — SID: ${data.sid}`);
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
