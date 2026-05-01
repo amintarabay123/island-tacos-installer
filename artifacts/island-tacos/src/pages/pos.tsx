@@ -987,13 +987,14 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     const notes = splitNote
       ? (chargeOrder.notes ? `${chargeOrder.notes}\n${splitNote}` : splitNote)
       : chargeOrder.notes;
-    await fetch(`/api/orders/${chargeOrder.id}`, {
+    const r = await fetch(`/api/orders/${chargeOrder.id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", ...(notes ? { notes } : {}) }),
     });
+    if (!r.ok) { alert("Failed to save payment. Please try again."); return; }
     setChargeOrder(null);
-    load(); // ticket stays in list (status is still "confirmed", not "completed")
+    await load(); // ticket stays in list (status is still "confirmed", not "completed")
   };
 
   const completeOrder = async (id: number) => {
@@ -1077,6 +1078,13 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                   })}
                 </div>
                 {o.notes && <p className="text-gray-500 text-xs italic mb-2">"{o.notes}"</p>}
+                {o.paymentStatus === "paid" && o.source === "pos" && (
+                  <div className="mb-2 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                    <span className="text-green-700 text-sm font-bold">✓ Pre-paid</span>
+                    <span className="text-green-600 text-sm">{PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}</span>
+                    <span className="text-green-500 text-xs ml-auto">awaiting pickup</span>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {o.status === "pending" && (o.source === "online" || o.source === "phone") && (
                     <>
@@ -1098,14 +1106,9 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                       Charge {fmt(o.total)}
                     </button>
                   ) : (
-                    <>
-                      <span className="flex items-center gap-1 text-sm font-semibold text-green-700 bg-green-50 rounded-lg px-2 h-10">
-                        ✓ Paid · {PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}
-                      </span>
-                      <button onClick={() => completeOrder(o.id)} className="flex-1 h-10 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-900 text-sm font-semibold transition-colors">
-                        Complete → Receipts
-                      </button>
-                    </>
+                    <button onClick={() => completeOrder(o.id)} className="flex-1 h-10 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-sm font-bold transition-colors">
+                      Send to Receipts
+                    </button>
                   )}
                   <button onClick={() => voidTicket(o.id)} className="h-10 px-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold transition-colors">Void</button>
                 </div>
@@ -2604,10 +2607,10 @@ export default function POS() {
           setIncomingOrders(pending);
         }
 
-        // ── Held ticket count ──
+        // ── Held ticket count — unpaid POS holds + pre-paid holds + ready orders ──
         setTicketCount(data.filter(o =>
           !["completed", "cancelled"].includes(o.status) &&
-          ((o.source === "pos" && o.paymentStatus === "pending") || o.status === "ready")
+          (o.source === "pos" || o.status === "ready")
         ).length);
       } catch {}
     };
@@ -2865,6 +2868,57 @@ export default function POS() {
     // Place order as "split" — the note contains the per-method breakdown
     const existingNote = orderNotes ? `${orderNotes}\n${note}` : note;
     await placeOrder("split", "paid", undefined, undefined, customerPhone || undefined, existingNote);
+  };
+
+  const handlePayAndHold = async (method: string, tendered?: number, splitNote?: string) => {
+    setPaymentModal(false);
+    if (cart.length === 0) return;
+    setSubmitting(true);
+    try {
+      if (resumedOrderId) {
+        await fetch(`/api/orders/${resumedOrderId}`, {
+          method: "PATCH", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "cancelled" }),
+        });
+      }
+      const noteWithSplit = splitNote
+        ? (orderNotes ? `${orderNotes}\n${splitNote}` : splitNote)
+        : (orderNotes || undefined);
+      const r = await fetch("/api/orders", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: customerName || "Walk-in",
+          customerEmail: "",
+          customerPhone: customerPhone || "",
+          orderType: "pickup",
+          paymentMethod: method,
+          paymentStatus: "paid",
+          source: "pos",
+          discountAmount: discount,
+          notes: noteWithSplit || null,
+          items: cart.map(c => ({
+            menuItemId: c.menuItemId,
+            quantity: c.quantity,
+            notes: c.notes || null,
+            modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
+            alreadyMade: c.alreadyMade ?? false,
+          })),
+        }),
+      });
+      if (!r.ok) {
+        const errData = await r.json().catch(() => ({})) as { error?: string };
+        throw new Error(errData.error ?? `Order failed (${r.status})`);
+      }
+      clearCart();
+      setResumedOrderId(null);
+      setTicketCount(tc => tc + 1);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to hold order. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleHold = () => {
@@ -3182,6 +3236,7 @@ export default function POS() {
         <PaymentModal
           total={total}
           onPay={handlePay}
+          onPayAndHold={handlePayAndHold}
           onClose={() => { setPaymentModal(false); setPaymentTab("cash"); }}
           onSplit={cart.length >= 2 ? () => { setPaymentModal(false); setSplitModal(true); setPaymentTab("cash"); } : undefined}
           onTabChange={setPaymentTab}
