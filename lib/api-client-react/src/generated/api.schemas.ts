@@ -89,6 +89,13 @@ export interface UpdateMenuItemBody {
   vegetarian?: boolean;
 }
 
+export interface OrderItemModifier {
+  modifierId?: string;
+  optionId?: string;
+  name: string;
+  price: number;
+}
+
 export interface OrderItem {
   id: number;
   orderId: number;
@@ -99,6 +106,8 @@ export interface OrderItem {
   /** @nullable */
   notes?: string | null;
   subtotal: number;
+  modifierSelections?: OrderItemModifier[] | null;
+  alreadyMade?: boolean | null;
 }
 
 export type OrderOrderType =
@@ -178,6 +187,8 @@ export interface CreateOrderItemInput {
   quantity: number;
   /** @nullable */
   notes?: string | null;
+  modifierSelections?: OrderItemModifier[] | null;
+  alreadyMade?: boolean | null;
 }
 
 export type CreateOrderBodyOrderType =

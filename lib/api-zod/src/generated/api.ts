@@ -223,6 +223,17 @@ export const ListOrdersResponseItem = zod.object({
       quantity: zod.number(),
       notes: zod.string().nullish(),
       subtotal: zod.number(),
+      modifierSelections: zod
+        .array(
+          zod.object({
+            modifierId: zod.string().optional(),
+            optionId: zod.string().optional(),
+            name: zod.string(),
+            price: zod.number(),
+          }),
+        )
+        .nullish(),
+      alreadyMade: zod.boolean().nullish(),
     }),
   ),
   estimatedReadyAt: zod.coerce.date().nullish(),
@@ -248,6 +259,17 @@ export const CreateOrderBody = zod.object({
       menuItemId: zod.number(),
       quantity: zod.number(),
       notes: zod.string().nullish(),
+      modifierSelections: zod
+        .array(
+          zod.object({
+            modifierId: zod.string().optional(),
+            optionId: zod.string().optional(),
+            name: zod.string(),
+            price: zod.number(),
+          }),
+        )
+        .nullish(),
+      alreadyMade: zod.boolean().nullish(),
     }),
   ),
 });
@@ -293,6 +315,17 @@ export const GetOrderResponse = zod.object({
       quantity: zod.number(),
       notes: zod.string().nullish(),
       subtotal: zod.number(),
+      modifierSelections: zod
+        .array(
+          zod.object({
+            modifierId: zod.string().optional(),
+            optionId: zod.string().optional(),
+            name: zod.string(),
+            price: zod.number(),
+          }),
+        )
+        .nullish(),
+      alreadyMade: zod.boolean().nullish(),
     }),
   ),
   estimatedReadyAt: zod.coerce.date().nullish(),
@@ -359,6 +392,17 @@ export const UpdateOrderStatusResponse = zod.object({
       quantity: zod.number(),
       notes: zod.string().nullish(),
       subtotal: zod.number(),
+      modifierSelections: zod
+        .array(
+          zod.object({
+            modifierId: zod.string().optional(),
+            optionId: zod.string().optional(),
+            name: zod.string(),
+            price: zod.number(),
+          }),
+        )
+        .nullish(),
+      alreadyMade: zod.boolean().nullish(),
     }),
   ),
   estimatedReadyAt: zod.coerce.date().nullish(),
@@ -407,6 +451,17 @@ export const TrackOrderResponse = zod.object({
       quantity: zod.number(),
       notes: zod.string().nullish(),
       subtotal: zod.number(),
+      modifierSelections: zod
+        .array(
+          zod.object({
+            modifierId: zod.string().optional(),
+            optionId: zod.string().optional(),
+            name: zod.string(),
+            price: zod.number(),
+          }),
+        )
+        .nullish(),
+      alreadyMade: zod.boolean().nullish(),
     }),
   ),
   estimatedReadyAt: zod.coerce.date().nullish(),
@@ -584,6 +639,17 @@ export const GetRecentOrdersResponseItem = zod.object({
       quantity: zod.number(),
       notes: zod.string().nullish(),
       subtotal: zod.number(),
+      modifierSelections: zod
+        .array(
+          zod.object({
+            modifierId: zod.string().optional(),
+            optionId: zod.string().optional(),
+            name: zod.string(),
+            price: zod.number(),
+          }),
+        )
+        .nullish(),
+      alreadyMade: zod.boolean().nullish(),
     }),
   ),
   estimatedReadyAt: zod.coerce.date().nullish(),

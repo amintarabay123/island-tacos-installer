@@ -694,6 +694,21 @@ components:
         vegetarian:
           type: boolean
 
+    OrderItemModifier:
+      type: object
+      properties:
+        modifierId:
+          type: string
+        optionId:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+      required:
+        - name
+        - price
+
     OrderItem:
       type: object
       properties:
@@ -713,6 +728,14 @@ components:
           type: ["string", "null"]
         subtotal:
           type: number
+        modifierSelections:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/OrderItemModifier"
+        alreadyMade:
+          type: boolean
+          nullable: true
       required:
         - id
         - orderId
@@ -803,6 +826,14 @@ components:
           type: integer
         notes:
           type: ["string", "null"]
+        modifierSelections:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/OrderItemModifier"
+        alreadyMade:
+          type: boolean
+          nullable: true
       required:
         - menuItemId
         - quantity

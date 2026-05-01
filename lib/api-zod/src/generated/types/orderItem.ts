@@ -5,6 +5,7 @@
  * Island Tacos Online Ordering API
  * OpenAPI spec version: 0.1.0
  */
+import type { OrderItemModifier } from "./orderItemModifier";
 
 export interface OrderItem {
   id: number;
@@ -16,4 +17,6 @@ export interface OrderItem {
   /** @nullable */
   notes?: string | null;
   subtotal: number;
+  modifierSelections?: OrderItemModifier[] | null;
+  alreadyMade?: boolean | null;
 }

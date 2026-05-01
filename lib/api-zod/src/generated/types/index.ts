@@ -31,6 +31,7 @@ export * from "./menuCategory";
 export * from "./menuItem";
 export * from "./order";
 export * from "./orderItem";
+export * from "./orderItemModifier";
 export * from "./orderOrderType";
 export * from "./orderPaymentMethod";
 export * from "./orderPaymentStatus";
