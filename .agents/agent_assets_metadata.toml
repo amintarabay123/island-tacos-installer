@@ -35,3 +35,9 @@ id = "6QtvND-2Msj8jUq8Kz61s"
 uri = "file://island-tacos-order-qr.png"
 type = "image"
 title = "Island Tacos — Online Order QR Code (orders.islandtacosbvi.com)"
+
+[[outputs]]
+id = "S-UC-Pt0KV27IdbwgoHSp"
+uri = "file://island-tacos-installer.tar.gz"
+type = "unspecified"
+title = "Island Tacos — Installer Package"
