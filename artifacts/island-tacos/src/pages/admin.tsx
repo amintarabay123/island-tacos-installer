@@ -61,7 +61,21 @@ const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
   preparing: "ready",
   ready: "completed",
 };
-const DONUT_COLORS = ["#f59e0b", "#3b82f6", "#f97316", "#22c55e", "#6b7280", "#ef4444"];
+const STATUS_DONUT_COLOR: Record<string, string> = {
+  pending: "#f59e0b",
+  confirmed: "#3b82f6",
+  preparing: "#f97316",
+  ready: "#22c55e",
+  cancelled: "#ef4444",
+  "completed-online": "#10b981",
+  "completed-phone": "#0d9488",
+  "completed-pos": "#6366f1",
+};
+const SOURCE_LABELS: Record<string, string> = {
+  online: "Online",
+  phone: "Phone",
+  pos: "Walk-in",
+};
 
 type RejectState = { orderId: number; reason: string } | null;
 
@@ -354,8 +368,24 @@ export default function Admin() {
   // Status donut data
   const statusDonut = useMemo(() => {
     const statusCount: Record<string, number> = {};
-    (orders ?? []).forEach((o) => { statusCount[o.status] = (statusCount[o.status] ?? 0) + 1; });
-    return Object.entries(statusCount).map(([status, value]) => ({ name: STATUS_LABELS[status] ?? status, value }));
+    const completedBySource: Record<string, number> = {};
+    (orders ?? []).forEach((o) => {
+      if (o.status === "completed") {
+        const src = (o.source as string) ?? "online";
+        completedBySource[src] = (completedBySource[src] ?? 0) + 1;
+      } else {
+        statusCount[o.status] = (statusCount[o.status] ?? 0) + 1;
+      }
+    });
+    const entries: { name: string; value: number; color: string; key: string }[] = [];
+    const STATUS_ORDER = ["pending", "confirmed", "preparing", "ready", "cancelled"];
+    for (const s of STATUS_ORDER) {
+      if (statusCount[s]) entries.push({ key: s, name: STATUS_LABELS[s] ?? s, value: statusCount[s], color: STATUS_DONUT_COLOR[s] ?? "#94a3b8" });
+    }
+    for (const [src, count] of Object.entries(completedBySource)) {
+      if (count > 0) entries.push({ key: `completed-${src}`, name: `Done · ${SOURCE_LABELS[src] ?? src}`, value: count, color: STATUS_DONUT_COLOR[`completed-${src}`] ?? "#10b981" });
+    }
+    return entries;
   }, [orders]);
 
   // Top items bar data
@@ -555,17 +585,17 @@ export default function Admin() {
                   <ResponsiveContainer width="100%" height={160}>
                     <PieChart>
                       <Pie data={statusDonut} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
-                        {statusDonut.map((_, i) => (
-                          <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                        {statusDonut.map((d) => (
+                          <Cell key={d.key} fill={d.color} />
                         ))}
                       </Pie>
                       <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-                    {statusDonut.map((d, i) => (
-                      <span key={d.name} className="flex items-center gap-1 text-xs text-slate-500">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                    {statusDonut.map((d) => (
+                      <span key={d.key} className="flex items-center gap-1 text-xs text-slate-500">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
                         {d.name} ({d.value})
                       </span>
                     ))}
