@@ -437,6 +437,13 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
       backchannel: {
         enabled: true,
       },
+      // Only interrupt the AI if the caller says at least 2 words — prevents
+      // background noise, coughs, or one-syllable sounds from pausing the AI.
+      stopSpeakingPlan: {
+        numWords: 2,
+        voiceSeconds: 0.3,
+        backoffSeconds: 1.5,
+      },
     };
 
     console.log(`[vapi/assistant-request] isOpen=${is_open}, firstMessage="${firstMessage.slice(0, 60)}..."`);
