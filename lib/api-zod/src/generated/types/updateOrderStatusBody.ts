@@ -5,12 +5,17 @@
  * Island Tacos Online Ordering API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateOrderStatusBodyActualPaymentMethod } from "./updateOrderStatusBodyActualPaymentMethod";
+import type { UpdateOrderStatusBodyPaymentStatus } from "./updateOrderStatusBodyPaymentStatus";
 import type { UpdateOrderStatusBodyStatus } from "./updateOrderStatusBodyStatus";
 
 export interface UpdateOrderStatusBody {
-  status: UpdateOrderStatusBodyStatus;
+  status?: UpdateOrderStatusBodyStatus;
   /** @nullable */
   estimatedReadyAt?: Date | null;
   /** @nullable */
   cancellationReason?: string | null;
+  kdsCleared?: boolean;
+  paymentStatus?: UpdateOrderStatusBodyPaymentStatus;
+  actualPaymentMethod?: UpdateOrderStatusBodyActualPaymentMethod;
 }

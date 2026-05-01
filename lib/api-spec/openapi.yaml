@@ -1019,8 +1019,14 @@ components:
           format: date-time
         cancellationReason:
           type: ["string", "null"]
-      required:
-        - status
+        kdsCleared:
+          type: boolean
+        paymentStatus:
+          type: string
+          enum: [unpaid, paid, refunded]
+        actualPaymentMethod:
+          type: string
+          enum: [cash, card, athmovil]
 
     InitiatePaymentBody:
       type: object

@@ -302,12 +302,33 @@ export const UpdateOrderStatusBodyStatus = {
   cancelled: "cancelled",
 } as const;
 
+export type UpdateOrderStatusBodyPaymentStatus =
+  (typeof UpdateOrderStatusBodyPaymentStatus)[keyof typeof UpdateOrderStatusBodyPaymentStatus];
+
+export const UpdateOrderStatusBodyPaymentStatus = {
+  unpaid: "unpaid",
+  paid: "paid",
+  refunded: "refunded",
+} as const;
+
+export type UpdateOrderStatusBodyActualPaymentMethod =
+  (typeof UpdateOrderStatusBodyActualPaymentMethod)[keyof typeof UpdateOrderStatusBodyActualPaymentMethod];
+
+export const UpdateOrderStatusBodyActualPaymentMethod = {
+  cash: "cash",
+  card: "card",
+  athmovil: "athmovil",
+} as const;
+
 export interface UpdateOrderStatusBody {
-  status: UpdateOrderStatusBodyStatus;
+  status?: UpdateOrderStatusBodyStatus;
   /** @nullable */
   estimatedReadyAt?: string | null;
   /** @nullable */
   cancellationReason?: string | null;
+  kdsCleared?: boolean;
+  paymentStatus?: UpdateOrderStatusBodyPaymentStatus;
+  actualPaymentMethod?: UpdateOrderStatusBodyActualPaymentMethod;
 }
 
 export type InitiatePaymentBodyPaymentMethod =

@@ -41,6 +41,8 @@ export * from "./paymentSession";
 export * from "./updateMenuCategoryBody";
 export * from "./updateMenuItemBody";
 export * from "./updateOrderStatusBody";
+export * from "./updateOrderStatusBodyActualPaymentMethod";
+export * from "./updateOrderStatusBodyPaymentStatus";
 export * from "./updateOrderStatusBodyStatus";
 export * from "./vapiMenu";
 export * from "./vapiMenuItem";

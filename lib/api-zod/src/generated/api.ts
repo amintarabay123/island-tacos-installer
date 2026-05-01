@@ -308,16 +308,21 @@ export const UpdateOrderStatusParams = zod.object({
 });
 
 export const UpdateOrderStatusBody = zod.object({
-  status: zod.enum([
-    "pending",
-    "confirmed",
-    "preparing",
-    "ready",
-    "completed",
-    "cancelled",
-  ]),
+  status: zod
+    .enum([
+      "pending",
+      "confirmed",
+      "preparing",
+      "ready",
+      "completed",
+      "cancelled",
+    ])
+    .optional(),
   estimatedReadyAt: zod.coerce.date().nullish(),
   cancellationReason: zod.string().nullish(),
+  kdsCleared: zod.boolean().optional(),
+  paymentStatus: zod.enum(["unpaid", "paid", "refunded"]).optional(),
+  actualPaymentMethod: zod.enum(["cash", "card", "athmovil"]).optional(),
 });
 
 export const UpdateOrderStatusResponse = zod.object({
