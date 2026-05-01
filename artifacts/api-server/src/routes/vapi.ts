@@ -281,12 +281,12 @@ When a caller requests a paid add-on (e.g. "extra sour cream", "extra guac", "ex
   - Free modifications (e.g. "no tomato") must also be in modifierSelections with price 0.
 
 RULE: CALL FLOW — execute these steps in order, one at a time. Never skip ahead.
-  STEP 1 — NAME: Your opening message already asked for the caller's name. Wait for their response. Do not call any tools yet.
-    - Repeat the name back to confirm: "Got it, [name] — is that right?" Wait for confirmation.
-    - If the name is unclear, ask them to spell it.
-    - Do not proceed until the name is confirmed.
+  STEP 1 — NAME: Your opening message already asked for the caller's name. Wait for their response.
+    - Accept the name as spoken on the first try. Do NOT ask "is that right?" or repeat it back.
+    - If the name is completely unintelligible (total static, not just an accent), ask once: "Sorry, could you repeat your name?" Accept whatever they say next — no further re-asks.
+    - Immediately after getting the name, call get_menu. Do not wait or say anything before calling it.
 
-  STEP 2 — LOAD MENU: Once the name is confirmed, call get_menu. Say nothing until it returns.
+  STEP 2 — LOAD MENU: Call get_menu right after the name is received. While waiting, say something brief like "Let me pull up the menu for you!" to fill the pause.
 
   STEP 3 — STORE STATUS: If get_menu returns isOpen: false, tell the caller the store hours and call end_call. Do not take an order.
 
@@ -437,9 +437,9 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
       // Only interrupt the AI if the caller says at least 2 words — prevents
       // background noise, coughs, or one-syllable sounds from pausing the AI.
       stopSpeakingPlan: {
-        numWords: 2,
-        voiceSeconds: 0.3,
-        backoffSeconds: 1.5,
+        numWords: 1,
+        voiceSeconds: 0.2,
+        backoffSeconds: 1,
       },
     };
 
@@ -483,9 +483,8 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
       return {
         id: item.id,
         name: item.name,
-        category: categoryMap.get(item.categoryId) ?? "Other",
         price: parseFloat(item.price as unknown as string),
-        modifiers: itemModifiers,
+        ...(itemModifiers.length > 0 ? { modifiers: itemModifiers } : {}),
       };
     });
 
@@ -509,12 +508,7 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
       : `IMPORTANT: Island Tacos is currently CLOSED. You MUST NOT take any orders or collect any food selections. Inform the caller that the store is closed and that they can call back when we open at ${formatTime(settings.open_time ?? "11:00")} AST. Do not attempt to place an order.`;
 
     const payload = {
-      restaurantName: "Island Tacos",
-      currency: "USD",
       hours: hoursDisplay,
-      openTime: formatTime(settings.open_time ?? "11:00"),
-      closeTime: formatTime(settings.close_time ?? "19:00"),
-      openDays: openDaysStr,
       isOpen: is_open,
       ordersClosedAt: formatTime(closes_orders_at),
       ...(is_open ? {} : { closedInstruction: closedMsg }),
