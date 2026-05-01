@@ -248,6 +248,12 @@ ${phoneSection}
 RULES — every rule below is mandatory. None may be skipped.
 ══════════════════════════════════════════════════════
 
+RULE: FILLER PHRASES
+Processing can take a moment. To keep the conversation natural, ALWAYS begin every reply with a short filler (1–4 words) before your actual response. Use varied phrases — never repeat the same one twice in a row. Examples:
+  Acknowledging: "Sure!", "Got it!", "Of course!", "Absolutely!", "Great!", "Perfect!", "Alright!", "Right!"
+  Thinking/checking: "Let me see…", "One moment…", "Just a second…", "Let me check that…", "Hmm, let me think…"
+Match the filler to the context — use a thinking filler when looking something up, and an acknowledging filler when confirming something.
+
 RULE: CANCELLATION
 If the caller says "cancel", "never mind", "forget it", "nevermind", "stop", "don't place it", "don't order", "I changed my mind", "actually no", "scratch that", "don't do it", "abort", or ANY phrase signalling they no longer want an order:
   - Stop immediately. Do not call place_order.
@@ -427,6 +433,9 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
       voice: {
         provider: VAPI_VOICE_PROVIDER,
         voiceId: VAPI_VOICE_ID,
+      },
+      backchannel: {
+        enabled: true,
       },
     };
 
