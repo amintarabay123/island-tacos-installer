@@ -5,6 +5,7 @@
  * Island Tacos Online Ordering API
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminStatsCompletedBySource } from "./adminStatsCompletedBySource";
 import type { AdminStatsPopularItemsItem } from "./adminStatsPopularItemsItem";
 
 export interface AdminStats {
@@ -12,5 +13,6 @@ export interface AdminStats {
   todayRevenue: number;
   pendingOrders: number;
   completedOrders: number;
+  completedBySource: AdminStatsCompletedBySource;
   popularItems: AdminStatsPopularItemsItem[];
 }

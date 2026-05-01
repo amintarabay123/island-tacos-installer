@@ -522,6 +522,11 @@ export const GetAdminStatsResponse = zod.object({
   todayRevenue: zod.number(),
   pendingOrders: zod.number(),
   completedOrders: zod.number(),
+  completedBySource: zod.object({
+    online: zod.number(),
+    phone: zod.number(),
+    pos: zod.number(),
+  }),
   popularItems: zod.array(
     zod.object({
       name: zod.string(),

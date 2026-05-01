@@ -1092,6 +1092,19 @@ components:
           type: integer
         completedOrders:
           type: integer
+        completedBySource:
+          type: object
+          properties:
+            online:
+              type: integer
+            phone:
+              type: integer
+            pos:
+              type: integer
+          required:
+            - online
+            - phone
+            - pos
         popularItems:
           type: array
           items:
@@ -1109,6 +1122,7 @@ components:
         - todayRevenue
         - pendingOrders
         - completedOrders
+        - completedBySource
         - popularItems
 
   securitySchemes:

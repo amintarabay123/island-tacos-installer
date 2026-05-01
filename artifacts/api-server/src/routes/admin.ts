@@ -70,6 +70,15 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
     (o) => o.status === "completed"
   ).length;
 
+  const completedBySource = { online: 0, phone: 0, pos: 0 };
+  for (const o of rangeOrders) {
+    if (o.status === "completed") {
+      const src = (o.source ?? "online") as keyof typeof completedBySource;
+      if (src in completedBySource) completedBySource[src]++;
+      else completedBySource.online++;
+    }
+  }
+
   const allRangeItems = await db
     .select()
     .from(orderItemsTable)
@@ -96,6 +105,7 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
     todayRevenue: Math.round(todayRevenue * 100) / 100,
     pendingOrders,
     completedOrders,
+    completedBySource,
     popularItems,
   });
 });

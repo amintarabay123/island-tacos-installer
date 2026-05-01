@@ -346,6 +346,12 @@ export interface PaymentResult {
   message: string;
 }
 
+export type AdminStatsCompletedBySource = {
+  online: number;
+  phone: number;
+  pos: number;
+};
+
 export type AdminStatsPopularItemsItem = {
   name: string;
   count: number;
@@ -356,6 +362,7 @@ export interface AdminStats {
   todayRevenue: number;
   pendingOrders: number;
   completedOrders: number;
+  completedBySource: AdminStatsCompletedBySource;
   popularItems: AdminStatsPopularItemsItem[];
 }
 

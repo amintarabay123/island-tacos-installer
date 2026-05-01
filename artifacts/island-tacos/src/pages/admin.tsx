@@ -68,7 +68,7 @@ const STATUS_DONUT_COLOR: Record<string, string> = {
   ready: "#22c55e",
   cancelled: "#ef4444",
   "completed-online": "#10b981",
-  "completed-phone": "#0d9488",
+  "completed-phone": "#ec4899",
   "completed-pos": "#6366f1",
 };
 const SOURCE_LABELS: Record<string, string> = {
@@ -368,12 +368,8 @@ export default function Admin() {
   // Status donut data
   const statusDonut = useMemo(() => {
     const statusCount: Record<string, number> = {};
-    const completedBySource: Record<string, number> = {};
     (orders ?? []).forEach((o) => {
-      if (o.status === "completed") {
-        const src = (o.source as string) ?? "online";
-        completedBySource[src] = (completedBySource[src] ?? 0) + 1;
-      } else {
+      if (o.status !== "completed") {
         statusCount[o.status] = (statusCount[o.status] ?? 0) + 1;
       }
     });
@@ -382,11 +378,16 @@ export default function Admin() {
     for (const s of STATUS_ORDER) {
       if (statusCount[s]) entries.push({ key: s, name: STATUS_LABELS[s] ?? s, value: statusCount[s], color: STATUS_DONUT_COLOR[s] ?? "#94a3b8" });
     }
-    for (const [src, count] of Object.entries(completedBySource)) {
-      if (count > 0) entries.push({ key: `completed-${src}`, name: `Done · ${SOURCE_LABELS[src] ?? src}`, value: count, color: STATUS_DONUT_COLOR[`completed-${src}`] ?? "#10b981" });
+    const cbs = stats?.completedBySource;
+    if (cbs) {
+      const sources: Array<keyof typeof cbs> = ["online", "phone", "pos"];
+      for (const src of sources) {
+        const count = cbs[src] ?? 0;
+        if (count > 0) entries.push({ key: `completed-${src}`, name: `Done · ${SOURCE_LABELS[src]}`, value: count, color: STATUS_DONUT_COLOR[`completed-${src}`] ?? "#10b981" });
+      }
     }
     return entries;
-  }, [orders]);
+  }, [orders, stats]);
 
   // Top items bar data
   const topItemsData = useMemo(() =>
