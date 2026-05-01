@@ -63,7 +63,7 @@ router.get("/admin/stats", async (req, res): Promise<void> => {
     .reduce((sum, o) => sum + parseFloat(o.total as unknown as string), 0);
 
   const pendingOrders = rangeOrders.filter((o) =>
-    ["pending", "confirmed", "preparing"].includes(o.status)
+    ["pending", "confirmed", "preparing", "ready"].includes(o.status)
   ).length;
 
   const completedOrders = rangeOrders.filter(

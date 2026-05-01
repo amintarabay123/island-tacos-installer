@@ -524,7 +524,7 @@ export default function Admin() {
             {[
               { label: "Orders", value: stats?.todayOrders ?? 0, icon: ShoppingBag, bg: "bg-blue-50", iconColor: "text-blue-600", trend: null },
               { label: "Revenue", value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, icon: DollarSign, bg: "bg-green-50", iconColor: "text-green-600", trend: null },
-              { label: "Pending", value: stats?.pendingOrders ?? 0, icon: Clock, bg: "bg-amber-50", iconColor: "text-amber-600", trend: null },
+              { label: "Active", value: stats?.pendingOrders ?? 0, icon: Clock, bg: "bg-amber-50", iconColor: "text-amber-600", trend: null },
               { label: "Completed", value: stats?.completedOrders ?? 0, icon: CheckCircle2, bg: "bg-slate-50", iconColor: "text-slate-600", trend: null },
             ].map(({ label, value, icon: Icon, bg, iconColor }) => (
               <div key={label} className="bg-white rounded-xl border shadow-sm p-4 flex items-center gap-4">
