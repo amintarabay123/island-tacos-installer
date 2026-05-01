@@ -212,8 +212,8 @@ function vapiResult(toolCallId: string | null, result: string): Record<string, u
  * IMPORTANT: Update VAPI_VOICE_PROVIDER and VAPI_VOICE_ID below to match your
  * existing Vapi assistant's voice settings so the caller hears the same voice.
  */
-const VAPI_MODEL_PROVIDER = "google";
-const VAPI_MODEL = "gemini-2.0-flash";
+const VAPI_MODEL_PROVIDER = "openai";
+const VAPI_MODEL = "gpt-4o-mini";
 const VAPI_VOICE_PROVIDER = "azure"; // e.g. "11labs", "openai", "azure"
 const VAPI_VOICE_ID = "en-US-JennyNeural"; // energetic, upbeat female
 
