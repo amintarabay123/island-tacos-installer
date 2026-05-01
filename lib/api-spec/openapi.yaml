@@ -482,6 +482,19 @@ paths:
       operationId: getAdminStats
       tags: [admin]
       summary: Get dashboard stats for admin
+      parameters:
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+            description: ISO date string (YYYY-MM-DD) for range start
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+            description: ISO date string (YYYY-MM-DD) for range end (inclusive)
       responses:
         "200":
           description: Stats summary
@@ -501,6 +514,18 @@ paths:
           required: false
           schema:
             type: integer
+        - name: startDate
+          in: query
+          required: false
+          schema:
+            type: string
+            description: ISO date string (YYYY-MM-DD) for range start
+        - name: endDate
+          in: query
+          required: false
+          schema:
+            type: string
+            description: ISO date string (YYYY-MM-DD) for range end (inclusive)
       responses:
         "200":
           description: Recent orders
@@ -992,6 +1017,8 @@ components:
         estimatedReadyAt:
           type: ["string", "null"]
           format: date-time
+        cancellationReason:
+          type: ["string", "null"]
       required:
         - status
 

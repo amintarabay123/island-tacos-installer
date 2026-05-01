@@ -11,4 +11,6 @@ export interface UpdateOrderStatusBody {
   status: UpdateOrderStatusBodyStatus;
   /** @nullable */
   estimatedReadyAt?: Date | null;
+  /** @nullable */
+  cancellationReason?: string | null;
 }

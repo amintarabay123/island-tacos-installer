@@ -6,8 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GetRecentOrdersParams = {
-  limit?: number;
+export type GetAdminStatsParams = {
   /**
    * ISO date string (YYYY-MM-DD) for range start
    */

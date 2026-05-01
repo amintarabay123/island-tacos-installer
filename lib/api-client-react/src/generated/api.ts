@@ -23,6 +23,7 @@ import type {
   CreateMenuItemBody,
   CreateOrderBody,
   ErrorResponse,
+  GetAdminStatsParams,
   GetRecentOrdersParams,
   HealthStatus,
   InitiatePaymentBody,
@@ -36,6 +37,9 @@ import type {
   UpdateMenuCategoryBody,
   UpdateMenuItemBody,
   UpdateOrderStatusBody,
+  VapiMenu,
+  VapiOrderBody,
+  VapiOrderResult,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1333,6 +1337,167 @@ export function useTrackOrder<
 }
 
 /**
+ * Returns all available menu items with categories, prices, and modifiers in a format suitable for the Vapi AI phone ordering assistant.
+ * @summary Get full menu for Vapi AI assistant
+ */
+export const getGetVapiMenuUrl = () => {
+  return `/api/vapi/menu`;
+};
+
+export const getVapiMenu = async (options?: RequestInit): Promise<VapiMenu> => {
+  return customFetch<VapiMenu>(getGetVapiMenuUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetVapiMenuQueryKey = () => {
+  return [`/api/vapi/menu`] as const;
+};
+
+export const getGetVapiMenuQueryOptions = <
+  TData = Awaited<ReturnType<typeof getVapiMenu>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getVapiMenu>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetVapiMenuQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getVapiMenu>>> = ({
+    signal,
+  }) => getVapiMenu({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getVapiMenu>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetVapiMenuQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getVapiMenu>>
+>;
+export type GetVapiMenuQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get full menu for Vapi AI assistant
+ */
+
+export function useGetVapiMenu<
+  TData = Awaited<ReturnType<typeof getVapiMenu>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getVapiMenu>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetVapiMenuQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Receives a completed order from the Vapi AI assistant, creates a pending phone order, and returns confirmation details for the AI to read to the caller. Requires VAPI_WEBHOOK_SECRET authentication header.
+ * @summary Create a phone order via Vapi AI
+ */
+export const getCreateVapiOrderUrl = () => {
+  return `/api/vapi/order`;
+};
+
+export const createVapiOrder = async (
+  vapiOrderBody: VapiOrderBody,
+  options?: RequestInit,
+): Promise<VapiOrderResult> => {
+  return customFetch<VapiOrderResult>(getCreateVapiOrderUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(vapiOrderBody),
+  });
+};
+
+export const getCreateVapiOrderMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createVapiOrder>>,
+    TError,
+    { data: BodyType<VapiOrderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createVapiOrder>>,
+  TError,
+  { data: BodyType<VapiOrderBody> },
+  TContext
+> => {
+  const mutationKey = ["createVapiOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createVapiOrder>>,
+    { data: BodyType<VapiOrderBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createVapiOrder(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateVapiOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createVapiOrder>>
+>;
+export type CreateVapiOrderMutationBody = BodyType<VapiOrderBody>;
+export type CreateVapiOrderMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a phone order via Vapi AI
+ */
+export const useCreateVapiOrder = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createVapiOrder>>,
+    TError,
+    { data: BodyType<VapiOrderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createVapiOrder>>,
+  TError,
+  { data: BodyType<VapiOrderBody> },
+  TContext
+> => {
+  return useMutation(getCreateVapiOrderMutationOptions(options));
+};
+
+/**
  * @summary Initiate a payment for an order
  */
 export const getInitiatePaymentUrl = () => {
@@ -1507,41 +1672,57 @@ export const useConfirmPayment = <
 /**
  * @summary Get dashboard stats for admin
  */
-export const getGetAdminStatsUrl = () => {
-  return `/api/admin/stats`;
+export const getGetAdminStatsUrl = (params?: GetAdminStatsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/stats?${stringifiedParams}`
+    : `/api/admin/stats`;
 };
 
 export const getAdminStats = async (
+  params?: GetAdminStatsParams,
   options?: RequestInit,
 ): Promise<AdminStats> => {
-  return customFetch<AdminStats>(getGetAdminStatsUrl(), {
+  return customFetch<AdminStats>(getGetAdminStatsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetAdminStatsQueryKey = () => {
-  return [`/api/admin/stats`] as const;
+export const getGetAdminStatsQueryKey = (params?: GetAdminStatsParams) => {
+  return [`/api/admin/stats`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetAdminStatsQueryOptions = <
   TData = Awaited<ReturnType<typeof getAdminStats>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getAdminStats>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetAdminStatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetAdminStatsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetAdminStatsQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminStats>>> = ({
     signal,
-  }) => getAdminStats({ signal, ...requestOptions });
+  }) => getAdminStats(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getAdminStats>>,
@@ -1562,15 +1743,18 @@ export type GetAdminStatsQueryError = ErrorType<unknown>;
 export function useGetAdminStats<
   TData = Awaited<ReturnType<typeof getAdminStats>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getAdminStats>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetAdminStatsQueryOptions(options);
+>(
+  params?: GetAdminStatsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminStats>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminStatsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

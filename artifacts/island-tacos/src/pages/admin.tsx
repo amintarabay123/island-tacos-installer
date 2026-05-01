@@ -13,6 +13,9 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { DateRange } from "react-day-picker";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -21,10 +24,20 @@ import {
   ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp,
   Settings, Monitor, LogOut, XCircle, BarChart3, Users,
   CloudUpload, Menu, X, ChefHat, UtensilsCrossed, Store,
-  History, ScrollText, LayoutDashboard,
+  History, ScrollText, LayoutDashboard, CalendarIcon,
 } from "lucide-react";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
+
+type DatePreset = "today" | "yesterday" | "last7" | "custom";
+
+function toBVIDateStr(date: Date): string {
+  const bvi = new Date(date.getTime() - 4 * 60 * 60 * 1000);
+  return bvi.toISOString().slice(0, 10);
+}
+function bviNDaysAgo(n: number): string {
+  return toBVIDateStr(new Date(Date.now() - n * 24 * 60 * 60 * 1000));
+}
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
@@ -164,6 +177,9 @@ export default function Admin() {
   const [, navigate] = useLocation();
   const [rejectState, setRejectState] = useState<RejectState>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [calOpen, setCalOpen] = useState(false);
+  const [preset, setPreset] = useState<DatePreset>("today");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "success" | "error">("idle");
   const [syncMessage, setSyncMessage] = useState("");
   const [lastSync, setLastSync] = useState<string | null>(() => localStorage.getItem("lastMenuSync"));
@@ -245,16 +261,32 @@ export default function Admin() {
     }
   };
 
-  const { data: stats } = useGetAdminStats({ query: { queryKey: getGetAdminStatsQueryKey(), refetchInterval: 5_000 } });
+  const dateParams = useMemo(() => {
+    if (preset === "today") return { startDate: bviNDaysAgo(0), endDate: bviNDaysAgo(0) };
+    if (preset === "yesterday") return { startDate: bviNDaysAgo(1), endDate: bviNDaysAgo(1) };
+    if (preset === "last7") return { startDate: bviNDaysAgo(6), endDate: bviNDaysAgo(0) };
+    return {
+      startDate: customRange?.from ? toBVIDateStr(customRange.from) : undefined,
+      endDate: customRange?.to ? toBVIDateStr(customRange.to) : (customRange?.from ? toBVIDateStr(customRange.from) : undefined),
+    };
+  }, [preset, customRange]);
+
+  const statsQueryKey = getGetAdminStatsQueryKey(dateParams);
+  const ordersQueryKey = getGetRecentOrdersQueryKey({ limit: 50, ...dateParams });
+
+  const { data: stats } = useGetAdminStats(
+    dateParams,
+    { query: { queryKey: statsQueryKey, refetchInterval: 5_000 } }
+  );
   const { data: orders, isLoading } = useGetRecentOrders(
-    { limit: 50 },
-    { query: { queryKey: getGetRecentOrdersQueryKey(), refetchInterval: 5_000 } }
+    { limit: 50, ...dateParams },
+    { query: { queryKey: ordersQueryKey, refetchInterval: 5_000 } }
   );
 
   useEffect(() => {
     const refresh = () => {
-      queryClient.invalidateQueries({ queryKey: getGetAdminStatsQueryKey() });
-      queryClient.invalidateQueries({ queryKey: getGetRecentOrdersQueryKey() });
+      queryClient.invalidateQueries({ queryKey: statsQueryKey });
+      queryClient.invalidateQueries({ queryKey: ordersQueryKey });
     };
     window.addEventListener("kds:order-updated", refresh);
     let bc: BroadcastChannel | null = null;
@@ -276,7 +308,7 @@ export default function Admin() {
   const handleStatusChange = (orderId: number, status: UpdateOrderStatusBodyStatus, cancellationReason?: string) => {
     updateStatus.mutate(
       { id: orderId, data: { status, cancellationReason: cancellationReason ?? null } },
-      { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetAdminStatsQueryKey() }); queryClient.invalidateQueries({ queryKey: getGetRecentOrdersQueryKey() }); setRejectState(null); } }
+      { onSuccess: () => { queryClient.invalidateQueries({ queryKey: statsQueryKey }); queryClient.invalidateQueries({ queryKey: ordersQueryKey }); setRejectState(null); } }
     );
   };
 
@@ -287,25 +319,37 @@ export default function Admin() {
   const activeOrders = orders?.filter((o) => ["pending", "confirmed", "preparing", "ready"].includes(o.status)) ?? [];
   const pastOrders = orders?.filter((o) => ["completed", "cancelled"].includes(o.status)) ?? [];
 
-  // Compute hourly revenue chart from today's orders
+  // Compute hourly revenue chart from returned orders (already date-filtered)
+  const isMultiDay = preset === "last7" || (preset === "custom" && customRange?.to && customRange.from && customRange.to.getTime() !== customRange.from.getTime());
+
   const hourlyData = useMemo(() => {
-    const now = new Date();
-    const todayOrders = (orders ?? []).filter((o) => {
-      const d = new Date(o.createdAt);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-    });
+    if (isMultiDay) {
+      // For multi-day ranges, aggregate by date
+      const byDate: Record<string, { revenue: number; count: number }> = {};
+      (orders ?? []).forEach((o) => {
+        const d = toBVIDateStr(new Date(o.createdAt));
+        if (!byDate[d]) byDate[d] = { revenue: 0, count: 0 };
+        byDate[d].revenue += o.total;
+        byDate[d].count++;
+      });
+      return Object.entries(byDate).sort(([a], [b]) => a.localeCompare(b)).map(([date, d]) => ({
+        hour: date.slice(5),
+        revenue: parseFloat(d.revenue.toFixed(2)),
+        orders: d.count,
+      }));
+    }
     const byHour: Record<number, { revenue: number; count: number }> = {};
     for (let h = 10; h <= 20; h++) byHour[h] = { revenue: 0, count: 0 };
-    todayOrders.forEach((o) => {
+    (orders ?? []).forEach((o) => {
       const h = new Date(o.createdAt).getHours();
-      if (byHour[h]) { byHour[h].revenue += o.total; byHour[h].count++; }
+      if (byHour[h] !== undefined) { byHour[h].revenue += o.total; byHour[h].count++; }
     });
     return Object.entries(byHour).map(([h, d]) => ({
       hour: `${Number(h) % 12 || 12}${Number(h) >= 12 ? "pm" : "am"}`,
       revenue: parseFloat(d.revenue.toFixed(2)),
       orders: d.count,
     }));
-  }, [orders]);
+  }, [orders, isMultiDay]);
 
   // Status donut data
   const statusDonut = useMemo(() => {
@@ -399,11 +443,56 @@ export default function Admin() {
         {/* Scrollable content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
 
+          {/* Date range picker */}
+          <div className="flex flex-wrap items-center gap-2">
+            {(["today", "yesterday", "last7", "custom"] as DatePreset[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => { setPreset(p); if (p !== "custom") setCalOpen(false); else setCalOpen(true); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${preset === p ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"}`}
+              >
+                {p === "today" ? "Today" : p === "yesterday" ? "Yesterday" : p === "last7" ? "Last 7 Days" : "Custom"}
+              </button>
+            ))}
+            {preset === "custom" && (
+              <Popover open={calOpen} onOpenChange={setCalOpen}>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border bg-white text-slate-600 border-slate-300 hover:border-slate-500 transition-colors">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    {customRange?.from
+                      ? customRange.to && customRange.to.getTime() !== customRange.from.getTime()
+                        ? `${toBVIDateStr(customRange.from)} → ${toBVIDateStr(customRange.to)}`
+                        : toBVIDateStr(customRange.from)
+                      : "Pick dates…"}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={customRange}
+                    onSelect={(range) => {
+                      setCustomRange(range);
+                      if (range?.from && range?.to) setCalOpen(false);
+                    }}
+                    numberOfMonths={1}
+                    disabled={{ after: new Date() }}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+            <span className="text-xs text-slate-400 ml-1">
+              {preset === "today" ? bviNDaysAgo(0)
+                : preset === "yesterday" ? bviNDaysAgo(1)
+                : preset === "last7" ? `${bviNDaysAgo(6)} → ${bviNDaysAgo(0)}`
+                : dateParams.startDate ? (dateParams.endDate && dateParams.endDate !== dateParams.startDate ? `${dateParams.startDate} → ${dateParams.endDate}` : dateParams.startDate) : ""}
+            </span>
+          </div>
+
           {/* Stat cards */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
-              { label: "Today's Orders", value: stats?.todayOrders ?? 0, icon: ShoppingBag, bg: "bg-blue-50", iconColor: "text-blue-600", trend: null },
-              { label: "Today's Revenue", value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, icon: DollarSign, bg: "bg-green-50", iconColor: "text-green-600", trend: null },
+              { label: "Orders", value: stats?.todayOrders ?? 0, icon: ShoppingBag, bg: "bg-blue-50", iconColor: "text-blue-600", trend: null },
+              { label: "Revenue", value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, icon: DollarSign, bg: "bg-green-50", iconColor: "text-green-600", trend: null },
               { label: "Pending", value: stats?.pendingOrders ?? 0, icon: Clock, bg: "bg-amber-50", iconColor: "text-amber-600", trend: null },
               { label: "Completed", value: stats?.completedOrders ?? 0, icon: CheckCircle2, bg: "bg-slate-50", iconColor: "text-slate-600", trend: null },
             ].map(({ label, value, icon: Icon, bg, iconColor }) => (
@@ -425,8 +514,8 @@ export default function Admin() {
             <div className="xl:col-span-2 bg-white rounded-xl border shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-bold text-slate-800">Revenue Today</h2>
-                  <p className="text-xs text-slate-400">Hourly breakdown</p>
+                  <h2 className="font-bold text-slate-800">Revenue</h2>
+                  <p className="text-xs text-slate-400">{isMultiDay ? "Daily breakdown" : "Hourly breakdown"}</p>
                 </div>
                 <TrendingUp className="h-5 w-5 text-emerald-500" />
               </div>
@@ -491,7 +580,7 @@ export default function Admin() {
             <div className="bg-white rounded-xl border shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-bold text-slate-800">Top Items Today</h2>
+                  <h2 className="font-bold text-slate-800">Top Items</h2>
                   <p className="text-xs text-slate-400">Units sold</p>
                 </div>
                 <TrendingUp className="h-5 w-5 text-purple-400" />

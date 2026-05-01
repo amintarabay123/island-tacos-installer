@@ -7,6 +7,7 @@
  */
 import type { CreateOrderBodyOrderType } from "./createOrderBodyOrderType";
 import type { CreateOrderBodyPaymentMethod } from "./createOrderBodyPaymentMethod";
+import type { CreateOrderBodySource } from "./createOrderBodySource";
 import type { CreateOrderItemInput } from "./createOrderItemInput";
 
 export interface CreateOrderBody {
@@ -17,6 +18,7 @@ export interface CreateOrderBody {
   /** @nullable */
   deliveryAddress?: string | null;
   paymentMethod: CreateOrderBodyPaymentMethod;
+  source?: CreateOrderBodySource;
   /** @nullable */
   notes?: string | null;
   items: CreateOrderItemInput[];

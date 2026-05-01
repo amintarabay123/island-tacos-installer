@@ -105,7 +105,6 @@ export const CreateMenuItemBody = zod.object({
   description: zod.string().nullish(),
   price: zod.number(),
   imageUrl: zod.string().nullish(),
-  posImageUrl: zod.string().nullish(),
   available: zod.boolean().optional(),
   popular: zod.boolean().optional(),
   spicy: zod.boolean().optional(),
@@ -146,7 +145,6 @@ export const UpdateMenuItemBody = zod.object({
   description: zod.string().nullish(),
   price: zod.number().optional(),
   imageUrl: zod.string().nullish(),
-  posImageUrl: zod.string().nullish(),
   available: zod.boolean().optional(),
   popular: zod.boolean().optional(),
   spicy: zod.boolean().optional(),
@@ -188,7 +186,6 @@ export const ListOrdersQueryParams = zod.object({
       "cancelled",
     ])
     .optional(),
-  kdsCleared: zod.enum(["true", "false"]).optional(),
   limit: zod.coerce.number().optional(),
 });
 
@@ -210,6 +207,7 @@ export const ListOrdersResponseItem = zod.object({
   ]),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
   paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  source: zod.enum(["online", "pos", "phone"]).nullish(),
   subtotal: zod.number(),
   tax: zod.number(),
   deliveryFee: zod.number(),
@@ -242,26 +240,14 @@ export const CreateOrderBody = zod.object({
   customerPhone: zod.string(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
-  paymentMethod: zod.enum(["card", "athmovil", "cash", "split", "complimentary"]),
-  paymentStatus: zod.enum(["pending", "paid"]).optional(),
+  paymentMethod: zod.enum(["card", "athmovil", "cash"]),
   source: zod.enum(["online", "pos", "phone"]).optional(),
-  discountAmount: zod.number().optional(),
   notes: zod.string().nullish(),
-  scheduledPickupAt: zod.string().nullish(),
   items: zod.array(
     zod.object({
       menuItemId: zod.number(),
       quantity: zod.number(),
       notes: zod.string().nullish(),
-      alreadyMade: zod.boolean().optional(),
-      modifierSelections: zod.array(
-        zod.object({
-          modifierId: zod.string(),
-          optionId: zod.string(),
-          name: zod.string(),
-          price: zod.number(),
-        })
-      ).optional(),
     }),
   ),
 });
@@ -281,7 +267,6 @@ export const GetOrderResponse = zod.object({
   customerPhone: zod.string(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
-  source: zod.enum(["online", "pos", "phone"]).nullish(),
   status: zod.enum([
     "pending",
     "confirmed",
@@ -292,6 +277,7 @@ export const GetOrderResponse = zod.object({
   ]),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
   paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  source: zod.enum(["online", "pos", "phone"]).nullish(),
   subtotal: zod.number(),
   tax: zod.number(),
   deliveryFee: zod.number(),
@@ -329,13 +315,9 @@ export const UpdateOrderStatusBody = zod.object({
     "ready",
     "completed",
     "cancelled",
-  ]).optional(),
-  kdsCleared: zod.boolean().optional(),
+  ]),
   estimatedReadyAt: zod.coerce.date().nullish(),
-  actualPaymentMethod: zod.string().optional(),
-  paymentStatus: zod.enum(["pending", "paid"]).optional(),
   cancellationReason: zod.string().nullish(),
-  notes: zod.string().nullish(),
 });
 
 export const UpdateOrderStatusResponse = zod.object({
@@ -356,6 +338,7 @@ export const UpdateOrderStatusResponse = zod.object({
   ]),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
   paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  source: zod.enum(["online", "pos", "phone"]).nullish(),
   subtotal: zod.number(),
   tax: zod.number(),
   deliveryFee: zod.number(),
@@ -403,6 +386,7 @@ export const TrackOrderResponse = zod.object({
   ]),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
   paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  source: zod.enum(["online", "pos", "phone"]).nullish(),
   subtotal: zod.number(),
   tax: zod.number(),
   deliveryFee: zod.number(),
@@ -423,6 +407,75 @@ export const TrackOrderResponse = zod.object({
   estimatedReadyAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
+});
+
+/**
+ * Returns all available menu items with categories, prices, and modifiers in a format suitable for the Vapi AI phone ordering assistant.
+ * @summary Get full menu for Vapi AI assistant
+ */
+export const GetVapiMenuResponse = zod.object({
+  restaurantName: zod.string(),
+  location: zod.string(),
+  currency: zod.string(),
+  menu: zod.array(
+    zod.object({
+      id: zod.number(),
+      name: zod.string(),
+      category: zod.string(),
+      description: zod.string().nullish(),
+      price: zod.number(),
+      available: zod.boolean(),
+      popular: zod.boolean(),
+      spicy: zod.boolean(),
+      vegetarian: zod.boolean(),
+      modifiers: zod.array(
+        zod.object({
+          name: zod.string(),
+          required: zod.boolean(),
+          minSelections: zod.number(),
+          maxSelections: zod.number().nullish(),
+          options: zod.array(
+            zod.object({
+              id: zod.string(),
+              name: zod.string(),
+              price: zod.number(),
+            }),
+          ),
+        }),
+      ),
+    }),
+  ),
+});
+
+/**
+ * Receives a completed order from the Vapi AI assistant, creates a pending phone order, and returns confirmation details for the AI to read to the caller. Requires VAPI_WEBHOOK_SECRET authentication header.
+ * @summary Create a phone order via Vapi AI
+ */
+export const createVapiOrderBodyItemsItemQuantityDefault = 1;
+
+export const CreateVapiOrderBody = zod.object({
+  customerName: zod.string(),
+  customerPhone: zod.string(),
+  notes: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      menuItemId: zod.number(),
+      quantity: zod
+        .number()
+        .default(createVapiOrderBodyItemsItemQuantityDefault),
+      notes: zod.string().nullish(),
+      modifierSelections: zod
+        .array(
+          zod.object({
+            modifierId: zod.string(),
+            optionId: zod.string(),
+            name: zod.string(),
+            price: zod.number(),
+          }),
+        )
+        .optional(),
+    }),
+  ),
 });
 
 /**
@@ -459,6 +512,11 @@ export const ConfirmPaymentResponse = zod.object({
 /**
  * @summary Get dashboard stats for admin
  */
+export const GetAdminStatsQueryParams = zod.object({
+  startDate: zod.coerce.string().optional(),
+  endDate: zod.coerce.string().optional(),
+});
+
 export const GetAdminStatsResponse = zod.object({
   todayOrders: zod.number(),
   todayRevenue: zod.number(),
@@ -477,6 +535,8 @@ export const GetAdminStatsResponse = zod.object({
  */
 export const GetRecentOrdersQueryParams = zod.object({
   limit: zod.coerce.number().optional(),
+  startDate: zod.coerce.string().optional(),
+  endDate: zod.coerce.string().optional(),
 });
 
 export const GetRecentOrdersResponseItem = zod.object({
@@ -487,7 +547,6 @@ export const GetRecentOrdersResponseItem = zod.object({
   customerPhone: zod.string(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
-  source: zod.enum(["online", "pos", "phone"]).nullish(),
   status: zod.enum([
     "pending",
     "confirmed",
@@ -498,6 +557,7 @@ export const GetRecentOrdersResponseItem = zod.object({
   ]),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
   paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  source: zod.enum(["online", "pos", "phone"]).nullish(),
   subtotal: zod.number(),
   tax: zod.number(),
   deliveryFee: zod.number(),
@@ -520,70 +580,3 @@ export const GetRecentOrdersResponseItem = zod.object({
   updatedAt: zod.coerce.date(),
 });
 export const GetRecentOrdersResponse = zod.array(GetRecentOrdersResponseItem);
-
-export const VapiModifierOption = zod.object({
-  id: zod.string(),
-  name: zod.string(),
-  price: zod.number(),
-});
-
-export const VapiModifier = zod.object({
-  name: zod.string(),
-  required: zod.boolean(),
-  minSelections: zod.number(),
-  maxSelections: zod.number().nullish(),
-  options: zod.array(VapiModifierOption),
-});
-
-export const VapiMenuItem = zod.object({
-  id: zod.number(),
-  name: zod.string(),
-  category: zod.string(),
-  description: zod.string().nullish(),
-  price: zod.number(),
-  available: zod.boolean(),
-  popular: zod.boolean(),
-  spicy: zod.boolean(),
-  vegetarian: zod.boolean(),
-  modifiers: zod.array(VapiModifier),
-});
-
-export const VapiMenu = zod.object({
-  restaurantName: zod.string(),
-  location: zod.string(),
-  currency: zod.string(),
-  menu: zod.array(VapiMenuItem),
-});
-
-export const VapiOrderItemInput = zod.object({
-  menuItemId: zod.number(),
-  quantity: zod.number().default(1),
-  notes: zod.string().nullish(),
-  modifierSelections: zod
-    .array(
-      zod.object({
-        modifierId: zod.string(),
-        optionId: zod.string(),
-        name: zod.string(),
-        price: zod.number(),
-      }),
-    )
-    .optional(),
-});
-
-export const VapiOrderBody = zod.object({
-  customerName: zod.string(),
-  customerPhone: zod.string(),
-  notes: zod.string().nullish(),
-  items: zod.array(VapiOrderItemInput),
-});
-
-export const VapiOrderResult = zod.object({
-  success: zod.boolean(),
-  confirmationCode: zod.string(),
-  total: zod.number(),
-  estimatedMinutes: zod.number(),
-  estimatedReadyAt: zod.string(),
-  estimatedReadyAtFormatted: zod.string(),
-  message: zod.string(),
-});

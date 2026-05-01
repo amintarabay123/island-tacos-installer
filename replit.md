@@ -71,6 +71,11 @@ No tax (BVI). Tax not applied at checkout.
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 - `pnpm --filter @workspace/island-tacos run dev` — run frontend locally
 
+## Codegen Notes
+
+- Orval generates both Zod schemas (`lib/api-zod/src/generated/api.ts`) and TypeScript interfaces (`lib/api-zod/src/generated/types/`) from the OpenAPI spec
+- The codegen script in `lib/api-spec/package.json` overrides `lib/api-zod/src/index.ts` after orval runs to export only from `./generated/api` — this prevents TS2308 duplicate export errors from conflicting Zod schemas and TypeScript interfaces with the same names
+
 ## Additional DB Tables
 
 - `shifts` — Cash register shifts (opening float, closing float, timestamps, notes)

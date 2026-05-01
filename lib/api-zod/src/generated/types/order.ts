@@ -9,6 +9,7 @@ import type { OrderItem } from "./orderItem";
 import type { OrderOrderType } from "./orderOrderType";
 import type { OrderPaymentMethod } from "./orderPaymentMethod";
 import type { OrderPaymentStatus } from "./orderPaymentStatus";
+import type { OrderSource } from "./orderSource";
 import type { OrderStatus } from "./orderStatus";
 
 export interface Order {
@@ -23,6 +24,7 @@ export interface Order {
   status: OrderStatus;
   paymentStatus: OrderPaymentStatus;
   paymentMethod: OrderPaymentMethod;
+  source?: OrderSource;
   subtotal: number;
   tax: number;
   deliveryFee: number;

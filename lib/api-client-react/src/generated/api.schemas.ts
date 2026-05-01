@@ -89,13 +89,6 @@ export interface UpdateMenuItemBody {
   vegetarian?: boolean;
 }
 
-export interface OrderItemModifierSelection {
-  modifierId: string;
-  optionId: string;
-  name: string;
-  price: number;
-}
-
 export interface OrderItem {
   id: number;
   orderId: number;
@@ -106,8 +99,6 @@ export interface OrderItem {
   /** @nullable */
   notes?: string | null;
   subtotal: number;
-  /** @nullable */
-  modifierSelections?: OrderItemModifierSelection[] | null;
 }
 
 export type OrderOrderType =
@@ -146,8 +137,14 @@ export const OrderPaymentMethod = {
   card: "card",
   athmovil: "athmovil",
   cash: "cash",
-  split: "split",
-  complimentary: "complimentary",
+} as const;
+
+export type OrderSource = (typeof OrderSource)[keyof typeof OrderSource] | null;
+
+export const OrderSource = {
+  online: "online",
+  pos: "pos",
+  phone: "phone",
 } as const;
 
 export interface Order {
@@ -162,19 +159,16 @@ export interface Order {
   status: OrderStatus;
   paymentStatus: OrderPaymentStatus;
   paymentMethod: OrderPaymentMethod;
+  source?: OrderSource;
   subtotal: number;
   tax: number;
   deliveryFee: number;
   total: number;
   /** @nullable */
   notes?: string | null;
-  /** @nullable */
-  cancellationReason?: string | null;
   items: OrderItem[];
   /** @nullable */
   estimatedReadyAt?: string | null;
-  /** @nullable */
-  scheduledPickupAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -203,6 +197,15 @@ export const CreateOrderBodyPaymentMethod = {
   cash: "cash",
 } as const;
 
+export type CreateOrderBodySource =
+  (typeof CreateOrderBodySource)[keyof typeof CreateOrderBodySource];
+
+export const CreateOrderBodySource = {
+  online: "online",
+  pos: "pos",
+  phone: "phone",
+} as const;
+
 export interface CreateOrderBody {
   customerName: string;
   customerEmail: string;
@@ -211,14 +214,80 @@ export interface CreateOrderBody {
   /** @nullable */
   deliveryAddress?: string | null;
   paymentMethod: CreateOrderBodyPaymentMethod;
-  paymentStatus?: "pending" | "paid";
-  source?: "online" | "pos" | "phone";
-  discountAmount?: number;
+  source?: CreateOrderBodySource;
   /** @nullable */
   notes?: string | null;
-  /** @nullable */
-  scheduledPickupAt?: string | null;
   items: CreateOrderItemInput[];
+}
+
+export interface VapiModifierOption {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface VapiModifier {
+  name: string;
+  required: boolean;
+  minSelections: number;
+  /** @nullable */
+  maxSelections?: number | null;
+  options: VapiModifierOption[];
+}
+
+export interface VapiMenuItem {
+  id: number;
+  name: string;
+  category: string;
+  /** @nullable */
+  description?: string | null;
+  price: number;
+  available: boolean;
+  popular: boolean;
+  spicy: boolean;
+  vegetarian: boolean;
+  modifiers: VapiModifier[];
+}
+
+export interface VapiMenu {
+  restaurantName: string;
+  location: string;
+  currency: string;
+  menu: VapiMenuItem[];
+}
+
+export type VapiOrderItemInputModifierSelectionsItem = {
+  modifierId: string;
+  optionId: string;
+  name: string;
+  price: number;
+};
+
+export interface VapiOrderItemInput {
+  menuItemId: number;
+  quantity?: number;
+  /** @nullable */
+  notes?: string | null;
+  modifierSelections?: VapiOrderItemInputModifierSelectionsItem[];
+}
+
+export interface VapiOrderBody {
+  customerName: string;
+  customerPhone: string;
+  /** @nullable */
+  notes?: string | null;
+  items: VapiOrderItemInput[];
+}
+
+export interface VapiOrderResult {
+  success: boolean;
+  confirmationCode: string;
+  total: number;
+  estimatedMinutes: number;
+  estimatedReadyAt: string;
+  estimatedReadyAtFormatted: string;
+  /** Human-readable message for the AI to read to the caller */
+  message: string;
 }
 
 export type UpdateOrderStatusBodyStatus =
@@ -234,16 +303,11 @@ export const UpdateOrderStatusBodyStatus = {
 } as const;
 
 export interface UpdateOrderStatusBody {
-  status?: UpdateOrderStatusBodyStatus;
-  kdsCleared?: boolean;
+  status: UpdateOrderStatusBodyStatus;
   /** @nullable */
   estimatedReadyAt?: string | null;
-  actualPaymentMethod?: string;
-  paymentStatus?: "pending" | "paid";
   /** @nullable */
   cancellationReason?: string | null;
-  /** @nullable */
-  notes?: string | null;
 }
 
 export type InitiatePaymentBodyPaymentMethod =
@@ -317,6 +381,25 @@ export const ListOrdersStatus = {
   cancelled: "cancelled",
 } as const;
 
+export type GetAdminStatsParams = {
+  /**
+   * ISO date string (YYYY-MM-DD) for range start
+   */
+  startDate?: string;
+  /**
+   * ISO date string (YYYY-MM-DD) for range end (inclusive)
+   */
+  endDate?: string;
+};
+
 export type GetRecentOrdersParams = {
   limit?: number;
+  /**
+   * ISO date string (YYYY-MM-DD) for range start
+   */
+  startDate?: string;
+  /**
+   * ISO date string (YYYY-MM-DD) for range end (inclusive)
+   */
+  endDate?: string;
 };
