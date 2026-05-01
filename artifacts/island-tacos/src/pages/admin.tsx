@@ -1,13 +1,28 @@
-import { useState, useRef, useEffect } from "react";
-import { Link } from "wouter";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { Link, useLocation } from "wouter";
 import { setPageMeta } from "@/lib/page-meta";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
-import { useGetAdminStats, useGetRecentOrders, useUpdateOrderStatus, getGetAdminStatsQueryKey, getGetRecentOrdersQueryKey, type UpdateOrderStatusBodyStatus } from "@workspace/api-client-react";
+import {
+  useGetAdminStats,
+  useGetRecentOrders,
+  useUpdateOrderStatus,
+  getGetAdminStatsQueryKey,
+  getGetRecentOrdersQueryKey,
+  type UpdateOrderStatusBodyStatus,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp, Settings, Monitor, LogOut, XCircle, BarChart3, Users, CloudUpload, Menu, X, ChefHat, UtensilsCrossed, Store, History, ScrollText } from "lucide-react";
-import { useLocation } from "wouter";
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from "recharts";
+import {
+  ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp,
+  Settings, Monitor, LogOut, XCircle, BarChart3, Users,
+  CloudUpload, Menu, X, ChefHat, UtensilsCrossed, Store,
+  History, ScrollText, LayoutDashboard,
+} from "lucide-react";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,7 +34,6 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "Completed",
   cancelled: "Cancelled",
 };
-
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   confirmed: "bg-blue-100 text-blue-800",
@@ -28,36 +42,139 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-gray-100 text-gray-800",
   cancelled: "bg-red-100 text-red-800",
 };
-
 const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
   pending: "confirmed",
   confirmed: "preparing",
   preparing: "ready",
   ready: "completed",
 };
+const DONUT_COLORS = ["#f59e0b", "#3b82f6", "#f97316", "#22c55e", "#6b7280", "#ef4444"];
 
 type RejectState = { orderId: number; reason: string } | null;
 
+type NavItem = {
+  label: string;
+  icon: React.ElementType;
+  href?: string;
+  action?: () => void;
+  external?: boolean;
+  iconColor?: string;
+};
+type NavSection = { title: string; items: NavItem[] };
+
+function Sidebar({
+  sections,
+  onClose,
+  onLogout,
+  isMobile,
+}: {
+  sections: NavSection[];
+  onClose?: () => void;
+  onLogout: () => void;
+  isMobile?: boolean;
+}) {
+  const [location] = useLocation();
+  return (
+    <div className={`flex flex-col h-full bg-slate-900 text-slate-100 ${isMobile ? "w-72" : "w-64"}`}>
+      {/* Brand */}
+      <div className="flex items-center justify-between px-5 py-5 border-b border-slate-700">
+        <div>
+          <div className="text-lg font-black tracking-tight text-white">ISLAND TACOS</div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-0.5">Admin Panel</div>
+        </div>
+        {isMobile && onClose && (
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-white">
+            <X className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
+        {sections.map((section) => (
+          <div key={section.title}>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 px-3 mb-1.5">
+              {section.title}
+            </p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const isActive = item.href ? location === item.href : false;
+                const base =
+                  "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer";
+                const activeClass = "bg-slate-700 text-white";
+                const inactiveClass = "text-slate-300 hover:bg-slate-800 hover:text-white";
+                const content = (
+                  <>
+                    <item.icon className={`h-4 w-4 shrink-0 ${item.iconColor ?? "text-slate-400"}`} />
+                    {item.label}
+                  </>
+                );
+                if (item.action) {
+                  return (
+                    <button key={item.label} onClick={() => { item.action!(); onClose?.(); }} className={`${base} ${isActive ? activeClass : inactiveClass}`}>
+                      {content}
+                    </button>
+                  );
+                }
+                if (item.external) {
+                  return (
+                    <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClose} className={`${base} ${inactiveClass}`}>
+                      {content}
+                    </a>
+                  );
+                }
+                return (
+                  <Link key={item.label} href={item.href!}>
+                    <div onClick={onClose} className={`${base} ${isActive ? activeClass : inactiveClass}`}>
+                      {content}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="px-3 pb-5 border-t border-slate-700 pt-4 space-y-0.5">
+        <Link href="/">
+          <div onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer">
+            <Store className="h-4 w-4 text-slate-400" /> Online Store
+          </div>
+        </Link>
+        <button
+          onClick={() => { onLogout(); onClose?.(); }}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors"
+        >
+          <LogOut className="h-4 w-4" /> Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Admin() {
-  useEffect(() => { setPageMeta("Admin — Island Tacos", "⚙️", { iconUrl: "/icon-admin-192.png", manifestUrl: "/manifest-admin.json" }); }, []);
+  useEffect(() => {
+    setPageMeta("Admin — Island Tacos", "⚙️", { iconUrl: "/icon-admin-192.png", manifestUrl: "/manifest-admin.json" });
+  }, []);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [rejectState, setRejectState] = useState<RejectState>(null);
-  const [navOpen, setNavOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "success" | "error">("idle");
-  const [syncMessage, setSyncMessage] = useState<string>("");
+  const [syncMessage, setSyncMessage] = useState("");
   const [lastSync, setLastSync] = useState<string | null>(() => localStorage.getItem("lastMenuSync"));
   const [importState, setImportState] = useState<"idle" | "importing" | "success" | "error">("idle");
-  const [importMessage, setImportMessage] = useState<string>("");
+  const [importMessage, setImportMessage] = useState("");
   const [csvState, setCsvState] = useState<"idle" | "uploading" | "success" | "error">("idle");
-  const [csvMessage, setCsvMessage] = useState<string>("");
+  const [csvMessage, setCsvMessage] = useState("");
   const csvInputRef = useRef<HTMLInputElement>(null);
   const prevOrderIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
 
-  // Role guard — staff can only access kitchen
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then((r) => r.json())
@@ -85,9 +202,7 @@ export default function Admin() {
       setSyncState("success");
       setSyncMessage(`${data.pushed?.categories ?? 0} categories, ${data.pushed?.items ?? 0} items pushed`);
       setTimeout(() => setSyncState("idle"), 4000);
-    } catch (e) {
-      setSyncState("error"); setSyncMessage(String(e));
-    }
+    } catch (e) { setSyncState("error"); setSyncMessage(String(e)); }
   };
 
   const handleLoyverseImport = async () => {
@@ -102,21 +217,17 @@ export default function Admin() {
       setImportState("success");
       setImportMessage(
         `Imported ${ordersImported} orders + ${customersImported} customers` +
-        (ordersSkipped || customersSkipped ? ` (${ordersSkipped} orders / ${customersSkipped} customers already existed)` : "") +
-        (truncated ? " — receipts limited to last 31 days by your Loyverse plan." : ".") +
+        (ordersSkipped || customersSkipped ? ` (${ordersSkipped}/${customersSkipped} already existed)` : "") +
+        (truncated ? " — receipts limited to last 31 days." : ".") +
         (errors?.length ? ` ${errors.length} error(s): ${errors[0]}` : "")
       );
-    } catch (e) {
-      setImportState("error");
-      setImportMessage(String(e));
-    }
+    } catch (e) { setImportState("error"); setImportMessage(String(e)); }
   };
 
   const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setCsvState("uploading");
-    setCsvMessage("Uploading & importing CSV — please wait…");
+    setCsvState("uploading"); setCsvMessage("Uploading & importing CSV — please wait…");
     try {
       const form = new FormData();
       form.append("file", file);
@@ -128,17 +239,18 @@ export default function Admin() {
       setCsvMessage(`Imported ${imported} orders` + (skipped ? ` (${skipped} already existed)` : "") + (errs ? `, ${errs} row error(s)` : "") + ".");
       setTimeout(() => { setCsvState("idle"); setCsvMessage(""); }, 8000);
     } catch (e) {
-      setCsvState("error");
-      setCsvMessage(String(e));
+      setCsvState("error"); setCsvMessage(String(e));
     } finally {
       if (csvInputRef.current) csvInputRef.current.value = "";
     }
   };
 
   const { data: stats } = useGetAdminStats({ query: { queryKey: getGetAdminStatsQueryKey(), refetchInterval: 5_000 } });
-  const { data: orders, isLoading } = useGetRecentOrders({ limit: 50 }, { query: { queryKey: getGetRecentOrdersQueryKey(), refetchInterval: 5_000 } });
+  const { data: orders, isLoading } = useGetRecentOrders(
+    { limit: 50 },
+    { query: { queryKey: getGetRecentOrdersQueryKey(), refetchInterval: 5_000 } }
+  );
 
-  // Refresh immediately when KDS changes an order (same tab or other tab via BroadcastChannel)
   useEffect(() => {
     const refresh = () => {
       queryClient.invalidateQueries({ queryKey: getGetAdminStatsQueryKey() });
@@ -146,548 +258,465 @@ export default function Admin() {
     };
     window.addEventListener("kds:order-updated", refresh);
     let bc: BroadcastChannel | null = null;
-    try {
-      bc = new BroadcastChannel("island_tacos_kds");
-      bc.onmessage = (e) => { if (e.data?.type === "kds:order-updated") refresh(); };
-    } catch {}
-    return () => {
-      window.removeEventListener("kds:order-updated", refresh);
-      bc?.close();
-    };
+    try { bc = new BroadcastChannel("island_tacos_kds"); bc.onmessage = (e) => { if (e.data?.type === "kds:order-updated") refresh(); }; } catch {}
+    return () => { window.removeEventListener("kds:order-updated", refresh); bc?.close(); };
   }, [queryClient]);
+
   const updateStatus = useUpdateOrderStatus();
 
   useEffect(() => {
     if (!orders) return;
-    const activeIds = new Set(
-      orders.filter((o) => ["pending", "confirmed", "preparing", "ready"].includes(o.status)).map((o) => o.id)
-    );
-    if (isFirstFetchRef.current) {
-      isFirstFetchRef.current = false;
-      prevOrderIdsRef.current = activeIds;
-      return;
-    }
+    const activeIds = new Set(orders.filter((o) => ["pending", "confirmed", "preparing", "ready"].includes(o.status)).map((o) => o.id));
+    if (isFirstFetchRef.current) { isFirstFetchRef.current = false; prevOrderIdsRef.current = activeIds; return; }
     const hasNew = [...activeIds].some((id) => !prevOrderIdsRef.current.has(id));
-    if (hasNew) {
-      toast({ title: "New order received!", description: "Check active orders below." });
-    }
+    if (hasNew) toast({ title: "New order received!", description: "Check active orders below." });
     prevOrderIdsRef.current = activeIds;
   }, [orders, toast]);
 
   const handleStatusChange = (orderId: number, status: UpdateOrderStatusBodyStatus, cancellationReason?: string) => {
     updateStatus.mutate(
       { id: orderId, data: { status, cancellationReason: cancellationReason ?? null } },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getGetAdminStatsQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetRecentOrdersQueryKey() });
-          setRejectState(null);
-        },
-      }
+      { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetAdminStatsQueryKey() }); queryClient.invalidateQueries({ queryKey: getGetRecentOrdersQueryKey() }); setRejectState(null); } }
     );
   };
 
   const handleCancelClick = (orderId: number) => {
-    if (rejectState?.orderId === orderId) {
-      setRejectState(null);
-    } else {
-      setRejectState({ orderId, reason: "" });
-    }
+    setRejectState(rejectState?.orderId === orderId ? null : { orderId, reason: "" });
   };
 
-  const confirmCancellation = (orderId: number) => {
-    handleStatusChange(orderId, "cancelled", rejectState?.reason || undefined);
-  };
+  const activeOrders = orders?.filter((o) => ["pending", "confirmed", "preparing", "ready"].includes(o.status)) ?? [];
+  const pastOrders = orders?.filter((o) => ["completed", "cancelled"].includes(o.status)) ?? [];
 
-  const activeOrders = orders?.filter((o) =>
-    ["pending", "confirmed", "preparing", "ready"].includes(o.status)
-  ) ?? [];
-  const pastOrders = orders?.filter((o) =>
-    ["completed", "cancelled"].includes(o.status)
-  ) ?? [];
+  // Compute hourly revenue chart from today's orders
+  const hourlyData = useMemo(() => {
+    const now = new Date();
+    const todayOrders = (orders ?? []).filter((o) => {
+      const d = new Date(o.createdAt);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+    });
+    const byHour: Record<number, { revenue: number; count: number }> = {};
+    for (let h = 10; h <= 20; h++) byHour[h] = { revenue: 0, count: 0 };
+    todayOrders.forEach((o) => {
+      const h = new Date(o.createdAt).getHours();
+      if (byHour[h]) { byHour[h].revenue += o.total; byHour[h].count++; }
+    });
+    return Object.entries(byHour).map(([h, d]) => ({
+      hour: `${Number(h) % 12 || 12}${Number(h) >= 12 ? "pm" : "am"}`,
+      revenue: parseFloat(d.revenue.toFixed(2)),
+      orders: d.count,
+    }));
+  }, [orders]);
+
+  // Status donut data
+  const statusDonut = useMemo(() => {
+    const statusCount: Record<string, number> = {};
+    (orders ?? []).forEach((o) => { statusCount[o.status] = (statusCount[o.status] ?? 0) + 1; });
+    return Object.entries(statusCount).map(([status, value]) => ({ name: STATUS_LABELS[status] ?? status, value }));
+  }, [orders]);
+
+  // Top items bar data
+  const topItemsData = useMemo(() =>
+    (stats?.popularItems ?? []).slice(0, 8).map((i) => ({ name: i.name.length > 14 ? i.name.slice(0, 13) + "…" : i.name, count: i.count })),
+    [stats]
+  );
+
+  const navSections: NavSection[] = [
+    {
+      title: "Operations",
+      items: [
+        { label: "Dashboard", icon: LayoutDashboard, href: adminRoutes.dashboard, iconColor: "text-emerald-400" },
+        {
+          label: "POS Terminal", icon: ShoppingBag, iconColor: "text-amber-400",
+          action: () => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`),
+        },
+        { label: "Kitchen Display", icon: ChefHat, href: adminRoutes.kitchen, iconColor: "text-orange-400" },
+        { label: "Customer Display", icon: Monitor, href: adminRoutes.display, external: true, iconColor: "text-blue-400" },
+      ],
+    },
+    {
+      title: "Manage",
+      items: [
+        { label: "Menu Editor", icon: UtensilsCrossed, href: adminRoutes.menu, iconColor: "text-green-400" },
+        { label: "Modifiers", icon: Settings, href: adminRoutes.modifiers, iconColor: "text-green-500" },
+        { label: "Store Settings", icon: Settings, href: adminRoutes.settings, iconColor: "text-slate-400" },
+      ],
+    },
+    {
+      title: "Analytics",
+      items: [
+        { label: "Reports", icon: BarChart3, href: adminRoutes.reports, iconColor: "text-purple-400" },
+        { label: "Financials", icon: History, href: adminRoutes.financials, iconColor: "text-emerald-400" },
+        { label: "Customers", icon: Users, href: adminRoutes.customers, iconColor: "text-blue-400" },
+        { label: "Customs (HMC-12)", icon: ScrollText, href: adminRoutes.customs, iconColor: "text-amber-400" },
+      ],
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile slide-in nav drawer */}
-      {navOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/40" onClick={() => setNavOpen(false)} />
-          {/* Panel */}
-          <div className="relative ml-auto w-72 h-full bg-background shadow-2xl flex flex-col overflow-y-auto">
-            {/* Panel header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b">
-              <span className="font-black text-lg text-primary">ISLAND TACOS</span>
-              <button onClick={() => setNavOpen(false)} className="p-1.5 rounded-md hover:bg-muted">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            {/* Nav sections */}
-            <nav className="flex-1 px-3 py-4 space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pb-1">Operations</p>
-              <button onClick={() => { setNavOpen(false); navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`); }}
-                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-muted text-left font-medium">
-                <span className="text-lg">🧾</span> POS Terminal
-              </button>
-              <Link href={adminRoutes.kitchen} onClick={() => setNavOpen(false)}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
-                  <ChefHat className="h-5 w-5 text-orange-500" /> Kitchen Display
-                </div>
-              </Link>
-              <a href={adminRoutes.display} target="_blank" rel="noopener noreferrer" onClick={() => setNavOpen(false)}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium">
-                  <Monitor className="h-5 w-5 text-blue-500" /> Customer Display
-                </div>
-              </a>
+    <div className="flex h-screen overflow-hidden bg-slate-50">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex flex-col shrink-0 border-r border-slate-800">
+        <Sidebar sections={navSections} onLogout={logout} />
+      </aside>
 
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pb-1 pt-4">Manage</p>
-              <Link href={adminRoutes.menu} onClick={() => setNavOpen(false)}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
-                  <UtensilsCrossed className="h-5 w-5 text-green-600" /> Menu Editor
-                </div>
-              </Link>
-              <Link href={adminRoutes.modifiers} onClick={() => setNavOpen(false)}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
-                  <Settings className="h-5 w-5 text-green-700" /> Modifiers
-                </div>
-              </Link>
-              <Link href={adminRoutes.settings} onClick={() => setNavOpen(false)}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
-                  <Settings className="h-5 w-5 text-muted-foreground" /> Store Settings
-                </div>
-              </Link>
-
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pb-1 pt-4">Analytics</p>
-              <Link href={adminRoutes.reports} onClick={() => setNavOpen(false)}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
-                  <BarChart3 className="h-5 w-5 text-purple-600" /> Reports
-                </div>
-              </Link>
-              <Link href={adminRoutes.financials} onClick={() => setNavOpen(false)}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
-                  <History className="h-5 w-5 text-emerald-600" /> Financial Statements
-                </div>
-              </Link>
-              <Link href={adminRoutes.customers} onClick={() => setNavOpen(false)}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
-                  <Users className="h-5 w-5 text-blue-600" /> Customers
-                </div>
-              </Link>
-              <Link href={adminRoutes.customs} onClick={() => setNavOpen(false)}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
-                  <ScrollText className="h-5 w-5 text-amber-600" /> Customs (HMC-12)
-                </div>
-              </Link>
-
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 pb-1 pt-4">More</p>
-              <Link href="/" onClick={() => setNavOpen(false)}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted font-medium cursor-pointer">
-                  <Store className="h-5 w-5 text-primary" /> Online Store
-                </div>
-              </Link>
-            </nav>
-            {/* Sign out at bottom */}
-            <div className="px-3 pb-6 border-t pt-4">
-              <button onClick={() => { setNavOpen(false); logout(); }}
-                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg hover:bg-red-50 text-red-600 font-medium">
-                <LogOut className="h-5 w-5" /> Sign Out
-              </button>
-            </div>
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+          <div className="relative h-full shadow-2xl">
+            <Sidebar sections={navSections} onClose={() => setSidebarOpen(false)} onLogout={logout} isMobile />
           </div>
         </div>
       )}
 
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4">
-          <div className="flex h-14 md:h-16 items-center justify-between gap-4">
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-base md:text-xl font-black text-primary">ISLAND TACOS</span>
-              <span className="text-muted-foreground hidden sm:inline">— Admin</span>
-            </div>
-            {/* Mobile: POS shortcut + hamburger */}
-            <div className="flex items-center gap-2 md:hidden">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs text-muted-foreground font-medium">Live</span>
-              </div>
-              <Button size="sm" className="bg-[#F5A623] hover:bg-[#E09520] text-black font-bold"
-                onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`)}>
-                🧾 POS
-              </Button>
-              <button onClick={() => setNavOpen(true)} className="p-2 rounded-md hover:bg-muted">
-                <Menu className="h-5 w-5" />
-              </button>
-            </div>
-            {/* Desktop: full nav bar (unchanged) */}
-            <div className="hidden md:flex items-center gap-1 overflow-x-auto scrollbar-none flex-1 justify-end">
-              <div className="flex items-center gap-1 mr-1 shrink-0">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs text-muted-foreground font-medium">Live</span>
-              </div>
-              <Button size="sm" className="bg-[#F5A623] hover:bg-[#E09520] text-black font-bold shrink-0"
-                onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`)}>
-                🧾 POS
-              </Button>
-              <Link href={adminRoutes.kitchen}>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <Monitor className="h-4 w-4" /><span className="ml-1.5">Kitchen</span>
-                </Button>
-              </Link>
-              <a href={adminRoutes.display} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <Monitor className="h-4 w-4 text-blue-500" /><span className="ml-1.5">Display</span>
-                </Button>
-              </a>
-              <Link href={adminRoutes.menu}>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <Settings className="h-4 w-4" /><span className="ml-1.5">Menu</span>
-                </Button>
-              </Link>
-              <Link href={adminRoutes.modifiers}>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <Settings className="h-4 w-4" /><span className="ml-1.5">Modifiers</span>
-                </Button>
-              </Link>
-              <Link href={adminRoutes.reports}>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <BarChart3 className="h-4 w-4" /><span className="ml-1.5">Reports</span>
-                </Button>
-              </Link>
-              <Link href={adminRoutes.financials}>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <History className="h-4 w-4 text-emerald-600" /><span className="ml-1.5">Financials</span>
-                </Button>
-              </Link>
-              <Link href={adminRoutes.customers}>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <Users className="h-4 w-4" /><span className="ml-1.5">Customers</span>
-                </Button>
-              </Link>
-              <Link href={adminRoutes.customs}>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <ScrollText className="h-4 w-4 text-amber-600" /><span className="ml-1.5">Customs</span>
-                </Button>
-              </Link>
-              <Link href={adminRoutes.settings}>
-                <Button variant="outline" size="sm" className="shrink-0">
-                  <Settings className="h-4 w-4 text-muted-foreground" /><span className="ml-1.5">Store</span>
-                </Button>
-              </Link>
-              <Link href="/">
-                <Button variant="ghost" size="sm" className="shrink-0">Store</Button>
-              </Link>
-              <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground shrink-0">
-                <LogOut className="h-4 w-4" /><span className="ml-1.5">Sign out</span>
-              </Button>
+      {/* Main area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top bar */}
+        <header className="shrink-0 flex items-center justify-between h-14 px-4 md:px-6 bg-white border-b shadow-sm">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-md hover:bg-slate-100">
+              <Menu className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="font-black text-slate-800 text-base leading-tight">Dashboard</h1>
+              <p className="text-xs text-slate-400 leading-tight hidden sm:block">Island Tacos — Admin</p>
             </div>
           </div>
-        </div>
-      </header>
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-xs text-slate-400 mr-1">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Live
+            </span>
+            <Button
+              size="sm"
+              className="bg-amber-500 hover:bg-amber-600 text-white font-bold"
+              onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`)}
+            >
+              🧾 POS
+            </Button>
+          </div>
+        </header>
 
-      <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Today's Orders", value: stats?.todayOrders ?? 0, icon: ShoppingBag, color: "text-blue-600" },
-            { label: "Today's Revenue", value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, icon: DollarSign, color: "text-green-600" },
-            { label: "Pending Orders", value: stats?.pendingOrders ?? 0, icon: Clock, color: "text-orange-600" },
-            { label: "Completed", value: stats?.completedOrders ?? 0, icon: CheckCircle2, color: "text-gray-600" },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="rounded-xl border bg-card p-4 flex items-center gap-4">
-              <div className={`rounded-lg bg-muted p-2 ${color}`}>
-                <Icon className="h-5 w-5" />
+        {/* Scrollable content */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            {[
+              { label: "Today's Orders", value: stats?.todayOrders ?? 0, icon: ShoppingBag, bg: "bg-blue-50", iconColor: "text-blue-600", trend: null },
+              { label: "Today's Revenue", value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, icon: DollarSign, bg: "bg-green-50", iconColor: "text-green-600", trend: null },
+              { label: "Pending", value: stats?.pendingOrders ?? 0, icon: Clock, bg: "bg-amber-50", iconColor: "text-amber-600", trend: null },
+              { label: "Completed", value: stats?.completedOrders ?? 0, icon: CheckCircle2, bg: "bg-slate-50", iconColor: "text-slate-600", trend: null },
+            ].map(({ label, value, icon: Icon, bg, iconColor }) => (
+              <div key={label} className="bg-white rounded-xl border shadow-sm p-4 flex items-center gap-4">
+                <div className={`rounded-xl ${bg} p-3 ${iconColor}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-medium">{label}</p>
+                  <p className="text-2xl font-black text-slate-800">{value}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs">{label}</p>
-                <p className="text-2xl font-black">{value}</p>
+            ))}
+          </div>
+
+          {/* Charts row */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            {/* Hourly revenue — takes 2 cols */}
+            <div className="xl:col-span-2 bg-white rounded-xl border shadow-sm p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-bold text-slate-800">Revenue Today</h2>
+                  <p className="text-xs text-slate-400">Hourly breakdown</p>
+                </div>
+                <TrendingUp className="h-5 w-5 text-emerald-500" />
               </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={hourlyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
+                    formatter={(v: number) => [`$${v.toFixed(2)}`, "Revenue"]}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2.5} fill="url(#revGrad)" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          ))}
-        </div>
 
-        {/* Cloud sync */}
-        <div className="rounded-xl border bg-card p-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-blue-50 p-2 text-blue-600"><CloudUpload className="h-5 w-5" /></div>
-            <div>
-              <p className="font-semibold text-sm">Sync Menu to Online Store</p>
-              <p className="text-xs text-muted-foreground">
-                {lastSync ? `Last synced: ${lastSync}` : "Pushes your menu to orders.islandtacosbvi.com"}
-              </p>
-              {syncMessage && (
-                <p className={`text-xs mt-0.5 ${syncState === "error" ? "text-red-600" : "text-green-600"}`}>{syncMessage}</p>
+            {/* Order status donut */}
+            <div className="bg-white rounded-xl border shadow-sm p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-bold text-slate-800">Order Mix</h2>
+                  <p className="text-xs text-slate-400">By status (recent 50)</p>
+                </div>
+                <ShoppingBag className="h-5 w-5 text-blue-400" />
+              </div>
+              {statusDonut.length === 0 ? (
+                <div className="flex items-center justify-center h-[200px] text-slate-400 text-sm">No orders yet</div>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height={160}>
+                    <PieChart>
+                      <Pie data={statusDonut} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                        {statusDonut.map((_, i) => (
+                          <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+                    {statusDonut.map((d, i) => (
+                      <span key={d.name} className="flex items-center gap-1 text-xs text-slate-500">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                        {d.name} ({d.value})
+                      </span>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
           </div>
-          <Button size="sm" variant="outline"
-            disabled={syncState === "syncing"}
-            onClick={handleSync}
-            className={syncState === "success" ? "border-green-500 text-green-700" : syncState === "error" ? "border-red-400 text-red-600" : ""}>
-            <CloudUpload className={`h-4 w-4 mr-1.5 ${syncState === "syncing" ? "animate-pulse" : ""}`} />
-            {syncState === "syncing" ? "Syncing…" : syncState === "success" ? "Synced!" : syncState === "error" ? "Retry Sync" : "Sync Now"}
-          </Button>
-        </div>
 
-        {/* Loyverse history import */}
-        <div className="rounded-xl border bg-card p-4 space-y-3">
-          {/* Row 1: API pull (last 30 days) */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><History className="h-5 w-5" /></div>
-              <div>
-                <p className="font-semibold text-sm">Import from Loyverse API</p>
-                <p className="text-xs text-muted-foreground">
-                  {importState === "idle"
-                    ? "Imports all customers + last 30 days of receipts"
-                    : importState === "importing"
-                    ? "Fetching from Loyverse — please wait…"
-                    : null}
-                </p>
-                {importMessage && (
-                  <p className={`text-xs mt-0.5 ${importState === "error" ? "text-red-600" : "text-green-600"}`}>{importMessage}</p>
-                )}
-              </div>
-            </div>
-            <Button size="sm" variant="outline"
-              disabled={importState === "importing" || importState === "success"}
-              onClick={handleLoyverseImport}
-              className={importState === "success" ? "border-green-500 text-green-700" : importState === "error" ? "border-red-400 text-red-600" : "border-purple-300 text-purple-700 hover:bg-purple-50"}>
-              <History className={`h-4 w-4 mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
-              {importState === "importing" ? "Importing…" : importState === "success" ? "Imported!" : importState === "error" ? "Retry Import" : "Import Now"}
-            </Button>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-dashed" />
-
-          {/* Row 2: CSV upload for full history */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600"><CloudUpload className="h-5 w-5" /></div>
-              <div>
-                <p className="font-semibold text-sm">Upload Loyverse CSV (full history)</p>
-                <p className="text-xs text-muted-foreground">
-                  {csvState === "idle"
-                    ? 'Export receipts from Loyverse → Reports → Sales → Export, then upload here'
-                    : csvState === "uploading"
-                    ? "Importing rows — please wait…"
-                    : null}
-                </p>
-                {csvMessage && (
-                  <p className={`text-xs mt-0.5 ${csvState === "error" ? "text-red-600" : "text-green-600"}`}>{csvMessage}</p>
-                )}
-              </div>
-            </div>
-            <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCSVUpload} />
-            <Button size="sm" variant="outline"
-              disabled={csvState === "uploading"}
-              onClick={() => csvInputRef.current?.click()}
-              className={csvState === "success" ? "border-green-500 text-green-700" : csvState === "error" ? "border-red-400 text-red-600" : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"}>
-              <CloudUpload className={`h-4 w-4 mr-1.5 ${csvState === "uploading" ? "animate-pulse" : ""}`} />
-              {csvState === "uploading" ? "Uploading…" : csvState === "success" ? "Imported!" : csvState === "error" ? "Retry Upload" : "Upload CSV"}
-            </Button>
-          </div>
-        </div>
-
-        {stats?.popularItems && stats.popularItems.length > 0 && (
-          <div className="rounded-xl border bg-card p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <h2 className="font-bold text-lg">Top Items Today</h2>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {stats.popularItems.map((item) => (
-                <div key={item.name} className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1">
-                  <span className="font-medium text-sm">{item.name}</span>
-                  <span className="text-primary font-bold text-sm">x{item.count}</span>
+          {/* Top items bar chart */}
+          {topItemsData.length > 0 && (
+            <div className="bg-white rounded-xl border shadow-sm p-5">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="font-bold text-slate-800">Top Items Today</h2>
+                  <p className="text-xs text-slate-400">Units sold</p>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Active orders */}
-        <section>
-          <h2 className="text-2xl font-black mb-4">
-            Active Orders
-            {activeOrders.length > 0 && (
-              <span className="ml-2 text-base font-normal text-muted-foreground">({activeOrders.length})</span>
-            )}
-          </h2>
-
-          {isLoading ? (
-            <p className="text-muted-foreground">Loading orders...</p>
-          ) : activeOrders.length === 0 ? (
-            <div className="rounded-xl border bg-muted/30 p-8 text-center text-muted-foreground">
-              No active orders right now.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {activeOrders.map((order) => (
-                <div key={order.id} className="rounded-xl border bg-card p-5 space-y-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono font-black text-lg text-primary">{order.confirmationCode}</span>
-                        <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${STATUS_COLORS[order.status]}`}>
-                          {STATUS_LABELS[order.status]}
-                        </span>
-                        <span className="text-xs bg-muted rounded-full px-2 py-0.5 capitalize">{order.orderType}</span>
-                      </div>
-                      <p className="font-medium">{order.customerName}</p>
-                      {order.customerPhone ? (
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-sm text-muted-foreground">{order.customerPhone}</span>
-                          <a
-                            href={`tel:${order.customerPhone}`}
-                            className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium transition-colors"
-                          >
-                            📞 Call
-                          </a>
-                          <a
-                            href={`https://wa.me/${order.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${order.customerName}, your Island Tacos order #${order.confirmationCode} is ready for pickup! 🌮`)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 font-medium transition-colors"
-                          >
-                            💬 WhatsApp
-                          </a>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Walk-in</p>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xl font-black">${order.total.toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-sm space-y-1">
-                    {order.items?.map((item) => (
-                      <div key={item.id} className="flex gap-2 text-muted-foreground">
-                        <span className="font-medium text-foreground">{item.quantity}x</span>
-                        <span>{item.menuItemName}</span>
-                        {item.notes && <span className="italic">— {item.notes}</span>}
-                      </div>
-                    ))}
-                    {order.notes && (
-                      <p className="text-muted-foreground italic mt-1">Note: {order.notes}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 pt-1">
-                    <div className="flex items-center gap-3">
-                      {NEXT_STATUS[order.status] && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleStatusChange(order.id, NEXT_STATUS[order.status])}
-                          disabled={updateStatus.isPending}
-                        >
-                          Mark as {STATUS_LABELS[NEXT_STATUS[order.status]]}
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant={rejectState?.orderId === order.id ? "outline" : "destructive"}
-                        onClick={() => handleCancelClick(order.id)}
-                        disabled={updateStatus.isPending}
-                      >
-                        <XCircle className="h-3.5 w-3.5 mr-1" />
-                        {rejectState?.orderId === order.id ? "Never mind" : "Cancel Order"}
-                      </Button>
-                    </div>
-                    {rejectState?.orderId === order.id && (
-                      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-3">
-                        <p className="text-sm font-medium text-destructive">What's the reason?</p>
-                        <div className="flex flex-wrap gap-2">
-                          {["Out of chicken", "Out of steak", "Out of shrimp", "Out of salmon", "Out of burger"].map((opt) => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => setRejectState({ ...rejectState, reason: rejectState.reason === opt ? "" : opt })}
-                              className={`rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${
-                                rejectState.reason === opt
-                                  ? "bg-destructive text-destructive-foreground border-destructive"
-                                  : "border-destructive/40 text-destructive hover:bg-destructive/10"
-                              }`}
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                        <Textarea
-                          placeholder="Other reason (optional)"
-                          value={["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].includes(rejectState.reason) ? "" : rejectState.reason}
-                          onChange={(e) => setRejectState({ ...rejectState, reason: e.target.value })}
-                          rows={1}
-                          className="text-sm resize-none"
-                        />
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => confirmCancellation(order.id)}
-                          disabled={updateStatus.isPending}
-                        >
-                          {updateStatus.isPending ? "Cancelling..." : "Confirm Cancellation"}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
+                <TrendingUp className="h-5 w-5 text-purple-400" />
+              </div>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={topItemsData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} width={90} />
+                  <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={14} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
-        </section>
 
-        {/* Past orders */}
-        {pastOrders.length > 0 && (
-          <section>
-            <h2 className="text-2xl font-black mb-4">Recent History</h2>
-            <div className="rounded-xl border bg-card overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b">
-                  <tr>
-                    <th className="text-left p-3 font-semibold">Code</th>
-                    <th className="text-left p-3 font-semibold">Customer</th>
-                    <th className="text-left p-3 font-semibold hidden md:table-cell">Items</th>
-                    <th className="text-right p-3 font-semibold">Total</th>
-                    <th className="text-left p-3 font-semibold">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pastOrders.slice(0, 20).map((order, idx) => (
-                    <tr key={order.id} className={idx % 2 === 0 ? "" : "bg-muted/20"}>
-                      <td className="p-3 font-mono font-bold text-primary">{order.confirmationCode}</td>
-                      <td className="p-3">
-                        <div>{order.customerName}</div>
-                        <div className="text-muted-foreground text-xs">{new Date(order.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
-                      </td>
-                      <td className="p-3 hidden md:table-cell text-muted-foreground">
-                        <div className="space-y-0.5">
-                          {order.items?.map((i) => (
-                            <div key={i.id}>
-                              <span>{i.quantity}x {i.menuItemName}</span>
-                              {i.notes && <span className="block text-xs pl-2 text-muted-foreground/70 italic">{i.notes}</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="p-3 text-right font-bold">${order.total.toFixed(2)}</td>
-                      <td className="p-3">
-                        <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${STATUS_COLORS[order.status]}`}>
-                          {STATUS_LABELS[order.status]}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Data tools */}
+          <div className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
+            <h2 className="font-bold text-slate-800 text-sm">Data Tools</h2>
+
+            {/* Menu sync */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-blue-50 p-2 text-blue-600"><CloudUpload className="h-4 w-4" /></div>
+                <div>
+                  <p className="font-semibold text-sm text-slate-700">Sync Menu to Online Store</p>
+                  <p className="text-xs text-slate-400">
+                    {lastSync ? `Last synced: ${lastSync}` : "Pushes your menu to the ordering site"}
+                  </p>
+                  {syncMessage && <p className={`text-xs mt-0.5 ${syncState === "error" ? "text-red-600" : "text-green-600"}`}>{syncMessage}</p>}
+                </div>
+              </div>
+              <Button size="sm" variant="outline" disabled={syncState === "syncing"} onClick={handleSync}
+                className={syncState === "success" ? "border-green-500 text-green-700" : syncState === "error" ? "border-red-400 text-red-600" : ""}>
+                <CloudUpload className={`h-4 w-4 mr-1.5 ${syncState === "syncing" ? "animate-pulse" : ""}`} />
+                {syncState === "syncing" ? "Syncing…" : syncState === "success" ? "Synced!" : syncState === "error" ? "Retry" : "Sync Now"}
+              </Button>
             </div>
+
+            {/* Loyverse import */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><History className="h-4 w-4" /></div>
+                <div>
+                  <p className="font-semibold text-sm text-slate-700">Import from Loyverse API</p>
+                  <p className="text-xs text-slate-400">
+                    {importState === "importing" ? "Fetching from Loyverse…" : "Imports customers + last 30 days of receipts"}
+                  </p>
+                  {importMessage && <p className={`text-xs mt-0.5 ${importState === "error" ? "text-red-600" : "text-green-600"}`}>{importMessage}</p>}
+                </div>
+              </div>
+              <Button size="sm" variant="outline" disabled={importState === "importing" || importState === "success"} onClick={handleLoyverseImport}
+                className={importState === "success" ? "border-green-500 text-green-700" : importState === "error" ? "border-red-400 text-red-600" : "border-purple-300 text-purple-700 hover:bg-purple-50"}>
+                <History className={`h-4 w-4 mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
+                {importState === "importing" ? "Importing…" : importState === "success" ? "Imported!" : importState === "error" ? "Retry" : "Import Now"}
+              </Button>
+            </div>
+
+            {/* CSV upload */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600"><CloudUpload className="h-4 w-4" /></div>
+                <div>
+                  <p className="font-semibold text-sm text-slate-700">Upload Loyverse CSV</p>
+                  <p className="text-xs text-slate-400">Import full order history from exported CSV</p>
+                  {csvMessage && <p className={`text-xs mt-0.5 ${csvState === "error" ? "text-red-600" : "text-green-600"}`}>{csvMessage}</p>}
+                </div>
+              </div>
+              <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCSVUpload} />
+              <Button size="sm" variant="outline" disabled={csvState === "uploading"} onClick={() => csvInputRef.current?.click()}
+                className={csvState === "success" ? "border-green-500 text-green-700" : csvState === "error" ? "border-red-400 text-red-600" : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"}>
+                <CloudUpload className={`h-4 w-4 mr-1.5 ${csvState === "uploading" ? "animate-pulse" : ""}`} />
+                {csvState === "uploading" ? "Uploading…" : csvState === "success" ? "Imported!" : csvState === "error" ? "Retry" : "Upload CSV"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Active orders */}
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-xl font-black text-slate-800">Active Orders</h2>
+              {activeOrders.length > 0 && (
+                <span className="text-xs font-bold bg-amber-100 text-amber-700 rounded-full px-2.5 py-0.5">
+                  {activeOrders.length}
+                </span>
+              )}
+            </div>
+            {isLoading ? (
+              <p className="text-slate-400">Loading orders…</p>
+            ) : activeOrders.length === 0 ? (
+              <div className="bg-white rounded-xl border p-8 text-center text-slate-400 shadow-sm">
+                No active orders right now.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activeOrders.map((order) => (
+                  <div key={order.id} className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-mono font-black text-lg text-emerald-600">{order.confirmationCode}</span>
+                          <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${STATUS_COLORS[order.status]}`}>
+                            {STATUS_LABELS[order.status]}
+                          </span>
+                          <span className="text-xs bg-slate-100 text-slate-600 rounded-full px-2 py-0.5 capitalize">{order.orderType}</span>
+                        </div>
+                        <p className="font-semibold text-slate-800">{order.customerName}</p>
+                        {order.customerPhone ? (
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-sm text-slate-400">{order.customerPhone}</span>
+                            <a href={`tel:${order.customerPhone}`} className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium transition-colors">📞 Call</a>
+                            <a
+                              href={`https://wa.me/${order.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${order.customerName}, your Island Tacos order #${order.confirmationCode} is ready for pickup! 🌮`)}`}
+                              target="_blank" rel="noreferrer"
+                              className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 font-medium transition-colors"
+                            >💬 WhatsApp</a>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-400">Walk-in</p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xl font-black text-slate-800">${order.total.toFixed(2)}</p>
+                        <p className="text-xs text-slate-400">
+                          {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-sm space-y-1">
+                      {order.items?.map((item) => (
+                        <div key={item.id} className="flex gap-2 text-slate-400">
+                          <span className="font-medium text-slate-700">{item.quantity}x</span>
+                          <span>{item.menuItemName}</span>
+                          {item.notes && <span className="italic">— {item.notes}</span>}
+                        </div>
+                      ))}
+                      {order.notes && <p className="text-slate-400 italic mt-1">Note: {order.notes}</p>}
+                    </div>
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center gap-3">
+                        {NEXT_STATUS[order.status] && (
+                          <Button size="sm" onClick={() => handleStatusChange(order.id, NEXT_STATUS[order.status])} disabled={updateStatus.isPending}>
+                            Mark as {STATUS_LABELS[NEXT_STATUS[order.status]]}
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant={rejectState?.orderId === order.id ? "outline" : "destructive"}
+                          onClick={() => handleCancelClick(order.id)}
+                          disabled={updateStatus.isPending}
+                        >
+                          <XCircle className="h-3.5 w-3.5 mr-1" />
+                          {rejectState?.orderId === order.id ? "Never mind" : "Cancel Order"}
+                        </Button>
+                      </div>
+                      {rejectState?.orderId === order.id && (
+                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-3">
+                          <p className="text-sm font-medium text-destructive">What's the reason?</p>
+                          <div className="flex flex-wrap gap-2">
+                            {["Out of chicken", "Out of steak", "Out of shrimp", "Out of salmon", "Out of burger"].map((opt) => (
+                              <button
+                                key={opt} type="button"
+                                onClick={() => setRejectState({ ...rejectState, reason: rejectState.reason === opt ? "" : opt })}
+                                className={`rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${rejectState.reason === opt ? "bg-destructive text-destructive-foreground border-destructive" : "border-destructive/40 text-destructive hover:bg-destructive/10"}`}
+                              >{opt}</button>
+                            ))}
+                          </div>
+                          <Textarea
+                            placeholder="Other reason (optional)"
+                            value={["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].includes(rejectState.reason) ? "" : rejectState.reason}
+                            onChange={(e) => setRejectState({ ...rejectState, reason: e.target.value })}
+                            rows={1} className="text-sm resize-none"
+                          />
+                          <Button size="sm" variant="destructive" onClick={() => handleStatusChange(order.id, "cancelled", rejectState?.reason || undefined)} disabled={updateStatus.isPending}>
+                            {updateStatus.isPending ? "Cancelling..." : "Confirm Cancellation"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
-        )}
+
+          {/* Past orders */}
+          {pastOrders.length > 0 && (
+            <section className="pb-6">
+              <h2 className="text-xl font-black text-slate-800 mb-4">Recent History</h2>
+              <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 border-b">
+                    <tr>
+                      <th className="text-left p-3 font-semibold text-slate-600">Code</th>
+                      <th className="text-left p-3 font-semibold text-slate-600">Customer</th>
+                      <th className="text-left p-3 font-semibold text-slate-600 hidden md:table-cell">Items</th>
+                      <th className="text-right p-3 font-semibold text-slate-600">Total</th>
+                      <th className="text-left p-3 font-semibold text-slate-600">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pastOrders.slice(0, 20).map((order, idx) => (
+                      <tr key={order.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                        <td className="p-3 font-mono font-bold text-emerald-600">{order.confirmationCode}</td>
+                        <td className="p-3">
+                          <div className="font-medium text-slate-700">{order.customerName}</div>
+                          <div className="text-slate-400 text-xs">{new Date(order.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                        </td>
+                        <td className="p-3 hidden md:table-cell text-slate-400">
+                          {order.items?.map((i) => <div key={i.id}>{i.quantity}x {i.menuItemName}{i.notes && <span className="italic text-xs"> — {i.notes}</span>}</div>)}
+                        </td>
+                        <td className="p-3 text-right font-bold text-slate-700">${order.total.toFixed(2)}</td>
+                        <td className="p-3">
+                          <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${STATUS_COLORS[order.status]}`}>
+                            {STATUS_LABELS[order.status]}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </main>
       </div>
     </div>
   );
