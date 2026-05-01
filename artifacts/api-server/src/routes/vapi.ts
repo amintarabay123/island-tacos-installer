@@ -434,9 +434,6 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
         provider: VAPI_VOICE_PROVIDER,
         voiceId: VAPI_VOICE_ID,
       },
-      backchannel: {
-        enabled: true,
-      },
       // Only interrupt the AI if the caller says at least 2 words — prevents
       // background noise, coughs, or one-syllable sounds from pausing the AI.
       stopSpeakingPlan: {
