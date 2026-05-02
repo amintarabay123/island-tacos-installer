@@ -2829,43 +2829,68 @@ export default function POS() {
     if (cart.length === 0) return;
     setSubmitting(true);
     try {
-      // If resuming a ticket, cancel the old one first
-      if (resumedOrderId) {
-        await fetch(`/api/orders/${resumedOrderId}`, {
-          method: "PATCH", credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "cancelled" }),
-        });
-      }
+      let order: Order;
+      const noNewItems = resumedOrderId && cart.every(c => c.alreadyMade);
 
-      const r = await fetch("/api/orders", {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerName: overrideName ?? (customerName || "Walk-in"),
-          customerEmail: "",
-          customerPhone: overridePhone ?? "",
-          orderType: "pickup",
-          paymentMethod: method,
-          paymentStatus,
-          source: "pos",
-          discountAmount: discount,
-          notes: (overrideNote ?? orderNotes) || null,
-          items: cart.map(c => ({
-            menuItemId: c.menuItemId,
-            quantity: c.quantity,
-            notes: c.notes || null,
-            modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
-            alreadyMade: c.alreadyMade ?? false,
-          })),
-        }),
-      });
-      if (!r.ok) {
-        const errData = await r.json().catch(() => ({})) as { error?: string };
-        throw new Error(errData.error ?? `Order failed (${r.status})`);
+      if (noNewItems && paymentStatus === "paid") {
+        // No new items added — patch the existing order in-place so it stays on KDS
+        // (cancel+create would remove it from KDS and the new order would be invisible)
+        const notes = (overrideNote ?? orderNotes) || undefined;
+        const r = await fetch(`/api/orders/${resumedOrderId}`, {
+          method: "PATCH", credentials: "include",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            actualPaymentMethod: method,
+            paymentStatus: "paid",
+            status: "completed",
+            ...(notes ? { notes } : {}),
+          }),
+        });
+        if (!r.ok) {
+          const errData = await r.json().catch(() => ({})) as { error?: string };
+          throw new Error(errData.error ?? `Order failed (${r.status})`);
+        }
+        order = await r.json();
+        if (!order?.items) throw new Error("Order response missing items");
+      } else {
+        // New items were added (or holding) — cancel old ticket and create a fresh order
+        if (resumedOrderId) {
+          await fetch(`/api/orders/${resumedOrderId}`, {
+            method: "PATCH", credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "cancelled" }),
+          });
+        }
+
+        const r = await fetch("/api/orders", {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerName: overrideName ?? (customerName || "Walk-in"),
+            customerEmail: "",
+            customerPhone: overridePhone ?? "",
+            orderType: "pickup",
+            paymentMethod: method,
+            paymentStatus,
+            source: "pos",
+            discountAmount: discount,
+            notes: (overrideNote ?? orderNotes) || null,
+            items: cart.map(c => ({
+              menuItemId: c.menuItemId,
+              quantity: c.quantity,
+              notes: c.notes || null,
+              modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
+              alreadyMade: c.alreadyMade ?? false,
+            })),
+          }),
+        });
+        if (!r.ok) {
+          const errData = await r.json().catch(() => ({})) as { error?: string };
+          throw new Error(errData.error ?? `Order failed (${r.status})`);
+        }
+        order = await r.json();
+        if (!order?.items) throw new Error("Order response missing items");
       }
-      const order: Order = await r.json();
-      if (!order?.items) throw new Error("Order response missing items");
       // Push "completed" state to customer display
       displayCompletedAt.current = Date.now();
       fetch("/api/display", {
@@ -2914,45 +2939,65 @@ export default function POS() {
     if (cart.length === 0) return;
     setSubmitting(true);
     try {
-      if (resumedOrderId) {
-        await fetch(`/api/orders/${resumedOrderId}`, {
-          method: "PATCH", credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "cancelled" }),
-        });
-      }
       const noteWithSplit = splitNote
         ? (orderNotes ? `${orderNotes}\n${splitNote}` : splitNote)
         : (orderNotes || undefined);
-      const r = await fetch("/api/orders", {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerName: customerName || "Walk-in",
-          customerEmail: "",
-          customerPhone: customerPhone || "",
-          orderType: "pickup",
-          paymentMethod: method,
-          paymentStatus: "paid",
-          source: "pos",
-          discountAmount: discount,
-          notes: noteWithSplit || null,
-          items: cart.map(c => ({
-            menuItemId: c.menuItemId,
-            quantity: c.quantity,
-            notes: c.notes || null,
-            modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
-            alreadyMade: c.alreadyMade ?? false,
-          })),
-        }),
-      });
-      if (!r.ok) {
-        const errData = await r.json().catch(() => ({})) as { error?: string };
-        throw new Error(errData.error ?? `Order failed (${r.status})`);
+      const noNewItems = resumedOrderId && cart.every(c => c.alreadyMade);
+
+      if (noNewItems) {
+        // No new items — patch existing order's payment without touching status or KDS state
+        const r = await fetch(`/api/orders/${resumedOrderId}`, {
+          method: "PATCH", credentials: "include",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            actualPaymentMethod: method,
+            paymentStatus: "paid",
+            ...(noteWithSplit ? { notes: noteWithSplit } : {}),
+          }),
+        });
+        if (!r.ok) {
+          const errData = await r.json().catch(() => ({})) as { error?: string };
+          throw new Error(errData.error ?? `Order failed (${r.status})`);
+        }
+      } else {
+        // New items added — cancel old ticket and create a new one
+        if (resumedOrderId) {
+          await fetch(`/api/orders/${resumedOrderId}`, {
+            method: "PATCH", credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "cancelled" }),
+          });
+        }
+        const r = await fetch("/api/orders", {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerName: customerName || "Walk-in",
+            customerEmail: "",
+            customerPhone: customerPhone || "",
+            orderType: "pickup",
+            paymentMethod: method,
+            paymentStatus: "paid",
+            source: "pos",
+            discountAmount: discount,
+            notes: noteWithSplit || null,
+            items: cart.map(c => ({
+              menuItemId: c.menuItemId,
+              quantity: c.quantity,
+              notes: c.notes || null,
+              modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
+              alreadyMade: c.alreadyMade ?? false,
+            })),
+          }),
+        });
+        if (!r.ok) {
+          const errData = await r.json().catch(() => ({})) as { error?: string };
+          throw new Error(errData.error ?? `Order failed (${r.status})`);
+        }
       }
       clearCart();
       setResumedOrderId(null);
-      setTicketCount(tc => tc + 1);
+      setTicketCount(tc => tc + (noNewItems ? 0 : 1));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to hold order. Please try again.");
     } finally {
