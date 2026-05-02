@@ -292,19 +292,26 @@ RULE: CALL FLOW — execute these steps in order, one at a time. Never skip ahea
   STEP 1 — NAME: Your opening message already asked for the caller's name. Wait for their response.
     - Accept the name as spoken on the first try. Do NOT ask "is that right?" or repeat it back.
     - If the name is completely unintelligible (total static, not just an accent), ask once: "Sorry, could you repeat your name?" Accept whatever they say next — no further re-asks.
-    - Immediately after getting the name, call get_menu. Do not wait or say anything before calling it.
 
-  STEP 2 — LOAD MENU: Call get_menu right after the name is received. While waiting, say something brief like "Let me pull up the menu for you!" to fill the pause.
+  STEP 1b — MOBILE NUMBER (landline/unknown callers only): If the PHONE NUMBER section above says to ask for a mobile number, do it NOW — right after you have the caller's name and before calling get_menu.
+    - Example: "And can I grab a mobile number to text you when your order is ready?"
+    - If they give one, store it for use as customerPhone when placing the order.
+    - If they decline, move on immediately. Do NOT ask again.
+    - Skip this step entirely if the caller's mobile was already detected automatically.
+
+  STEP 2 — LOAD MENU: Call get_menu immediately after Step 1 (and Step 1b if applicable). While waiting for the result, say something brief like "Let me pull up the menu for you!" to fill the pause.
 
   STEP 3 — STORE STATUS: If get_menu returns isOpen: false, tell the caller the store hours and call end_call. Do not take an order.
 
-  STEP 4 — TAKE THE ORDER: Ask "Great [name], what would you like today?" Take the full order. For each item, ask about required choices or add-ons before moving on.
+  STEP 4 — TAKE THE ORDER: Ask "Great [name], what would you like today?" Take the full order. For each item:
+    - Ask about any REQUIRED modifier choices before moving on (e.g. protein choice, size).
+    - Ask about optional paid add-ons naturally if the item has them (e.g. "Would you like to add guac or sour cream?").
 
-  STEP 5 — CONFIRM: Read back the complete order with the total price. Ask "Does that sound right?" Wait for a clear yes before proceeding. If they cancel or want changes, handle it before moving on.
+  STEP 5 — CONFIRM: Read back the complete order with each item, any modifiers, and the total price. Ask "Does that sound right?" Wait for a clear yes before proceeding. If they cancel or want changes, handle it before moving on.
 
   STEP 6 — PLACE ORDER: Call place_order only after clear confirmation in Step 5. Use the name from Step 1 exactly as spoken. No items in the order = do not call place_order.
 
-  STEP 7 — CLOSE: After place_order succeeds, read the confirmation code, thank them warmly, and call end_call immediately.
+  STEP 7 — CLOSE: After place_order succeeds, read the confirmation code clearly (spell it out letter-by-letter if needed), tell them the estimated ready time, thank them warmly, and call end_call immediately.
 
 RULE: LIVE PERSON — If the caller asks to speak to a person, a manager, or anyone on the team at any point, say: "Of course! You can reach us directly on WhatsApp at 284-544-8088 and someone will get back to you right away." Then call end_call.
 
@@ -418,8 +425,8 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
                             type: "object",
                             required: ["modifierId", "optionId", "name", "price"],
                             properties: {
-                              modifierId: { type: "string", description: "The modifier's loyverseId from the menu" },
-                              optionId: { type: "string", description: "The exact option id from the menu's modifier options array" },
+                              modifierId: { type: "string", description: "The modifier group's `id` field from the menu response (e.g. the `id` on the modifiers[] object, NOT the option id)" },
+                              optionId: { type: "string", description: "The exact `id` of the chosen option inside the modifier's options[] array" },
                               name: { type: "string", description: "Human-readable option name (e.g. 'Extra Sour Cream')" },
                               price: { type: "number", description: "Price from the menu (0 for free modifications like 'no tomato')" },
                             },
@@ -447,7 +454,7 @@ router.post("/vapi/assistant-request", async (req: Request, res: Response): Prom
       // Only interrupt the AI if the caller says at least 2 words — prevents
       // background noise, coughs, or one-syllable sounds from pausing the AI.
       stopSpeakingPlan: {
-        numWords: 1,
+        numWords: 2,
         voiceSeconds: 0.2,
         backoffSeconds: 1,
       },
@@ -479,6 +486,7 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
         .map(id => modifierMap.get(id))
         .filter((m): m is NonNullable<typeof m> => Boolean(m))
         .map(m => ({
+          id: m.loyverseId,  // REQUIRED: AI uses this as modifierId when placing orders
           name: m.name,
           required: m.required,
           options: (m.options as { id: string; name: string; price: number }[])
@@ -493,6 +501,7 @@ router.all("/vapi/menu", async (req: Request, res: Response): Promise<void> => {
       return {
         id: item.id,
         name: item.name,
+        category: categoryMap.get(item.categoryId) ?? "Other",
         price: parseFloat(item.price as unknown as string),
         ...(itemModifiers.length > 0 ? { modifiers: itemModifiers } : {}),
       };
