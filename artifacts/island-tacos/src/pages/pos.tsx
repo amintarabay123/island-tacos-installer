@@ -2630,6 +2630,12 @@ export default function POS() {
             playChime();
           }
         } else {
+          // Prune popup orders that are no longer pending on the server.
+          // This stops the repeat chime when an order was confirmed/cancelled
+          // by another device or auto-process (e.g. Vapi) without the POS acting on it.
+          const pendingIds = new Set(pending.map(o => o.id));
+          setPopupOrders(prev => prev.filter(o => pendingIds.has(o.id)));
+
           const newOrders = pending.filter(o => !seenOnlineIdsRef.current.has(o.id));
           if (newOrders.length > 0) {
             playChime();
@@ -2687,7 +2693,8 @@ export default function POS() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "confirmed" }),
     });
-    seenOnlineIdsRef.current.delete(id);
+    // Do NOT delete from seenOnlineIdsRef — keeping the ID prevents re-alerting
+    // if the PATCH fails silently (order would re-appear as "new" on next poll).
     setIncomingOrders(prev => prev.filter(o => o.id !== id));
     setPopupOrders(prev => prev.filter(o => o.id !== id));
     setShowRejectInput(false); setRejectReason("");
@@ -2699,7 +2706,7 @@ export default function POS() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "cancelled", cancellationReason: rejectReason || null }),
     });
-    seenOnlineIdsRef.current.delete(id);
+    // Do NOT delete from seenOnlineIdsRef — same reason as acceptOnline above.
     setIncomingOrders(prev => prev.filter(o => o.id !== id));
     setPopupOrders(prev => prev.filter(o => o.id !== id));
     setShowRejectInput(false); setRejectReason("");
@@ -2894,27 +2901,36 @@ export default function POS() {
         order = await r.json();
         if (!order?.items) throw new Error("Order response missing items");
       }
-      // Push "completed" state to customer display
-      displayCompletedAt.current = Date.now();
-      fetch("/api/display", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "completed",
-          items: [],
-          subtotal: 0,
-          tax: 0,
-          total: order.total,
-          paymentMethod: method,
-          orderCode: order.confirmationCode,
-          estimatedReadyAt: order.estimatedReadyAt,
-        }),
-      }).catch(() => {});
+      if (paymentStatus === "paid") {
+        // Push "completed" state to customer display only for actual payments
+        displayCompletedAt.current = Date.now();
+        fetch("/api/display", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "completed",
+            items: [],
+            subtotal: 0,
+            tax: 0,
+            total: order.total,
+            paymentMethod: method,
+            orderCode: order.confirmationCode,
+            estimatedReadyAt: order.estimatedReadyAt,
+          }),
+        }).catch(() => {});
+      }
       clearCart();
       setResumedOrderId(null);
-      setReceiptModal({ order, tendered });
-      // Adjust held ticket count: +1 when holding a new ticket, -1 when paying a resumed one
-      setTicketCount(tc => Math.max(0, tc + (paymentStatus === "pending" ? 1 : resumedOrderId ? -1 : 0)));
+      if (paymentStatus === "paid") {
+        // Show receipt only for completed payments
+        setReceiptModal({ order, tendered });
+        // Paying a resumed ticket removes it from the held count; new paid orders don't affect it
+        setTicketCount(tc => Math.max(0, tc + (resumedOrderId ? -1 : 0)));
+      } else if (!noNewItems) {
+        // First-time hold of a brand-new ticket: add it to the held count
+        setTicketCount(tc => tc + 1);
+      }
+      // Re-hold (noNewItems && pending): ticket was already counted — no change needed
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Failed to place order. Please try again.");
