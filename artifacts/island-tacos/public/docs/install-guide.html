@@ -118,7 +118,7 @@
       <div class="check-item"><input type="checkbox"><div><div class="label">Staff PIN</div><div class="sub">The 4-digit code staff use for the POS and kitchen screens</div></div></div>
       <div class="check-item"><input type="checkbox"><div><div class="label">ATH Móvil Public Token</div><div class="sub">From your ATH Móvil business account — starts with a long string of letters/numbers</div></div></div>
       <div class="check-item"><input type="checkbox"><div><div class="label">ATH Móvil Private Token</div><div class="sub">The second token from ATH Móvil — keep this one secret</div></div></div>
-      <div class="check-item"><input type="checkbox"><div><div class="label">Clerk Keys (2)</div><div class="sub">From the Replit Auth pane — Publishable Key (pk_live_...) and Secret Key (sk_live_...)</div></div></div>
+      <div class="check-item"><input type="checkbox"><div><div class="label">Clerk Keys (2)</div><div class="sub">From your Clerk dashboard at clerk.com — Publishable Key (pk_live_...) and Secret Key (sk_live_...)</div></div></div>
       <div class="check-item"><input type="checkbox"><div><div class="label">Printer IP Address</div><div class="sub">Your receipt printer's local IP — likely 192.168.8.195 (check your router or printer settings)</div></div></div>
       <div class="check-item"><input type="checkbox"><div><div class="label">A piece of paper &amp; pen</div><div class="sub">You'll write down two passwords you make up during setup</div></div></div>
     </div>
@@ -132,36 +132,30 @@
 
   <!-- ── Step 1: Download ───────────────────────────────────────── -->
   <div class="section">
-    <div class="section-title"><span class="num">1</span> Download the Island Tacos Software</div>
-    <p class="section-sub">Get the project files onto the mini PC.</p>
+    <div class="section-title"><span class="num">1</span> Download &amp; Extract the Island Tacos Software</div>
+    <p class="section-sub">This single command downloads and extracts everything automatically. Copy and paste it — don't type it by hand.</p>
 
     <ul class="steps">
       <li>
         <input type="checkbox" class="step-cb">
         <div class="content">
-          <strong>Open a web browser on the mini PC and go to your Replit project</strong>
-          <span class="note">Log in at replit.com and open the Island Tacos project.</span>
+          <strong>Click the Windows Start button, type "PowerShell", right-click it, and choose "Run as administrator"</strong>
+          <span class="note">A blue window will open. Click Yes if Windows asks for permission.</span>
         </div>
       </li>
       <li>
         <input type="checkbox" class="step-cb">
         <div class="content">
-          <strong>Click the three dots (⋮) menu in the top-right corner of Replit</strong>
-          <span class="note">A dropdown menu will appear with several options.</span>
+          <strong>Copy the line below exactly, paste it into the blue PowerShell window, and press Enter</strong>
+          <div class="screen" style="margin-top:10px;font-size:12px;word-break:break-all;">New-Item -ItemType Directory -Force C:\IslandTacos | Out-Null; Invoke-WebRequest -Uri "https://orders.islandtacosbvi.com/island-tacos-installer.tar.gz" -OutFile "$env:TEMP\it.tar.gz"; tar -xzf "$env:TEMP\it.tar.gz" -C C:\IslandTacos --strip-components=1</div>
+          <span class="note">This downloads the latest software and extracts it to <strong>C:\IslandTacos</strong>. It may take 1–2 minutes depending on your internet speed.</span>
         </div>
       </li>
       <li>
         <input type="checkbox" class="step-cb">
         <div class="content">
-          <strong>Click "Download as ZIP"</strong>
-          <span class="note">A file called something like <em>island-tacos.zip</em> will download to your Downloads folder.</span>
-        </div>
-      </li>
-      <li>
-        <input type="checkbox" class="step-cb">
-        <div class="content">
-          <strong>Open your Downloads folder, right-click the ZIP file, and click "Extract All"</strong>
-          <span class="note">Windows will ask where to extract. Change the location to <strong>C:\IslandTacos</strong> and click Extract.</span>
+          <strong>When the command finishes (the cursor returns to a new line), you can close PowerShell</strong>
+          <span class="note">You will run the actual installer in the next step.</span>
         </div>
       </li>
     </ul>
@@ -239,10 +233,10 @@
 <span class="answer">      → Paste or type your ATH Móvil private token. You won't see it as you type.</span>
 
 <span class="prompt">      Clerk Publishable Key:</span>
-<span class="answer">      → Paste the key starting with pk_live_... (from Replit Auth pane).</span>
+<span class="answer">      → Paste the key starting with pk_live_... (from your Clerk dashboard at clerk.com).</span>
 
 <span class="prompt">      Clerk Secret Key:</span>
-<span class="answer">      → Paste the key starting with sk_live_... You won't see it as you type.</span>
+<span class="answer">      → Paste the key starting with sk_live_... (from Clerk dashboard). You won't see it as you type.</span>
 
 <span class="prompt">      Sync Secret (make up a password):</span>
 <span class="answer">      → Type any word or phrase (e.g. mysynckey99). WRITE THIS DOWN.</span>
@@ -465,7 +459,7 @@
       <tr><td class="label">Online Store</td><td>https://orders.islandtacosbvi.com</td></tr>
       <tr><td class="label">Admin Dashboard (local)</td><td>http://____________:3001/it-admin</td></tr>
       <tr><td class="label">Kitchen Screen (local)</td><td>http://____________:3001/it-admin/kitchen</td></tr>
-      <tr><td class="label">Customer Display (local)</td><td>http://____________:3001/it-admin/display</td></tr>
+      <tr><td class="label">Customer Display (local)</td><td>http://____________:3001/display</td></tr>
       <tr><td class="label">Admin PIN</td><td>____________</td></tr>
       <tr><td class="label">Staff PIN</td><td>____________</td></tr>
       <tr><td class="label">Database Password</td><td>____________</td></tr>
