@@ -700,13 +700,13 @@ function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: n
 
 interface CustomerSuggestion { id: number; name: string; phone: string | null; email: string | null; }
 
-function HoldModal({ initialName, initialNote, onHold, onClose }: {
-  initialName: string; initialNote: string;
+function HoldModal({ initialName, initialPhone, initialNote, onHold, onClose }: {
+  initialName: string; initialPhone: string; initialNote: string;
   onHold: (name: string, phone: string, note: string) => void;
   onClose: () => void;
 }) {
   const [name, setName] = useState(initialName);
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(initialPhone);
   const [note, setNote] = useState(initialNote);
   const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -860,7 +860,7 @@ function elapsedLabel(createdAt: string, now: number): { label: string; cls: str
 }
 
 function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
-  onResume: (items: CartItem[], name: string, note: string, discount: number, orderId: number) => void;
+  onResume: (items: CartItem[], name: string, phone: string, note: string, discount: number, orderId: number) => void;
   onClose: () => void;
   onPaymentComplete: (order: Order, tendered?: number) => void;
 }) {
@@ -905,7 +905,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
       modifierSelections: (i.modifierSelections ?? []) as CartModifier[],
       alreadyMade: true,
     }));
-    onResume(items, o.customerName, o.notes ?? "", o.discountAmount, o.id);
+    onResume(items, o.customerName, o.customerPhone ?? "", o.notes ?? "", o.discountAmount, o.id);
     onClose();
   };
 
@@ -3015,8 +3015,8 @@ export default function POS() {
     await placeOrder("cash", "pending", undefined, name || "Walk-in", phone, note);
   };
 
-  const handleResume = (items: CartItem[], name: string, note: string, disc: number, orderId: number) => {
-    setCart(items); setCustomerName(name); setOrderNotes(note); setDiscount(disc); setResumedOrderId(orderId);
+  const handleResume = (items: CartItem[], name: string, phone: string, note: string, disc: number, orderId: number) => {
+    setCart(items); setCustomerName(name); setCustomerPhone(phone); setOrderNotes(note); setDiscount(disc); setResumedOrderId(orderId);
   };
 
   const handleTicketPaymentComplete = (order: Order, tendered?: number) => {
@@ -3354,6 +3354,7 @@ export default function POS() {
       {holdModal && (
         <HoldModal
           initialName={customerName}
+          initialPhone={customerPhone}
           initialNote={orderNotes}
           onHold={handleHoldConfirm}
           onClose={() => setHoldModal(false)}
