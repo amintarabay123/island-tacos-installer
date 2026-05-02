@@ -588,11 +588,20 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     updates.paymentStatus = "paid";
   }
 
-  const [order] = await db
-    .update(ordersTable)
-    .set(updates)
-    .where(eq(ordersTable.id, params.data.id))
-    .returning();
+  let order;
+  if (Object.keys(updates).length === 0) {
+    // Nothing to update (e.g. re-hold with no changes) — fetch existing order as-is
+    [order] = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.id, params.data.id));
+  } else {
+    [order] = await db
+      .update(ordersTable)
+      .set(updates)
+      .where(eq(ordersTable.id, params.data.id))
+      .returning();
+  }
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
