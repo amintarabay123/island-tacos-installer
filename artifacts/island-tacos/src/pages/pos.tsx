@@ -2832,19 +2832,22 @@ export default function POS() {
       let order: Order;
       const noNewItems = resumedOrderId && cart.every(c => c.alreadyMade);
 
-      if (noNewItems && paymentStatus === "paid") {
-        // No new items added — patch the existing order in-place so it stays on KDS
-        // (cancel+create would remove it from KDS and the new order would be invisible)
+      if (noNewItems) {
+        // No new items added — patch the existing order in-place so it stays on KDS.
+        // Cancel+create would remove it from KDS and the new order would be invisible
+        // (all items alreadyMade → KDS filter skips it entirely).
         const notes = (overrideNote ?? orderNotes) || undefined;
+        const patchBody: Record<string, unknown> = { ...(notes ? { notes } : {}) };
+        if (paymentStatus === "paid") {
+          patchBody.actualPaymentMethod = method;
+          patchBody.paymentStatus = "paid";
+          patchBody.status = "completed";
+        }
+        // For "pending" (re-hold): just update notes/name if changed — keep status as-is
         const r = await fetch(`/api/orders/${resumedOrderId}`, {
           method: "PATCH", credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({
-            actualPaymentMethod: method,
-            paymentStatus: "paid",
-            status: "completed",
-            ...(notes ? { notes } : {}),
-          }),
+          body: JSON.stringify(patchBody),
         });
         if (!r.ok) {
           const errData = await r.json().catch(() => ({})) as { error?: string };
@@ -2853,7 +2856,7 @@ export default function POS() {
         order = await r.json();
         if (!order?.items) throw new Error("Order response missing items");
       } else {
-        // New items were added (or holding) — cancel old ticket and create a fresh order
+        // New items were added — cancel old ticket and create a fresh order
         if (resumedOrderId) {
           await fetch(`/api/orders/${resumedOrderId}`, {
             method: "PATCH", credentials: "include",
