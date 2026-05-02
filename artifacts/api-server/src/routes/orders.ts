@@ -640,6 +640,7 @@ router.post("/orders/:id/refund", async (req, res): Promise<void> => {
     reason: reason ?? null,
     refundMethod,
   }).returning();
+  await db.update(ordersTable).set({ paymentStatus: "refunded" }).where(eq(ordersTable.id, id));
   res.status(201).json({ ...refund, amount: parseFloat(refund.amount) });
 });
 

@@ -1221,6 +1221,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   const [refundMethod, setRefundMethod] = useState("cash");
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [refundSuccess, setRefundSuccess] = useState(false);
+  const [orderRefunds, setOrderRefunds] = useState<{ id: number; amount: number; reason: string | null; refundMethod: string; createdAt: string }[]>([]);
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailAddress, setEmailAddress] = useState("");
   const [emailSending, setEmailSending] = useState(false);
@@ -1234,13 +1235,21 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
       .then(r => r.json())
       .then((data: Order[]) => {
         const done = data
-          .filter(o => o.paymentStatus === "paid" || o.status === "completed")
+          .filter(o => o.paymentStatus === "paid" || o.paymentStatus === "refunded" || o.status === "completed")
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setOrders(done);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!selected) { setOrderRefunds([]); return; }
+    fetch(`/api/orders/${selected.id}/refunds`, { credentials: "include", headers: authHeaders() })
+      .then(r => r.json())
+      .then(setOrderRefunds)
+      .catch(() => {});
+  }, [selected?.id]);
 
   const today = new Date().toDateString();
   const q = search.trim().toLowerCase();
@@ -1304,6 +1313,20 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             <div className="border-t border-dashed border-gray-300 my-3"/>
+            {orderRefunds.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-2 space-y-1">
+                {orderRefunds.map(r => (
+                  <div key={r.id}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-red-700 font-bold text-sm">REFUNDED</span>
+                      <span className="text-red-700 font-bold text-sm">-{fmt(r.amount)}</span>
+                    </div>
+                    <div className="text-red-500 text-xs">{PAY_LABEL[r.refundMethod] ?? r.refundMethod} · {new Date(r.createdAt).toLocaleString()}</div>
+                    {r.reason && <div className="text-red-400 text-xs">Reason: {r.reason}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="text-center text-gray-400 text-xs">Thank you!</div>
           </div>
           <div className="p-4 border-t border-gray-200 space-y-2">
@@ -1443,13 +1466,23 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                 <button disabled={refundSubmitting || !refundAmount}
                   onClick={async () => {
                     setRefundSubmitting(true);
-                    await fetch(`/api/orders/${selected.id}/refund`, {
-                      method: "POST", credentials: "include",
-                      headers: { "Content-Type": "application/json", ...authHeaders() },
-                      body: JSON.stringify({ amount: parseFloat(refundAmount), reason: refundReason, refundMethod }),
-                    });
-                    setRefundOpen(false); setRefundSuccess(true); setRefundSubmitting(false);
-                    setTimeout(() => onClose(), 1500);
+                    try {
+                      const r = await fetch(`/api/orders/${selected.id}/refund`, {
+                        method: "POST", credentials: "include",
+                        headers: { "Content-Type": "application/json", ...authHeaders() },
+                        body: JSON.stringify({ amount: parseFloat(refundAmount), reason: refundReason, refundMethod }),
+                      });
+                      if (r.ok) {
+                        const newRefund = await r.json();
+                        setOrderRefunds(prev => [...prev, newRefund]);
+                        setOrders(prev => prev.map(o => o.id === selected.id ? { ...o, paymentStatus: "refunded" } : o));
+                        setSelected(prev => prev ? { ...prev, paymentStatus: "refunded" } : prev);
+                        setRefundOpen(false);
+                        setRefundSuccess(true);
+                      }
+                    } finally {
+                      setRefundSubmitting(false);
+                    }
                   }}
                   className="w-full h-10 rounded-xl bg-red-600 hover:bg-red-500 text-gray-900 font-bold transition-colors disabled:opacity-50">
                   {refundSubmitting ? "Processing…" : `Confirm Refund ${refundAmount ? fmt(parseFloat(refundAmount)) : ""}`}
@@ -1516,14 +1549,19 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
             </p>
           )}
           {visible.map(o => (
-            <button key={o.id} onClick={() => { setSelected(o); setRefireStatus("idle"); }}
+            <button key={o.id} onClick={() => { setSelected(o); setRefireStatus("idle"); setRefundSuccess(false); setRefundOpen(false); }}
               className="w-full bg-gray-100 hover:bg-gray-200 rounded-xl p-4 text-left transition-colors">
               <div className="flex items-start justify-between mb-1">
                 <div>
                   <span className="text-gray-900 font-bold text-sm">{o.customerName || "Walk-in"}</span>
                   <span className="ml-2 text-gray-500 text-xs">#{o.confirmationCode}</span>
                 </div>
-                <span className="text-[#F5A623] font-bold">{fmt(o.total)}</span>
+                <div className="flex items-center gap-1.5">
+                  {o.paymentStatus === "refunded" && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">Refunded</span>
+                  )}
+                  <span className="text-[#F5A623] font-bold">{fmt(o.total)}</span>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-gray-400 text-xs">
