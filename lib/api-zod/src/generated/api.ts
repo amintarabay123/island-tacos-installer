@@ -393,6 +393,7 @@ export const UpdateOrderStatusBody = zod.object({
   actualPaymentMethod: zod
     .enum(["cash", "card", "athmovil", "split", "complimentary"])
     .optional(),
+  notes: zod.string().nullish(),
 });
 
 export const UpdateOrderStatusResponse = zod.object({

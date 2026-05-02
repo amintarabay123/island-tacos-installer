@@ -580,6 +580,9 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
   if (parsed.data.paymentStatus) {
     updates.paymentStatus = parsed.data.paymentStatus;
   }
+  if (parsed.data.notes !== undefined) {
+    updates.notes = parsed.data.notes ?? null;
+  }
   // Auto-mark as paid when completed from POS (not from KDS clear)
   if (parsed.data.status === "completed" && !parsed.data.paymentStatus && !parsed.data.kdsCleared) {
     updates.paymentStatus = "paid";

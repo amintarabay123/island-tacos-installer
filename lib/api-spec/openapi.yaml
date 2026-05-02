@@ -1086,6 +1086,8 @@ components:
         actualPaymentMethod:
           type: string
           enum: [cash, card, athmovil, split, complimentary]
+        notes:
+          type: ["string", "null"]
 
     InitiatePaymentBody:
       type: object

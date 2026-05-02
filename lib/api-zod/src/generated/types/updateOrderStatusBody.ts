@@ -18,4 +18,6 @@ export interface UpdateOrderStatusBody {
   kdsCleared?: boolean;
   paymentStatus?: UpdateOrderStatusBodyPaymentStatus;
   actualPaymentMethod?: UpdateOrderStatusBodyActualPaymentMethod;
+  /** @nullable */
+  notes?: string | null;
 }
