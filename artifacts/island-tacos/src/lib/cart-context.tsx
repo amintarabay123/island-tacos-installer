@@ -45,13 +45,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = (menuItem: MenuItem, quantity: number, notes?: string, modifierSelections?: ModifierSelection[]) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.menuItem.id === menuItem.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.menuItem.id === menuItem.id
-            ? { ...i, quantity: i.quantity + quantity, notes: notes || i.notes, modifierSelections: modifierSelections || i.modifierSelections }
-            : i
+      const modsKey = JSON.stringify(
+        (modifierSelections ?? []).map(m => `${m.modifierId}:${m.optionId}`).sort()
+      );
+      const existing = prev.find((i) => {
+        if (i.menuItem.id !== menuItem.id) return false;
+        const existingModsKey = JSON.stringify(
+          (i.modifierSelections ?? []).map(m => `${m.modifierId}:${m.optionId}`).sort()
         );
+        return existingModsKey === modsKey;
+      });
+      if (existing) {
+        return prev.map((i) => {
+          const existingModsKey = JSON.stringify(
+            (i.modifierSelections ?? []).map(m => `${m.modifierId}:${m.optionId}`).sort()
+          );
+          return i.menuItem.id === menuItem.id && existingModsKey === modsKey
+            ? { ...i, quantity: i.quantity + quantity }
+            : i;
+        });
       }
       return [...prev, { menuItem, quantity, notes, modifierSelections }];
     });

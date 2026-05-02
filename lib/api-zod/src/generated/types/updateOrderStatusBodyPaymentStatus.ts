@@ -10,7 +10,8 @@ export type UpdateOrderStatusBodyPaymentStatus =
   (typeof UpdateOrderStatusBodyPaymentStatus)[keyof typeof UpdateOrderStatusBodyPaymentStatus];
 
 export const UpdateOrderStatusBodyPaymentStatus = {
-  unpaid: "unpaid",
+  pending: "pending",
   paid: "paid",
+  failed: "failed",
   refunded: "refunded",
 } as const;

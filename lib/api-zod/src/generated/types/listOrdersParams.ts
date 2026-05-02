@@ -5,9 +5,11 @@
  * Island Tacos Online Ordering API
  * OpenAPI spec version: 0.1.0
  */
+import type { ListOrdersKdsCleared } from "./listOrdersKdsCleared";
 import type { ListOrdersStatus } from "./listOrdersStatus";
 
 export type ListOrdersParams = {
   status?: ListOrdersStatus;
+  kdsCleared?: ListOrdersKdsCleared;
   limit?: number;
 };

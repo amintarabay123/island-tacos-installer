@@ -14,6 +14,8 @@ export interface CreateMenuItemBody {
   price: number;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  posImageUrl?: string | null;
   available?: boolean;
   popular?: boolean;
   spicy?: boolean;

@@ -244,6 +244,12 @@ paths:
           schema:
             type: string
             enum: [pending, confirmed, preparing, ready, completed, cancelled]
+        - name: kdsCleared
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: ["true", "false"]
         - name: limit
           in: query
           required: false
@@ -624,6 +630,8 @@ components:
           type: number
         imageUrl:
           type: ["string", "null"]
+        posImageUrl:
+          type: ["string", "null"]
         available:
           type: boolean
         popular:
@@ -659,6 +667,8 @@ components:
           type: number
         imageUrl:
           type: ["string", "null"]
+        posImageUrl:
+          type: ["string", "null"]
         available:
           type: boolean
         popular:
@@ -685,6 +695,8 @@ components:
           type: number
         imageUrl:
           type: ["string", "null"]
+        posImageUrl:
+          type: ["string", "null"]
         available:
           type: boolean
         popular:
@@ -706,6 +718,8 @@ components:
         price:
           type: number
       required:
+        - modifierId
+        - optionId
         - name
         - price
 
@@ -755,9 +769,9 @@ components:
         customerName:
           type: string
         customerEmail:
-          type: string
+          type: ["string", "null"]
         customerPhone:
-          type: string
+          type: ["string", "null"]
         orderType:
           type: string
           enum: [pickup, delivery]
@@ -771,12 +785,14 @@ components:
           enum: [pending, paid, failed, refunded]
         paymentMethod:
           type: string
-          enum: [card, athmovil, cash]
+          enum: [card, athmovil, cash, split, complimentary]
         source:
           type: string
           enum: [online, pos, phone]
           nullable: true
         subtotal:
+          type: number
+        discountAmount:
           type: number
         tax:
           type: number
@@ -786,11 +802,18 @@ components:
           type: number
         notes:
           type: ["string", "null"]
+        cancellationReason:
+          type: ["string", "null"]
+        kdsCleared:
+          type: ["boolean", "null"]
         items:
           type: array
           items:
             $ref: "#/components/schemas/OrderItem"
         estimatedReadyAt:
+          type: ["string", "null"]
+          format: date-time
+        scheduledPickupAt:
           type: ["string", "null"]
           format: date-time
         createdAt:
@@ -803,13 +826,12 @@ components:
         - id
         - confirmationCode
         - customerName
-        - customerEmail
-        - customerPhone
         - orderType
         - status
         - paymentStatus
         - paymentMethod
         - subtotal
+        - discountAmount
         - tax
         - deliveryFee
         - total
@@ -844,9 +866,9 @@ components:
         customerName:
           type: string
         customerEmail:
-          type: string
+          type: ["string", "null"]
         customerPhone:
-          type: string
+          type: ["string", "null"]
         orderType:
           type: string
           enum: [pickup, delivery]
@@ -854,20 +876,26 @@ components:
           type: ["string", "null"]
         paymentMethod:
           type: string
-          enum: [card, athmovil, cash]
+          enum: [card, athmovil, cash, split, complimentary]
+        paymentStatus:
+          type: string
+          enum: [pending, paid]
         source:
           type: string
           enum: [online, pos, phone]
+        discountAmount:
+          type: number
         notes:
           type: ["string", "null"]
+        scheduledPickupAt:
+          type: ["string", "null"]
+          format: date-time
         items:
           type: array
           items:
             $ref: "#/components/schemas/CreateOrderItemInput"
       required:
         - customerName
-        - customerEmail
-        - customerPhone
         - orderType
         - paymentMethod
         - items
@@ -1054,10 +1082,10 @@ components:
           type: boolean
         paymentStatus:
           type: string
-          enum: [unpaid, paid, refunded]
+          enum: [pending, paid, failed, refunded]
         actualPaymentMethod:
           type: string
-          enum: [cash, card, athmovil]
+          enum: [cash, card, athmovil, split, complimentary]
 
     InitiatePaymentBody:
       type: object

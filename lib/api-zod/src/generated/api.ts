@@ -88,6 +88,7 @@ export const ListMenuItemsResponseItem = zod.object({
   description: zod.string().nullish(),
   price: zod.number(),
   imageUrl: zod.string().nullish(),
+  posImageUrl: zod.string().nullish(),
   available: zod.boolean(),
   popular: zod.boolean(),
   spicy: zod.boolean(),
@@ -105,6 +106,7 @@ export const CreateMenuItemBody = zod.object({
   description: zod.string().nullish(),
   price: zod.number(),
   imageUrl: zod.string().nullish(),
+  posImageUrl: zod.string().nullish(),
   available: zod.boolean().optional(),
   popular: zod.boolean().optional(),
   spicy: zod.boolean().optional(),
@@ -125,6 +127,7 @@ export const GetMenuItemResponse = zod.object({
   description: zod.string().nullish(),
   price: zod.number(),
   imageUrl: zod.string().nullish(),
+  posImageUrl: zod.string().nullish(),
   available: zod.boolean(),
   popular: zod.boolean(),
   spicy: zod.boolean(),
@@ -145,6 +148,7 @@ export const UpdateMenuItemBody = zod.object({
   description: zod.string().nullish(),
   price: zod.number().optional(),
   imageUrl: zod.string().nullish(),
+  posImageUrl: zod.string().nullish(),
   available: zod.boolean().optional(),
   popular: zod.boolean().optional(),
   spicy: zod.boolean().optional(),
@@ -158,6 +162,7 @@ export const UpdateMenuItemResponse = zod.object({
   description: zod.string().nullish(),
   price: zod.number(),
   imageUrl: zod.string().nullish(),
+  posImageUrl: zod.string().nullish(),
   available: zod.boolean(),
   popular: zod.boolean(),
   spicy: zod.boolean(),
@@ -186,6 +191,7 @@ export const ListOrdersQueryParams = zod.object({
       "cancelled",
     ])
     .optional(),
+  kdsCleared: zod.enum(["true", "false"]).optional(),
   limit: zod.coerce.number().optional(),
 });
 
@@ -193,8 +199,8 @@ export const ListOrdersResponseItem = zod.object({
   id: zod.number(),
   confirmationCode: zod.string(),
   customerName: zod.string(),
-  customerEmail: zod.string(),
-  customerPhone: zod.string(),
+  customerEmail: zod.string().nullish(),
+  customerPhone: zod.string().nullish(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
   status: zod.enum([
@@ -206,13 +212,22 @@ export const ListOrdersResponseItem = zod.object({
     "cancelled",
   ]),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
-  paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  paymentMethod: zod.enum([
+    "card",
+    "athmovil",
+    "cash",
+    "split",
+    "complimentary",
+  ]),
   source: zod.enum(["online", "pos", "phone"]).nullish(),
   subtotal: zod.number(),
+  discountAmount: zod.number(),
   tax: zod.number(),
   deliveryFee: zod.number(),
   total: zod.number(),
   notes: zod.string().nullish(),
+  cancellationReason: zod.string().nullish(),
+  kdsCleared: zod.boolean().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -226,8 +241,8 @@ export const ListOrdersResponseItem = zod.object({
       modifierSelections: zod
         .array(
           zod.object({
-            modifierId: zod.string().optional(),
-            optionId: zod.string().optional(),
+            modifierId: zod.string(),
+            optionId: zod.string(),
             name: zod.string(),
             price: zod.number(),
           }),
@@ -237,6 +252,7 @@ export const ListOrdersResponseItem = zod.object({
     }),
   ),
   estimatedReadyAt: zod.coerce.date().nullish(),
+  scheduledPickupAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -247,13 +263,22 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
  */
 export const CreateOrderBody = zod.object({
   customerName: zod.string(),
-  customerEmail: zod.string(),
-  customerPhone: zod.string(),
+  customerEmail: zod.string().nullish(),
+  customerPhone: zod.string().nullish(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
-  paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  paymentMethod: zod.enum([
+    "card",
+    "athmovil",
+    "cash",
+    "split",
+    "complimentary",
+  ]),
+  paymentStatus: zod.enum(["pending", "paid"]).optional(),
   source: zod.enum(["online", "pos", "phone"]).optional(),
+  discountAmount: zod.number().optional(),
   notes: zod.string().nullish(),
+  scheduledPickupAt: zod.coerce.date().nullish(),
   items: zod.array(
     zod.object({
       menuItemId: zod.number(),
@@ -262,8 +287,8 @@ export const CreateOrderBody = zod.object({
       modifierSelections: zod
         .array(
           zod.object({
-            modifierId: zod.string().optional(),
-            optionId: zod.string().optional(),
+            modifierId: zod.string(),
+            optionId: zod.string(),
             name: zod.string(),
             price: zod.number(),
           }),
@@ -285,8 +310,8 @@ export const GetOrderResponse = zod.object({
   id: zod.number(),
   confirmationCode: zod.string(),
   customerName: zod.string(),
-  customerEmail: zod.string(),
-  customerPhone: zod.string(),
+  customerEmail: zod.string().nullish(),
+  customerPhone: zod.string().nullish(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
   status: zod.enum([
@@ -298,13 +323,22 @@ export const GetOrderResponse = zod.object({
     "cancelled",
   ]),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
-  paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  paymentMethod: zod.enum([
+    "card",
+    "athmovil",
+    "cash",
+    "split",
+    "complimentary",
+  ]),
   source: zod.enum(["online", "pos", "phone"]).nullish(),
   subtotal: zod.number(),
+  discountAmount: zod.number(),
   tax: zod.number(),
   deliveryFee: zod.number(),
   total: zod.number(),
   notes: zod.string().nullish(),
+  cancellationReason: zod.string().nullish(),
+  kdsCleared: zod.boolean().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -318,8 +352,8 @@ export const GetOrderResponse = zod.object({
       modifierSelections: zod
         .array(
           zod.object({
-            modifierId: zod.string().optional(),
-            optionId: zod.string().optional(),
+            modifierId: zod.string(),
+            optionId: zod.string(),
             name: zod.string(),
             price: zod.number(),
           }),
@@ -329,6 +363,7 @@ export const GetOrderResponse = zod.object({
     }),
   ),
   estimatedReadyAt: zod.coerce.date().nullish(),
+  scheduledPickupAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -354,16 +389,18 @@ export const UpdateOrderStatusBody = zod.object({
   estimatedReadyAt: zod.coerce.date().nullish(),
   cancellationReason: zod.string().nullish(),
   kdsCleared: zod.boolean().optional(),
-  paymentStatus: zod.enum(["unpaid", "paid", "refunded"]).optional(),
-  actualPaymentMethod: zod.enum(["cash", "card", "athmovil"]).optional(),
+  paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]).optional(),
+  actualPaymentMethod: zod
+    .enum(["cash", "card", "athmovil", "split", "complimentary"])
+    .optional(),
 });
 
 export const UpdateOrderStatusResponse = zod.object({
   id: zod.number(),
   confirmationCode: zod.string(),
   customerName: zod.string(),
-  customerEmail: zod.string(),
-  customerPhone: zod.string(),
+  customerEmail: zod.string().nullish(),
+  customerPhone: zod.string().nullish(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
   status: zod.enum([
@@ -375,13 +412,22 @@ export const UpdateOrderStatusResponse = zod.object({
     "cancelled",
   ]),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
-  paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  paymentMethod: zod.enum([
+    "card",
+    "athmovil",
+    "cash",
+    "split",
+    "complimentary",
+  ]),
   source: zod.enum(["online", "pos", "phone"]).nullish(),
   subtotal: zod.number(),
+  discountAmount: zod.number(),
   tax: zod.number(),
   deliveryFee: zod.number(),
   total: zod.number(),
   notes: zod.string().nullish(),
+  cancellationReason: zod.string().nullish(),
+  kdsCleared: zod.boolean().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -395,8 +441,8 @@ export const UpdateOrderStatusResponse = zod.object({
       modifierSelections: zod
         .array(
           zod.object({
-            modifierId: zod.string().optional(),
-            optionId: zod.string().optional(),
+            modifierId: zod.string(),
+            optionId: zod.string(),
             name: zod.string(),
             price: zod.number(),
           }),
@@ -406,6 +452,7 @@ export const UpdateOrderStatusResponse = zod.object({
     }),
   ),
   estimatedReadyAt: zod.coerce.date().nullish(),
+  scheduledPickupAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -421,8 +468,8 @@ export const TrackOrderResponse = zod.object({
   id: zod.number(),
   confirmationCode: zod.string(),
   customerName: zod.string(),
-  customerEmail: zod.string(),
-  customerPhone: zod.string(),
+  customerEmail: zod.string().nullish(),
+  customerPhone: zod.string().nullish(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
   status: zod.enum([
@@ -434,13 +481,22 @@ export const TrackOrderResponse = zod.object({
     "cancelled",
   ]),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
-  paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  paymentMethod: zod.enum([
+    "card",
+    "athmovil",
+    "cash",
+    "split",
+    "complimentary",
+  ]),
   source: zod.enum(["online", "pos", "phone"]).nullish(),
   subtotal: zod.number(),
+  discountAmount: zod.number(),
   tax: zod.number(),
   deliveryFee: zod.number(),
   total: zod.number(),
   notes: zod.string().nullish(),
+  cancellationReason: zod.string().nullish(),
+  kdsCleared: zod.boolean().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -454,8 +510,8 @@ export const TrackOrderResponse = zod.object({
       modifierSelections: zod
         .array(
           zod.object({
-            modifierId: zod.string().optional(),
-            optionId: zod.string().optional(),
+            modifierId: zod.string(),
+            optionId: zod.string(),
             name: zod.string(),
             price: zod.number(),
           }),
@@ -465,6 +521,7 @@ export const TrackOrderResponse = zod.object({
     }),
   ),
   estimatedReadyAt: zod.coerce.date().nullish(),
+  scheduledPickupAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
@@ -609,8 +666,8 @@ export const GetRecentOrdersResponseItem = zod.object({
   id: zod.number(),
   confirmationCode: zod.string(),
   customerName: zod.string(),
-  customerEmail: zod.string(),
-  customerPhone: zod.string(),
+  customerEmail: zod.string().nullish(),
+  customerPhone: zod.string().nullish(),
   orderType: zod.enum(["pickup", "delivery"]),
   deliveryAddress: zod.string().nullish(),
   status: zod.enum([
@@ -622,13 +679,22 @@ export const GetRecentOrdersResponseItem = zod.object({
     "cancelled",
   ]),
   paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
-  paymentMethod: zod.enum(["card", "athmovil", "cash"]),
+  paymentMethod: zod.enum([
+    "card",
+    "athmovil",
+    "cash",
+    "split",
+    "complimentary",
+  ]),
   source: zod.enum(["online", "pos", "phone"]).nullish(),
   subtotal: zod.number(),
+  discountAmount: zod.number(),
   tax: zod.number(),
   deliveryFee: zod.number(),
   total: zod.number(),
   notes: zod.string().nullish(),
+  cancellationReason: zod.string().nullish(),
+  kdsCleared: zod.boolean().nullish(),
   items: zod.array(
     zod.object({
       id: zod.number(),
@@ -642,8 +708,8 @@ export const GetRecentOrdersResponseItem = zod.object({
       modifierSelections: zod
         .array(
           zod.object({
-            modifierId: zod.string().optional(),
-            optionId: zod.string().optional(),
+            modifierId: zod.string(),
+            optionId: zod.string(),
             name: zod.string(),
             price: zod.number(),
           }),
@@ -653,6 +719,7 @@ export const GetRecentOrdersResponseItem = zod.object({
     }),
   ),
   estimatedReadyAt: zod.coerce.date().nullish(),
+  scheduledPickupAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });

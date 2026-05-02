@@ -244,7 +244,8 @@ async function sendCancellationSMS(order: OrderRow, reason: string | null) {
     ` #${order.confirmationCode}.${reasonLine}` +
     ` We're sorry for the inconvenience. Please call us at (284) 544-8088 if you have any questions.`;
 
-  const params = new URLSearchParams({ To: order.customerPhone, From: fromNumber, Body: body });
+  const normalizedPhone = formatBVIPhone(order.customerPhone);
+  const params = new URLSearchParams({ To: normalizedPhone, From: fromNumber, Body: body });
   const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
   const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
 
@@ -262,7 +263,7 @@ async function sendCancellationSMS(order: OrderRow, reason: string | null) {
       console.error(`[sms] Twilio cancellation failed (${resp.status}): ${text}`);
     } else {
       const data = JSON.parse(text);
-      console.log(`[sms] Cancellation SMS sent to ${order.customerPhone} for ${order.confirmationCode} — SID: ${data.sid}`);
+      console.log(`[sms] Cancellation SMS sent to ${normalizedPhone} for ${order.confirmationCode} — SID: ${data.sid}`);
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

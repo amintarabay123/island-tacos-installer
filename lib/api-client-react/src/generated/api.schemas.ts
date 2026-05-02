@@ -54,6 +54,8 @@ export interface MenuItem {
   price: number;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  posImageUrl?: string | null;
   available: boolean;
   popular: boolean;
   spicy: boolean;
@@ -69,6 +71,8 @@ export interface CreateMenuItemBody {
   price: number;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  posImageUrl?: string | null;
   available?: boolean;
   popular?: boolean;
   spicy?: boolean;
@@ -83,6 +87,8 @@ export interface UpdateMenuItemBody {
   price?: number;
   /** @nullable */
   imageUrl?: string | null;
+  /** @nullable */
+  posImageUrl?: string | null;
   available?: boolean;
   popular?: boolean;
   spicy?: boolean;
@@ -90,8 +96,8 @@ export interface UpdateMenuItemBody {
 }
 
 export interface OrderItemModifier {
-  modifierId?: string;
-  optionId?: string;
+  modifierId: string;
+  optionId: string;
   name: string;
   price: number;
 }
@@ -146,6 +152,8 @@ export const OrderPaymentMethod = {
   card: "card",
   athmovil: "athmovil",
   cash: "cash",
+  split: "split",
+  complimentary: "complimentary",
 } as const;
 
 export type OrderSource = (typeof OrderSource)[keyof typeof OrderSource] | null;
@@ -160,8 +168,10 @@ export interface Order {
   id: number;
   confirmationCode: string;
   customerName: string;
-  customerEmail: string;
-  customerPhone: string;
+  /** @nullable */
+  customerEmail?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
   orderType: OrderOrderType;
   /** @nullable */
   deliveryAddress?: string | null;
@@ -170,14 +180,21 @@ export interface Order {
   paymentMethod: OrderPaymentMethod;
   source?: OrderSource;
   subtotal: number;
+  discountAmount: number;
   tax: number;
   deliveryFee: number;
   total: number;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  cancellationReason?: string | null;
+  /** @nullable */
+  kdsCleared?: boolean | null;
   items: OrderItem[];
   /** @nullable */
   estimatedReadyAt?: string | null;
+  /** @nullable */
+  scheduledPickupAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -206,6 +223,16 @@ export const CreateOrderBodyPaymentMethod = {
   card: "card",
   athmovil: "athmovil",
   cash: "cash",
+  split: "split",
+  complimentary: "complimentary",
+} as const;
+
+export type CreateOrderBodyPaymentStatus =
+  (typeof CreateOrderBodyPaymentStatus)[keyof typeof CreateOrderBodyPaymentStatus];
+
+export const CreateOrderBodyPaymentStatus = {
+  pending: "pending",
+  paid: "paid",
 } as const;
 
 export type CreateOrderBodySource =
@@ -219,15 +246,21 @@ export const CreateOrderBodySource = {
 
 export interface CreateOrderBody {
   customerName: string;
-  customerEmail: string;
-  customerPhone: string;
+  /** @nullable */
+  customerEmail?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
   orderType: CreateOrderBodyOrderType;
   /** @nullable */
   deliveryAddress?: string | null;
   paymentMethod: CreateOrderBodyPaymentMethod;
+  paymentStatus?: CreateOrderBodyPaymentStatus;
   source?: CreateOrderBodySource;
+  discountAmount?: number;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  scheduledPickupAt?: string | null;
   items: CreateOrderItemInput[];
 }
 
@@ -317,8 +350,9 @@ export type UpdateOrderStatusBodyPaymentStatus =
   (typeof UpdateOrderStatusBodyPaymentStatus)[keyof typeof UpdateOrderStatusBodyPaymentStatus];
 
 export const UpdateOrderStatusBodyPaymentStatus = {
-  unpaid: "unpaid",
+  pending: "pending",
   paid: "paid",
+  failed: "failed",
   refunded: "refunded",
 } as const;
 
@@ -329,6 +363,8 @@ export const UpdateOrderStatusBodyActualPaymentMethod = {
   cash: "cash",
   card: "card",
   athmovil: "athmovil",
+  split: "split",
+  complimentary: "complimentary",
 } as const;
 
 export interface UpdateOrderStatusBody {
@@ -406,6 +442,7 @@ export type ListMenuItemsParams = {
 
 export type ListOrdersParams = {
   status?: ListOrdersStatus;
+  kdsCleared?: ListOrdersKdsCleared;
   limit?: number;
 };
 
@@ -419,6 +456,14 @@ export const ListOrdersStatus = {
   ready: "ready",
   completed: "completed",
   cancelled: "cancelled",
+} as const;
+
+export type ListOrdersKdsCleared =
+  (typeof ListOrdersKdsCleared)[keyof typeof ListOrdersKdsCleared];
+
+export const ListOrdersKdsCleared = {
+  true: "true",
+  false: "false",
 } as const;
 
 export type GetAdminStatsParams = {

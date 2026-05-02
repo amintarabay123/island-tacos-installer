@@ -7,19 +7,26 @@
  */
 import type { CreateOrderBodyOrderType } from "./createOrderBodyOrderType";
 import type { CreateOrderBodyPaymentMethod } from "./createOrderBodyPaymentMethod";
+import type { CreateOrderBodyPaymentStatus } from "./createOrderBodyPaymentStatus";
 import type { CreateOrderBodySource } from "./createOrderBodySource";
 import type { CreateOrderItemInput } from "./createOrderItemInput";
 
 export interface CreateOrderBody {
   customerName: string;
-  customerEmail: string;
-  customerPhone: string;
+  /** @nullable */
+  customerEmail?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
   orderType: CreateOrderBodyOrderType;
   /** @nullable */
   deliveryAddress?: string | null;
   paymentMethod: CreateOrderBodyPaymentMethod;
+  paymentStatus?: CreateOrderBodyPaymentStatus;
   source?: CreateOrderBodySource;
+  discountAmount?: number;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  scheduledPickupAt?: Date | null;
   items: CreateOrderItemInput[];
 }

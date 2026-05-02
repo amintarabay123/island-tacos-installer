@@ -13,4 +13,6 @@ export const OrderPaymentMethod = {
   card: "card",
   athmovil: "athmovil",
   cash: "cash",
+  split: "split",
+  complimentary: "complimentary",
 } as const;

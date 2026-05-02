@@ -16,8 +16,10 @@ export interface Order {
   id: number;
   confirmationCode: string;
   customerName: string;
-  customerEmail: string;
-  customerPhone: string;
+  /** @nullable */
+  customerEmail?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
   orderType: OrderOrderType;
   /** @nullable */
   deliveryAddress?: string | null;
@@ -26,14 +28,21 @@ export interface Order {
   paymentMethod: OrderPaymentMethod;
   source?: OrderSource;
   subtotal: number;
+  discountAmount: number;
   tax: number;
   deliveryFee: number;
   total: number;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  cancellationReason?: string | null;
+  /** @nullable */
+  kdsCleared?: boolean | null;
   items: OrderItem[];
   /** @nullable */
   estimatedReadyAt?: Date | null;
+  /** @nullable */
+  scheduledPickupAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -13,4 +13,6 @@ export const UpdateOrderStatusBodyActualPaymentMethod = {
   cash: "cash",
   card: "card",
   athmovil: "athmovil",
+  split: "split",
+  complimentary: "complimentary",
 } as const;

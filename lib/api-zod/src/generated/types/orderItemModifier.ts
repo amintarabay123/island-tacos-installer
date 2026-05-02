@@ -7,8 +7,8 @@
  */
 
 export interface OrderItemModifier {
-  modifierId?: string;
-  optionId?: string;
+  modifierId: string;
+  optionId: string;
   name: string;
   price: number;
 }

@@ -307,7 +307,7 @@ export default function Checkout() {
                     autoComplete="tel"
                     required
                   />
-                  <p className="text-xs text-muted-foreground">We'll call this number when your order is ready.</p>
+                  <p className="text-xs text-muted-foreground">We'll text this number when your order is ready.</p>
                 </div>
               </section>
 
@@ -464,8 +464,8 @@ export default function Checkout() {
             <div className="space-y-4">
               <h2 className="text-xl font-bold">Order Summary</h2>
               <div className="bg-muted/30 rounded-xl border p-4 space-y-3">
-                {items.map((item) => (
-                  <div key={item.menuItem.id} className="flex justify-between text-sm gap-2">
+                {items.map((item, idx) => (
+                  <div key={`${item.menuItem.id}-${idx}`} className="flex justify-between text-sm gap-2">
                     <div className="min-w-0">
                       <span className="text-muted-foreground">{item.quantity}x {item.menuItem.name}</span>
                       {(item.modifierSelections ?? []).length > 0 && (

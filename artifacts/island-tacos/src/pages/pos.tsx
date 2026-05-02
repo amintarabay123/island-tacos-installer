@@ -102,7 +102,7 @@ function buildReceiptLines(order: Order, tendered?: number): { text: string; bol
   const lines: { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean }[] = [];
   lines.push({ text: "ISLAND TACOS", bold: true, center: true, size: "large" });
   lines.push({ text: "Wickhams Cay 1, Road Town, BVI", center: true });
-  lines.push({ text: "Tel: +1 (284) 000-0000", center: true });
+  lines.push({ text: "Tel: (284) 544-8088", center: true });
   lines.push({ divider: true, text: "" });
   lines.push({ text: `#${order.confirmationCode}  ${new Date(order.createdAt).toLocaleString()}` });
   lines.push({ text: `Customer: ${order.customerName || "Walk-in"}` });
@@ -130,7 +130,7 @@ function buildReceiptLines(order: Order, tendered?: number): { text: string; bol
   }
   lines.push({ divider: true, text: "" });
   lines.push({ text: "Thank you for your visit!", center: true });
-  lines.push({ text: "islandtacos.com", center: true });
+  lines.push({ text: "islandtacosbvi.com", center: true });
   lines.push({ text: "", center: true });
   return lines;
 }
@@ -2576,7 +2576,7 @@ export default function POS() {
   useEffect(() => {
     const poll = async () => {
       try {
-        const r = await fetch("/api/orders", { credentials: "include" });
+        const r = await fetch("/api/orders?limit=500", { credentials: "include" });
         const data: Order[] = await r.json();
 
         // ── Online + phone order notifications ──
