@@ -1548,35 +1548,36 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
               {q ? `No orders matching "${search}"` : filter === "today" ? "No completed orders today" : "No completed orders yet"}
             </p>
           )}
-          {visible.map(o => (
-            <button key={o.id} onClick={() => { setSelected(o); setRefireStatus("idle"); setRefundSuccess(false); setRefundOpen(false); }}
-              className="w-full bg-gray-100 hover:bg-gray-200 rounded-xl p-4 text-left transition-colors">
-              <div className="flex items-start justify-between mb-1">
-                <div>
-                  <span className="text-gray-900 font-bold text-sm">{o.customerName || "Walk-in"}</span>
-                  <span className="ml-2 text-gray-500 text-xs">#{o.confirmationCode}</span>
+          {visible.map(o => {
+            const isRefunded = o.paymentStatus === "refunded";
+            return (
+              <button key={o.id} onClick={() => { setSelected(o); setRefireStatus("idle"); setRefundSuccess(false); setRefundOpen(false); }}
+                className={`w-full rounded-xl p-4 text-left transition-colors ${isRefunded ? "bg-red-50 hover:bg-red-100 border border-red-200" : "bg-gray-100 hover:bg-gray-200"}`}>
+                <div className="flex items-start justify-between mb-1">
+                  <div>
+                    <span className={`font-bold text-sm ${isRefunded ? "text-gray-500" : "text-gray-900"}`}>{o.customerName || "Walk-in"}</span>
+                    <span className="ml-2 text-gray-400 text-xs">#{o.confirmationCode}</span>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className={`font-bold text-sm ${isRefunded ? "line-through text-gray-400" : "text-[#F5A623]"}`}>{fmt(o.total)}</span>
+                    {isRefunded && <span className="text-xs font-bold text-red-600">↩ Refunded</span>}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  {o.paymentStatus === "refunded" && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">Refunded</span>
-                  )}
-                  <span className="text-[#F5A623] font-bold">{fmt(o.total)}</span>
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-400 text-xs">
+                    {o.items.map(i => {
+                      const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
+                      return `${i.quantity}× ${i.menuItemName}${mods}`;
+                    }).join(" • ")}
+                  </p>
                 </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-gray-400 text-xs">
-                  {o.items.map(i => {
-                    const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
-                    return `${i.quantity}× ${i.menuItemName}${mods}`;
-                  }).join(" • ")}
-                </p>
-              </div>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-gray-500 text-xs">{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}</span>
-              </div>
-            </button>
-          ))}
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-gray-500 text-xs">{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
