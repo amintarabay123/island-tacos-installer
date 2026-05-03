@@ -331,7 +331,11 @@ Header
 Step 8 "Starting the server..."
 Write-Host ""
 
-pm2 delete island-tacos 2>$null
+# Refresh PATH so pm2 is found after fresh install
+$env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" +
+            [System.Environment]::GetEnvironmentVariable("PATH", "User")
+
+try { pm2 delete island-tacos 2>$null } catch {}
 pm2 start local-install/ecosystem.config.cjs
 pm2 save
 
