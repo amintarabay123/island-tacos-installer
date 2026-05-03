@@ -158,6 +158,7 @@ router.get("/download/ecosystem.config.cjs", serveFile("local-install/ecosystem.
 router.get("/download/menu-import.sql",      serveFile("local-install/menu-import.sql",         "menu-import.sql",      "application/octet-stream"));
 router.get("/download/menu-patch.sql",       serveFile("local-install/menu-patch.sql",          "menu-patch.sql",       "application/octet-stream"));
 router.get("/download/server",               serveFile("artifacts/api-server/dist/index.mjs",   "index.mjs",            "application/octet-stream"));
+router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "application/octet-stream"));
 
 router.get("/download/setup-guide", (_req: Request, res: Response): void => {
   const full = path.join(PROJECT_ROOT, "artifacts", "island-tacos", "public", "docs", "install-guide.html");
