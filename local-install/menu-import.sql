@@ -1,5 +1,6 @@
 -- Island Tacos Menu Import
 -- Run with: psql -U ituser -d islandtacos -f menu-import.sql
+SET client_encoding = 'UTF8';
 
 -- Categories
 INSERT INTO menu_categories (id, name, description, sort_order, loyverse_id, send_to_kds, icon) VALUES
