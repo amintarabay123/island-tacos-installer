@@ -35,7 +35,7 @@ else
   printf "  Online store URL: "
   read -r BASE_URL
   BASE_URL="${BASE_URL%/}"
-  DOWNLOAD_URL="${BASE_URL}/island-tacos-installer.tar.gz"
+  DOWNLOAD_URL="${BASE_URL}/api/download/project"
   echo "$DOWNLOAD_URL" > "$SOURCE_FILE"
 fi
 

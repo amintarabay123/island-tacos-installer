@@ -34,7 +34,7 @@ if (Test-Path $SourceFile) {
     Write-Host "  Where is your online store hosted?" -ForegroundColor Gray
     Write-Host "  Example: https://orders.islandtacosbvi.com" -ForegroundColor DarkGray
     $BaseUrl = (Read-Host "  Online store URL").Trim().TrimEnd("/")
-    $DownloadUrl = "$BaseUrl/island-tacos-installer.tar.gz"
+    $DownloadUrl = "$BaseUrl/api/download/project"
     Set-Content -Path $SourceFile -Value $DownloadUrl
 }
 

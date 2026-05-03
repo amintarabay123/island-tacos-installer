@@ -147,7 +147,7 @@
         <input type="checkbox" class="step-cb">
         <div class="content">
           <strong>Copy the line below exactly, paste it into the blue PowerShell window, and press Enter</strong>
-          <div class="screen" style="margin-top:10px;font-size:12px;word-break:break-all;">New-Item -ItemType Directory -Force C:\IslandTacos | Out-Null; Invoke-WebRequest -Uri "https://orders.islandtacosbvi.com/island-tacos-installer.tar.gz" -OutFile "$env:TEMP\it.tar.gz"; tar -xzf "$env:TEMP\it.tar.gz" -C C:\IslandTacos --strip-components=1</div>
+          <div class="screen" style="margin-top:10px;font-size:12px;word-break:break-all;">New-Item -ItemType Directory -Force C:\IslandTacos | Out-Null; Invoke-WebRequest -Uri "https://orders.islandtacosbvi.com/api/download/project" -OutFile "$env:TEMP\it.tar.gz"; tar -xzf "$env:TEMP\it.tar.gz" -C C:\IslandTacos --strip-components=1</div>
           <span class="note">This downloads the latest software and extracts it to <strong>C:\IslandTacos</strong>. It may take 1–2 minutes depending on your internet speed.</span>
         </div>
       </li>
