@@ -1,8 +1,184 @@
--- Island Tacos Menu Import
--- Run with: psql -U ituser -d islandtacos -f menu-import.sql
+-- Island Tacos - Full Schema + Menu Data Import
+-- Run with:
+--   $env:PGPASSWORD="data1234"; $env:PGCLIENTENCODING="UTF8"; & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U ituser -d islandtacos -f "C:\IslandTacos\menu-import.sql"
+
 SET client_encoding = 'UTF8';
 
--- Categories
+-- ============================================================
+-- SCHEMA
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS store_settings (
+  key VARCHAR(100) PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS menu_categories (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  icon TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  send_to_kds BOOLEAN NOT NULL DEFAULT true,
+  loyverse_id TEXT UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS menu_items (
+  id SERIAL PRIMARY KEY,
+  category_id INTEGER NOT NULL REFERENCES menu_categories(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  price NUMERIC(10,2) NOT NULL,
+  image_url TEXT,
+  pos_image_url TEXT,
+  available BOOLEAN NOT NULL DEFAULT true,
+  popular BOOLEAN NOT NULL DEFAULT false,
+  spicy BOOLEAN NOT NULL DEFAULT false,
+  vegetarian BOOLEAN NOT NULL DEFAULT false,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  loyverse_item_id TEXT UNIQUE,
+  loyverse_variant_id TEXT,
+  loyverse_modifier_ids TEXT[],
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS menu_items_category_id_idx ON menu_items(category_id);
+CREATE INDEX IF NOT EXISTS menu_items_available_idx ON menu_items(available);
+CREATE INDEX IF NOT EXISTS menu_items_sort_order_idx ON menu_items(sort_order);
+
+CREATE TABLE IF NOT EXISTS modifiers (
+  id SERIAL PRIMARY KEY,
+  loyverse_id TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  options JSONB NOT NULL DEFAULT '[]',
+  required BOOLEAN NOT NULL DEFAULT false,
+  min_selections INTEGER NOT NULL DEFAULT 0,
+  max_selections INTEGER,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  unavailable_option_ids TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id SERIAL PRIMARY KEY,
+  confirmation_code TEXT NOT NULL UNIQUE,
+  customer_name TEXT NOT NULL,
+  customer_email TEXT NOT NULL DEFAULT '',
+  customer_phone TEXT NOT NULL DEFAULT '',
+  order_type TEXT NOT NULL DEFAULT 'pickup',
+  delivery_address TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  payment_status TEXT NOT NULL DEFAULT 'pending',
+  payment_method TEXT NOT NULL DEFAULT 'card',
+  source TEXT NOT NULL DEFAULT 'online',
+  subtotal NUMERIC(10,2) NOT NULL,
+  discount_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  tax NUMERIC(10,2) NOT NULL,
+  delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
+  total NUMERIC(10,2) NOT NULL,
+  notes TEXT,
+  kds_cleared BOOLEAN NOT NULL DEFAULT false,
+  cancellation_reason TEXT,
+  estimated_ready_at TIMESTAMPTZ,
+  scheduled_pickup_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS orders_status_idx ON orders(status);
+CREATE INDEX IF NOT EXISTS orders_kds_cleared_idx ON orders(kds_cleared);
+CREATE INDEX IF NOT EXISTS orders_created_at_idx ON orders(created_at);
+CREATE INDEX IF NOT EXISTS orders_customer_phone_idx ON orders(customer_phone);
+CREATE INDEX IF NOT EXISTS orders_source_idx ON orders(source);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  menu_item_id INTEGER REFERENCES menu_items(id) ON DELETE SET NULL,
+  menu_item_name TEXT NOT NULL,
+  menu_item_price NUMERIC(10,2) NOT NULL,
+  quantity INTEGER NOT NULL,
+  notes TEXT,
+  modifier_selections JSONB,
+  subtotal NUMERIC(10,2) NOT NULL,
+  already_made BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE INDEX IF NOT EXISTS order_items_order_id_idx ON order_items(order_id);
+
+CREATE TABLE IF NOT EXISTS shifts (
+  id SERIAL PRIMARY KEY,
+  opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  closed_at TIMESTAMPTZ,
+  opening_float NUMERIC(10,2) NOT NULL DEFAULT 0,
+  closing_float NUMERIC(10,2),
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS cash_transactions (
+  id SERIAL PRIMARY KEY,
+  shift_id INTEGER REFERENCES shifts(id),
+  type TEXT NOT NULL,
+  amount NUMERIC(10,2) NOT NULL,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS refunds (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES orders(id),
+  amount NUMERIC(10,2) NOT NULL,
+  reason TEXT,
+  refund_method TEXT NOT NULL DEFAULT 'cash',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS customers (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  notes TEXT,
+  visit_count INTEGER NOT NULL DEFAULT 1,
+  total_spent NUMERIC(10,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS employees (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'staff',
+  pin_hash TEXT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS loyverse_daily_summary (
+  date DATE PRIMARY KEY,
+  gross_sales NUMERIC(10,2) NOT NULL DEFAULT 0,
+  refunds NUMERIC(10,2) NOT NULL DEFAULT 0,
+  discounts NUMERIC(10,2) NOT NULL DEFAULT 0,
+  net_sales NUMERIC(10,2) NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS financial_statement_drafts (
+  id SERIAL PRIMARY KEY,
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+  data JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================
+-- MENU CATEGORIES
+-- ============================================================
+
 INSERT INTO menu_categories (id, name, description, sort_order, loyverse_id, send_to_kds, icon) VALUES
 (21, 'Tacos', NULL, 0, '985ebc52-71b4-11ea-8d93-0603130a05b8', true, '🌮'),
 (22, 'Misc', NULL, 0, NULL, true, '❓'),
@@ -27,7 +203,6 @@ INSERT INTO menu_categories (id, name, description, sort_order, loyverse_id, sen
 (17, 'Drinks', NULL, 110, '985f4278-71b4-11ea-8d93-0603130a05b8', false, '🥤')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
-  description = EXCLUDED.description,
   sort_order = EXCLUDED.sort_order,
   loyverse_id = EXCLUDED.loyverse_id,
   send_to_kds = EXCLUDED.send_to_kds,
@@ -35,7 +210,10 @@ ON CONFLICT (id) DO UPDATE SET
 
 SELECT setval('menu_categories_id_seq', (SELECT MAX(id) FROM menu_categories));
 
--- Menu Items
+-- ============================================================
+-- MENU ITEMS
+-- ============================================================
+
 INSERT INTO menu_items (id, name, description, price, category_id, available, popular, spicy, vegetarian, image_url, pos_image_url, sort_order, loyverse_item_id, loyverse_variant_id) VALUES
 (68, 'Taco Salmon 🐟', 'Two soft shell tortilla stuffed with salmoni, with fresh pico, corn, cabbage and guacamole.', 20.00, 21, true, false, false, false, '/api/storage/objects/uploads/29840448-0b96-4ed3-89dd-efa375ae731c', '/api/storage/objects/uploads/72db41b0-7b08-4cae-8ce3-cc805a5d84fa', 30, 'e15db5a8-8c82-4d2c-905d-57df763e5fca', '20b8eebe-c637-4886-9e6a-3a21d443ff43'),
 (69, 'Taco Shrimp 🍤', 'Two soft shell tortilla stuffed with shrimp, with fresh pico, corn, cabbage and guacamole.', 18.00, 21, true, false, false, false, '/api/storage/objects/uploads/3ec62eb8-655f-4f84-931b-0f50ecc881a1', '/api/storage/objects/uploads/6caf2189-a038-46d4-917c-61d2ad76471f', 20, '845ad1f2-5de1-4a38-952b-1f2ac44a38c9', 'ab9e6734-8835-4ad9-8880-687638f265b6'),
@@ -73,17 +251,17 @@ INSERT INTO menu_items (id, name, description, price, category_id, available, po
 (103, 'Salad Steak 🥩', NULL, 18.00, 16, true, false, false, false, '/api/storage/objects/uploads/6dca4215-900a-4662-bc75-3f63b8db4312', '/api/storage/objects/uploads/9a126fce-d95b-4d0b-896c-e8d462e0658d', 220, 'd106cf38-711e-11ea-8d93-0603130a05b8', 'bd87c1bc-71a9-11ea-8d93-0603130a05b8'),
 (104, 'Salad Chicken 🍗', NULL, 16.00, 16, true, false, false, false, '/api/storage/objects/uploads/b90f9e32-c854-496f-8992-9bf00aff0841', '/api/storage/objects/uploads/4dedb1ff-d0d3-458a-ba11-5d430409fb67', 210, 'd106c944-711e-11ea-8d93-0603130a05b8', 'bd87bf45-71a9-11ea-8d93-0603130a05b8'),
 (105, 'Burrito Veggie 🥗', 'Grilled Veggies in a12 inch flour tortilla with cheese, corn, salsa, rice, black beans, guacamole with our house sauce wrapped tight.', 12.00, 20, true, false, false, true, '/api/storage/objects/uploads/f810dab6-1335-490b-afa4-f3f14078b701', '/api/storage/objects/uploads/1a9ec796-71e0-432e-b979-7be321a49152', 150, 'b0be6472-711e-11ea-8d93-0603130a05b8', 'abcce8d3-71a9-11ea-8d93-0603130a05b8'),
-(106, 'wMisc ❓', NULL, 0.00, 6, true, false, false, false, 'https://api.loyverse.com/image/ab9ddd6b-711e-11ea-8d93-0603130a05b8', NULL, 470, 'ab9ddd6b-711e-11ea-8d93-0603130a05b8', 'a7160c0b-71a9-11ea-8d93-0603130a05b8'),
+(106, 'wMisc', NULL, 0.00, 6, true, false, false, false, 'https://api.loyverse.com/image/ab9ddd6b-711e-11ea-8d93-0603130a05b8', NULL, 470, 'ab9ddd6b-711e-11ea-8d93-0603130a05b8', 'a7160c0b-71a9-11ea-8d93-0603130a05b8'),
 (107, 'Rice Bowl Veggie 🥗', NULL, 14.00, 18, true, false, false, true, '/api/storage/objects/uploads/e1d8a2ac-24be-4c38-9c92-dfb97ee1c521', '/api/storage/objects/uploads/2517a0e5-de76-496a-9a5c-2faef6962d59', 200, 'aa009183-711e-11ea-8d93-0603130a05b8', 'a513c283-71a9-11ea-8d93-0603130a05b8'),
-(108, 'xSoda/Juice 🥤', NULL, 2.00, 17, true, false, false, false, '/api/storage/objects/uploads/53fb88ad-7b55-4966-8c06-331cbdefe083', '/api/storage/objects/uploads/721de97b-5c29-4bc1-a7f9-4def830a5e4b', 430, 'a9807354-711e-11ea-8d93-0603130a05b8', 'a4fc9d3e-71a9-11ea-8d93-0603130a05b8'),
-(109, 'xWater 💧', NULL, 1.00, 17, true, false, false, false, '/api/image-proxy?url=aHR0cHM6Ly9hcGkubG95dmVyc2UuY29tL2ltYWdlL2E5ODA3MmE2LTcxMWUtMTFlYS04ZDkzLTA2MDMxMzBhMDViOA', '/api/storage/objects/uploads/a927ebfc-071d-444c-957e-e976bd53cd62', 440, 'a98072a6-711e-11ea-8d93-0603130a05b8', 'a4fc9cb2-71a9-11ea-8d93-0603130a05b8'),
+(108, 'xSoda/Juice', NULL, 2.00, 17, true, false, false, false, '/api/storage/objects/uploads/53fb88ad-7b55-4966-8c06-331cbdefe083', '/api/storage/objects/uploads/721de97b-5c29-4bc1-a7f9-4def830a5e4b', 430, 'a9807354-711e-11ea-8d93-0603130a05b8', 'a4fc9d3e-71a9-11ea-8d93-0603130a05b8'),
+(109, 'xWater', NULL, 1.00, 17, true, false, false, false, '/api/image-proxy?url=aHR0cHM6Ly9hcGkubG95dmVyc2UuY29tL2ltYWdlL2E5ODA3MmE2LTcxMWUtMTFlYS04ZDkzLTA2MDMxMzBhMDViOA', '/api/storage/objects/uploads/a927ebfc-071d-444c-957e-e976bd53cd62', 440, 'a98072a6-711e-11ea-8d93-0603130a05b8', 'a4fc9cb2-71a9-11ea-8d93-0603130a05b8'),
 (110, 'Rice Bowl Shrimp 🍤', NULL, 20.00, 18, true, false, false, false, '/api/storage/objects/uploads/e5732d68-4c50-4e20-8305-ed9d5a85532a', '/api/storage/objects/uploads/02794d3e-b62e-46f7-ae28-abd49c312f4e', 180, 'a95cf990-711e-11ea-8d93-0603130a05b8', 'a4ec1c69-71a9-11ea-8d93-0603130a05b8'),
 (111, 'Rice Bowl Steak 🥩', NULL, 18.00, 18, true, false, false, false, '/api/storage/objects/uploads/a9b5ced1-db3e-4415-aa31-01a550d9b2cc', '/api/storage/objects/uploads/673d03d4-e60c-421a-8fd9-cae3b23a730f', 170, 'a95cf7dc-711e-11ea-8d93-0603130a05b8', 'a4ec1ae1-71a9-11ea-8d93-0603130a05b8'),
 (112, 'Rice Bowl Chicken 🍗', NULL, 16.00, 18, true, true, false, false, '/api/storage/objects/uploads/b5f10a85-5e7e-4eef-87cf-86b95a8016c7', 'https://api.loyverse.com/image/a95cdaa5-711e-11ea-8d93-0603130a05b8', 160, 'a95cdaa5-711e-11ea-8d93-0603130a05b8', 'a4ec1835-71a9-11ea-8d93-0603130a05b8'),
 (113, 'Quesadilla Shrimp 🍤', NULL, 18.00, 19, true, false, false, false, '/api/storage/objects/uploads/a457dbaa-faeb-4b73-806f-a20074bb5d76', '/api/storage/objects/uploads/d547ae71-dc78-4df8-8e05-cbe2f2b3c6a2', 80, 'a95cd8fd-711e-11ea-8d93-0603130a05b8', 'a4ec16cf-71a9-11ea-8d93-0603130a05b8'),
 (114, 'Quesadilla Steak 🥩', NULL, 16.00, 19, true, false, false, false, '/api/storage/objects/uploads/70dc41e0-ada7-4be6-9c86-1e97268e947d', '/api/storage/objects/uploads/26a509b7-b898-4bd0-ae3b-1437ee025816', 70, 'a95cd7d1-711e-11ea-8d93-0603130a05b8', 'a4ec15bc-71a9-11ea-8d93-0603130a05b8'),
 (115, 'Quesadilla Chicken 🍗', NULL, 14.00, 19, true, false, false, false, '/api/storage/objects/uploads/b466a449-30e8-42c6-98c6-2170c47424d7', '/api/storage/objects/uploads/f34a2743-ac1a-44f0-86af-6fc4b8f0eec8', 60, 'a95cd599-711e-11ea-8d93-0603130a05b8', 'a4ec1519-71a9-11ea-8d93-0603130a05b8'),
-(116, 'Burrito Shrimp 🍤', 'Juicy Shrimp in a12 inch flour tortilla with cheese, corn, salsa, rice, black beans, guacamole with our house sauce wrapped tight.', 18.00, 20, true, false, false, false, '/api/storage/objects/uploads/50b38f37-9917-4482-9d54-15492705ca18', '/api/storage/objects/uploads/a14ee3fd-fcc0-4679-99d3-83f152432a35', 130, 'a95cb545-711e-11ea-8d93-0603130a05b8', 'a4ebc52b-71a9-11ea-8d93-0603130a05b8'),
+(116, 'Burrito Shrimp 🍤', 'Juicy Shrimp in a12 inch flour tortilla with cheese, corn, salsa, rice, black beans, guacamole with our house sauce wrapped tight.', 18.00, 20, true, false, false, false, '/api/storage/objects/uploads/50b38f37-9917-4482-9d54-15492705ca18', '/api/storage/objects/uploads/a14ee3fd-fcc0-4679-99d3-83f152432a35', 130, 'a95cb545-711e-11ea-8d93-0603130a05b8', 'a4ebc52b-71a9-11a9-11ea-8d93-0603130a05b8'),
 (117, 'Burrito Steak 🥩', 'Grilled Steak in a12 inch flour tortilla with cheese, corn, salsa, rice, black beans, guacamole with our house sauce wrapped tight.', 16.00, 20, true, false, false, false, '/api/storage/objects/uploads/714adcf5-54db-4726-b3bb-5f8f223a9f9f', '/api/storage/objects/uploads/5077dd51-25c6-4562-89f3-9622dde07a16', 120, 'a95cb45c-711e-11ea-8d93-0603130a05b8', 'a4ebc455-71a9-11ea-8d93-0603130a05b8')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
@@ -102,4 +280,4 @@ ON CONFLICT (id) DO UPDATE SET
 
 SELECT setval('menu_items_id_seq', (SELECT MAX(id) FROM menu_items));
 
-SELECT 'Done! Imported ' || COUNT(*) || ' menu items and categories.' FROM menu_items;
+SELECT 'Done! Imported ' || COUNT(*) || ' menu items.' AS result FROM menu_items;
