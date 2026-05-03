@@ -5,6 +5,9 @@
 $ErrorActionPreference = "Stop"
 $Host.UI.RawUI.WindowTitle = "Island Tacos Installer"
 
+# Ensure working directory is the folder containing this script
+Set-Location $PSScriptRoot
+
 function Header {
     Clear-Host
     Write-Host ""
