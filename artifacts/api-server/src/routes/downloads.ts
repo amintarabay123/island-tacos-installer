@@ -168,25 +168,40 @@ router.get("/download/setup-guide", (_req: Request, res: Response): void => {
   res.send(fs.readFileSync(full, "utf-8"));
 });
 
-// Installer archive — redirects to GCS public URL (bypasses Replit proxy size limit)
-router.get("/download/project", (req: Request, res: Response): void => {
-  if (gcsPublicUrl) {
-    res.redirect(302, gcsPublicUrl);
-    return;
-  }
+// Returns the direct GCS download URL as JSON — client downloads from GCS directly,
+// bypassing the Replit proxy entirely (the proxy transparently follows 302s and hits size limits).
+// PowerShell usage: $u=(iwr "…/api/download/project-url"|ConvertFrom-Json).url; iwr $u -OutFile …
+router.get("/download/project-url", (req: Request, res: Response): void => {
+  const send = () => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.json({ url: gcsPublicUrl });
+  };
 
-  // Still generating — poll until ready (up to 5 min)
+  if (gcsPublicUrl) { send(); return; }
+
   const deadline = Date.now() + 5 * 60 * 1000;
   const poll = setInterval(() => {
-    if (gcsPublicUrl) {
+    if (gcsPublicUrl) { clearInterval(poll); send(); }
+    else if (Date.now() > deadline) {
       clearInterval(poll);
-      res.redirect(302, gcsPublicUrl);
-    } else if (Date.now() > deadline) {
+      res.status(503).json({ error: "Installer is still being prepared. Please retry in a minute." });
+    }
+  }, 3000);
+  req.on("close", () => clearInterval(poll));
+});
+
+// Legacy redirect endpoint (kept for backwards compat, but proxy intercepts it — prefer /project-url)
+router.get("/download/project", (req: Request, res: Response): void => {
+  if (gcsPublicUrl) { res.redirect(302, gcsPublicUrl); return; }
+
+  const deadline = Date.now() + 5 * 60 * 1000;
+  const poll = setInterval(() => {
+    if (gcsPublicUrl) { clearInterval(poll); res.redirect(302, gcsPublicUrl); }
+    else if (Date.now() > deadline) {
       clearInterval(poll);
       res.status(503).send("Installer is still being prepared. Please retry in a minute.");
     }
   }, 3000);
-
   req.on("close", () => clearInterval(poll));
 });
 
