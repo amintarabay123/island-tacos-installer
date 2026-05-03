@@ -56,7 +56,7 @@ if (staticEnv) {
   if (existsSync(staticPath)) {
     app.use(express.static(staticPath));
     // SPA fallback — send index.html for any route not matched above
-    app.get("*", (_req, res) => {
+    app.get("/{*splat}", (_req, res) => {
       res.sendFile(path.join(staticPath, "index.html"));
     });
     logger.info({ staticPath }, "Serving frontend static files");
