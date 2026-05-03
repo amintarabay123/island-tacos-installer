@@ -109,30 +109,24 @@ async function generateAndUpload(): Promise<void> {
   }
 }
 
-// Check if GCS object already exists and is fresh
+// On startup: immediately sign a URL for the existing GCS object (if any) so downloads
+// are available right away, then always regenerate a fresh archive in the background
+// so the archive stays in sync with the latest deployed source.
 async function initInstallerCache(): Promise<void> {
   try {
     const bucket = getBucket();
     const file = bucket.file(GCS_OBJECT_NAME);
     const [exists] = await file.exists();
-
     if (exists) {
-      const [meta] = await file.getMetadata();
-      const updated = meta.updated ? new Date(meta.updated as string).getTime() : 0;
-      const fresh = (Date.now() - updated) < MAX_CACHE_AGE_MS;
-
-      if (fresh) {
-        const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
-        gcsPublicUrl = await signObjectGetURL(bucketId, GCS_OBJECT_NAME, 7 * 24 * 3600);
-        console.log("[installer] using existing GCS object, signed URL ready");
-        return;
-      }
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
+      gcsPublicUrl = await signObjectGetURL(bucketId, GCS_OBJECT_NAME, 7 * 24 * 3600);
+      console.log("[installer] existing GCS object signed — regenerating fresh archive in background...");
     }
   } catch {
-    // GCS check failed — proceed to regenerate
+    // No existing object or GCS unavailable — will generate fresh
   }
 
-  // Generate fresh
+  // Always regenerate on startup so the archive matches the current deployment
   generateAndUpload().catch((err) => {
     console.error("[installer] background generation failed:", err);
   });

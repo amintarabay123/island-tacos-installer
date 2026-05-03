@@ -1,4 +1,4 @@
-# ─────────────────────────────────────────────────────────────────────────────
+﻿# ─────────────────────────────────────────────────────────────────────────────
 # Island Tacos — Windows Local Server Installer
 # Launched automatically by INSTALL.bat
 # ─────────────────────────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ $athPrivate = AskSecret "ATH Movil Private Token"
 Write-Host ""
 
 Write-Host "  ── Clerk Authentication ─────────────────────────────────────" -ForegroundColor DarkGray
-Write-Host "      Copy these from the Replit Auth pane or Clerk dashboard." -ForegroundColor Gray
+Write-Host "      Copy these from your Clerk dashboard at clerk.com." -ForegroundColor Gray
 Write-Host "      Publishable key starts with pk_live_ or pk_test_" -ForegroundColor Gray
 Write-Host "      Secret key starts with sk_live_ or sk_test_" -ForegroundColor Gray
 $clerkPub    = Ask "Clerk Publishable Key"
