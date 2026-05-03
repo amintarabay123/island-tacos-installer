@@ -227,6 +227,10 @@ function parseObjectPath(path: string): {
   };
 }
 
+export async function signObjectGetURL(bucketName: string, objectName: string, ttlSec: number): Promise<string> {
+  return signObjectURL({ bucketName, objectName, method: "GET", ttlSec });
+}
+
 async function signObjectURL({
   bucketName,
   objectName,
