@@ -290,7 +290,7 @@ OK ".env written"
 Header
 Step 5 "Installing project dependencies..."
 Write-Host ""
-pnpm install --frozen-lockfile
+pnpm install --ignore-scripts
 OK "Dependencies installed"
 
 # ─────────────────────────────────────────────────────────────────────────────
