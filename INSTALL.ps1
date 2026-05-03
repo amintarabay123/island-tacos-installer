@@ -190,7 +190,8 @@ Header
 Step 3 "Setting up the database..."
 Write-Host ""
 
-$pgCmd = (Get-Command psql -ErrorAction SilentlyContinue)?.Source
+$pgCmdObj = Get-Command psql -ErrorAction SilentlyContinue
+$pgCmd = if ($pgCmdObj) { $pgCmdObj.Source } else { $null }
 if (-not $pgCmd) {
     # Try common install paths
     $pgPaths = @(
