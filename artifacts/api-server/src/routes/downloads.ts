@@ -155,6 +155,7 @@ router.get("/download/INSTALL.bat",          serveFile("INSTALL.bat",           
 router.get("/download/INSTALL.ps1",          serveFile("INSTALL.ps1",                          "INSTALL.ps1",          "application/octet-stream"));
 router.get("/download/install.sh",           serveFile("install.sh",                           "install.sh",           "application/octet-stream"));
 router.get("/download/ecosystem.config.cjs", serveFile("local-install/ecosystem.config.cjs",   "ecosystem.config.cjs", "application/octet-stream"));
+router.get("/download/menu-import.sql",      serveFile("local-install/menu-import.sql",         "menu-import.sql",      "application/octet-stream"));
 
 router.get("/download/setup-guide", (_req: Request, res: Response): void => {
   const full = path.join(PROJECT_ROOT, "artifacts", "island-tacos", "public", "docs", "install-guide.html");
