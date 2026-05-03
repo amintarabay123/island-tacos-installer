@@ -1,5 +1,6 @@
 const raw = import.meta.env.VITE_ADMIN_PATH as string | undefined;
-export const ADMIN_PATH = raw ? `/${raw}` : "/it-admin";
+const cleaned = raw?.replace(/^\/+/, "");
+export const ADMIN_PATH = cleaned ? `/${cleaned}` : "/it-admin";
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 
