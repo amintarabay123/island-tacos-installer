@@ -114,10 +114,21 @@ try {
 
 if (-not $pgRunning) {
     Warn "PostgreSQL not found — installing via winget..."
-    winget install PostgreSQL.PostgreSQL --accept-package-agreements --accept-source-agreements -e
+    $pgInstalled = $false
+    foreach ($pgId in @("PostgreSQL.PostgreSQL.16", "PostgreSQL.PostgreSQL.15", "PostgreSQL.PostgreSQL.17")) {
+        winget install $pgId --accept-package-agreements --accept-source-agreements -e 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) { $pgInstalled = $true; break }
+    }
+    if (-not $pgInstalled) {
+        Fatal "PostgreSQL could not be installed automatically.`n`n  Please install it manually:`n  1. Go to https://www.postgresql.org/download/windows/`n  2. Download and run the installer`n  3. Use 'postgres' as the superuser password when asked`n  4. Then run this installer again."
+    }
     $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" +
                 [System.Environment]::GetEnvironmentVariable("PATH", "User")
-    Start-Service -Name (Get-Service -Name "postgresql*").Name -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 5
+    $pgSvc = Get-Service -Name "postgresql*" -ErrorAction SilentlyContinue
+    if ($pgSvc) {
+        Start-Service -Name $pgSvc.Name -ErrorAction SilentlyContinue
+    }
     OK "PostgreSQL installed and started"
 }
 
