@@ -27,6 +27,13 @@ const MAX_CACHE_AGE_MS  = 12 * 60 * 60 * 1000; // 12 hours
 let gcsPublicUrl: string | null = null;
 let generating = false;
 
+// ── Frontend dist — GCS-backed (bypasses Replit proxy size limit) ─────────────
+const FRONTEND_CACHE        = path.join("/tmp", "island-tacos-frontend-cache.tar.gz");
+const FRONTEND_GCS_OBJECT   = "installer/island-tacos-frontend.tar.gz";
+
+let frontendGcsUrl: string | null = null;
+let frontendGenerating = false;
+
 const EXCLUDE = [
   "--exclude=./.git",
   "--exclude=*/node_modules",
@@ -136,6 +143,74 @@ async function initInstallerCache(): Promise<void> {
 // Kick off on startup (don't await — non-blocking)
 initInstallerCache().catch(console.error);
 
+async function generateAndUploadFrontend(): Promise<void> {
+  if (frontendGenerating) return;
+  frontendGenerating = true;
+  frontendGcsUrl = null;
+
+  console.log("[frontend] generating archive...");
+
+  const distDir = path.join(PROJECT_ROOT, "artifacts", "island-tacos", "dist", "public");
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tmp = FRONTEND_CACHE + ".tmp";
+      const out = fs.createWriteStream(tmp);
+      const tar = spawn("tar", ["-czf", "-", "-C", distDir, "."]);
+
+      tar.stdout.pipe(out);
+
+      out.on("error", (err) => { tar.kill(); fs.unlink(tmp, () => {}); reject(err); });
+      tar.on("error", (err) => { fs.unlink(tmp, () => {}); reject(err); });
+      tar.on("close", (code) => {
+        if (code !== 0) { fs.unlink(tmp, () => {}); reject(new Error(`tar exited ${code}`)); return; }
+        fs.rename(tmp, FRONTEND_CACHE, (err) => { if (err) reject(err); else resolve(); });
+      });
+    });
+
+    console.log("[frontend] archive ready, uploading to GCS...");
+
+    const bucket = getBucket();
+    const file = bucket.file(FRONTEND_GCS_OBJECT);
+    await file.save(fs.readFileSync(FRONTEND_CACHE), {
+      metadata: {
+        contentType: "application/gzip",
+        contentDisposition: 'attachment; filename="island-tacos-frontend.tar.gz"',
+      },
+    });
+
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
+    frontendGcsUrl = await signObjectGetURL(bucketId, FRONTEND_GCS_OBJECT, 7 * 24 * 3600);
+    console.log("[frontend] available at:", frontendGcsUrl);
+
+  } catch (err) {
+    console.error("[frontend] error:", err instanceof Error ? err.message : err);
+  } finally {
+    frontendGenerating = false;
+  }
+}
+
+async function initFrontendCache(): Promise<void> {
+  try {
+    const bucket = getBucket();
+    const file = bucket.file(FRONTEND_GCS_OBJECT);
+    const [exists] = await file.exists();
+    if (exists) {
+      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
+      frontendGcsUrl = await signObjectGetURL(bucketId, FRONTEND_GCS_OBJECT, 7 * 24 * 3600);
+      console.log("[frontend] existing GCS object signed — regenerating in background...");
+    }
+  } catch {
+    // No existing object or GCS unavailable — will generate fresh
+  }
+
+  generateAndUploadFrontend().catch((err) => {
+    console.error("[frontend] background generation failed:", err);
+  });
+}
+
+initFrontendCache().catch(console.error);
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function serveFile(filePath: string, filename: string, contentType: string) {
   return (_req: Request, res: Response): void => {
@@ -160,15 +235,21 @@ router.get("/download/menu-import.sql",      serveFile("local-install/menu-impor
 router.get("/download/menu-patch.sql",       serveFile("local-install/menu-patch.sql",          "menu-patch.sql",       "application/octet-stream"));
 router.get("/download/server",               serveFile("artifacts/api-server/dist/index.mjs",   "index.mjs",            "application/octet-stream"));
 
-// Stream the built frontend dist as a tar.gz — extract into dist/public on local server
-router.get("/download/frontend", (_req: Request, res: Response): void => {
-  const distDir = path.join(PROJECT_ROOT, "artifacts", "island-tacos", "dist", "public");
-  if (!fs.existsSync(distDir)) { res.status(404).json({ error: "Frontend dist not found — run a build first" }); return; }
-  res.setHeader("Content-Type", "application/gzip");
-  res.setHeader("Content-Disposition", 'attachment; filename="island-tacos-frontend.tar.gz"');
-  const tar = spawn("tar", ["-czf", "-", "-C", distDir, "."]);
-  tar.stdout.pipe(res);
-  tar.on("error", () => res.end());
+// Frontend dist download — GCS-backed signed URL (bypasses Replit proxy size limit)
+router.get("/download/frontend", (req: Request, res: Response): void => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  if (frontendGcsUrl) { res.json({ url: frontendGcsUrl }); return; }
+
+  const deadline = Date.now() + 5 * 60 * 1000;
+  const poll = setInterval(() => {
+    if (frontendGcsUrl) { clearInterval(poll); res.json({ url: frontendGcsUrl }); }
+    else if (Date.now() > deadline) {
+      clearInterval(poll);
+      res.status(503).json({ error: "Frontend is still being prepared. Please retry in a minute." });
+    }
+  }, 3000);
+  req.on("close", () => clearInterval(poll));
 });
 router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "application/octet-stream"));
 router.get("/download/update-ip.ps1",        serveFile("local-install/update-ip.ps1",           "update-ip.ps1",        "application/octet-stream"));
