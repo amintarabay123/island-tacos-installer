@@ -73,6 +73,10 @@ router.use(printRouter);
 
 // Admin + Loyverse + Settings PATCH + Sync push/export: owner only
 router.use(/^\/(admin|loyverse|reports|employees|financials)/, (req: Request, res: Response, next: NextFunction) => {
+  // Localhost-only: import-sales reads a local file, no auth needed
+  const ip = req.ip || req.socket.remoteAddress || "";
+  const isLocal = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+  if (isLocal && req.path === "/import-sales") return next();
   requireAdminAuth(req, res, next);
 });
 router.use("/sync/push",   (req: Request, res: Response, next: NextFunction) => requireAdminAuth(req, res, next));
