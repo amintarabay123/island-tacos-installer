@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
+import { objectStorageClient } from "../lib/objectStorage";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 
 const router: IRouter = Router();
@@ -78,6 +79,31 @@ router.get("/storage/objects/*objectPath", async (req: Request, res: Response): 
       console.error("Serve error:", err);
       res.status(500).json({ error: "Failed to serve file" });
     }
+  }
+});
+
+// GET /api/admin/uploaded-images — list all uploaded images in GCS
+router.get("/admin/uploaded-images", async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const privateDir = process.env.PRIVATE_OBJECT_DIR ?? "";
+    if (!privateDir) { res.status(500).json({ error: "Storage not configured" }); return; }
+    const parts = privateDir.replace(/^\//, "").split("/");
+    const bucketName = parts[0];
+    const prefix = parts.slice(1).join("/");
+    const uploadsPrefix = prefix ? `${prefix}/uploads/` : "uploads/";
+
+    const bucket = objectStorageClient.bucket(bucketName);
+    const [files] = await bucket.getFiles({ prefix: uploadsPrefix });
+
+    const urls = files.map((f) => {
+      const entityId = f.name.slice(uploadsPrefix.length);
+      return `/api/storage/objects/uploads/${entityId}`;
+    }).filter((u) => !u.endsWith("/"));
+
+    res.json({ urls });
+  } catch (err) {
+    console.error("List uploads error:", err);
+    res.status(500).json({ error: "Failed to list uploads" });
   }
 });
 

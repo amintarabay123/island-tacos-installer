@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Pencil, Trash2, Sliders, GripVertical, ChefHat, Upload, X } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Sliders, GripVertical, ChefHat, Upload, X, Images } from "lucide-react";
 
 type ModifierOption = { id: string; name: string; price: number; position: number };
 type Modifier = { id: number; loyverseId: string; name: string; options: ModifierOption[] };
@@ -70,6 +70,28 @@ export default function AdminMenu() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [posImageUploading, setPosImageUploading] = useState(false);
   const posImageInputRef = useRef<HTMLInputElement>(null);
+
+  // Gallery picker state
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryTarget, setGalleryTarget] = useState<"imageUrl" | "posImageUrl">("imageUrl");
+  const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+
+  const openGallery = (target: "imageUrl" | "posImageUrl") => {
+    setGalleryTarget(target);
+    setGalleryOpen(true);
+    setGalleryLoading(true);
+    fetch("/api/admin/uploaded-images", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d: { urls: string[] }) => setGalleryUrls(d.urls ?? []))
+      .catch(() => setGalleryUrls([]))
+      .finally(() => setGalleryLoading(false));
+  };
+
+  const pickGalleryImage = (url: string) => {
+    setForm((f) => ({ ...f, [galleryTarget]: url }));
+    setGalleryOpen(false);
+  };
 
   // Category management
   type CatForm = { name: string; icon: string; sendToKds: boolean };
@@ -691,6 +713,16 @@ export default function AdminMenu() {
                 >
                   {imageUploading ? "Uploading…" : <><Upload className="h-4 w-4 mr-1" />Upload</>}
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openGallery("imageUrl")}
+                  className="shrink-0"
+                  title="Browse uploaded photos"
+                >
+                  <Images className="h-4 w-4" />
+                </Button>
                 <input
                   ref={imageInputRef}
                   type="file"
@@ -733,6 +765,16 @@ export default function AdminMenu() {
                   className="shrink-0"
                 >
                   {posImageUploading ? "Uploading…" : <><Upload className="h-4 w-4 mr-1" />Upload</>}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openGallery("posImageUrl")}
+                  className="shrink-0"
+                  title="Browse uploaded photos"
+                >
+                  <Images className="h-4 w-4" />
                 </Button>
                 <input
                   ref={posImageInputRef}
@@ -883,6 +925,48 @@ export default function AdminMenu() {
             >
               {catDialog?.mode === "create" ? "Create Category" : "Save Changes"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image gallery picker */}
+      <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {galleryTarget === "imageUrl" ? "Pick Online Store Image" : "Pick POS Image"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground -mt-2">Click any photo to assign it to this item.</p>
+          <div className="overflow-y-auto flex-1 mt-2">
+            {galleryLoading ? (
+              <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">Loading photos…</div>
+            ) : galleryUrls.length === 0 ? (
+              <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">No uploaded photos found.</div>
+            ) : (
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                {galleryUrls.map((url) => (
+                  <button
+                    key={url}
+                    type="button"
+                    onClick={() => pickGalleryImage(url)}
+                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all hover:border-primary hover:scale-105 focus:outline-none focus:border-primary ${
+                      form[galleryTarget] === url ? "border-primary ring-2 ring-primary/30" : "border-border"
+                    }`}
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGalleryOpen(false)}>Cancel</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
