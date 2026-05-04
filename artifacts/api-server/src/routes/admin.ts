@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, desc, sql, and, gte, lt } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, pool } from "@workspace/db";
+import fs from "fs";
 import {
   GetRecentOrdersQueryParams,
   GetAdminStatsQueryParams,
@@ -165,8 +166,9 @@ router.get("/admin/recent-orders", async (req, res): Promise<void> => {
   res.json(result);
 });
 
-// POST /api/admin/import-sales — localhost-only, imports a sales-export.json into the local DB
-router.post("/import-sales", async (req: Request, res: Response) => {
+// GET /api/admin/import-sales?file=C:\path\to\sales-export.json
+// Reads the file from disk server-side — no payload size issues, localhost-only
+router.get("/import-sales", async (req: Request, res: Response) => {
   const ip = req.ip || req.socket.remoteAddress || "";
   const isLocal =
     ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
@@ -175,7 +177,20 @@ router.post("/import-sales", async (req: Request, res: Response) => {
     return;
   }
 
-  const data = req.body as Record<string, unknown[]>;
+  const filePath = req.query.file as string;
+  if (!filePath) {
+    res.status(400).json({ error: "Missing ?file= query parameter" });
+    return;
+  }
+
+  let data: Record<string, unknown[]>;
+  try {
+    const raw = fs.readFileSync(filePath, "utf-8");
+    data = JSON.parse(raw) as Record<string, unknown[]>;
+  } catch (err) {
+    res.status(400).json({ error: `Cannot read file: ${String(err)}` });
+    return;
+  }
   const tables = [
     "shifts",
     "cash_transactions",
