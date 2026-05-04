@@ -162,6 +162,7 @@ router.get("/download/server",               serveFile("artifacts/api-server/dis
 router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "application/octet-stream"));
 router.get("/download/update-ip.ps1",        serveFile("local-install/update-ip.ps1",           "update-ip.ps1",        "application/octet-stream"));
 router.get("/download/update-ip.bat",        serveFile("local-install/update-ip.bat",           "update-ip.bat",        "application/octet-stream"));
+router.get("/download/import-sales",         serveFile("local-install/import-sales.cjs",        "import-sales.cjs",     "application/octet-stream"));
 
 router.get("/download/setup-guide", (_req: Request, res: Response): void => {
   const full = path.join(PROJECT_ROOT, "artifacts", "island-tacos", "public", "docs", "install-guide.html");
@@ -192,31 +193,10 @@ router.get("/download/project-url", (req: Request, res: Response): void => {
   req.on("close", () => clearInterval(poll));
 });
 
-// ── Sales data export ──────────────────────────────────────────────────────────
-// Generates a SQL file with all orders, order_items, shifts, cash_transactions,
-// and refunds. Designed to be imported into the local PostgreSQL database.
-// Usage: psql -U ituser -d islandtacos -f sales-export.sql
-
-function sqlLit(val: unknown): string {
-  if (val === null || val === undefined) return "NULL";
-  if (typeof val === "boolean") return val ? "TRUE" : "FALSE";
-  if (typeof val === "number") return String(val);
-  // Standard single-quote escaping: replace ' with ''
-  const s = String(val).replace(/'/g, "''");
-  return `'${s}'`;
-}
-
-function buildInserts(table: string, rows: Record<string, unknown>[]): string {
-  if (rows.length === 0) return `-- (no rows in ${table})\n`;
-  const cols = Object.keys(rows[0]!);
-  const colList = cols.map(c => `"${c}"`).join(", ");
-  const lines: string[] = [`-- ${table} (${rows.length} rows)`];
-  for (const row of rows) {
-    const vals = cols.map(c => sqlLit(row[c])).join(", ");
-    lines.push(`INSERT INTO ${table} (${colList}) VALUES (${vals}) ON CONFLICT (id) DO NOTHING;`);
-  }
-  return lines.join("\n") + "\n";
-}
+// ── Sales data export (JSON) ───────────────────────────────────────────────────
+// Returns all sales data as JSON. Use with the import-sales.cjs script.
+// Download: Invoke-WebRequest -Uri ".../api/download/sales-export" -OutFile sales-export.json
+// Import:   node import-sales.cjs sales-export.json
 
 router.get("/download/sales-export", async (req: Request, res: Response): Promise<void> => {
   try {
@@ -230,35 +210,19 @@ router.get("/download/sales-export", async (req: Request, res: Response): Promis
         client.query("SELECT * FROM refunds ORDER BY id"),
       ]);
 
-      const now = new Date().toISOString();
-      let sql = `-- Island Tacos — Full Sales Export\n`;
-      sql += `-- Generated: ${now}\n`;
-      sql += `-- Orders: ${ord.rowCount}  |  Revenue: see totals in admin reports\n`;
-      sql += `-- Import: psql -U ituser -d islandtacos -f sales-export.sql\n\n`;
+      const payload = {
+        generatedAt: new Date().toISOString(),
+        orders: ord.rows,
+        order_items: items.rows,
+        shifts: shifts.rows,
+        cash_transactions: cashTxns.rows,
+        refunds: refunds.rows,
+      };
 
-      sql += buildInserts("orders", ord.rows);
-      sql += "\n";
-      sql += buildInserts("order_items", items.rows);
-      sql += "\n";
-      sql += buildInserts("shifts", shifts.rows);
-      sql += "\n";
-      sql += buildInserts("cash_transactions", cashTxns.rows);
-      sql += "\n";
-      sql += buildInserts("refunds", refunds.rows);
-      sql += "\n";
-
-      // Reset sequences so new records don't conflict
-      sql += `-- Reset sequences\n`;
-      sql += `SELECT setval('orders_id_seq', COALESCE((SELECT MAX(id) FROM orders), 1));\n`;
-      sql += `SELECT setval('order_items_id_seq', COALESCE((SELECT MAX(id) FROM order_items), 1));\n`;
-      sql += `SELECT setval('shifts_id_seq', COALESCE((SELECT MAX(id) FROM shifts), 1));\n`;
-      sql += `SELECT setval('cash_transactions_id_seq', COALESCE((SELECT MAX(id) FROM cash_transactions), 1));\n`;
-      sql += `SELECT setval('refunds_id_seq', COALESCE((SELECT MAX(id) FROM refunds), 1));\n`;
-
-      const filename = `island-tacos-sales-${now.slice(0, 10)}.sql`;
-      res.setHeader("Content-Type", "application/octet-stream");
+      const filename = `island-tacos-sales-${payload.generatedAt.slice(0, 10)}.json`;
+      res.setHeader("Content-Type", "application/json");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.send(sql);
+      res.send(JSON.stringify(payload, null, 2));
     } finally {
       client.release();
     }
