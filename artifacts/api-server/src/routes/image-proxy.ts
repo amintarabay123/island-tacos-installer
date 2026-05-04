@@ -89,12 +89,17 @@ class PlaceholderImageError extends Error {
   constructor() { super("LOYVERSE_PLACEHOLDER"); this.name = "PlaceholderImageError"; }
 }
 
+const LOYVERSE_TOKEN = process.env.LOYVERSE_API_TOKEN ?? "";
+
 /** Fetch from upstream, write to disk + memory. */
 function fetchAndCache(targetUrl: string): Promise<CachedImage> {
   return new Promise((resolve, reject) => {
     const parsed = new URL(targetUrl);
     const lib = parsed.protocol === "https:" ? https : http;
-    const req = lib.get(targetUrl, { headers: { "User-Agent": "IslandTacos/1.0" } }, (upstream) => {
+    const isLoyverse = ALLOWED_HOSTS.includes(parsed.hostname);
+    const fetchHeaders: Record<string, string> = { "User-Agent": "IslandTacos/1.0" };
+    if (isLoyverse && LOYVERSE_TOKEN) fetchHeaders["Authorization"] = `Bearer ${LOYVERSE_TOKEN}`;
+    const req = lib.get(targetUrl, { headers: fetchHeaders }, (upstream) => {
       if ((upstream.statusCode ?? 0) !== 200) {
         upstream.resume();
         return reject(new Error(`Upstream ${upstream.statusCode}`));
