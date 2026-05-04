@@ -1,6 +1,6 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, desc, sql, and, gte, lt } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, pool } from "@workspace/db";
 import {
   GetRecentOrdersQueryParams,
   GetAdminStatsQueryParams,
@@ -163,6 +163,61 @@ router.get("/admin/recent-orders", async (req, res): Promise<void> => {
   );
 
   res.json(result);
+});
+
+// POST /api/admin/import-sales — localhost-only, imports a sales-export.json into the local DB
+router.post("/import-sales", async (req: Request, res: Response) => {
+  const ip = req.ip || req.socket.remoteAddress || "";
+  const isLocal =
+    ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+  if (!isLocal) {
+    res.status(403).json({ error: "Only accessible from localhost" });
+    return;
+  }
+
+  const data = req.body as Record<string, unknown[]>;
+  const tables = [
+    "shifts",
+    "cash_transactions",
+    "orders",
+    "order_items",
+    "refunds",
+  ] as const;
+
+  const counts: Record<string, number> = {};
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    for (const table of tables) {
+      const rows = (data[table] as Record<string, unknown>[]) || [];
+      let inserted = 0;
+      for (const row of rows) {
+        const cols = Object.keys(row);
+        if (cols.length === 0) continue;
+        const placeholders = cols.map((_, i) => `$${i + 1}`).join(", ");
+        const values = cols.map((c) => row[c]);
+        await client.query(
+          `INSERT INTO ${table} (${cols.map((c) => `"${c}"`).join(", ")})
+           VALUES (${placeholders})
+           ON CONFLICT (id) DO NOTHING`,
+          values
+        );
+        inserted++;
+      }
+      counts[table] = inserted;
+    }
+
+    await client.query("COMMIT");
+    res.json({ ok: true, counts });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    req.log.error({ err }, "import-sales failed");
+    res.status(500).json({ error: String(err) });
+  } finally {
+    client.release();
+  }
 });
 
 export default router;
