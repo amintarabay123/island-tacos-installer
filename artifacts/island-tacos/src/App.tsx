@@ -133,34 +133,52 @@ function Router() {
 // Export for use in navigation within staff pages
 export { ADMIN_PATH, adminRoutes };
 
+function AppProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <CartProvider>
+          <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+            {children}
+          </Suspense>
+          <Toaster />
+          <FbBrowserPrompt />
+          <InstallPrompt />
+        </CartProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
 
   return (
     <ClerkProvider
-      publishableKey={clerkPubKey ?? ""}
+      publishableKey={clerkPubKey!}
       proxyUrl={clerkProxyUrl}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
-      <QueryClientProvider client={queryClient}>
+      <AppProviders>
         <ClerkQueryClientCacheInvalidator />
-        <TooltipProvider>
-          <CartProvider>
-            <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
-              <Router />
-            </Suspense>
-            <Toaster />
-            <FbBrowserPrompt />
-            <InstallPrompt />
-          </CartProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
+        <Router />
+      </AppProviders>
     </ClerkProvider>
   );
 }
 
 function App() {
+  if (!clerkPubKey) {
+    return (
+      <WouterRouter base={basePath}>
+        <AppProviders>
+          <Router />
+        </AppProviders>
+      </WouterRouter>
+    );
+  }
+
   return (
     <WouterRouter base={basePath}>
       <ClerkProviderWithRoutes />
