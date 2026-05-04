@@ -164,6 +164,8 @@ export default function Home() {
   };
 
   const openItemModal = async (item: any) => {
+    // Give the popup a fresh attempt even if the grid image had a transient failure
+    setBrokenImages(prev => { const next = new Set(prev); next.delete(item.id); return next; });
     setSelectedItem(item);
     setQuantity(1);
     setNotes("");

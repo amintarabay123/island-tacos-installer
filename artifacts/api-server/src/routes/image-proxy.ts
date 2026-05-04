@@ -180,7 +180,14 @@ router.get("/image-proxy", async (req: Request, res: Response): Promise<void> =>
   }
 });
 
-/** Convert a Loyverse image URL to our proxied URL */
+const OWN_STORAGE_HOST = "orders.islandtacosbvi.com";
+
+/** Convert an image URL to a server-routed URL.
+ *  - Loyverse CDN → /api/image-proxy?url=… (cached proxy)
+ *  - Our own production storage (absolute) → relative /api/storage/… path
+ *    so it goes through the local server's redirect-to-production fallback
+ *  - Everything else → returned as-is
+ */
 export function proxyImageUrl(raw: string | null | undefined): string | null {
   if (!raw) return null;
   try {
@@ -188,6 +195,9 @@ export function proxyImageUrl(raw: string | null | undefined): string | null {
     if (ALLOWED_HOSTS.includes(parsed.hostname)) {
       const encoded = Buffer.from(raw, "utf8").toString("base64url");
       return `/api/image-proxy?url=${encoded}`;
+    }
+    if (parsed.hostname === OWN_STORAGE_HOST && parsed.pathname.startsWith("/api/storage/")) {
+      return parsed.pathname;
     }
   } catch {}
   return raw;
