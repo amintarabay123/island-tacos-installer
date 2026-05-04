@@ -526,8 +526,14 @@ export default function Kitchen() {
 
   const [mobileTab, setMobileTab] = useState<"new" | "preparing" | "ready">("new");
 
-  // Filter out orders where ALL items are in non-KDS categories
-  const kdsOrders = orders.filter(o => o.items.some(item => isKdsItem(item) && !item.alreadyMade));
+  // Show on KDS if the order has at least one kitchen item (food that needs prep)
+  // AND at least one item that hasn't been made yet.
+  // Split conditions so that adding a non-KDS item (e.g. a drink) to a held food order
+  // still surfaces the ticket — the kitchen needs to assemble the new item with existing food.
+  const kdsOrders = orders.filter(o =>
+    o.items.some(item => isKdsItem(item)) &&
+    o.items.some(item => !item.alreadyMade)
+  );
 
   const byCol: Record<string, Order[]> = { new: [], preparing: [], ready: [] };
   for (const o of kdsOrders) {
