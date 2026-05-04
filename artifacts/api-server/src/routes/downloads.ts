@@ -159,6 +159,17 @@ router.get("/download/ecosystem.config.cjs", serveFile("local-install/ecosystem.
 router.get("/download/menu-import.sql",      serveFile("local-install/menu-import.sql",         "menu-import.sql",      "application/octet-stream"));
 router.get("/download/menu-patch.sql",       serveFile("local-install/menu-patch.sql",          "menu-patch.sql",       "application/octet-stream"));
 router.get("/download/server",               serveFile("artifacts/api-server/dist/index.mjs",   "index.mjs",            "application/octet-stream"));
+
+// Stream the built frontend dist as a tar.gz — extract into dist/public on local server
+router.get("/download/frontend", (_req: Request, res: Response): void => {
+  const distDir = path.join(PROJECT_ROOT, "artifacts", "island-tacos", "dist", "public");
+  if (!fs.existsSync(distDir)) { res.status(404).json({ error: "Frontend dist not found — run a build first" }); return; }
+  res.setHeader("Content-Type", "application/gzip");
+  res.setHeader("Content-Disposition", 'attachment; filename="island-tacos-frontend.tar.gz"');
+  const tar = spawn("tar", ["-czf", "-", "-C", distDir, "."]);
+  tar.stdout.pipe(res);
+  tar.on("error", () => res.end());
+});
 router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "application/octet-stream"));
 router.get("/download/update-ip.ps1",        serveFile("local-install/update-ip.ps1",           "update-ip.ps1",        "application/octet-stream"));
 router.get("/download/update-ip.bat",        serveFile("local-install/update-ip.bat",           "update-ip.bat",        "application/octet-stream"));
