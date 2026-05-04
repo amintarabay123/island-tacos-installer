@@ -3026,6 +3026,11 @@ export default function POS() {
 
   const handleHold = () => {
     if (cart.length === 0) return;
+    // Resumed ticket already has name/phone — save immediately without re-asking
+    if (resumedOrderId) {
+      void placeOrder("cash", "pending", undefined, customerName || "Walk-in", customerPhone, orderNotes);
+      return;
+    }
     setHoldModal(true);
   };
 
