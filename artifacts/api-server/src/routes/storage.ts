@@ -15,6 +15,14 @@ function parseRequestUploadUrlBody(body: unknown): { success: true; data: Reques
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
+// When the Replit sidecar isn't available (local Windows server), redirect storage
+// requests to production so tablets can still load photos over the internet.
+const PRODUCTION_URL = (process.env.PRODUCTION_URL || "https://orders.islandtacosbvi.com").replace(/\/$/, "");
+
+function redirectToProduction(req: Request, res: Response): void {
+  res.redirect(302, `${PRODUCTION_URL}/api${req.path}`);
+}
+
 /**
  * POST /storage/uploads/request-url
  *
@@ -71,8 +79,9 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
       res.end();
     }
   } catch (error) {
-    req.log.error({ err: error }, "Error serving public object");
-    res.status(500).json({ error: "Failed to serve public object" });
+    // Sidecar not available (local server) — redirect to production
+    req.log.warn({ err: error }, "Storage unavailable locally, redirecting to production");
+    redirectToProduction(req, res);
   }
 });
 
@@ -122,8 +131,9 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
       res.status(404).json({ error: "Object not found" });
       return;
     }
-    req.log.error({ err: error }, "Error serving object");
-    res.status(500).json({ error: "Failed to serve object" });
+    // Sidecar not available (local server) — redirect to production
+    req.log.warn({ err: error }, "Storage unavailable locally, redirecting to production");
+    redirectToProduction(req, res);
   }
 });
 
