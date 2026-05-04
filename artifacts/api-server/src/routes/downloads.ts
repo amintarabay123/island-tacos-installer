@@ -201,13 +201,9 @@ function sqlLit(val: unknown): string {
   if (val === null || val === undefined) return "NULL";
   if (typeof val === "boolean") return val ? "TRUE" : "FALSE";
   if (typeof val === "number") return String(val);
-  const s = String(val);
-  // Use dollar-quoting to safely embed arbitrary text without escaping issues
-  // Find a tag that doesn't appear in the string
-  let tag = "";
-  let n = 0;
-  while (s.includes(`$${tag}$`)) tag = String(n++);
-  return `$${tag}$${s}$${tag}$`;
+  // Standard single-quote escaping: replace ' with ''
+  const s = String(val).replace(/'/g, "''");
+  return `'${s}'`;
 }
 
 function buildInserts(table: string, rows: Record<string, unknown>[]): string {
@@ -239,7 +235,6 @@ router.get("/download/sales-export", async (req: Request, res: Response): Promis
       sql += `-- Generated: ${now}\n`;
       sql += `-- Orders: ${ord.rowCount}  |  Revenue: see totals in admin reports\n`;
       sql += `-- Import: psql -U ituser -d islandtacos -f sales-export.sql\n\n`;
-      sql += `BEGIN;\n\n`;
 
       sql += buildInserts("orders", ord.rows);
       sql += "\n";
@@ -258,9 +253,7 @@ router.get("/download/sales-export", async (req: Request, res: Response): Promis
       sql += `SELECT setval('order_items_id_seq', COALESCE((SELECT MAX(id) FROM order_items), 1));\n`;
       sql += `SELECT setval('shifts_id_seq', COALESCE((SELECT MAX(id) FROM shifts), 1));\n`;
       sql += `SELECT setval('cash_transactions_id_seq', COALESCE((SELECT MAX(id) FROM cash_transactions), 1));\n`;
-      sql += `SELECT setval('refunds_id_seq', COALESCE((SELECT MAX(id) FROM refunds), 1));\n\n`;
-
-      sql += `COMMIT;\n`;
+      sql += `SELECT setval('refunds_id_seq', COALESCE((SELECT MAX(id) FROM refunds), 1));\n`;
 
       const filename = `island-tacos-sales-${now.slice(0, 10)}.sql`;
       res.setHeader("Content-Type", "application/octet-stream");
