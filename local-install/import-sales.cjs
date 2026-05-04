@@ -10,7 +10,33 @@
 
 const fs = require("fs");
 const path = require("path");
-const { Client } = require("pg");
+
+// Find pg from the project's existing node_modules (avoids needing a global install)
+function requirePg() {
+  const candidates = [
+    "pg",
+    path.join(__dirname, "..", "node_modules", "pg"),
+    path.join(__dirname, "..", "artifacts", "api-server", "node_modules", "pg"),
+    path.join(__dirname, "..", "node_modules", ".pnpm", "pg@8.13.3", "node_modules", "pg"),
+  ];
+  for (const p of candidates) {
+    try { return require(p); } catch {}
+  }
+  // Last resort: search for pg anywhere under node_modules
+  const base = path.join(__dirname, "..");
+  const dirs = ["node_modules/pg", "artifacts/api-server/node_modules/pg"];
+  for (const d of dirs) {
+    const full = path.join(base, d);
+    if (fs.existsSync(path.join(full, "lib", "index.js"))) {
+      try { return require(full); } catch {}
+    }
+  }
+  console.error("ERROR: Cannot find the 'pg' module.");
+  console.error("Fix: run  npm install pg  in C:\\IslandTacos  then retry.");
+  process.exit(1);
+}
+
+const { Client } = requirePg();
 
 const filePath = process.argv[2];
 if (!filePath) {
