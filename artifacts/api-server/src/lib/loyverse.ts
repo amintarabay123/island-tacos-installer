@@ -215,6 +215,13 @@ export async function syncFromLoyverse(): Promise<SyncResult> {
       });
 
       if (existing) {
+        // Preserve custom (non-Loyverse) image URLs — only fall back to Loyverse's
+        // image if the item doesn't already have a custom one.
+        const isCustomImage = existing.imageUrl &&
+          !existing.imageUrl.includes("api.loyverse.com") &&
+          !existing.imageUrl.includes("cdn.loyverse.com");
+        const imageUrl = isCustomImage ? existing.imageUrl : (litem.image_url ?? null);
+
         // Update everything except `available` — preserve the admin's visibility toggle
         await db
           .update(menuItemsTable)
@@ -222,7 +229,7 @@ export async function syncFromLoyverse(): Promise<SyncResult> {
             name: litem.item_name,
             description: stripHtml(litem.description),
             price: String(price),
-            imageUrl: litem.image_url ?? null,
+            imageUrl,
             categoryId,
             loyverseItemId: litem.id,
             loyverseVariantId: variant.variant_id,
