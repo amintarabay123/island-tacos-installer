@@ -247,9 +247,9 @@ router.get("/download/project", (req: Request, res: Response): void => {
   req.on("close", () => clearInterval(poll));
 });
 
-// GET /api/download/import-sales?file=C:\path\to\sales-export.json
+// GET /api/download/run-import?file=C:\path\to\sales-export.json
 // Localhost-only — reads the file from disk and inserts into the local DB
-router.get("/download/import-sales", async (req: Request, res: Response) => {
+router.get("/download/run-import", async (req: Request, res: Response) => {
   const ip = req.ip || req.socket.remoteAddress || "";
   const isLocal = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
   if (!isLocal) {
