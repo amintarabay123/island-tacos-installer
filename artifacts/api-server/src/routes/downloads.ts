@@ -4,6 +4,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
 import { objectStorageClient, signObjectGetURL } from "../lib/objectStorage";
+import { db } from "../lib/db";
 
 const router: IRouter = Router();
 
