@@ -43,6 +43,8 @@ export default function Home() {
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, Record<string, number>>>({});
   const [loadingModifiers, setLoadingModifiers] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
+  const handleImgError = (id: string) => setBrokenImages(prev => new Set(prev).add(id));
 
   const { addItem } = useCart();
 
@@ -247,8 +249,8 @@ export default function Home() {
                 onClick={() => openItemModal(item)}
               >
                 <div className="aspect-[4/3] bg-muted overflow-hidden relative">
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  {item.imageUrl && !brokenImages.has(item.id) ? (
+                    <img src={item.imageUrl} alt={item.name} onError={() => handleImgError(item.id)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-3xl text-muted-foreground/30 font-bold">
                       {item.name.charAt(0)}
@@ -330,8 +332,8 @@ export default function Home() {
                   onClick={() => openItemModal(item)}
                 >
                   <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-lg bg-muted overflow-hidden">
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    {item.imageUrl && !brokenImages.has(item.id) ? (
+                      <img src={item.imageUrl} alt={item.name} onError={() => handleImgError(item.id)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-2xl font-bold">
                         {item.name.charAt(0)}
@@ -369,8 +371,8 @@ export default function Home() {
           <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0 max-h-[90vh] flex flex-col">
             {/* Image */}
             <div className="w-full bg-muted overflow-hidden shrink-0 flex items-center justify-center" style={{ maxHeight: "260px", minHeight: "160px" }}>
-              {selectedItem.imageUrl ? (
-                <img src={selectedItem.imageUrl} alt={selectedItem.name} className="w-full h-full object-contain" style={{ maxHeight: "260px" }} />
+              {selectedItem.imageUrl && !brokenImages.has(selectedItem.id) ? (
+                <img src={selectedItem.imageUrl} alt={selectedItem.name} onError={() => handleImgError(selectedItem.id)} className="w-full h-full object-contain" style={{ maxHeight: "260px" }} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground/20 text-6xl font-bold">
                   {selectedItem.name.charAt(0)}
