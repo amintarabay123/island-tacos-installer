@@ -76,8 +76,9 @@ router.get("/storage/objects/*objectPath", async (req: Request, res: Response): 
     if (err instanceof ObjectNotFoundError) {
       res.status(404).json({ error: "Not found" });
     } else {
-      console.error("Serve error:", err);
-      res.status(500).json({ error: "Failed to serve file" });
+      // GCS sidecar not available (local server) — redirect to production
+      const productionUrl = `https://orders.islandtacosbvi.com/api${req.path}`;
+      res.redirect(302, productionUrl);
     }
   }
 });
