@@ -21,6 +21,8 @@ Write-Host ".env updated" -ForegroundColor Green
 # Rebuild frontend
 Write-Host "Rebuilding frontend (takes about a minute)..." -ForegroundColor Yellow
 $env:VITE_ADMIN_PATH = "it-admin"
+$env:PORT = "3001"
+$env:BASE_PATH = "/"
 Set-Location "$PSScriptRoot\.."
 pnpm --filter "@workspace/island-tacos" run build | Out-Null
 
