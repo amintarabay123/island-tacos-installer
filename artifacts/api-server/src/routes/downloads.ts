@@ -285,7 +285,13 @@ router.get("/download/run-import", async (req: Request, res: Response) => {
         const cols = Object.keys(row);
         if (cols.length === 0) continue;
         const placeholders = cols.map((_, i) => `$${i + 1}`).join(", ");
-        const values = cols.map((c) => row[c]);
+        const values = cols.map((c) => {
+          const v = row[c];
+          // JSONB columns need explicit JSON string — pg would otherwise serialize
+          // arrays/objects as PostgreSQL array literals which JSONB rejects
+          if (v !== null && typeof v === "object") return JSON.stringify(v);
+          return v;
+        });
         await client.query(
           `INSERT INTO ${table} (${cols.map((c) => `"${c}"`).join(", ")}) VALUES (${placeholders}) ON CONFLICT (id) DO NOTHING`,
           values
