@@ -71,7 +71,7 @@ describe("OpenAPI spec — required fields", () => {
 });
 
 // ─── 2. Phone normalisation ───────────────────────────────────────────────────
-// Mirrors the logic in vapi.ts without importing DB-coupled modules.
+// Mirrors the logic in lib/phone-utils.ts without importing DB-coupled modules.
 
 function formatBVIPhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");

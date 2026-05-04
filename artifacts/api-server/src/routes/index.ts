@@ -20,7 +20,6 @@ import employeesRouter from "./employees";
 import imageProxyRouter from "./image-proxy";
 import syncRouter from "./sync";
 import downloadsRouter from "./downloads";
-import vapiRouter from "./vapi";
 import financialsRouter from "./financials";
 import customsRouter from "./customs";
 
@@ -38,9 +37,6 @@ router.get("/print/bridge.js", (_req, res): void => {
 
 // Public download routes (no auth required)
 router.use(downloadsRouter);
-
-// Vapi AI phone ordering routes (public GET /vapi/menu, POST /vapi/order uses own secret auth)
-router.use(vapiRouter);
 
 // Public routes (upload requires staff auth; /uploads static serving is public)
 router.use(healthRouter);

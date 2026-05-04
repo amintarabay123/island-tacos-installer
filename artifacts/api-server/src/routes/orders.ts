@@ -4,7 +4,7 @@ import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable, storeSe
 import { upsertCustomer } from "./customers";
 import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
-import { isBVIMobile, formatBVIPhone } from "./vapi";
+import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
 import nodemailer from "nodemailer";
 
 const mailer = nodemailer.createTransport({
