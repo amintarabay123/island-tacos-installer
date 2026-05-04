@@ -4,7 +4,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
 import { objectStorageClient, signObjectGetURL } from "../lib/objectStorage";
-import { db } from "../lib/db";
+import { pool } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -190,6 +190,89 @@ router.get("/download/project-url", (req: Request, res: Response): void => {
     }
   }, 3000);
   req.on("close", () => clearInterval(poll));
+});
+
+// ── Sales data export ──────────────────────────────────────────────────────────
+// Generates a SQL file with all orders, order_items, shifts, cash_transactions,
+// and refunds. Designed to be imported into the local PostgreSQL database.
+// Usage: psql -U ituser -d islandtacos -f sales-export.sql
+
+function sqlLit(val: unknown): string {
+  if (val === null || val === undefined) return "NULL";
+  if (typeof val === "boolean") return val ? "TRUE" : "FALSE";
+  if (typeof val === "number") return String(val);
+  const s = String(val);
+  // Use dollar-quoting to safely embed arbitrary text without escaping issues
+  // Find a tag that doesn't appear in the string
+  let tag = "";
+  let n = 0;
+  while (s.includes(`$${tag}$`)) tag = String(n++);
+  return `$${tag}$${s}$${tag}$`;
+}
+
+function buildInserts(table: string, rows: Record<string, unknown>[]): string {
+  if (rows.length === 0) return `-- (no rows in ${table})\n`;
+  const cols = Object.keys(rows[0]!);
+  const colList = cols.map(c => `"${c}"`).join(", ");
+  const lines: string[] = [`-- ${table} (${rows.length} rows)`];
+  for (const row of rows) {
+    const vals = cols.map(c => sqlLit(row[c])).join(", ");
+    lines.push(`INSERT INTO ${table} (${colList}) VALUES (${vals}) ON CONFLICT (id) DO NOTHING;`);
+  }
+  return lines.join("\n") + "\n";
+}
+
+router.get("/download/sales-export", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const client = await pool.connect();
+    try {
+      const [ord, items, shifts, cashTxns, refunds] = await Promise.all([
+        client.query("SELECT * FROM orders ORDER BY id"),
+        client.query("SELECT * FROM order_items ORDER BY id"),
+        client.query("SELECT * FROM shifts ORDER BY id"),
+        client.query("SELECT * FROM cash_transactions ORDER BY id"),
+        client.query("SELECT * FROM refunds ORDER BY id"),
+      ]);
+
+      const now = new Date().toISOString();
+      let sql = `-- Island Tacos — Full Sales Export\n`;
+      sql += `-- Generated: ${now}\n`;
+      sql += `-- Orders: ${ord.rowCount}  |  Revenue: see totals in admin reports\n`;
+      sql += `-- Import: psql -U ituser -d islandtacos -f sales-export.sql\n\n`;
+      sql += `BEGIN;\n\n`;
+
+      sql += buildInserts("orders", ord.rows);
+      sql += "\n";
+      sql += buildInserts("order_items", items.rows);
+      sql += "\n";
+      sql += buildInserts("shifts", shifts.rows);
+      sql += "\n";
+      sql += buildInserts("cash_transactions", cashTxns.rows);
+      sql += "\n";
+      sql += buildInserts("refunds", refunds.rows);
+      sql += "\n";
+
+      // Reset sequences so new records don't conflict
+      sql += `-- Reset sequences\n`;
+      sql += `SELECT setval('orders_id_seq', COALESCE((SELECT MAX(id) FROM orders), 1));\n`;
+      sql += `SELECT setval('order_items_id_seq', COALESCE((SELECT MAX(id) FROM order_items), 1));\n`;
+      sql += `SELECT setval('shifts_id_seq', COALESCE((SELECT MAX(id) FROM shifts), 1));\n`;
+      sql += `SELECT setval('cash_transactions_id_seq', COALESCE((SELECT MAX(id) FROM cash_transactions), 1));\n`;
+      sql += `SELECT setval('refunds_id_seq', COALESCE((SELECT MAX(id) FROM refunds), 1));\n\n`;
+
+      sql += `COMMIT;\n`;
+
+      const filename = `island-tacos-sales-${now.slice(0, 10)}.sql`;
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(sql);
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: "Export failed", detail: msg });
+  }
 });
 
 // Legacy redirect endpoint (kept for backwards compat, but proxy intercepts it — prefer /project-url)
