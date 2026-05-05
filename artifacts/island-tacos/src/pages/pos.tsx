@@ -45,7 +45,10 @@ const PAY_LABEL: Record<string, string> = { cash: "Cash", card: "Card", athmovil
 
 type PrinterConfig = { type: "browser" | "network" | "bridge"; ip?: string; port?: number; bridgeUrl?: string };
 function getPrinterConfig(): PrinterConfig {
-  try { return JSON.parse(localStorage.getItem("printerConfig") ?? "{}"); } catch { return { type: "browser" }; }
+  try {
+    const saved = JSON.parse(localStorage.getItem("printerConfig") ?? "{}");
+    return { type: "network", ip: "192.168.8.195", port: 9100, ...saved };
+  } catch { return { type: "network", ip: "192.168.8.195", port: 9100 }; }
 }
 
 async function printReceiptLines(

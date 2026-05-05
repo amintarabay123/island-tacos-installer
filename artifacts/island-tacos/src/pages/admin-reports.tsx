@@ -47,7 +47,10 @@ export default function AdminReports() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [printerConfig, setPrinterConfig] = useState<PrinterConfig>(() => {
-    try { return JSON.parse(localStorage.getItem("printerConfig") ?? "{}"); } catch { return { type: "browser", ip: "", port: 9100 }; }
+    try {
+      const saved = JSON.parse(localStorage.getItem("printerConfig") ?? "{}");
+      return { type: "network", ip: "192.168.8.195", port: 9100, bridgeUrl: "http://localhost:8765", ...saved };
+    } catch { return { type: "network", ip: "192.168.8.195", port: 9100, bridgeUrl: "http://localhost:8765" }; }
   });
   const [showPrinterSettings, setShowPrinterSettings] = useState(false);
   const [printerSaved, setPrinterSaved] = useState(false);
@@ -611,9 +614,9 @@ export default function AdminReports() {
                 <select value={printerConfig.type ?? "browser"}
                   onChange={e => setPrinterConfig(p => ({ ...p, type: e.target.value as PrinterConfig["type"] }))}
                   className="px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white">
+                  <option value="network">WiFi Direct — Munbyn (recommended ✓)</option>
+                  <option value="bridge">Local Bridge (separate bridge script)</option>
                   <option value="browser">Browser Print (OS print dialog)</option>
-                  <option value="bridge">Local Bridge (WiFi receipt printer ✓)</option>
-                  <option value="network">Network ESC/POS (local server only)</option>
                 </select>
               </div>
 
@@ -664,7 +667,7 @@ export default function AdminReports() {
               <p className="text-xs text-amber-700 mt-2">Opens the OS print dialog. Set your receipt printer as the default printer to skip the dialog.</p>
             )}
             {printerConfig.type === "network" && (
-              <p className="text-xs text-amber-700 mt-2">Only works when the API server is running on the same local network as the printer (not for the cloud-hosted app).</p>
+              <p className="text-xs text-amber-700 mt-2">Sends print jobs directly to the Munbyn over WiFi. Make sure the printer is on and connected to the Huawei router.</p>
             )}
           </div>
         </div>
