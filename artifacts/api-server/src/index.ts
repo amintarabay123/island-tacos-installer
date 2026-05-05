@@ -5,6 +5,16 @@ import { warmAllMenuImages } from "./routes/image-proxy";
 import { startMidnightResetScheduler } from "./lib/midnight-reset";
 import { pool } from "@workspace/db";
 
+// Keep the server alive through unhandled errors — log them and continue.
+// Without these handlers Node.js 24 exits immediately on any uncaught async error,
+// which would kill the POS mid-service.
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "Uncaught exception — server staying up");
+});
+process.on("unhandledRejection", (reason) => {
+  logger.error({ reason }, "Unhandled promise rejection — server staying up");
+});
+
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
