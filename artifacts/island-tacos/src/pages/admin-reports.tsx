@@ -80,6 +80,10 @@ export default function AdminReports() {
     loadReport(f, t);
   };
 
+  useEffect(() => {
+    localStorage.setItem("printerConfig", JSON.stringify(printerConfig));
+  }, [printerConfig]);
+
   const savePrinterConfig = () => {
     localStorage.setItem("printerConfig", JSON.stringify(printerConfig));
     setPrinterSaved(true);
