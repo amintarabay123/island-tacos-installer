@@ -1108,9 +1108,13 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                     <button onClick={() => chargeTicket(o)} className="flex-1 h-10 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-sm font-bold transition-colors">
                       Charge {fmt(o.total)}
                     </button>
+                  ) : o.status === "ready" ? (
+                    <button onClick={() => completeOrder(o.id)} className="flex-1 h-10 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-bold transition-colors">
+                      ✓ Complete & Receipt
+                    </button>
                   ) : (
-                    <button onClick={() => completeOrder(o.id)} className="flex-1 h-10 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-sm font-bold transition-colors">
-                      Send to Receipts
+                    <button disabled className="flex-1 h-10 rounded-lg bg-gray-100 text-gray-400 text-sm font-semibold cursor-not-allowed">
+                      Pre-paid — awaiting kitchen
                     </button>
                   )}
                   <button onClick={() => voidTicket(o.id)} className="h-10 px-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold transition-colors">Void</button>
