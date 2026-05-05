@@ -106,42 +106,28 @@ if ($pgCmdObj) {
 }
 
 if ($pgCmd) {
+    # Temporarily allow stderr from psql (NOTICE messages) without aborting the script
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+
     $env:PGPASSWORD = $PgSuperPass
 
-    # Create ituser and islandtacos database (safe if they already exist)
-    $setupSql = @"
-DO `$`$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ituser') THEN
-    CREATE USER ituser WITH PASSWORD '$DbPassword';
-  ELSE
-    ALTER USER ituser WITH PASSWORD '$DbPassword';
-  END IF;
-END `$`$;
-SELECT 'exists' FROM pg_database WHERE datname = 'islandtacos'
-`$`$ DO `$`$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'islandtacos') THEN
-    PERFORM dblink_exec('dbname=postgres', 'CREATE DATABASE islandtacos OWNER ituser');
-  END IF;
-END `$`$;
-"@
-    # Simpler approach: use separate commands
+    # Create ituser (or update password if already exists)
     $createUser = "DO `$`$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ituser') THEN CREATE USER ituser WITH PASSWORD '$DbPassword'; ELSE ALTER USER ituser WITH PASSWORD '$DbPassword'; END IF; END `$`$;"
-    $createDb   = "SELECT 'already exists' WHERE EXISTS (SELECT FROM pg_database WHERE datname = 'islandtacos') UNION ALL SELECT 'created' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'islandtacos');"
+    & $pgCmd -U postgres -h localhost -q -c $createUser 2>$null
 
-    # Run as postgres superuser
-    echo $createUser | & $pgCmd -U postgres -h localhost -q 2>$null
-    # Create DB only if not exists (psql -c createdb won't work so use CREATE DATABASE carefully)
-    $env:PGPASSWORD = $PgSuperPass
+    # Create database only if it doesn't exist
     $dbExists = & $pgCmd -U postgres -h localhost -tAq -c "SELECT COUNT(*) FROM pg_database WHERE datname = 'islandtacos';" 2>$null
-    if ($dbExists -eq "0") {
+    if (($dbExists -replace '\s','') -eq "0") {
         & $pgCmd -U postgres -h localhost -q -c "CREATE DATABASE islandtacos OWNER ituser;" 2>$null
         Write-OK "Database 'islandtacos' created."
     } else {
         Write-OK "Database 'islandtacos' already exists."
     }
     & $pgCmd -U postgres -h localhost -q -c "GRANT ALL PRIVILEGES ON DATABASE islandtacos TO ituser;" 2>$null
+
     Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    $ErrorActionPreference = $prev
     Write-OK "PostgreSQL user and database ready."
 } else {
     Write-Warn "psql not found. Skipping database creation."
@@ -179,11 +165,12 @@ if ($pgCmd) {
     $schemaTmp = "$env:TEMP\island-tacos-schema.sql"
     Invoke-WebRequest "$CLOUD/api/download/schema.sql" -OutFile $schemaTmp -UseBasicParsing
     $env:PGPASSWORD = $DbPassword
-    # 2>$null suppresses PostgreSQL NOTICE messages (e.g. "table already exists, skipping")
-    # which are normal and harmless but look scary in PowerShell.
-    $schemaErrors = & $pgCmd -U ituser -h localhost -d islandtacos -f $schemaTmp -q 2>&1 |
-        Where-Object { $_ -match "ERROR" }
-    if ($schemaErrors) { foreach ($e in $schemaErrors) { Write-Warn "Schema warning: $e" } }
+    # Run psql with $ErrorActionPreference = Continue so that PostgreSQL NOTICE messages
+    # on stderr (e.g. "relation already exists, skipping") do NOT abort the script.
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    & $pgCmd -U ituser -h localhost -d islandtacos -f $schemaTmp -q 2>$null
+    $ErrorActionPreference = $prev
     Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
     Remove-Item $schemaTmp -Force -ErrorAction SilentlyContinue
     Write-OK "Database schema applied (all tables created/updated)."
