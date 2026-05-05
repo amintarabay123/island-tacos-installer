@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 
 const POLL_INTERVAL_MS = 5_000;
+const FETCH_TIMEOUT_MS = 10_000;
 
 export function startOnlineOrdersSync(): void {
   const cloudUrl = process.env.SYNC_TARGET_URL?.replace(/\/$/, "");
@@ -23,7 +24,7 @@ export function startOnlineOrdersSync(): void {
       const url = `${cloudUrl}/api/orders/online-sync?since=${encodeURIComponent(lastSyncTime)}`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${syncSecret}` },
-        signal: AbortSignal.timeout(4_000),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
 
       if (!res.ok) {
@@ -103,7 +104,11 @@ export function startOnlineOrdersSync(): void {
     }
   }
 
-  // Fire immediately, then every 5 s
-  void sync();
-  setInterval(() => { void sync(); }, POLL_INTERVAL_MS);
+  // Recursive loop — waits for each sync to finish before scheduling the next,
+  // so a slow cloud response never causes overlapping requests.
+  async function loop() {
+    await sync();
+    setTimeout(() => { void loop(); }, POLL_INTERVAL_MS);
+  }
+  void loop();
 }
