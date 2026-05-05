@@ -5,6 +5,39 @@ import { logger } from "./logger";
 const POLL_INTERVAL_MS = 5_000;
 const FETCH_TIMEOUT_MS = 30_000;
 
+/**
+ * Push a local status change back to the cloud so the customer tracking
+ * page stays accurate. Fire-and-forget — errors are logged but never thrown.
+ * Only does anything when SYNC_TARGET_URL + SYNC_SECRET are configured
+ * (i.e. this is the local server, not the cloud itself).
+ */
+export function pushStatusToCloud(
+  confirmationCode: string,
+  updates: {
+    status?: string;
+    kdsCleared?: boolean;
+    estimatedReadyAt?: Date | null;
+    cancellationReason?: string | null;
+  },
+): void {
+  const cloudUrl = process.env.SYNC_TARGET_URL?.replace(/\/$/, "");
+  const syncSecret = process.env.SYNC_SECRET;
+  if (!cloudUrl || !syncSecret) return; // running on cloud — skip
+
+  const url = `${cloudUrl}/api/orders/sync-status`;
+  fetch(url, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${syncSecret}`,
+    },
+    body: JSON.stringify({ confirmationCode, ...updates }),
+    signal: AbortSignal.timeout(10_000),
+  }).catch((err) => {
+    logger.warn({ err, confirmationCode }, "Status write-back to cloud failed");
+  });
+}
+
 export function startOnlineOrdersSync(): void {
   const cloudUrl = process.env.SYNC_TARGET_URL?.replace(/\/$/, "");
   const syncSecret = process.env.SYNC_SECRET;
