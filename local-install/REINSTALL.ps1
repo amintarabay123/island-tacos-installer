@@ -179,9 +179,11 @@ if ($pgCmd) {
     $schemaTmp = "$env:TEMP\island-tacos-schema.sql"
     Invoke-WebRequest "$CLOUD/api/download/schema.sql" -OutFile $schemaTmp -UseBasicParsing
     $env:PGPASSWORD = $DbPassword
-    & $pgCmd -U ituser -h localhost -d islandtacos -f $schemaTmp -q 2>&1 | ForEach-Object {
-        if ($_ -match "ERROR") { Write-Warn "Schema: $_" }
-    }
+    # 2>$null suppresses PostgreSQL NOTICE messages (e.g. "table already exists, skipping")
+    # which are normal and harmless but look scary in PowerShell.
+    $schemaErrors = & $pgCmd -U ituser -h localhost -d islandtacos -f $schemaTmp -q 2>&1 |
+        Where-Object { $_ -match "ERROR" }
+    if ($schemaErrors) { foreach ($e in $schemaErrors) { Write-Warn "Schema warning: $e" } }
     Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
     Remove-Item $schemaTmp -Force -ErrorAction SilentlyContinue
     Write-OK "Database schema applied (all tables created/updated)."
