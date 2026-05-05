@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { logger } from "./logger";
 
 const POLL_INTERVAL_MS = 5_000;
-const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_TIMEOUT_MS = 30_000;
 
 export function startOnlineOrdersSync(): void {
   const cloudUrl = process.env.SYNC_TARGET_URL?.replace(/\/$/, "");
@@ -22,6 +22,7 @@ export function startOnlineOrdersSync(): void {
   async function sync() {
     try {
       const url = `${cloudUrl}/api/orders/online-sync?since=${encodeURIComponent(lastSyncTime)}`;
+      logger.debug({ url }, "Online sync: fetching");
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${syncSecret}` },
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
