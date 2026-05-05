@@ -3,13 +3,33 @@ import net from "net";
 
 const router: IRouter = Router();
 
+/**
+ * Strip characters that ESC/POS thermal printers can't render.
+ * Munbyn ITPP905 uses Windows-1252 (Latin-1 superset) — anything
+ * above U+00FF, plus common smart-punctuation, gets sanitised.
+ */
+function sanitizeText(str: string): string {
+  return str
+    // Replace common Unicode typographic chars with ASCII equivalents
+    .replace(/[\u2018\u2019]/g, "'")   // smart single quotes
+    .replace(/[\u201C\u201D]/g, '"')   // smart double quotes
+    .replace(/\u2014/g, "-")           // em dash
+    .replace(/\u2013/g, "-")           // en dash
+    .replace(/\u2026/g, "...")         // ellipsis
+    .replace(/\u00D7/g, "x")          // multiplication sign
+    // Strip all remaining characters outside Latin-1 (U+0000–U+00FF)
+    // This removes all emoji, CJK, arrows, symbols, etc.
+    .replace(/[^\x00-\xFF]/g, "")
+    .trim();
+}
+
 function buildEscPos(lines: { text: string; bold?: boolean; center?: boolean; size?: "normal" | "large" | "small"; divider?: boolean }[]): Buffer {
   const ESC = 0x1b;
   const GS = 0x1d;
   const chunks: Buffer[] = [];
 
   const cmd = (...bytes: number[]) => chunks.push(Buffer.from(bytes));
-  const text = (str: string) => chunks.push(Buffer.from(str + "\n", "utf8"));
+  const text = (str: string) => chunks.push(Buffer.from(sanitizeText(str) + "\n", "latin1"));
 
   // Initialize
   cmd(ESC, 0x40);
@@ -124,11 +144,18 @@ const PRINTER_IP   = process.env.PRINTER_IP   || '192.168.8.195';
 const PRINTER_PORT = parseInt(process.env.PRINTER_PORT || '9100');
 const BRIDGE_PORT  = parseInt(process.env.PORT || '8765');
 
+function sanitize(s) {
+  return s
+    .replace(/[\\u2018\\u2019]/g, "'").replace(/[\\u201C\\u201D]/g, '"')
+    .replace(/\\u2014/g, '-').replace(/\\u2013/g, '-').replace(/\\u2026/g, '...')
+    .replace(/[^\\x00-\\xFF]/g, '').trim();
+}
+
 function buildEscPos(lines) {
   const ESC = 0x1b, GS = 0x1d;
   const chunks = [];
   const cmd  = (...b) => chunks.push(Buffer.from(b));
-  const text = (s)    => chunks.push(Buffer.from(s + '\\n', 'utf8'));
+  const text = (s)    => chunks.push(Buffer.from(sanitize(s) + '\\n', 'latin1'));
 
   cmd(ESC, 0x40);       // initialize
   cmd(ESC, 0x74, 0x10); // UTF-8 code page
