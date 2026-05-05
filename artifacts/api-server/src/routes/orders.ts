@@ -509,8 +509,13 @@ router.post("/orders", async (req, res): Promise<void> => {
   res.status(201).json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    const cause = err instanceof Error && err.cause instanceof Error
+      ? err.cause.message
+      : err instanceof Error && err.cause
+        ? String(err.cause)
+        : undefined;
     req.log.error({ err }, "order creation failed");
-    res.status(500).json({ error: "Order failed", detail: message });
+    res.status(500).json({ error: "Order failed", detail: message, cause });
   }
 });
 

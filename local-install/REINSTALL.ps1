@@ -129,6 +129,7 @@ if ($pgCmd) {
     Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
     $ErrorActionPreference = $prev
     Write-OK "PostgreSQL user and database ready."
+
 } else {
     Write-Warn "psql not found. Skipping database creation."
     Write-Warn "If the database does not exist, the server will fail to start."
@@ -174,6 +175,15 @@ if ($pgCmd) {
     Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
     Remove-Item $schemaTmp -Force -ErrorAction SilentlyContinue
     Write-OK "Database schema applied (all tables created/updated)."
+
+    # Grant table + sequence access to ituser (in case tables were created by postgres)
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $env:PGPASSWORD = $PgSuperPass
+    & $pgCmd -U postgres -h localhost -d islandtacos -q -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ituser; GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ituser; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ituser; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ituser;" 2>$null
+    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    $ErrorActionPreference = $prev
+    Write-OK "Table and sequence permissions granted to ituser."
 } else {
     Write-Warn "Skipping schema migration (psql not found)."
 }
