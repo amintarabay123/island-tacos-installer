@@ -251,7 +251,82 @@ router.get("/download/frontend", (req: Request, res: Response): void => {
   }, 3000);
   req.on("close", () => clearInterval(poll));
 });
+// Pre-filled .env — requires ?pin=ADMIN_PIN query param
+// Injects all known secrets so the local server needs no manual editing
+router.get("/download/env", (req: Request, res: Response): void => {
+  const pin = req.query.pin as string | undefined;
+  if (!pin || pin !== process.env.ADMIN_PIN) {
+    res.status(401).json({ error: "Invalid or missing pin" });
+    return;
+  }
+
+  const ip        = process.env.LOCAL_SERVER_IP ?? "192.168.132.100";
+  const port      = "3001";
+  const publicUrl = `http://${ip}:${port}`;
+
+  const env = [
+    "# Island Tacos — Local Server Configuration (pre-filled by cloud server)",
+    "# Generated: " + new Date().toISOString(),
+    "",
+    "# ── PostgreSQL ──────────────────────────────────────────────────────────────",
+    "# Replace YOUR_DB_PASSWORD with your PostgreSQL password",
+    "DATABASE_URL=postgresql://ituser:YOUR_DB_PASSWORD@localhost:5432/islandtacos",
+    "",
+    "# ── Server ───────────────────────────────────────────────────────────────────",
+    `PORT=${port}`,
+    "NODE_ENV=production",
+    `PUBLIC_URL=${publicUrl}`,
+    "SERVE_STATIC_PATH=./artifacts/island-tacos/dist/public",
+    "",
+    "# ── Security ─────────────────────────────────────────────────────────────────",
+    `SESSION_SECRET=${process.env.SESSION_SECRET ?? ""}`,
+    `ADMIN_PIN=${process.env.ADMIN_PIN ?? ""}`,
+    `STAFF_PIN=${process.env.STAFF_PIN ?? ""}`,
+    "",
+    "# ── ATH Móvil ────────────────────────────────────────────────────────────────",
+    `ATHMOVIL_PUBLIC_TOKEN=${process.env.ATHMOVIL_PUBLIC_TOKEN ?? ""}`,
+    `ATHMOVIL_PRIVATE_TOKEN=${process.env.ATHMOVIL_PRIVATE_TOKEN ?? ""}`,
+    "",
+    "# ── Email ────────────────────────────────────────────────────────────────────",
+    `SMTP_PASSWORD=${process.env.SMTP_PASSWORD ?? ""}`,
+    "SMTP_HOST=smtp.gmail.com",
+    "SMTP_PORT=587",
+    `SMTP_USER=${process.env.SMTP_USER ?? "orders@islandtacosbvi.com"}`,
+    "",
+    "# ── Object Storage ───────────────────────────────────────────────────────────",
+    `DEFAULT_OBJECT_STORAGE_BUCKET_ID=${process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? ""}`,
+    `PRIVATE_OBJECT_DIR=${process.env.PRIVATE_OBJECT_DIR ?? ""}`,
+    `PUBLIC_OBJECT_SEARCH_PATHS=${process.env.PUBLIC_OBJECT_SEARCH_PATHS ?? ""}`,
+    "",
+    "# ── Cloud Sync ───────────────────────────────────────────────────────────────",
+    "SYNC_TARGET_URL=https://orders.islandtacosbvi.com",
+    `SYNC_SECRET=${process.env.SYNC_SECRET ?? ""}`,
+    "",
+    "# ── Vapi (AI Phone) ──────────────────────────────────────────────────────────",
+    `VAPI_API_KEY=${process.env.VAPI_API_KEY ?? ""}`,
+    `VAPI_WEBHOOK_SECRET=${process.env.VAPI_WEBHOOK_SECRET ?? ""}`,
+    "",
+    "# ── Loyverse ─────────────────────────────────────────────────────────────────",
+    `LOYVERSE_API_TOKEN=${process.env.LOYVERSE_API_TOKEN ?? ""}`,
+    "",
+    "# ── Twilio ───────────────────────────────────────────────────────────────────",
+    `TWILIO_ACCOUNT_SID=${process.env.TWILIO_ACCOUNT_SID ?? ""}`,
+    `TWILIO_AUTH_TOKEN=${process.env.TWILIO_AUTH_TOKEN ?? ""}`,
+    "",
+    "# ── OpenAI ───────────────────────────────────────────────────────────────────",
+    `OPENAI_API_KEY=${process.env.OPENAI_API_KEY ?? ""}`,
+    "",
+    "# ── Local IP (used for ATH webhook registration) ─────────────────────────────",
+    `LOCAL_SERVER_IP=${ip}`,
+  ].join("\n");
+
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename=".env"');
+  res.send(env);
+});
+
 router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "application/octet-stream"));
+router.get("/download/REINSTALL.ps1",        serveFile("local-install/REINSTALL.ps1",           "REINSTALL.ps1",        "application/octet-stream"));
 router.get("/download/update-ip.ps1",        serveFile("local-install/update-ip.ps1",           "update-ip.ps1",        "application/octet-stream"));
 router.get("/download/update-ip.bat",        serveFile("local-install/update-ip.bat",           "update-ip.bat",        "application/octet-stream"));
 router.get("/download/import-sales",         serveFile("local-install/import-sales.cjs",        "import-sales.cjs",     "application/octet-stream"));
