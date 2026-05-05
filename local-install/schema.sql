@@ -183,3 +183,17 @@ ALTER TABLE menu_items  ADD COLUMN IF NOT EXISTS pos_image_url        TEXT;
 ALTER TABLE menu_items  ADD COLUMN IF NOT EXISTS loyverse_modifier_ids TEXT[];
 ALTER TABLE modifiers   ADD COLUMN IF NOT EXISTS unavailable_option_ids TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE modifiers   ADD COLUMN IF NOT EXISTS sort_order            INTEGER NOT NULL DEFAULT 0;
+
+-- ── Sequence sync (safe on fresh and existing DBs) ────────────────────────────
+-- Resets each serial sequence to MAX(id)+1 so inserts never collide with
+-- existing rows (common after restoring a backup or migrating data).
+SELECT setval(pg_get_serial_sequence('orders','id'),         COALESCE(MAX(id),0)+1, false) FROM orders;
+SELECT setval(pg_get_serial_sequence('order_items','id'),    COALESCE(MAX(id),0)+1, false) FROM order_items;
+SELECT setval(pg_get_serial_sequence('menu_categories','id'),COALESCE(MAX(id),0)+1, false) FROM menu_categories;
+SELECT setval(pg_get_serial_sequence('menu_items','id'),     COALESCE(MAX(id),0)+1, false) FROM menu_items;
+SELECT setval(pg_get_serial_sequence('modifiers','id'),      COALESCE(MAX(id),0)+1, false) FROM modifiers;
+SELECT setval(pg_get_serial_sequence('shifts','id'),         COALESCE(MAX(id),0)+1, false) FROM shifts;
+SELECT setval(pg_get_serial_sequence('cash_transactions','id'),COALESCE(MAX(id),0)+1, false) FROM cash_transactions;
+SELECT setval(pg_get_serial_sequence('refunds','id'),        COALESCE(MAX(id),0)+1, false) FROM refunds;
+SELECT setval(pg_get_serial_sequence('customers','id'),      COALESCE(MAX(id),0)+1, false) FROM customers;
+SELECT setval(pg_get_serial_sequence('employees','id'),      COALESCE(MAX(id),0)+1, false) FROM employees;
