@@ -327,6 +327,7 @@ router.get("/download/env", (req: Request, res: Response): void => {
 
 router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "application/octet-stream"));
 router.get("/download/REINSTALL.ps1",        serveFile("local-install/REINSTALL.ps1",           "REINSTALL.ps1",        "application/octet-stream"));
+router.get("/download/schema.sql",           serveFile("local-install/schema.sql",              "schema.sql",           "application/octet-stream"));
 router.get("/download/update-ip.ps1",        serveFile("local-install/update-ip.ps1",           "update-ip.ps1",        "application/octet-stream"));
 router.get("/download/update-ip.bat",        serveFile("local-install/update-ip.bat",           "update-ip.bat",        "application/octet-stream"));
 router.get("/download/import-sales",         serveFile("local-install/import-sales.cjs",        "import-sales.cjs",     "application/octet-stream"));

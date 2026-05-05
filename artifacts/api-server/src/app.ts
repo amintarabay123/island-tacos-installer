@@ -35,7 +35,10 @@ app.use(
 );
 
 // Clerk proxy must come before body parsers (streams raw bytes)
-app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+// Only activate when CLERK_SECRET_KEY is configured (not on local-only installs)
+if (process.env.CLERK_SECRET_KEY) {
+  app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+}
 
 app.use(cors({ origin: true, credentials: true }));
 // Sales import can be several MB

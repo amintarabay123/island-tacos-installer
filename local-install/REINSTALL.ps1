@@ -2,59 +2,77 @@
 <#
 .SYNOPSIS
     Island Tacos — Complete clean reinstall on Windows local server.
-    Downloads everything fresh from the cloud. Only asks for your DB password.
+    Downloads everything fresh from the cloud. Only asks for 2 things:
+      1. Your Admin PIN
+      2. Your PostgreSQL password (data1234 unless you changed it)
 
 .USAGE
-    PowerShell (as Administrator):
-        Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-        .\REINSTALL.ps1
-
-    Or run directly from the cloud (no need to download first):
+    Option A — Run directly from the cloud (no download needed):
         Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
         irm https://orders.islandtacosbvi.com/api/download/REINSTALL.ps1 | iex
+
+    Option B — Download first, then run:
+        Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+        Invoke-WebRequest https://orders.islandtacosbvi.com/api/download/REINSTALL.ps1 -OutFile REINSTALL.ps1
+        .\REINSTALL.ps1
 #>
 
 $ErrorActionPreference = "Stop"
-$CLOUD = "https://orders.islandtacosbvi.com"
+$CLOUD       = "https://orders.islandtacosbvi.com"
 $INSTALL_DIR = "C:\IslandTacos"
 
-function Write-Step { param($msg) Write-Host "`n>>> $msg" -ForegroundColor Cyan }
-function Write-OK   { param($msg) Write-Host "    OK  $msg" -ForegroundColor Green }
-function Write-Fail { param($msg) Write-Host "    ERR $msg" -ForegroundColor Red; exit 1 }
+function Write-Step  { param($msg) Write-Host "`n>>> $msg" -ForegroundColor Cyan }
+function Write-OK    { param($msg) Write-Host "    [OK]  $msg" -ForegroundColor Green }
+function Write-Warn  { param($msg) Write-Host "    [!!]  $msg" -ForegroundColor Yellow }
+function Write-Fail  { param($msg) Write-Host "`n[FAILED] $msg" -ForegroundColor Red; exit 1 }
 
 Write-Host ""
-Write-Host "============================================" -ForegroundColor Yellow
-Write-Host "   Island Tacos — Fresh Install" -ForegroundColor Yellow
-Write-Host "============================================" -ForegroundColor Yellow
+Write-Host "================================================" -ForegroundColor Yellow
+Write-Host "   Island Tacos — Fresh Install / Reinstall" -ForegroundColor Yellow
+Write-Host "================================================" -ForegroundColor Yellow
+Write-Host ""
+Write-Host " This script will:" -ForegroundColor White
+Write-Host "   1. Stop any running instance" -ForegroundColor Gray
+Write-Host "   2. Set up the PostgreSQL database" -ForegroundColor Gray
+Write-Host "   3. Apply/update the database schema" -ForegroundColor Gray
+Write-Host "   4. Download all app files from the cloud" -ForegroundColor Gray
+Write-Host "   5. Start the server with PM2" -ForegroundColor Gray
 Write-Host ""
 
-# ── 1. Collect credentials ────────────────────────────────────────────────────
-$AdminPin = Read-Host "Enter your Admin PIN (to authenticate with cloud server)"
+# ── Collect credentials ───────────────────────────────────────────────────────
+
+$AdminPin = Read-Host "Enter your Admin PIN"
 if (-not $AdminPin) { Write-Fail "Admin PIN is required." }
 
-# Verify PIN against cloud server
+# Verify PIN against cloud server before doing anything
+Write-Step "Verifying Admin PIN with cloud server..."
 try {
     $testUrl = "$CLOUD/api/download/env?pin=$([uri]::EscapeDataString($AdminPin))"
     $null = Invoke-WebRequest $testUrl -UseBasicParsing -ErrorAction Stop
-    Write-OK "Admin PIN verified."
+    Write-OK "Admin PIN accepted."
 } catch {
-    Write-Fail "Admin PIN rejected by cloud server. Check your PIN and try again."
+    Write-Fail "Admin PIN rejected. Check your PIN and try again."
 }
 
-$DbPassword = Read-Host "Enter your PostgreSQL password for the 'ituser' account"
-if (-not $DbPassword) { Write-Fail "Database password is required." }
+$DbPassword = Read-Host "Enter your PostgreSQL password for 'ituser' (press Enter for: data1234)"
+if (-not $DbPassword) { $DbPassword = "data1234" }
 
-# ── 2. Stop running PM2 process ───────────────────────────────────────────────
+$PgSuperPass = Read-Host "Enter your PostgreSQL superuser (postgres) password (press Enter for: postgres)"
+if (-not $PgSuperPass) { $PgSuperPass = "postgres" }
+
+# ── Stop running PM2 process ──────────────────────────────────────────────────
+
 Write-Step "Stopping existing PM2 process (if any)..."
 try {
-    pm2 stop island-tacos 2>$null
-    pm2 delete island-tacos 2>$null
-    Write-OK "PM2 process stopped and removed."
+    pm2 stop island-tacos 2>$null | Out-Null
+    pm2 delete island-tacos 2>$null | Out-Null
+    Write-OK "PM2 process stopped."
 } catch {
     Write-OK "No running PM2 process found (that's fine)."
 }
 
-# ── 3. Create directory structure ─────────────────────────────────────────────
+# ── Create directory structure ────────────────────────────────────────────────
+
 Write-Step "Creating install directory: $INSTALL_DIR"
 $dirs = @(
     $INSTALL_DIR,
@@ -67,102 +85,203 @@ foreach ($d in $dirs) {
 }
 Write-OK "Directories ready."
 
-# ── 4. Download pre-filled .env ───────────────────────────────────────────────
-Write-Step "Downloading configuration (.env)..."
-$envUrl = "$CLOUD/api/download/env?pin=$([uri]::EscapeDataString($AdminPin))"
+# ── PostgreSQL: create user and database ──────────────────────────────────────
+
+Write-Step "Setting up PostgreSQL database..."
+
+# Find psql executable
+$pgCmd = $null
+$pgCmdObj = Get-Command psql -ErrorAction SilentlyContinue
+if ($pgCmdObj) {
+    $pgCmd = $pgCmdObj.Source
+} else {
+    $pgPaths = @(
+        "C:\Program Files\PostgreSQL\18\bin\psql.exe",
+        "C:\Program Files\PostgreSQL\17\bin\psql.exe",
+        "C:\Program Files\PostgreSQL\16\bin\psql.exe",
+        "C:\Program Files\PostgreSQL\15\bin\psql.exe",
+        "C:\Program Files\PostgreSQL\14\bin\psql.exe"
+    )
+    foreach ($p in $pgPaths) { if (Test-Path $p) { $pgCmd = $p; break } }
+}
+
+if ($pgCmd) {
+    $env:PGPASSWORD = $PgSuperPass
+
+    # Create ituser and islandtacos database (safe if they already exist)
+    $setupSql = @"
+DO `$`$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ituser') THEN
+    CREATE USER ituser WITH PASSWORD '$DbPassword';
+  ELSE
+    ALTER USER ituser WITH PASSWORD '$DbPassword';
+  END IF;
+END `$`$;
+SELECT 'exists' FROM pg_database WHERE datname = 'islandtacos'
+`$`$ DO `$`$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'islandtacos') THEN
+    PERFORM dblink_exec('dbname=postgres', 'CREATE DATABASE islandtacos OWNER ituser');
+  END IF;
+END `$`$;
+"@
+    # Simpler approach: use separate commands
+    $createUser = "DO `$`$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ituser') THEN CREATE USER ituser WITH PASSWORD '$DbPassword'; ELSE ALTER USER ituser WITH PASSWORD '$DbPassword'; END IF; END `$`$;"
+    $createDb   = "SELECT 'already exists' WHERE EXISTS (SELECT FROM pg_database WHERE datname = 'islandtacos') UNION ALL SELECT 'created' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'islandtacos');"
+
+    # Run as postgres superuser
+    echo $createUser | & $pgCmd -U postgres -h localhost -q 2>$null
+    # Create DB only if not exists (psql -c createdb won't work so use CREATE DATABASE carefully)
+    $env:PGPASSWORD = $PgSuperPass
+    $dbExists = & $pgCmd -U postgres -h localhost -tAq -c "SELECT COUNT(*) FROM pg_database WHERE datname = 'islandtacos';" 2>$null
+    if ($dbExists -eq "0") {
+        & $pgCmd -U postgres -h localhost -q -c "CREATE DATABASE islandtacos OWNER ituser;" 2>$null
+        Write-OK "Database 'islandtacos' created."
+    } else {
+        Write-OK "Database 'islandtacos' already exists."
+    }
+    & $pgCmd -U postgres -h localhost -q -c "GRANT ALL PRIVILEGES ON DATABASE islandtacos TO ituser;" 2>$null
+    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    Write-OK "PostgreSQL user and database ready."
+} else {
+    Write-Warn "psql not found. Skipping database creation."
+    Write-Warn "If the database does not exist, the server will fail to start."
+    Write-Warn "Create it manually: database='islandtacos', user='ituser', password='$DbPassword'"
+}
+
+# ── Download pre-filled .env ──────────────────────────────────────────────────
+
+Write-Step "Downloading configuration (.env from cloud)..."
+$envUrl     = "$CLOUD/api/download/env?pin=$([uri]::EscapeDataString($AdminPin))"
 $envContent = (Invoke-WebRequest $envUrl -UseBasicParsing).Content
 
 # Patch in the actual DB password
 $envContent = $envContent -replace "YOUR_DB_PASSWORD", $DbPassword
 
 $envPath = "$INSTALL_DIR\.env"
-[System.IO.File]::WriteAllText($envPath, $envContent, [System.Text.Encoding]::UTF8)
-Write-OK ".env written to $envPath"
+[System.IO.File]::WriteAllText($envPath, $envContent, (New-Object System.Text.UTF8Encoding $false))
+Write-OK ".env written (all secrets pre-filled)."
 
-# ── 5. Download ecosystem.config.cjs ─────────────────────────────────────────
+# Read LOCAL_SERVER_IP from the .env for use in the success message later
+$localIp = "192.168.132.100"
+foreach ($line in $envContent -split "`n") {
+    $line = $line.Trim()
+    if ($line -match "^LOCAL_SERVER_IP=(.+)$") {
+        $localIp = $Matches[1].Trim()
+        break
+    }
+}
+
+# ── Apply database schema ─────────────────────────────────────────────────────
+
+Write-Step "Applying database schema..."
+if ($pgCmd) {
+    $schemaTmp = "$env:TEMP\island-tacos-schema.sql"
+    Invoke-WebRequest "$CLOUD/api/download/schema.sql" -OutFile $schemaTmp -UseBasicParsing
+    $env:PGPASSWORD = $DbPassword
+    & $pgCmd -U ituser -h localhost -d islandtacos -f $schemaTmp -q 2>&1 | ForEach-Object {
+        if ($_ -match "ERROR") { Write-Warn "Schema: $_" }
+    }
+    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    Remove-Item $schemaTmp -Force -ErrorAction SilentlyContinue
+    Write-OK "Database schema applied (all tables created/updated)."
+} else {
+    Write-Warn "Skipping schema migration (psql not found)."
+}
+
+# ── Download ecosystem.config.cjs ─────────────────────────────────────────────
+
 Write-Step "Downloading PM2 config..."
 Invoke-WebRequest "$CLOUD/api/download/ecosystem.config.cjs" -OutFile "$INSTALL_DIR\local-install\ecosystem.config.cjs" -UseBasicParsing
-Write-OK "ecosystem.config.cjs downloaded."
+Write-OK "PM2 ecosystem config downloaded."
 
-# ── 6. Download server binary ─────────────────────────────────────────────────
-Write-Step "Downloading server binary (index.mjs)..."
+# ── Download server binary ────────────────────────────────────────────────────
+
+Write-Step "Downloading server binary..."
 Invoke-WebRequest "$CLOUD/api/download/server" -OutFile "$INSTALL_DIR\artifacts\api-server\dist\index.mjs" -UseBasicParsing
 Write-OK "Server binary downloaded."
 
-# ── 7. Download and extract frontend ─────────────────────────────────────────
-Write-Step "Downloading frontend bundle (this may take a moment)..."
-$frontendJson  = (Invoke-WebRequest "$CLOUD/api/download/frontend" -UseBasicParsing).Content | ConvertFrom-Json
-$frontendUrl   = $frontendJson.url
-if (-not $frontendUrl) { Write-Fail "Could not get frontend download URL. Try again in a minute." }
+# ── Download and extract frontend ─────────────────────────────────────────────
 
-$frontendTar = "$env:TEMP\island-tacos-frontend.tar.gz"
+Write-Step "Downloading frontend bundle (may take a moment)..."
+$frontendJson = (Invoke-WebRequest "$CLOUD/api/download/frontend" -UseBasicParsing).Content | ConvertFrom-Json
+$frontendUrl  = $frontendJson.url
+if (-not $frontendUrl) { Write-Fail "Could not get frontend download URL. Wait a minute and try again." }
+
+$frontendTar  = "$env:TEMP\island-tacos-frontend.tar.gz"
 Invoke-WebRequest $frontendUrl -OutFile $frontendTar -UseBasicParsing
 Write-OK "Frontend archive downloaded."
 
 Write-Step "Extracting frontend..."
 $frontendDest = "$INSTALL_DIR\artifacts\island-tacos\dist\public"
-
-# Clear old frontend files
 Get-ChildItem $frontendDest -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 
-# Try tar (built into Windows 10+)
-try {
+if (Get-Command tar -ErrorAction SilentlyContinue) {
     tar -xzf $frontendTar -C $frontendDest
     Write-OK "Frontend extracted."
-} catch {
-    Write-Fail "Failed to extract frontend. Make sure tar is available (Windows 10+)."
+} else {
+    Write-Fail "tar not found. Install Windows 10 build 17063+ or extract manually."
 }
 Remove-Item $frontendTar -Force -ErrorAction SilentlyContinue
 
-# ── 8. Verify Node.js and PM2 ─────────────────────────────────────────────────
-Write-Step "Checking Node.js and PM2..."
+# ── Verify Node.js and PM2 ────────────────────────────────────────────────────
+
+Write-Step "Checking Node.js..."
 try {
-    $nodeVer = node --version
+    $nodeVer = node --version 2>&1
     Write-OK "Node.js $nodeVer found."
 } catch {
     Write-Fail "Node.js not found. Install from https://nodejs.org (LTS) and re-run this script."
 }
-try {
-    $pm2Ver = pm2 --version
-    Write-OK "PM2 $pm2Ver found."
-} catch {
+
+Write-Step "Checking PM2..."
+if (-not (Get-Command pm2 -ErrorAction SilentlyContinue)) {
     Write-Step "Installing PM2 globally..."
     npm install -g pm2
     Write-OK "PM2 installed."
+} else {
+    $pm2Ver = pm2 --version 2>&1
+    Write-OK "PM2 $pm2Ver found."
 }
 
-# ── 9. Start server with PM2 ──────────────────────────────────────────────────
+# ── Start server ──────────────────────────────────────────────────────────────
+
 Write-Step "Starting Island Tacos server with PM2..."
 Set-Location $INSTALL_DIR
-pm2 start local-install\ecosystem.config.cjs
+pm2 start "local-install\ecosystem.config.cjs"
 pm2 save
-Write-OK "PM2 process started and saved."
+Write-OK "PM2 started and saved."
 
-# ── 10. Verify server is responding ───────────────────────────────────────────
+# ── Health check ──────────────────────────────────────────────────────────────
+
 Write-Step "Waiting for server to come online..."
-$tries = 0
 $online = $false
-while ($tries -lt 15) {
+for ($i = 0; $i -lt 15; $i++) {
     Start-Sleep -Seconds 2
     try {
         $r = Invoke-WebRequest "http://localhost:3001/api/healthz" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
         if ($r.StatusCode -eq 200) { $online = $true; break }
     } catch {}
-    $tries++
 }
 
+# ── Done ──────────────────────────────────────────────────────────────────────
+
 Write-Host ""
-Write-Host "============================================" -ForegroundColor Yellow
+Write-Host "================================================" -ForegroundColor Yellow
 if ($online) {
-    Write-Host "   Install complete!" -ForegroundColor Green
+    Write-Host "   Install complete and server is running!" -ForegroundColor Green
     Write-Host ""
-    Write-Host "   POS:       http://192.168.132.100:3001/it-dav7dwn8/pos" -ForegroundColor White
-    Write-Host "   Kitchen:   http://192.168.132.100:3001/it-dav7dwn8/kitchen" -ForegroundColor White
-    Write-Host "   Admin:     http://192.168.132.100:3001/it-dav7dwn8/login" -ForegroundColor White
-    Write-Host "   Online:    https://orders.islandtacosbvi.com" -ForegroundColor White
+    Write-Host "   POS:      http://${localIp}:3001/it-dav7dwn8/pos" -ForegroundColor White
+    Write-Host "   Kitchen:  http://${localIp}:3001/it-dav7dwn8/kitchen" -ForegroundColor White
+    Write-Host "   Admin:    http://${localIp}:3001/it-dav7dwn8/login" -ForegroundColor White
+    Write-Host "   Online:   https://orders.islandtacosbvi.com" -ForegroundColor White
+    Write-Host ""
+    Write-Host "   Logs:     pm2 logs island-tacos" -ForegroundColor Gray
+    Write-Host "   Status:   pm2 status" -ForegroundColor Gray
 } else {
-    Write-Host "   Files installed, but server did not respond." -ForegroundColor Red
-    Write-Host "   Check logs with:  pm2 logs island-tacos --lines 30" -ForegroundColor Yellow
+    Write-Host "   Files installed but server did not respond." -ForegroundColor Red
+    Write-Host "   Check logs:  pm2 logs island-tacos --lines 30" -ForegroundColor Yellow
+    Write-Host "   Common fix:  make sure PostgreSQL is running" -ForegroundColor Yellow
 }
-Write-Host "============================================" -ForegroundColor Yellow
+Write-Host "================================================" -ForegroundColor Yellow
 Write-Host ""
