@@ -5,6 +5,7 @@ import { upsertCustomer } from "./customers";
 import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
 import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
+import { pushStatusToCloud } from "../lib/online-orders-sync";
 import nodemailer from "nodemailer";
 
 const mailer = nodemailer.createTransport({
@@ -540,6 +541,56 @@ router.get("/orders/track/:confirmationCode", async (req, res): Promise<void> =>
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
 
+// Local → cloud status write-back endpoint
+// Called by the local server when kitchen/POS changes an online order's status.
+// Cloud updates its DB and fires the customer notification (email + SMS).
+// Protected by SYNC_SECRET — no session auth required.
+router.patch("/orders/sync-status", async (req, res): Promise<void> => {
+  const syncSecret = process.env.SYNC_SECRET;
+  if (!syncSecret || req.headers.authorization !== `Bearer ${syncSecret}`) {
+    res.status(401).json({ error: "Unauthorized" }); return;
+  }
+
+  const { confirmationCode, status, kdsCleared, estimatedReadyAt, cancellationReason } =
+    req.body as {
+      confirmationCode: string;
+      status?: string;
+      kdsCleared?: boolean;
+      estimatedReadyAt?: string | null;
+      cancellationReason?: string | null;
+    };
+
+  if (!confirmationCode) { res.status(400).json({ error: "confirmationCode required" }); return; }
+
+  const updates: Record<string, unknown> = {};
+  if (status !== undefined)            updates.status = status;
+  if (kdsCleared !== undefined)        updates.kdsCleared = kdsCleared;
+  if (estimatedReadyAt !== undefined)  updates.estimatedReadyAt = estimatedReadyAt ? new Date(estimatedReadyAt) : null;
+  if (cancellationReason !== undefined) updates.cancellationReason = cancellationReason ?? null;
+
+  if (Object.keys(updates).length === 0) { res.json({ ok: true }); return; }
+
+  const [order] = await db
+    .update(ordersTable)
+    .set(updates)
+    .where(eq(ordersTable.confirmationCode, confirmationCode))
+    .returning();
+
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+
+  // Cloud fires the customer notification (local server deliberately skips this)
+  if (status === "ready") {
+    if (order.customerEmail) sendReadyEmail(order).catch(() => {});
+    if (order.customerPhone) sendReadySMS(order).catch(() => {});
+  }
+  if (status === "cancelled" && order.customerPhone) {
+    sendCancellationSMS(order, cancellationReason ?? null).catch(() => {});
+  }
+
+  broadcastOrderEvent("order_updated", order.id);
+  res.json({ ok: true });
+});
+
 // Cloud → local sync export endpoint
 // Called by the local server every 5 s to pull new online orders.
 // Protected by a shared SYNC_SECRET bearer token.
@@ -693,29 +744,41 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
     .from(orderItemsTable)
     .where(eq(orderItemsTable.orderId, order.id));
 
-  // Send "ready for pickup" notifications when status transitions to ready
-  if (parsed.data.status === "ready") {
-    if (order.customerEmail) {
-      sendReadyEmail(order).catch((err) =>
-        console.error("[email] ready notification failed:", err?.message)
-      );
-    }
-    if (order.customerPhone) {
-      sendReadySMS(order).catch((err) =>
-        console.error("[sms] ready notification failed:", err?.message)
-      );
-    }
-  }
+  const isLocalMode = !!process.env.SYNC_TARGET_URL;
+  const isOnlineOrder = order.source === "online";
 
-  // Send cancellation SMS for phone/online orders that have a customer phone
-  if (
-    parsed.data.status === "cancelled" &&
-    (order.source === "phone" || order.source === "online") &&
-    order.customerPhone
-  ) {
-    sendCancellationSMS(order, parsed.data.cancellationReason ?? null).catch((err) =>
-      console.error("[sms] cancellation notification failed:", err?.message)
-    );
+  if (isLocalMode && isOnlineOrder) {
+    // Local server: push status back to cloud — cloud handles all notifications.
+    // This avoids duplicate SMS/email (local + cloud both firing).
+    pushStatusToCloud(order.confirmationCode, {
+      status:               parsed.data.status,
+      kdsCleared:           parsed.data.kdsCleared,
+      estimatedReadyAt:     parsed.data.estimatedReadyAt ? new Date(parsed.data.estimatedReadyAt) : undefined,
+      cancellationReason:   parsed.data.cancellationReason,
+    });
+  } else {
+    // Cloud (or local POS orders): send notifications directly from this server.
+    if (parsed.data.status === "ready") {
+      if (order.customerEmail) {
+        sendReadyEmail(order).catch((err) =>
+          console.error("[email] ready notification failed:", err?.message)
+        );
+      }
+      if (order.customerPhone) {
+        sendReadySMS(order).catch((err) =>
+          console.error("[sms] ready notification failed:", err?.message)
+        );
+      }
+    }
+    if (
+      parsed.data.status === "cancelled" &&
+      (order.source === "phone" || order.source === "online") &&
+      order.customerPhone
+    ) {
+      sendCancellationSMS(order, parsed.data.cancellationReason ?? null).catch((err) =>
+        console.error("[sms] cancellation notification failed:", err?.message)
+      );
+    }
   }
 
   broadcastOrderEvent("order_updated", order.id);
