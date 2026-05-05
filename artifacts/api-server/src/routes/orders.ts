@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, inArray, count, or } from "drizzle-orm";
+import { eq, desc, and, inArray, count, or, gte } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable, storeSettingsTable } from "@workspace/db";
 import { upsertCustomer } from "./customers";
 import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
@@ -538,6 +538,77 @@ router.get("/orders/track/:confirmationCode", async (req, res): Promise<void> =>
     .from(orderItemsTable)
     .where(eq(orderItemsTable.orderId, order.id));
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
+});
+
+// Cloud → local sync export endpoint
+// Called by the local server every 5 s to pull new online orders.
+// Protected by a shared SYNC_SECRET bearer token.
+router.get("/orders/online-sync", async (req, res): Promise<void> => {
+  const syncSecret = process.env.SYNC_SECRET;
+  if (!syncSecret || req.headers.authorization !== `Bearer ${syncSecret}`) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const sinceStr = req.query.since as string | undefined;
+  const since = sinceStr ? new Date(sinceStr) : new Date(Date.now() - 2 * 60 * 60 * 1000);
+  if (isNaN(since.getTime())) {
+    res.status(400).json({ error: "Invalid since timestamp" });
+    return;
+  }
+
+  const orders = await db
+    .select()
+    .from(ordersTable)
+    .where(and(eq(ordersTable.source, "online"), gte(ordersTable.createdAt, since)))
+    .orderBy(ordersTable.createdAt);
+
+  if (orders.length === 0) { res.json([]); return; }
+
+  const orderIds = orders.map((o) => o.id);
+  const allItems = await db
+    .select()
+    .from(orderItemsTable)
+    .where(inArray(orderItemsTable.orderId, orderIds));
+
+  const itemsByOrder = new Map<number, typeof allItems>();
+  for (const item of allItems) {
+    const list = itemsByOrder.get(item.orderId) ?? [];
+    list.push(item);
+    itemsByOrder.set(item.orderId, list);
+  }
+
+  const result = orders.map((order) => ({
+    order: {
+      confirmationCode:  order.confirmationCode,
+      customerName:      order.customerName,
+      customerEmail:     order.customerEmail,
+      customerPhone:     order.customerPhone,
+      orderType:         order.orderType,
+      deliveryAddress:   order.deliveryAddress,
+      status:            order.status,
+      paymentStatus:     order.paymentStatus,
+      paymentMethod:     order.paymentMethod,
+      subtotal:          order.subtotal,
+      discountAmount:    order.discountAmount,
+      tax:               order.tax,
+      deliveryFee:       order.deliveryFee,
+      total:             order.total,
+      notes:             order.notes,
+      createdAt:         order.createdAt,
+    },
+    items: (itemsByOrder.get(order.id) ?? []).map((item) => ({
+      menuItemId:         item.menuItemId,
+      menuItemName:       item.menuItemName,
+      menuItemPrice:      item.menuItemPrice,
+      quantity:           item.quantity,
+      notes:              item.notes,
+      modifierSelections: item.modifierSelections,
+      subtotal:           item.subtotal,
+    })),
+  }));
+
+  res.json(result);
 });
 
 router.get("/orders/:id", async (req, res): Promise<void> => {

@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { registerAthMovilWebhook } from "./lib/athmovil-webhook-register";
 import { warmAllMenuImages } from "./routes/image-proxy";
 import { startMidnightResetScheduler } from "./lib/midnight-reset";
+import { startOnlineOrdersSync } from "./lib/online-orders-sync";
 import { pool } from "@workspace/db";
 
 // Keep the server alive through unhandled errors — log them and continue.
@@ -75,6 +76,10 @@ app.listen(port, (err) => {
   // Restore sold-out items to available every night at midnight BVI time.
   // Items in the MISC category are never auto-reset (they're POS-only by design).
   startMidnightResetScheduler();
+
+  // Pull online orders from cloud into local DB every 5 s (local mode only).
+  // Enabled when SYNC_TARGET_URL + SYNC_SECRET are set in .env.
+  startOnlineOrdersSync();
 
   // Register ATH Móvil webhook URL in production only (non-blocking)
   if (process.env["NODE_ENV"] === "production") {
