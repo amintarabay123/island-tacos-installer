@@ -325,6 +325,7 @@ router.get("/orders", async (req, res): Promise<void> => {
 });
 
 router.post("/orders", async (req, res): Promise<void> => {
+  try {
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -506,6 +507,11 @@ router.post("/orders", async (req, res): Promise<void> => {
 
   broadcastOrderEvent("order_created", order.id);
   res.status(201).json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    req.log.error({ err }, "order creation failed");
+    res.status(500).json({ error: "Order failed", detail: message });
+  }
 });
 
 router.get("/orders/track/:confirmationCode", async (req, res): Promise<void> => {
