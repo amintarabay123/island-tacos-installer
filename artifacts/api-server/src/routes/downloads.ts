@@ -230,6 +230,8 @@ function serveFile(filePath: string, filename: string, contentType: string) {
 router.get("/download/INSTALL.bat",          serveFile("INSTALL.bat",                          "INSTALL.bat",          "application/octet-stream"));
 router.get("/download/INSTALL.ps1",          serveFile("INSTALL.ps1",                          "INSTALL.ps1",          "application/octet-stream"));
 router.get("/download/install.sh",           serveFile("install.sh",                           "install.sh",           "application/octet-stream"));
+router.get("/download/UPDATE.bat",           serveFile("UPDATE.bat",                           "UPDATE.bat",           "application/octet-stream"));
+router.get("/download/UPDATE.ps1",           serveFile("UPDATE.ps1",                           "UPDATE.ps1",           "application/octet-stream"));
 router.get("/download/ecosystem.config.cjs", serveFile("local-install/ecosystem.config.cjs",   "ecosystem.config.cjs", "application/octet-stream"));
 router.get("/download/menu-import.sql",      serveFile("local-install/menu-import.sql",         "menu-import.sql",      "application/octet-stream"));
 router.get("/download/menu-patch.sql",       serveFile("local-install/menu-patch.sql",          "menu-patch.sql",       "application/octet-stream"));

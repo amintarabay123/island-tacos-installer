@@ -223,6 +223,18 @@ if (Get-Command tar -ErrorAction SilentlyContinue) {
 }
 Remove-Item $frontendTar -Force -ErrorAction SilentlyContinue
 
+# ── Add firewall rule for Tailscale / LAN access on port 3001 ────────────────
+
+Write-Step "Checking firewall rule for port 3001..."
+$rule = Get-NetFirewallRule -DisplayName "Island Tacos Port 3001" -ErrorAction SilentlyContinue
+if (-not $rule) {
+    New-NetFirewallRule -DisplayName "Island Tacos Port 3001" `
+        -Direction Inbound -Protocol TCP -LocalPort 3001 -Action Allow -Profile Any | Out-Null
+    Write-OK "Firewall rule created (port 3001 open for iPhone/Tailscale access)."
+} else {
+    Write-OK "Firewall rule already exists."
+}
+
 # ── Verify Node.js and PM2 ────────────────────────────────────────────────────
 
 Write-Step "Checking Node.js..."
