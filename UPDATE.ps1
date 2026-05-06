@@ -1,4 +1,4 @@
-# Island Tacos — Update Script
+# Island Tacos - Update Script
 # Downloads the latest pre-built server and frontend from the cloud.
 # No local rebuild needed.
 #
@@ -8,44 +8,46 @@ $ErrorActionPreference = "Stop"
 $CLOUD = "https://orders.islandtacosbvi.com"
 $Root  = "C:\IslandTacos"
 
-function Write-Step { param($msg) Write-Host "`n>>> $msg" -ForegroundColor Cyan }
+function Write-Step { param($msg) Write-Host "" ; Write-Host ">>> $msg" -ForegroundColor Cyan }
 function Write-OK   { param($msg) Write-Host "    [OK]  $msg" -ForegroundColor Green }
 function Write-Warn { param($msg) Write-Host "    [!!]  $msg" -ForegroundColor Yellow }
-function Write-Fail { param($msg) Write-Host "`n[FAILED] $msg" -ForegroundColor Red; Read-Host "Press Enter to exit"; exit 1 }
+function Write-Fail { param($msg) Write-Host "" ; Write-Host "[FAILED] $msg" -ForegroundColor Red; Read-Host "Press Enter to exit"; exit 1 }
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Yellow
-Write-Host "   Island Tacos — Update" -ForegroundColor Yellow
+Write-Host "   Island Tacos - Update" -ForegroundColor Yellow
 Write-Host "============================================" -ForegroundColor Yellow
 Write-Host ""
 
-# ── Step 1: Stop PM2 first — releases the file lock on index.mjs ─────────────
-Write-Step "Stopping server (releases file lock)..."
+# Step 1: Stop PM2 first so index.mjs is not locked
+Write-Step "Stopping server..."
 try { pm2 delete island-tacos 2>$null | Out-Null } catch {}
 Start-Sleep 1
 Write-OK "Server stopped."
 
-# ── Step 2: Download updated PM2 config ──────────────────────────────────────
+# Step 2: Download updated PM2 config
 Write-Step "Downloading PM2 config..."
 try {
     Invoke-WebRequest "$CLOUD/api/download/ecosystem.config.cjs" `
         -OutFile "$Root\local-install\ecosystem.config.cjs" -UseBasicParsing -ErrorAction Stop
     Write-OK "PM2 config updated."
-} catch { Write-Warn "PM2 config download failed: $_ (using existing)" }
+} catch {
+    Write-Warn "PM2 config download failed - using existing file."
+}
 
-# ── Step 3: Download server binary (lock released in step 1) ─────────────────
+# Step 3: Download server binary (file lock released in step 1)
 Write-Step "Downloading server binary..."
 Invoke-WebRequest "$CLOUD/api/download/server" `
     -OutFile "$Root\artifacts\api-server\dist\index.mjs" -UseBasicParsing -ErrorAction Stop
 $sz = (Get-Item "$Root\artifacts\api-server\dist\index.mjs").Length
 Write-OK "Server binary updated ($([math]::Round($sz/1MB, 1)) MB)."
 
-# ── Step 4: Download updated frontend bundle ──────────────────────────────────
-Write-Step "Downloading frontend bundle (may take ~30s)..."
+# Step 4: Download updated frontend bundle
+Write-Step "Downloading frontend bundle (may take 30 seconds)..."
 try {
     $json = (Invoke-WebRequest "$CLOUD/api/download/frontend" -UseBasicParsing -TimeoutSec 120).Content | ConvertFrom-Json
     $url  = $json.url
-    if (-not $url) { throw "No GCS URL returned from server" }
+    if (-not $url) { throw "No download URL returned from server." }
 
     $tar  = "$env:TEMP\island-tacos-frontend.tar.gz"
     Invoke-WebRequest $url -OutFile $tar -UseBasicParsing
@@ -60,10 +62,10 @@ try {
     Write-OK "Frontend extracted."
 } catch {
     Write-Warn "Frontend update skipped: $_"
-    Write-Warn "Server binary was still updated. The existing frontend will be used."
+    Write-Warn "Server binary was still updated. Existing frontend will be used."
 }
 
-# ── Step 5: Ensure firewall rule exists for iPhone/Tailscale access ───────────
+# Step 5: Ensure firewall rule exists for iPhone and Tailscale
 Write-Step "Checking firewall rule for port 3001..."
 $rule = Get-NetFirewallRule -DisplayName "Island Tacos Port 3001" -ErrorAction SilentlyContinue
 if (-not $rule) {
@@ -74,14 +76,14 @@ if (-not $rule) {
     Write-OK "Firewall rule already exists."
 }
 
-# ── Step 6: Start server ──────────────────────────────────────────────────────
+# Step 6: Start server
 Write-Step "Starting server..."
 Set-Location $Root
 pm2 start "local-install\ecosystem.config.cjs"
 pm2 save
 Write-OK "Server started and saved."
 
-# ── Step 7: Health check ──────────────────────────────────────────────────────
+# Step 7: Health check
 Write-Step "Waiting for server to respond..."
 $online = $false
 for ($i = 0; $i -lt 15; $i++) {
@@ -92,7 +94,6 @@ for ($i = 0; $i -lt 15; $i++) {
     } catch {}
 }
 
-# ── Done ──────────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Yellow
 if ($online) {
@@ -102,7 +103,7 @@ if ($online) {
     Write-Host "   Kitchen: http://localhost:3001/it-dav7dwn8/kitchen" -ForegroundColor White
     Write-Host "   Admin:   http://localhost:3001/it-dav7dwn8/admin" -ForegroundColor White
 } else {
-    Write-Host "   Files updated but server health check failed." -ForegroundColor Red
+    Write-Host "   Files updated but health check failed." -ForegroundColor Red
     Write-Host "   Run: pm2 logs island-tacos --lines 30" -ForegroundColor Yellow
 }
 Write-Host "============================================" -ForegroundColor Yellow
