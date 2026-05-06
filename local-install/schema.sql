@@ -173,16 +173,39 @@ CREATE TABLE IF NOT EXISTS store_settings (
 -- Add new columns here as ALTER TABLE ... ADD COLUMN IF NOT EXISTS
 -- so older databases automatically get updates without data loss.
 
-ALTER TABLE orders      ADD COLUMN IF NOT EXISTS kds_cleared         BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE orders      ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;
-ALTER TABLE orders      ADD COLUMN IF NOT EXISTS scheduled_pickup_at TIMESTAMPTZ;
-ALTER TABLE orders      ADD COLUMN IF NOT EXISTS discount_amount      NUMERIC(10,2) NOT NULL DEFAULT 0;
-ALTER TABLE order_items ADD COLUMN IF NOT EXISTS already_made         BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE order_items ADD COLUMN IF NOT EXISTS subtotal             NUMERIC(10,2);
-ALTER TABLE menu_items  ADD COLUMN IF NOT EXISTS pos_image_url        TEXT;
-ALTER TABLE menu_items  ADD COLUMN IF NOT EXISTS loyverse_modifier_ids TEXT[];
-ALTER TABLE modifiers   ADD COLUMN IF NOT EXISTS unavailable_option_ids TEXT[] NOT NULL DEFAULT '{}';
-ALTER TABLE modifiers   ADD COLUMN IF NOT EXISTS sort_order            INTEGER NOT NULL DEFAULT 0;
+-- orders
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS kds_cleared          BOOLEAN      NOT NULL DEFAULT false;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS cancellation_reason  TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS scheduled_pickup_at  TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS estimated_ready_at   TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount       NUMERIC(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee          NUMERIC(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS updated_at            TIMESTAMPTZ  NOT NULL DEFAULT NOW();
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS source                TEXT         NOT NULL DEFAULT 'online';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method        TEXT         NOT NULL DEFAULT 'card';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status        TEXT         NOT NULL DEFAULT 'pending';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_type            TEXT         NOT NULL DEFAULT 'pickup';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address      TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email        TEXT         NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone        TEXT         NOT NULL DEFAULT '';
+-- order_items
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS already_made          BOOLEAN      NOT NULL DEFAULT false;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS subtotal              NUMERIC(10,2);
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS modifier_selections   JSONB;
+-- menu_items
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS pos_image_url          TEXT;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS loyverse_modifier_ids  TEXT[];
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS popular                BOOLEAN      NOT NULL DEFAULT false;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS spicy                  BOOLEAN      NOT NULL DEFAULT false;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS vegetarian             BOOLEAN      NOT NULL DEFAULT false;
+-- modifiers
+ALTER TABLE modifiers ADD COLUMN IF NOT EXISTS unavailable_option_ids  TEXT[]       NOT NULL DEFAULT '{}';
+ALTER TABLE modifiers ADD COLUMN IF NOT EXISTS sort_order              INTEGER      NOT NULL DEFAULT 0;
+-- customers / employees
+ALTER TABLE customers  ADD COLUMN IF NOT EXISTS visit_count            INTEGER      NOT NULL DEFAULT 1;
+ALTER TABLE customers  ADD COLUMN IF NOT EXISTS total_spent            NUMERIC(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE customers  ADD COLUMN IF NOT EXISTS updated_at             TIMESTAMPTZ  NOT NULL DEFAULT NOW();
+ALTER TABLE employees  ADD COLUMN IF NOT EXISTS updated_at             TIMESTAMPTZ  NOT NULL DEFAULT NOW();
 
 -- ── Sequence sync (safe on fresh and existing DBs) ────────────────────────────
 -- Resets each serial sequence to MAX(id)+1 so inserts never collide with
