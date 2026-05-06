@@ -9,7 +9,7 @@ import { setPageMeta } from "@/lib/page-meta";
 
 type ModifierOption = { id: string; name: string; price: number; position: number; allowMultiple?: boolean; maxQuantity?: number };
 type Modifier = { id: number; loyverseId: string; name: string; options: ModifierOption[]; required: boolean; minSelections: number; maxSelections: number | null };
-type MenuCategory = { id: number; name: string; sortOrder: number };
+type MenuCategory = { id: number; name: string; sortOrder: number; sendToKds: boolean };
 type MenuItem = {
   id: number; categoryId: number; name: string; description?: string | null;
   price: number; imageUrl?: string | null; posImageUrl?: string | null; available: boolean;
@@ -2795,6 +2795,11 @@ export default function POS() {
   };
 
   const pushToCart = (item: MenuItem, sels: CartModifier[], note = "") => {
+    // Drinks (sendToKds=false) added to a resumed ticket are marked alreadyMade so they
+    // don't trigger a cancel+recreate of the order or a KDS re-fire.
+    const cat = categories.find(c => c.id === item.categoryId);
+    const isDrink = cat ? !cat.sendToKds : false;
+    const alreadyMade = (resumedOrderId && isDrink) ? true : undefined;
     // Try to merge with existing identical item (only when no note)
     const existingKey = !note ? cart.find(c =>
       c.menuItemId === item.id && c.notes === "" &&
@@ -2803,7 +2808,7 @@ export default function POS() {
     if (existingKey) {
       setCart(cart.map(c => c.key === existingKey ? { ...c, quantity: c.quantity + 1 } : c));
     } else {
-      setCart([...cart, { key: uid(), menuItemId: item.id, name: item.name, price: item.price, quantity: 1, notes: note, modifierSelections: sels }]);
+      setCart([...cart, { key: uid(), menuItemId: item.id, name: item.name, price: item.price, quantity: 1, notes: note, modifierSelections: sels, ...(alreadyMade !== undefined ? { alreadyMade } : {}) }]);
     }
     // Auto-switch to cart panel on mobile
     if (window.innerWidth < 640) setMobileView("cart");
