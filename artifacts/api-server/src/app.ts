@@ -55,18 +55,24 @@ app.use("/api", router);
 // Local mode: serve the built frontend from the same process.
 // SERVE_STATIC_PATH  — path to the island-tacos dist/public folder
 // BASE_PATH          — the URL prefix the frontend was built with (e.g. /it-dav7dwn8)
-//                      Must match the Vite base so asset URLs resolve correctly.
+//
+// Mounted at BOTH basePath and root "/" so the server handles:
+//   - New builds: assets at /it-dav7dwn8/assets/... (via basePath mount)
+//   - Old builds: assets at /assets/...             (via root mount)
 const staticEnv = process.env["SERVE_STATIC_PATH"];
 if (staticEnv) {
   const staticPath = path.resolve(process.cwd(), staticEnv);
-  // Strip trailing slash; default to "" (root) if not set
   const basePath = (process.env["BASE_PATH"] ?? "").replace(/\/$/, "");
   if (existsSync(staticPath)) {
-    // Mount at the base path prefix so /it-dav7dwn8/assets/... resolves to
-    // staticPath/assets/... after Express strips the prefix.
-    app.use(basePath || "/", express.static(staticPath));
-    // SPA fallback — send index.html for any route under the base path
-    app.use(basePath || "/", (_req, res) => {
+    // Mount at base path prefix for builds that embed the prefix in asset URLs
+    if (basePath) {
+      app.use(basePath, express.static(staticPath));
+    }
+    // Always mount at root — catches /assets/... from older builds and
+    // any direct root navigation (e.g. http://ip:3001/)
+    app.use(express.static(staticPath));
+    // SPA fallback — any route not matched above gets index.html
+    app.use((_req, res) => {
       res.sendFile(path.join(staticPath, "index.html"));
     });
     logger.info({ staticPath, basePath: basePath || "/" }, "Serving frontend static files");
