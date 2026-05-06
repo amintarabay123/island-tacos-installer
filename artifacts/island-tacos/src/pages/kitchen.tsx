@@ -386,7 +386,7 @@ export default function Kitchen() {
         const newConfirmed = active.filter((o) =>
           o.status === "confirmed" &&
           !prevIdsRef.current.has(o.id) &&
-          o.items.some(item => !item.alreadyMade)
+          o.items.some(item => !item.alreadyMade && isKdsItem(item))
         );
         if (newConfirmed.length > 0) {
           // Restart the 3-chime burst for this new batch
@@ -436,7 +436,7 @@ export default function Kitchen() {
 
   // Stop the 3-chime burst early if all pending orders are cleared before it finishes.
   useEffect(() => {
-    const hasPending = orders.some((o) => o.status === "confirmed" && o.items.some(item => !item.alreadyMade));
+    const hasPending = orders.some((o) => o.status === "confirmed" && o.items.some(item => !item.alreadyMade && isKdsItem(item)));
     if (!hasPending && chimeIntervalRef.current) {
       clearInterval(chimeIntervalRef.current);
       chimeIntervalRef.current = null;
