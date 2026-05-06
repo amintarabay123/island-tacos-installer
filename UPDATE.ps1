@@ -50,14 +50,18 @@ try {
     if (-not $url) { throw "No download URL returned from server." }
 
     $tar  = "$env:TEMP\island-tacos-frontend.tar.gz"
-    Invoke-WebRequest $url -OutFile $tar -UseBasicParsing
-    Write-OK "Frontend archive downloaded."
+    Invoke-WebRequest $url -OutFile $tar -UseBasicParsing -ErrorAction Stop
+    $tarSize = (Get-Item $tar).Length
+    if ($tarSize -lt 100000) { throw "Downloaded archive is too small ($tarSize bytes) - likely a failed download." }
+    Write-OK "Frontend archive downloaded ($([math]::Round($tarSize/1MB, 1)) MB)."
 
+    # Only clear AFTER successful download - prevents empty directory if download fails
     $dest = "$Root\artifacts\island-tacos\dist\public"
     if (Test-Path $dest) { Get-ChildItem $dest | Remove-Item -Recurse -Force }
     else { New-Item -ItemType Directory -Path $dest -Force | Out-Null }
 
     tar -xzf $tar -C $dest
+    if ($LASTEXITCODE -ne 0) { throw "tar extraction failed (exit code $LASTEXITCODE)." }
     Remove-Item $tar -Force -ErrorAction SilentlyContinue
     Write-OK "Frontend extracted."
 } catch {
