@@ -53,18 +53,23 @@ if (process.env.CLERK_SECRET_KEY) {
 app.use("/api", router);
 
 // Local mode: serve the built frontend from the same process.
-// Set SERVE_STATIC_PATH to the absolute or cwd-relative path of the
-// island-tacos dist/public folder (e.g. ./artifacts/island-tacos/dist/public).
+// SERVE_STATIC_PATH  — path to the island-tacos dist/public folder
+// BASE_PATH          — the URL prefix the frontend was built with (e.g. /it-dav7dwn8)
+//                      Must match the Vite base so asset URLs resolve correctly.
 const staticEnv = process.env["SERVE_STATIC_PATH"];
 if (staticEnv) {
   const staticPath = path.resolve(process.cwd(), staticEnv);
+  // Strip trailing slash; default to "" (root) if not set
+  const basePath = (process.env["BASE_PATH"] ?? "").replace(/\/$/, "");
   if (existsSync(staticPath)) {
-    app.use(express.static(staticPath));
-    // SPA fallback — send index.html for any route not matched above
-    app.use((_req, res) => {
+    // Mount at the base path prefix so /it-dav7dwn8/assets/... resolves to
+    // staticPath/assets/... after Express strips the prefix.
+    app.use(basePath || "/", express.static(staticPath));
+    // SPA fallback — send index.html for any route under the base path
+    app.use(basePath || "/", (_req, res) => {
       res.sendFile(path.join(staticPath, "index.html"));
     });
-    logger.info({ staticPath }, "Serving frontend static files");
+    logger.info({ staticPath, basePath: basePath || "/" }, "Serving frontend static files");
   } else {
     logger.warn({ staticPath }, "SERVE_STATIC_PATH set but directory not found — skipping static serving");
   }

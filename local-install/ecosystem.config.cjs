@@ -33,7 +33,14 @@ module.exports = {
       script: "node",
       args: `--enable-source-maps ${path.join(root, "artifacts/api-server/dist/index.mjs")}`,
       cwd: root,
-      env: loadEnv(envPath),
+      env: {
+        ...loadEnv(envPath),
+        // Hardcoded overrides — these are guaranteed to reach the process
+        // regardless of .env encoding or parsing issues on Windows.
+        PORT: "3001",
+        SERVE_STATIC_PATH: "./artifacts/island-tacos/dist/public",
+        BASE_PATH: "/it-dav7dwn8",
+      },
       watch: false,
       autorestart: true,
       max_restarts: 50,
