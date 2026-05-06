@@ -25,15 +25,14 @@ try { pm2 delete island-tacos 2>$null | Out-Null } catch {}
 Start-Sleep 1
 Write-OK "Server stopped."
 
-# Step 2: Download updated PM2 config
+# Step 2: Download updated PM2 config (hard failure — old config causes silent env var loss)
 Write-Step "Downloading PM2 config..."
-try {
-    Invoke-WebRequest "$CLOUD/api/download/ecosystem.config.cjs" `
-        -OutFile "$Root\local-install\ecosystem.config.cjs" -UseBasicParsing -ErrorAction Stop
-    Write-OK "PM2 config updated."
-} catch {
-    Write-Warn "PM2 config download failed - using existing file."
+Invoke-WebRequest "$CLOUD/api/download/ecosystem.config.cjs" `
+    -OutFile "$Root\local-install\ecosystem.config.cjs" -UseBasicParsing -ErrorAction Stop
+if (-not (Select-String -Path "$Root\local-install\ecosystem.config.cjs" -Pattern "SERVE_STATIC_PATH" -Quiet)) {
+    Write-Fail "Downloaded ecosystem.config.cjs is missing SERVE_STATIC_PATH — aborting."
 }
+Write-OK "PM2 config updated (SERVE_STATIC_PATH verified)."
 
 # Step 3: Download server binary (file lock released in step 1)
 Write-Step "Downloading server binary..."
