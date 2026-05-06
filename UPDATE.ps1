@@ -79,14 +79,26 @@ if (-not $rule) {
     Write-OK "Firewall rule already exists."
 }
 
-# Step 6: Start server
+# Step 6: Self-update — write fresh copies of UPDATE.bat and UPDATE.ps1 to disk.
+# Safe because this script runs from %TEMP%, not from C:\IslandTacos.
+# After this step, future runs of UPDATE.bat always get current scripts.
+Write-Step "Refreshing update scripts on disk..."
+try {
+    Invoke-WebRequest "$CLOUD/api/download/UPDATE.bat" -OutFile "$Root\UPDATE.bat" -UseBasicParsing -ErrorAction Stop
+    Invoke-WebRequest "$CLOUD/api/download/UPDATE.ps1" -OutFile "$Root\UPDATE.ps1" -UseBasicParsing -ErrorAction Stop
+    Write-OK "UPDATE.bat and UPDATE.ps1 refreshed."
+} catch {
+    Write-Warn "Could not refresh update scripts: $_ (non-fatal)"
+}
+
+# Step 7: Start server
 Write-Step "Starting server..."
 Set-Location $Root
 pm2 start "local-install\ecosystem.config.cjs"
 pm2 save
 Write-OK "Server started and saved."
 
-# Step 7: Health check
+# Step 8: Health check
 Write-Step "Waiting for server to respond..."
 $online = $false
 for ($i = 0; $i -lt 15; $i++) {
