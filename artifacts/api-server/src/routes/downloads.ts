@@ -234,14 +234,14 @@ function serveFile(filePath: string, filename: string, contentType: string) {
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 
-router.get("/download/INSTALL.bat",          serveFile("INSTALL.bat",                          "INSTALL.bat",          "application/octet-stream"));
-router.get("/download/INSTALL.ps1",          serveFile("INSTALL.ps1",                          "INSTALL.ps1",          "application/octet-stream"));
-router.get("/download/install.sh",           serveFile("install.sh",                           "install.sh",           "application/octet-stream"));
-router.get("/download/UPDATE.bat",           serveFile("UPDATE.bat",                           "UPDATE.bat",           "application/octet-stream"));
-router.get("/download/UPDATE.ps1",           serveFile("UPDATE.ps1",                           "UPDATE.ps1",           "application/octet-stream"));
-router.get("/download/ecosystem.config.cjs", serveFile("local-install/ecosystem.config.cjs",   "ecosystem.config.cjs", "application/octet-stream"));
-router.get("/download/menu-import.sql",      serveFile("local-install/menu-import.sql",         "menu-import.sql",      "application/octet-stream"));
-router.get("/download/menu-patch.sql",       serveFile("local-install/menu-patch.sql",          "menu-patch.sql",       "application/octet-stream"));
+router.get("/download/INSTALL.bat",          serveFile("INSTALL.bat",                          "INSTALL.bat",          "text/plain; charset=utf-8"));
+router.get("/download/INSTALL.ps1",          serveFile("INSTALL.ps1",                          "INSTALL.ps1",          "text/plain; charset=utf-8"));
+router.get("/download/install.sh",           serveFile("install.sh",                           "install.sh",           "text/plain; charset=utf-8"));
+router.get("/download/UPDATE.bat",           serveFile("UPDATE.bat",                           "UPDATE.bat",           "text/plain; charset=utf-8"));
+router.get("/download/UPDATE.ps1",           serveFile("UPDATE.ps1",                           "UPDATE.ps1",           "text/plain; charset=utf-8"));
+router.get("/download/ecosystem.config.cjs", serveFile("local-install/ecosystem.config.cjs",   "ecosystem.config.cjs", "text/plain; charset=utf-8"));
+router.get("/download/menu-import.sql",      serveFile("local-install/menu-import.sql",         "menu-import.sql",      "text/plain; charset=utf-8"));
+router.get("/download/menu-patch.sql",       serveFile("local-install/menu-patch.sql",          "menu-patch.sql",       "text/plain; charset=utf-8"));
 router.get("/download/server",               serveFile("artifacts/api-server/dist/index.mjs",   "index.mjs",            "application/octet-stream"));
 
 // Frontend dist download — GCS-backed signed URL (bypasses Replit proxy size limit)
@@ -334,12 +334,12 @@ router.get("/download/env", (req: Request, res: Response): void => {
   res.send(env);
 });
 
-router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "application/octet-stream"));
-router.get("/download/REINSTALL.ps1",        serveFile("local-install/REINSTALL.ps1",           "REINSTALL.ps1",        "application/octet-stream"));
-router.get("/download/schema.sql",           serveFile("local-install/schema.sql",              "schema.sql",           "application/octet-stream"));
-router.get("/download/update-ip.ps1",        serveFile("local-install/update-ip.ps1",           "update-ip.ps1",        "application/octet-stream"));
-router.get("/download/update-ip.bat",        serveFile("local-install/update-ip.bat",           "update-ip.bat",        "application/octet-stream"));
-router.get("/download/import-sales",         serveFile("local-install/import-sales.cjs",        "import-sales.cjs",     "application/octet-stream"));
+router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "text/plain; charset=utf-8"));
+router.get("/download/REINSTALL.ps1",        serveFile("local-install/REINSTALL.ps1",           "REINSTALL.ps1",        "text/plain; charset=utf-8"));
+router.get("/download/schema.sql",           serveFile("local-install/schema.sql",              "schema.sql",           "text/plain; charset=utf-8"));
+router.get("/download/update-ip.ps1",        serveFile("local-install/update-ip.ps1",           "update-ip.ps1",        "text/plain; charset=utf-8"));
+router.get("/download/update-ip.bat",        serveFile("local-install/update-ip.bat",           "update-ip.bat",        "text/plain; charset=utf-8"));
+router.get("/download/import-sales",         serveFile("local-install/import-sales.cjs",        "import-sales.cjs",     "text/plain; charset=utf-8"));
 
 router.get("/download/setup-guide", (_req: Request, res: Response): void => {
   const full = path.join(PROJECT_ROOT, "artifacts", "island-tacos", "public", "docs", "install-guide.html");
