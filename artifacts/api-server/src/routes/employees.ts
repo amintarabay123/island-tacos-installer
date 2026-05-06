@@ -85,13 +85,24 @@ router.delete("/employees/:id", requireAdminAuth, async (req, res): Promise<void
 
 // POST /api/employees/verify-pin — used by auth (internal, no auth required)
 export async function verifyPin(pin: string): Promise<{ valid: boolean; role: string; name: string } | null> {
-  await seedFromEnvIfEmpty();
-  const employees = await db.select().from(employeesTable).where(eq(employeesTable.active, true));
-  for (const emp of employees) {
-    const match = await bcrypt.compare(pin, emp.pinHash);
-    if (match) return { valid: true, role: emp.role, name: emp.name };
+  try {
+    await seedFromEnvIfEmpty();
+    const employees = await db.select().from(employeesTable).where(eq(employeesTable.active, true));
+    for (const emp of employees) {
+      const match = await bcrypt.compare(pin, emp.pinHash);
+      if (match) return { valid: true, role: emp.role, name: emp.name };
+    }
+    // DB worked fine — PIN simply didn't match any employee
+    return null;
+  } catch {
+    // DB unavailable (employees table missing, connection error, etc.)
+    // Fall back to direct env var comparison so the system stays operational
+    const adminPin = process.env["ADMIN_PIN"];
+    const staffPin = process.env["STAFF_PIN"];
+    if (adminPin && pin === adminPin) return { valid: true, role: "owner", name: "Owner" };
+    if (staffPin && pin === staffPin) return { valid: true, role: "staff", name: "Staff" };
+    return null;
   }
-  return null;
 }
 
 export default router;
