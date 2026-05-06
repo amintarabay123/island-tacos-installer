@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, menuCategoriesTable, menuItemsTable, modifiersTable, storeSettingsTable } from "@workspace/db";
+import { sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -104,15 +105,15 @@ router.post("/sync/receive", async (req, res): Promise<void> => {
     // Reset sequences so new inserts don't conflict with the restored IDs
     if (categories.length > 0) {
       const maxCatId = Math.max(...categories.map(c => c.id));
-      await tx.execute(`SELECT setval('menu_categories_id_seq', ${maxCatId}, true)`);
+      await tx.execute(sql`SELECT setval('menu_categories_id_seq', ${maxCatId}, true)`);
     }
     if (items.length > 0) {
       const maxItemId = Math.max(...items.map(i => i.id));
-      await tx.execute(`SELECT setval('menu_items_id_seq', ${maxItemId}, true)`);
+      await tx.execute(sql`SELECT setval('menu_items_id_seq', ${maxItemId}, true)`);
     }
     if (modifiers.length > 0) {
       const maxModId = Math.max(...modifiers.map(m => m.id));
-      await tx.execute(`SELECT setval('modifiers_id_seq', ${maxModId}, true)`);
+      await tx.execute(sql`SELECT setval('modifiers_id_seq', ${maxModId}, true)`);
     }
   });
 
@@ -213,15 +214,15 @@ export async function pullMenuFromCloud(): Promise<
     }
     if (categories.length > 0) {
       const maxCatId = Math.max(...categories.map(c => c.id));
-      await tx.execute(`SELECT setval('menu_categories_id_seq', ${maxCatId}, true)`);
+      await tx.execute(sql`SELECT setval('menu_categories_id_seq', ${maxCatId}, true)`);
     }
     if (items.length > 0) {
       const maxItemId = Math.max(...items.map(i => i.id));
-      await tx.execute(`SELECT setval('menu_items_id_seq', ${maxItemId}, true)`);
+      await tx.execute(sql`SELECT setval('menu_items_id_seq', ${maxItemId}, true)`);
     }
     if (modifiers.length > 0) {
       const maxModId = Math.max(...modifiers.map(m => m.id));
-      await tx.execute(`SELECT setval('modifiers_id_seq', ${maxModId}, true)`);
+      await tx.execute(sql`SELECT setval('modifiers_id_seq', ${maxModId}, true)`);
     }
   });
 

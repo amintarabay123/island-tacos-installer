@@ -5,7 +5,7 @@ import { warmAllMenuImages } from "./routes/image-proxy";
 import { startMidnightResetScheduler } from "./lib/midnight-reset";
 import { startOnlineOrdersSync } from "./lib/online-orders-sync";
 import { pullMenuFromCloud } from "./routes/sync";
-import { pool } from "@workspace/db";
+import { pool, db, menuCategoriesTable } from "@workspace/db";
 
 // Keep the server alive through unhandled errors — log them and continue.
 // Without these handlers Node.js 24 exits immediately on any uncaught async error,
@@ -85,19 +85,18 @@ app.listen(port, (err) => {
   // Auto-seed menu from cloud on startup if local DB is empty (local mode only).
   // This fixes fresh installs where schema ran but menu data was never imported.
   if (process.env["SYNC_TARGET_URL"] && process.env["SYNC_SECRET"]) {
-    import("@workspace/db").then(({ db, menuCategoriesTable }) =>
-      db.select({ id: menuCategoriesTable.id }).from(menuCategoriesTable).limit(1)
-    ).then(async (rows) => {
-      if (rows.length === 0) {
-        logger.info("Menu is empty — auto-pulling from cloud...");
-        const result = await pullMenuFromCloud();
-        if ("error" in result) {
-          logger.warn({ err: result.error }, "Auto menu pull failed");
-        } else {
-          logger.info(result, "Menu auto-pulled from cloud on startup");
+    db.select({ id: menuCategoriesTable.id }).from(menuCategoriesTable).limit(1)
+      .then(async (rows) => {
+        if (rows.length === 0) {
+          logger.info("Menu is empty — auto-pulling from cloud...");
+          const result = await pullMenuFromCloud();
+          if ("error" in result) {
+            logger.warn({ err: result.error }, "Auto menu pull failed");
+          } else {
+            logger.info(result, "Menu auto-pulled from cloud on startup");
+          }
         }
-      }
-    }).catch(e => logger.warn({ err: e }, "Menu auto-seed check failed"));
+      }).catch(e => logger.warn({ err: e }, "Menu auto-seed check failed"));
   }
 
   // Register ATH Móvil webhook URL in production only (non-blocking)
