@@ -156,7 +156,13 @@ async function generateAndUploadFrontend(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       const tmp = FRONTEND_CACHE + ".tmp";
       const out = fs.createWriteStream(tmp);
-      const tar = spawn("tar", ["-czf", "-", "-C", distDir, "."]);
+      const tar = spawn("tar", [
+        "-czf", "-",
+        "-C", distDir,
+        "--exclude=./island-tacos-installer.tar.gz", // 51 MB — not needed on mini PC
+        "--exclude=./docs",                          // install docs — not needed at runtime
+        ".",
+      ]);
 
       tar.stdout.pipe(out);
 
