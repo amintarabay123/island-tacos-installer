@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import path from "path";
+import os from "os";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
@@ -20,7 +21,7 @@ const PROJECT_ROOT = path.resolve(__dirname, "..", "..", "..");
 // 3. The download route does a 302 redirect to the GCS URL.
 //    This completely bypasses the Replit reverse proxy size limit.
 
-const INSTALLER_CACHE   = path.join("/tmp", "island-tacos-installer-cache.tar.gz");
+const INSTALLER_CACHE   = path.join(os.tmpdir(), "island-tacos-installer-cache.tar.gz");
 const GCS_OBJECT_NAME   = "installer/island-tacos-installer.tar.gz";
 const MAX_CACHE_AGE_MS  = 12 * 60 * 60 * 1000; // 12 hours
 
@@ -28,7 +29,7 @@ let gcsPublicUrl: string | null = null;
 let generating = false;
 
 // ── Frontend dist — GCS-backed (bypasses Replit proxy size limit) ─────────────
-const FRONTEND_CACHE        = path.join("/tmp", "island-tacos-frontend-cache.tar.gz");
+const FRONTEND_CACHE        = path.join(os.tmpdir(), "island-tacos-frontend-cache.tar.gz");
 const FRONTEND_GCS_OBJECT   = "installer/island-tacos-frontend.tar.gz";
 
 let frontendGcsUrl: string | null = null;
