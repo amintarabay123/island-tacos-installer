@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Store, Users, Plus, Pencil, Trash2, Shield, User, Check, X, CreditCard } from "lucide-react";
+import { ArrowLeft, Save, Store, Users, Plus, Pencil, Trash2, Shield, User, Check, X, CreditCard, RefreshCw } from "lucide-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -125,6 +125,27 @@ export default function AdminSettings() {
     const next = current.includes(id) ? current.filter(m => m !== id) : [...current, id];
     if (next.length === 0) return;
     setForm(f => ({ ...f, online_payment_methods: JSON.stringify(next) }));
+  };
+
+  // ── Cloud sync (local server only) ──
+  const [pulling, setPulling] = useState(false);
+  const handlePullFromCloud = async () => {
+    setPulling(true);
+    try {
+      const res = await fetch(`${API}/api/sync/pull`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Pull failed");
+      toast({ title: `Menu synced from cloud — ${data.categories} categories, ${data.items} items` });
+      // Reload the page so the fresh menu/settings are shown
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (e) {
+      toast({ title: String(e instanceof Error ? e.message : e), variant: "destructive" });
+    } finally {
+      setPulling(false);
+    }
   };
 
   const handleSave = async () => {
@@ -361,6 +382,27 @@ export default function AdminSettings() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-8">
+
+        {/* ── Sync from Cloud (local server only) ── */}
+        <section className="rounded-xl border bg-card p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="font-bold text-base">Sync Menu from Cloud</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Replaces the local menu and settings with the latest data from the cloud. Use this after making menu changes online, or if the local menu is empty.
+              </p>
+            </div>
+            <Button
+              onClick={handlePullFromCloud}
+              disabled={pulling}
+              variant="outline"
+              className="shrink-0"
+            >
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${pulling ? "animate-spin" : ""}`} />
+              {pulling ? "Syncing…" : "Pull from Cloud"}
+            </Button>
+          </div>
+        </section>
 
         {/* ── Business Info ── */}
         <section className="rounded-xl border bg-card p-6 space-y-5">

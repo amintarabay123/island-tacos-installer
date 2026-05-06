@@ -120,6 +120,115 @@ router.post("/sync/receive", async (req, res): Promise<void> => {
   res.json({ ok: true, categories: categories.length, items: items.length, modifiers: modifiers.length });
 });
 
+// ── POST /sync/pull ───────────────────────────────────────────────────────────
+// Pulls the full menu snapshot from the cloud and imports it locally.
+// Called from the local admin UI or on startup when menu is empty.
+// Protected by admin session auth in routes/index.ts.
+router.post("/sync/pull", async (req, res): Promise<void> => {
+  const result = await pullMenuFromCloud();
+  if ("error" in result) {
+    res.status(502).json(result);
+    return;
+  }
+  res.json({ ok: true, ...result });
+});
+
+/**
+ * Pull menu + settings from the cloud into this local database.
+ * Returns an error object on failure or counts on success.
+ * Safe to call on startup — only runs when SYNC_TARGET_URL is configured.
+ */
+export async function pullMenuFromCloud(): Promise<
+  { error: string } | { categories: number; items: number; modifiers: number }
+> {
+  const cloudUrl = process.env["SYNC_TARGET_URL"]?.replace(/\/$/, "");
+  const secret   = process.env["SYNC_SECRET"];
+
+  if (!cloudUrl || !secret) {
+    return { error: "SYNC_TARGET_URL or SYNC_SECRET not set — cannot pull from cloud" };
+  }
+
+  let exportRes: Response;
+  try {
+    exportRes = await fetch(`${cloudUrl}/api/sync/export`, {
+      headers: { "x-sync-secret": secret },
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (err) {
+    return { error: `Network error reaching cloud: ${String(err)}` };
+  }
+
+  if (!exportRes.ok) {
+    const body = await exportRes.text().catch(() => "");
+    return { error: `Cloud export returned ${exportRes.status}: ${body}` };
+  }
+
+  const payload = await exportRes.json() as {
+    categories: (typeof menuCategoriesTable.$inferSelect)[];
+    items:      (typeof menuItemsTable.$inferSelect)[];
+    modifiers:  (typeof modifiersTable.$inferSelect)[];
+    settings:   (typeof storeSettingsTable.$inferSelect)[];
+  };
+
+  const { categories = [], items = [], modifiers = [], settings = [] } = payload;
+
+  await db.transaction(async (tx) => {
+    await tx.delete(modifiersTable);
+    await tx.delete(menuItemsTable);
+    await tx.delete(menuCategoriesTable);
+
+    if (categories.length > 0) {
+      await tx.insert(menuCategoriesTable).values(
+        categories.map(({ id, name, description, icon, sortOrder, sendToKds, loyverseId }) => ({
+          id, name, description, icon, sortOrder, sendToKds, loyverseId: loyverseId ?? null,
+        }))
+      );
+    }
+    if (items.length > 0) {
+      await tx.insert(menuItemsTable).values(
+        items.map(({ id, categoryId, name, description, price, imageUrl, posImageUrl,
+                      available, popular, spicy, vegetarian, sortOrder,
+                      loyverseItemId, loyverseVariantId, loyverseModifierIds }) => ({
+          id, categoryId, name, description, price, imageUrl, posImageUrl,
+          available, popular, spicy, vegetarian, sortOrder,
+          loyverseItemId: loyverseItemId ?? null,
+          loyverseVariantId: loyverseVariantId ?? null,
+          loyverseModifierIds: loyverseModifierIds ?? null,
+        }))
+      );
+    }
+    if (modifiers.length > 0) {
+      await tx.insert(modifiersTable).values(
+        modifiers.map(({ id, loyverseId, name, options, required,
+                         minSelections, maxSelections, sortOrder }) => ({
+          id, loyverseId, name, options, required,
+          minSelections, maxSelections: maxSelections ?? null, sortOrder,
+        }))
+      );
+    }
+    for (const s of settings) {
+      await tx.insert(storeSettingsTable)
+        .values({ key: s.key, value: s.value })
+        .onConflictDoUpdate({ target: storeSettingsTable.key, set: { value: s.value } });
+    }
+    if (categories.length > 0) {
+      const maxCatId = Math.max(...categories.map(c => c.id));
+      await tx.execute(`SELECT setval('menu_categories_id_seq', ${maxCatId}, true)`);
+    }
+    if (items.length > 0) {
+      const maxItemId = Math.max(...items.map(i => i.id));
+      await tx.execute(`SELECT setval('menu_items_id_seq', ${maxItemId}, true)`);
+    }
+    if (modifiers.length > 0) {
+      const maxModId = Math.max(...modifiers.map(m => m.id));
+      await tx.execute(`SELECT setval('modifiers_id_seq', ${maxModId}, true)`);
+    }
+  });
+
+  logger.info({ categories: categories.length, items: items.length, modifiers: modifiers.length }, "Menu pulled from cloud");
+  return { categories: categories.length, items: items.length, modifiers: modifiers.length };
+}
+
 // ── POST /sync/push ───────────────────────────────────────────────────────────
 // Convenience: export local menu and push it to SYNC_TARGET_URL in one call.
 // Called from the admin UI — protected by admin session auth in routes/index.ts.
