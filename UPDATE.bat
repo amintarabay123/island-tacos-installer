@@ -1,22 +1,25 @@
 @echo off
 :: Island Tacos — Update
-:: Always fetches the latest update script from the cloud, then runs it.
-:: This means the update logic is always current — no stale local copy.
+:: Downloads and runs the latest update script directly from the cloud.
 :: Run as Administrator.
 
 setlocal
 set CLOUD=https://orders.islandtacosbvi.com
-set TMPSCRIPT=%TEMP%\island-tacos-update.ps1
 
 echo.
-echo Fetching latest update script from cloud...
+echo ============================================
+echo    Island Tacos - Update
+echo ============================================
+echo.
+echo Downloading and running update from cloud...
+echo.
+
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "Invoke-WebRequest '%CLOUD%/api/download/UPDATE.ps1' -OutFile '%TMPSCRIPT%' -UseBasicParsing"
+  "& ([scriptblock]::Create((Invoke-WebRequest '%CLOUD%/api/download/UPDATE.ps1' -UseBasicParsing).Content))"
 
 if %ERRORLEVEL% neq 0 (
-    echo Failed to download update script. Check your internet connection.
-    pause
-    exit /b 1
+    echo.
+    echo [ERROR] Update did not complete successfully.
+    echo Run as Administrator and check your internet connection.
 )
-
-powershell -NoProfile -ExecutionPolicy Bypass -File "%TMPSCRIPT%"
+pause
