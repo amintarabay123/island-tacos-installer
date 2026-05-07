@@ -23,7 +23,8 @@ Write-Step "Locating PostgreSQL..."
 $psql = $null
 
 # Check PATH first
-$psql = (Get-Command psql -ErrorAction SilentlyContinue)?.Source
+$psqlCmd = Get-Command psql -ErrorAction SilentlyContinue
+if ($psqlCmd) { $psql = $psqlCmd.Source }
 
 # Search common install dirs if not in PATH
 if (-not $psql) {
