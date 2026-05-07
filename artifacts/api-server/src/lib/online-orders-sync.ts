@@ -107,12 +107,15 @@ export function startOnlineOrdersSync(): void {
           })
           .returning({ id: ordersTable.id });
 
-        // Insert items using the new local order ID
+        // Insert items using the new local order ID.
+        // menuItemId is intentionally set to null — the cloud's item IDs won't
+        // match the local DB's IDs, so using the cloud ID would violate the FK
+        // constraint. Name and price are stored directly, so null is safe here.
         if (items.length > 0) {
           await db.insert(orderItemsTable).values(
             items.map((item) => ({
               orderId:            inserted.id,
-              menuItemId:         (item.menuItemId   as number | null) ?? null,
+              menuItemId:         null,
               menuItemName:       item.menuItemName  as string,
               menuItemPrice:      item.menuItemPrice as string,
               quantity:           item.quantity      as number,

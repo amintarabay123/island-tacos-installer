@@ -536,7 +536,8 @@ export default function Kitchen() {
 
   const byCol: Record<string, Order[]> = { new: [], preparing: [], ready: [] };
   for (const o of kdsOrders) {
-    if (o.status === "confirmed") byCol.new.push(o);
+    if (o.status === "pending") continue; // not yet accepted — don't show on KDS
+    else if (o.status === "confirmed") byCol.new.push(o);
     else if (o.status === "preparing") byCol.preparing.push(o);
     else {
       // "ready" and "completed" (paid from POS but kitchen hasn't cleared yet)

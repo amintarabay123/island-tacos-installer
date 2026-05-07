@@ -2480,13 +2480,16 @@ export default function POS() {
   const [allItems, setAllItems] = useState<MenuItem[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
 
+  const _API = import.meta.env.BASE_URL.replace(/\/$/, "");
   useEffect(() => {
     Promise.all([
-      fetch("/api/menu/categories").then(r => r.json()),
-      fetch("/api/menu/items?available=true").then(r => r.json()),
+      fetch(`${_API}/api/menu/categories`, { credentials: "include", headers: authHeaders() }).then(r => r.json()),
+      fetch(`${_API}/api/menu/items?available=true`, { credentials: "include", headers: authHeaders() }).then(r => r.json()),
     ]).then(([cats, items]) => {
-      setCategories(cats);
-      setAllItems(items);
+      setCategories(Array.isArray(cats) ? cats : []);
+      setAllItems(Array.isArray(items) ? items : []);
+    }).catch(err => {
+      console.error("POS menu load failed:", err);
     }).finally(() => setLoadingMenu(false));
   }, []);
 
