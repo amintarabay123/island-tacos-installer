@@ -284,7 +284,7 @@ if ($online) {
     Write-Host ""
     Write-Host "   POS:      http://${localIp}:3001/it-dav7dwn8/pos" -ForegroundColor White
     Write-Host "   Kitchen:  http://${localIp}:3001/it-dav7dwn8/kitchen" -ForegroundColor White
-    Write-Host "   Admin:    http://${localIp}:3001/it-dav7dwn8/login" -ForegroundColor White
+    Write-Host "   Display:  http://${localIp}:3001/display" -ForegroundColor White
     Write-Host "   Online:   https://orders.islandtacosbvi.com" -ForegroundColor White
     Write-Host ""
     Write-Host "   Logs:     pm2 logs island-tacos" -ForegroundColor Gray
