@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, menuCategoriesTable, menuItemsTable, modifiersTable, storeSettingsTable } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -35,6 +35,44 @@ router.patch("/sync/settings", async (req, res): Promise<void> => {
       .values({ key, value })
       .onConflictDoUpdate({ target: storeSettingsTable.key, set: { value, updatedAt: new Date() } });
   }
+  res.json({ ok: true });
+});
+
+// ── POST /sync/soldout/item/:id ───────────────────────────────────────────────
+// Called by local server when a menu item is toggled sold out/available.
+// Protected by X-Sync-Secret header.
+router.post("/sync/soldout/item/:id", async (req, res): Promise<void> => {
+  if (!checkSyncSecret(req, res)) return;
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { available } = req.body as { available?: boolean };
+  if (typeof available !== "boolean") { res.status(400).json({ error: "available (bool) required" }); return; }
+  const [updated] = await db
+    .update(menuItemsTable)
+    .set({ available })
+    .where(eq(menuItemsTable.id, id))
+    .returning({ id: menuItemsTable.id, available: menuItemsTable.available });
+  if (!updated) { res.status(404).json({ error: "Item not found" }); return; }
+  res.json({ ok: true });
+});
+
+// ── POST /sync/soldout/modifier-option ────────────────────────────────────────
+// Called by local server when a modifier option is 86'd or restored.
+// Protected by X-Sync-Secret header.
+router.post("/sync/soldout/modifier-option", async (req, res): Promise<void> => {
+  if (!checkSyncSecret(req, res)) return;
+  const { modifierId, optionId, available } = req.body as { modifierId?: unknown; optionId?: unknown; available?: unknown };
+  const mid = Number(modifierId);
+  if (isNaN(mid) || typeof optionId !== "string" || !optionId || typeof available !== "boolean") {
+    res.status(400).json({ error: "modifierId (number), optionId (string), available (bool) required" });
+    return;
+  }
+  const [modifier] = await db.select().from(modifiersTable).where(eq(modifiersTable.id, mid));
+  if (!modifier) { res.status(404).json({ error: "Modifier not found" }); return; }
+  let ids: string[] = Array.isArray(modifier.unavailableOptionIds) ? [...modifier.unavailableOptionIds] : [];
+  if (!available && !ids.includes(optionId)) ids.push(optionId);
+  else if (available) ids = ids.filter((i) => i !== optionId);
+  await db.update(modifiersTable).set({ unavailableOptionIds: ids }).where(eq(modifiersTable.id, mid));
   res.json({ ok: true });
 });
 

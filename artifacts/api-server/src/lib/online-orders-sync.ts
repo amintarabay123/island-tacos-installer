@@ -33,6 +33,30 @@ export function pushSettingsToCloud(updates: Record<string, string>): void {
   });
 }
 
+export function pushSoldOutItemToCloud(itemId: number, available: boolean): void {
+  const cloudUrl = process.env.SYNC_TARGET_URL?.replace(/\/$/, "");
+  const syncSecret = process.env.SYNC_SECRET;
+  if (!cloudUrl || !syncSecret) return;
+  fetch(`${cloudUrl}/api/sync/soldout/item/${itemId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Sync-Secret": syncSecret },
+    body: JSON.stringify({ available }),
+    signal: AbortSignal.timeout(10_000),
+  }).catch((err) => logger.warn({ err }, "Sold-out item push to cloud failed"));
+}
+
+export function pushSoldOutModifierOptionToCloud(modifierId: number, optionId: string, available: boolean): void {
+  const cloudUrl = process.env.SYNC_TARGET_URL?.replace(/\/$/, "");
+  const syncSecret = process.env.SYNC_SECRET;
+  if (!cloudUrl || !syncSecret) return;
+  fetch(`${cloudUrl}/api/sync/soldout/modifier-option`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Sync-Secret": syncSecret },
+    body: JSON.stringify({ modifierId, optionId, available }),
+    signal: AbortSignal.timeout(10_000),
+  }).catch((err) => logger.warn({ err }, "Sold-out modifier push to cloud failed"));
+}
+
 export function pushStatusToCloud(
   confirmationCode: string,
   updates: {

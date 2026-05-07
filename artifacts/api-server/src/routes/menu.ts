@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, sql, inArray } from "drizzle-orm";
 import { proxyImageUrl, prewarmImageCache } from "./image-proxy";
 import { db, menuCategoriesTable, menuItemsTable, modifiersTable, orderItemsTable } from "@workspace/db";
+import { pushSoldOutItemToCloud, pushSoldOutModifierOptionToCloud } from "../lib/online-orders-sync";
 import {
   CreateMenuCategoryBody,
   UpdateMenuCategoryParams,
@@ -286,6 +287,7 @@ router.post("/menu/soldout/item/:id", async (req, res): Promise<void> => {
     .where(eq(menuItemsTable.id, id))
     .returning({ id: menuItemsTable.id, available: menuItemsTable.available });
   if (!updated) { res.status(404).json({ error: "Item not found" }); return; }
+  pushSoldOutItemToCloud(id, available);
   res.json(updated);
 });
 
@@ -313,6 +315,7 @@ router.post("/menu/soldout/modifier-option", async (req, res): Promise<void> => 
     .set({ unavailableOptionIds: ids })
     .where(eq(modifiersTable.id, mid))
     .returning({ id: modifiersTable.id, unavailableOptionIds: modifiersTable.unavailableOptionIds });
+  pushSoldOutModifierOptionToCloud(mid, optionId, available);
   res.json(updated);
 });
 
