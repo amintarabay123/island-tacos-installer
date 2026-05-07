@@ -23,7 +23,7 @@ import {
 import {
   ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp,
   Settings, Monitor, LogOut, XCircle, BarChart3, Users,
-  CloudUpload, Menu, X, ChefHat, UtensilsCrossed, Store,
+  CloudUpload, CloudDownload, Menu, X, ChefHat, UtensilsCrossed, Store,
   History, ScrollText, LayoutDashboard, CalendarIcon,
 } from "lucide-react";
 import { adminRoutes } from "@/lib/admin-path";
@@ -201,8 +201,8 @@ export default function Admin() {
   const [importMessage, setImportMessage] = useState("");
   const [csvState, setCsvState] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [csvMessage, setCsvMessage] = useState("");
-  const [menuPullState, setMenuPullState] = useState<"idle" | "pulling" | "success" | "error">("idle");
-  const [menuPullMessage, setMenuPullMessage] = useState("");
+  const [pullMenuState, setPullMenuState] = useState<"idle" | "pulling" | "success" | "error">("idle");
+  const [pullMenuMessage, setPullMenuMessage] = useState("");
   const csvInputRef = useRef<HTMLInputElement>(null);
   const prevOrderIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
@@ -237,17 +237,17 @@ export default function Admin() {
     } catch (e) { setSyncState("error"); setSyncMessage(String(e)); }
   };
 
-  const handleMenuPullFromLoyverse = async () => {
-    if (menuPullState === "pulling") return;
-    setMenuPullState("pulling"); setMenuPullMessage("");
+  const handlePullMenuFromCloud = async () => {
+    if (pullMenuState === "pulling") return;
+    setPullMenuState("pulling"); setPullMenuMessage("");
     try {
-      const r = await fetch("/api/loyverse/sync", { method: "POST", credentials: "include", headers: authHeaders() });
+      const r = await fetch("/api/sync/pull", { method: "POST", credentials: "include", headers: authHeaders() });
       const data = await r.json();
-      if (!r.ok) throw new Error(data.error ?? "Sync failed");
-      setMenuPullState("success");
-      setMenuPullMessage(`${data.itemsUpserted ?? 0} items, ${data.modifiers ?? 0} modifiers refreshed`);
-      setTimeout(() => setMenuPullState("idle"), 5000);
-    } catch (e) { setMenuPullState("error"); setMenuPullMessage(String(e)); }
+      if (!r.ok) throw new Error(data.error ?? "Pull failed");
+      setPullMenuState("success");
+      setPullMenuMessage(`${data.items ?? 0} items, ${data.modifiers ?? 0} modifiers pulled from cloud`);
+      setTimeout(() => setPullMenuState("idle"), 5000);
+    } catch (e) { setPullMenuState("error"); setPullMenuMessage(String(e)); }
   };
 
   const handleLoyverseImport = async () => {
@@ -667,6 +667,23 @@ export default function Admin() {
               </Button>
             </div>
 
+            {/* Pull menu from cloud */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-teal-50 p-2 text-teal-600"><CloudDownload className="h-4 w-4" /></div>
+                <div>
+                  <p className="font-semibold text-sm text-slate-700">Pull Menu from Cloud</p>
+                  <p className="text-xs text-slate-400">Resyncs all items &amp; modifiers from the online store to this device</p>
+                  {pullMenuMessage && <p className={`text-xs mt-0.5 ${pullMenuState === "error" ? "text-red-600" : "text-green-600"}`}>{pullMenuMessage}</p>}
+                </div>
+              </div>
+              <Button size="sm" variant="outline" disabled={pullMenuState === "pulling"} onClick={handlePullMenuFromCloud}
+                className={pullMenuState === "success" ? "border-green-500 text-green-700" : pullMenuState === "error" ? "border-red-400 text-red-600" : "border-teal-300 text-teal-700 hover:bg-teal-50"}>
+                <CloudDownload className={`h-4 w-4 mr-1.5 ${pullMenuState === "pulling" ? "animate-pulse" : ""}`} />
+                {pullMenuState === "pulling" ? "Pulling…" : pullMenuState === "success" ? "Done!" : pullMenuState === "error" ? "Retry" : "Pull Now"}
+              </Button>
+            </div>
+
             {/* Loyverse import */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
               <div className="flex items-center gap-3">
@@ -683,23 +700,6 @@ export default function Admin() {
                 className={importState === "success" ? "border-green-500 text-green-700" : importState === "error" ? "border-red-400 text-red-600" : "border-purple-300 text-purple-700 hover:bg-purple-50"}>
                 <History className={`h-4 w-4 mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
                 {importState === "importing" ? "Importing…" : importState === "success" ? "Imported!" : importState === "error" ? "Retry" : "Import Now"}
-              </Button>
-            </div>
-
-            {/* Refresh menu from Loyverse */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-green-50 p-2 text-green-600"><RefreshCw className="h-4 w-4" /></div>
-                <div>
-                  <p className="font-semibold text-sm text-slate-700">Refresh Menu from Loyverse</p>
-                  <p className="text-xs text-slate-400">Re-pulls all items &amp; modifiers from Loyverse into local DB</p>
-                  {menuPullMessage && <p className={`text-xs mt-0.5 ${menuPullState === "error" ? "text-red-600" : "text-green-600"}`}>{menuPullMessage}</p>}
-                </div>
-              </div>
-              <Button size="sm" variant="outline" disabled={menuPullState === "pulling"} onClick={handleMenuPullFromLoyverse}
-                className={menuPullState === "success" ? "border-green-500 text-green-700" : menuPullState === "error" ? "border-red-400 text-red-600" : "border-green-300 text-green-700 hover:bg-green-50"}>
-                <RefreshCw className={`h-4 w-4 mr-1.5 ${menuPullState === "pulling" ? "animate-spin" : ""}`} />
-                {menuPullState === "pulling" ? "Refreshing…" : menuPullState === "success" ? "Done!" : menuPullState === "error" ? "Retry" : "Refresh Now"}
               </Button>
             </div>
 
