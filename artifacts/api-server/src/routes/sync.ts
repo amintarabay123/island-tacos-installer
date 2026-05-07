@@ -126,12 +126,16 @@ router.post("/sync/receive", async (req, res): Promise<void> => {
 // Called from the local admin UI or on startup when menu is empty.
 // Protected by admin session auth in routes/index.ts.
 router.post("/sync/pull", async (req, res): Promise<void> => {
-  const result = await pullMenuFromCloud();
-  if ("error" in result) {
-    res.status(502).json(result);
-    return;
+  try {
+    const result = await pullMenuFromCloud();
+    if ("error" in result) {
+      res.status(502).json(result);
+      return;
+    }
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: `Pull failed: ${String(err)}` });
   }
-  res.json({ ok: true, ...result });
 });
 
 /**
@@ -151,10 +155,13 @@ export async function pullMenuFromCloud(): Promise<
 
   let exportRes: Response;
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30_000);
     exportRes = await fetch(`${cloudUrl}/api/sync/export`, {
       headers: { "x-sync-secret": secret },
-      signal: AbortSignal.timeout(30_000),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
   } catch (err) {
     return { error: `Network error reaching cloud: ${String(err)}` };
   }

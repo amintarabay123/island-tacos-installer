@@ -51,6 +51,13 @@ if (process.env.CLERK_SECRET_KEY) {
 }
 
 app.use("/api", router);
+// If a BASE_PATH is set (local install), also handle BASE_PATH/api/* so that
+// the Vite-built frontend (which prefixes BASE_URL to all fetch calls) can
+// reach the API without the requests falling through to the SPA fallback.
+const runtimeBasePath = (process.env["BASE_PATH"] ?? "").replace(/\/$/, "");
+if (runtimeBasePath) {
+  app.use(`${runtimeBasePath}/api`, router);
+}
 
 // Local mode: serve the built frontend from the same process.
 // SERVE_STATIC_PATH  — path to the island-tacos dist/public folder
