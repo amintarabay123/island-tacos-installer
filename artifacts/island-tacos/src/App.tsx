@@ -81,6 +81,7 @@ function Router() {
       <Route path="/track" component={TrackOrder} />
       <Route path="/account" component={AccountPage} />
       <Route path="/display" component={CustomerDisplay} />
+      {ADMIN_PATH && <Route path={`${ADMIN_PATH}/display`} component={CustomerDisplay} />}
 
       {/* Clerk auth routes */}
       <Route path="/sign-in/*?" component={SignInPage} />
