@@ -334,6 +334,8 @@ router.get("/download/env", (req: Request, res: Response): void => {
   res.send(env);
 });
 
+router.get("/download/FIXDB.ps1",            serveFile("local-install/FIXDB.ps1",               "FIXDB.ps1",            "text/plain; charset=utf-8"));
+router.get("/download/FIXDB.bat",            serveFile("local-install/FIXDB.bat",               "FIXDB.bat",            "text/plain; charset=utf-8"));
 router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "text/plain; charset=utf-8"));
 router.get("/download/REINSTALL.ps1",        serveFile("local-install/REINSTALL.ps1",           "REINSTALL.ps1",        "text/plain; charset=utf-8"));
 router.get("/download/schema.sql",           serveFile("local-install/schema.sql",              "schema.sql",           "text/plain; charset=utf-8"));
