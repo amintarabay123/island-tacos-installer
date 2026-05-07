@@ -1,18 +1,10 @@
 # Island Tacos — Fix Database Connection
 # Run this if you see "password authentication failed for ituser"
 # or if the menu is empty and sync fails.
-#
-# What it does:
-#   1. Reads your current DATABASE_URL from C:\IslandTacos\.env
-#   2. Asks for the correct database password (or resets to a new one)
-#   3. Updates ituser's password in PostgreSQL
-#   4. Updates the .env file with the correct password
-#   5. Re-applies the database schema
-#   6. Restarts the server
 
-$ErrorActionPreference = "Stop"
-$CLOUD = "https://orders.islandtacosbvi.com"
-$Root  = "C:\IslandTacos"
+$ErrorActionPreference = "SilentlyContinue"
+$CLOUD   = "https://orders.islandtacosbvi.com"
+$Root    = "C:\IslandTacos"
 $EnvFile = "$Root\.env"
 
 function Write-Step { param($msg) Write-Host "" ; Write-Host ">>> $msg" -ForegroundColor Cyan }
@@ -26,7 +18,39 @@ Write-Host "   Island Tacos - Fix Database" -ForegroundColor Yellow
 Write-Host "============================================" -ForegroundColor Yellow
 Write-Host ""
 
-# Step 1: Read current DATABASE_URL
+# ── Find psql ────────────────────────────────────────────────────────────────
+Write-Step "Locating PostgreSQL..."
+$psql = $null
+
+# Check PATH first
+$psql = (Get-Command psql -ErrorAction SilentlyContinue)?.Source
+
+# Search common install dirs if not in PATH
+if (-not $psql) {
+    $candidates = @(
+        "C:\Program Files\PostgreSQL\17\bin\psql.exe",
+        "C:\Program Files\PostgreSQL\16\bin\psql.exe",
+        "C:\Program Files\PostgreSQL\15\bin\psql.exe",
+        "C:\Program Files\PostgreSQL\14\bin\psql.exe",
+        "C:\Program Files\PostgreSQL\13\bin\psql.exe"
+    )
+    foreach ($c in $candidates) {
+        if (Test-Path $c) { $psql = $c; break }
+    }
+}
+
+# Last resort: recursive search under Program Files
+if (-not $psql) {
+    $found = Get-ChildItem "C:\Program Files\PostgreSQL" -Filter "psql.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($found) { $psql = $found.FullName }
+}
+
+if (-not $psql) {
+    Write-Fail "psql.exe not found. Make sure PostgreSQL is installed.`nExpected at: C:\Program Files\PostgreSQL\<version>\bin\psql.exe"
+}
+Write-OK "Found psql: $psql"
+
+# ── Read .env ─────────────────────────────────────────────────────────────────
 Write-Step "Reading current configuration..."
 if (-not (Test-Path $EnvFile)) {
     Write-Fail ".env file not found at $EnvFile — please reinstall."
@@ -37,112 +61,92 @@ if (-not $dbUrl) {
     Write-Fail "DATABASE_URL not found in $EnvFile"
 }
 
-$currentPassIsBroken = $dbUrl -match 'YOUR_DB_PASSWORD'
-if ($currentPassIsBroken) {
-    Write-Warn "DATABASE_URL still has placeholder 'YOUR_DB_PASSWORD' — needs your real password."
+if ($dbUrl -match 'YOUR_DB_PASSWORD') {
+    Write-Warn "DATABASE_URL still has placeholder — needs your real password."
 } else {
-    Write-Warn "Testing current connection..."
-    $uri     = [Uri]$dbUrl
-    $dbUser  = $uri.UserInfo.Split(':')[0]
-    $dbPass  = $uri.UserInfo.Split(':')[1]
-    $dbHost  = $uri.Host
-    $dbPort  = if ($uri.Port -gt 0) { $uri.Port } else { 5432 }
-    $dbName  = $uri.AbsolutePath.TrimStart('/')
-
-    $env:PGPASSWORD = $dbPass
-    $testResult = & psql -h $dbHost -p $dbPort -U $dbUser -d $dbName -c "SELECT 1" 2>&1
-    $env:PGPASSWORD = ""
-    if ($LASTEXITCODE -eq 0) {
-        Write-OK "Connection works! Running schema fix anyway..."
-    }
+    Write-OK "DATABASE_URL found."
 }
 
-# Step 2: Ask for the password to use
+# ── Ask for password ──────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "    Enter the database password for the 'ituser' account." -ForegroundColor White
-Write-Host "    (This is the password you chose when you first installed Island Tacos.)" -ForegroundColor Gray
-Write-Host "    If you don't remember it, just type a new password — this script will reset it." -ForegroundColor Gray
+Write-Host "    (The password you chose when you first installed Island Tacos.)" -ForegroundColor Gray
+Write-Host "    If you don't remember it, type a new one — it will be reset." -ForegroundColor Gray
 Write-Host ""
-$newPass = Read-Host "    Database password" -AsSecureString
+$secPass = Read-Host "    Database password" -AsSecureString
 $newPass = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-    [Runtime.InteropServices.Marshal]::SecureStringToBSTR($newPass))
+    [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secPass))
 
-if (-not $newPass) {
-    Write-Fail "No password entered — aborting."
-}
+if (-not $newPass) { Write-Fail "No password entered — aborting." }
 
-# Step 3: Reset ituser's password using postgres superuser
+# ── Reset ituser password (as postgres superuser) ─────────────────────────────
 Write-Step "Resetting ituser password in PostgreSQL..."
 $env:PGPASSWORD = "postgres"
-$result = & psql -h localhost -p 5432 -U postgres -c "
-DO \$\$ BEGIN
+$sql = @"
+DO `$`$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ituser') THEN
     CREATE USER ituser WITH PASSWORD '$newPass';
   ELSE
     ALTER USER ituser WITH PASSWORD '$newPass';
   END IF;
-END \$\$;
-CREATE DATABASE islandtacos OWNER ituser;
-GRANT ALL PRIVILEGES ON DATABASE islandtacos TO ituser;
-" 2>&1
+END `$`$;
+"@
+$r1 = & $psql -h localhost -p 5432 -U postgres -c $sql 2>&1
 $env:PGPASSWORD = ""
 
-# "already exists" for the database is fine
-if ($LASTEXITCODE -ne 0 -and ($result -notmatch 'already exists')) {
-    Write-Warn "Password reset command returned error (may still have worked): $result"
-    Write-Warn "If PostgreSQL superuser password is not 'postgres', you may need to do this manually."
-} else {
-    Write-OK "ituser password updated in PostgreSQL."
-}
+# Create DB and grant (ignore "already exists")
+$env:PGPASSWORD = "postgres"
+$r2 = & $psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE islandtacos OWNER ituser;" 2>&1
+$r3 = & $psql -h localhost -p 5432 -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE islandtacos TO ituser;" 2>&1
+$env:PGPASSWORD = ""
 
-# Step 4: Update .env with correct password
+Write-OK "ituser password set."
+
+# ── Update .env ───────────────────────────────────────────────────────────────
 Write-Step "Updating .env file..."
-$newDbUrl = "postgresql://ituser:${newPass}@localhost:5432/islandtacos"
-$envContent = Get-Content $EnvFile -Raw
-$envContent = $envContent -replace 'DATABASE_URL=.*', "DATABASE_URL=$newDbUrl"
+$newDbUrl    = "postgresql://ituser:${newPass}@localhost:5432/islandtacos"
+$envContent  = Get-Content $EnvFile -Raw
+$envContent  = $envContent -replace 'DATABASE_URL=[^\r\n]*', "DATABASE_URL=$newDbUrl"
 Set-Content $EnvFile $envContent -Encoding UTF8 -NoNewline
-Write-OK ".env updated with new DATABASE_URL."
+Write-OK ".env updated."
 
-# Step 5: Test the new connection
+# ── Test connection ───────────────────────────────────────────────────────────
 Write-Step "Testing new connection..."
 $env:PGPASSWORD = $newPass
-$testResult = & psql -h localhost -p 5432 -U ituser -d islandtacos -c "SELECT 1" 2>&1
+$test = & $psql -h localhost -p 5432 -U ituser -d islandtacos -c "SELECT 1" 2>&1
 $env:PGPASSWORD = ""
-if ($LASTEXITCODE -ne 0) {
-    Write-Warn "Connection test failed: $testResult"
-    Write-Warn "The password may still be wrong, or PostgreSQL may need a restart."
-    Write-Warn "Try: net stop postgresql-x64-17 && net start postgresql-x64-17"
-} else {
+if ($LASTEXITCODE -eq 0) {
     Write-OK "Connection successful!"
+} else {
+    Write-Warn "Connection test failed: $test"
+    Write-Warn "PostgreSQL may need a restart. Try opening Services and restarting postgresql-x64-17."
 }
 
-# Step 6: Re-apply schema
+# ── Apply schema ──────────────────────────────────────────────────────────────
 Write-Step "Applying database schema..."
 try {
     $schemaTmp = "$env:TEMP\it-schema.sql"
     Invoke-WebRequest "$CLOUD/api/download/schema.sql" -OutFile $schemaTmp -UseBasicParsing -ErrorAction Stop
     $env:PGPASSWORD = $newPass
-    $result = & psql -h localhost -p 5432 -U ituser -d islandtacos -f $schemaTmp 2>&1
+    $sr = & $psql -h localhost -p 5432 -U ituser -d islandtacos -f $schemaTmp 2>&1
     Remove-Item $schemaTmp -Force -ErrorAction SilentlyContinue
     $env:PGPASSWORD = ""
-    if ($LASTEXITCODE -ne 0) { throw "psql exited $LASTEXITCODE`n$result" }
+    if ($LASTEXITCODE -ne 0) { throw $sr }
     Write-OK "Schema applied."
 } catch {
-    Write-Warn "Schema step failed: $_ (non-fatal)"
+    Write-Warn "Schema step: $_ (non-fatal — continuing)"
 }
 
-# Step 7: Restart server
+# ── Restart server ────────────────────────────────────────────────────────────
 Write-Step "Restarting server..."
-try {
-    Set-Location $Root
-    pm2 delete island-tacos 2>$null | Out-Null
-} catch {}
-Start-Sleep 1
+try { pm2 delete island-tacos 2>$null | Out-Null } catch {}
+Start-Sleep 2
+Set-Location $Root
 pm2 start "local-install\ecosystem.config.cjs"
 pm2 save
 Write-OK "Server restarted."
 
-# Step 8: Health check
+# ── Health check ──────────────────────────────────────────────────────────────
 Write-Step "Waiting for server to respond..."
 $online = $false
 for ($i = 0; $i -lt 15; $i++) {
