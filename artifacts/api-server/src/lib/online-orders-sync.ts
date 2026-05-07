@@ -11,6 +11,28 @@ const FETCH_TIMEOUT_MS = 30_000;
  * Only does anything when SYNC_TARGET_URL + SYNC_SECRET are configured
  * (i.e. this is the local server, not the cloud itself).
  */
+/**
+ * Push settings changes to the cloud so the online ordering site stays accurate.
+ * Fire-and-forget — only runs on the local server (SYNC_TARGET_URL set).
+ */
+export function pushSettingsToCloud(updates: Record<string, string>): void {
+  const cloudUrl = process.env.SYNC_TARGET_URL?.replace(/\/$/, "");
+  const syncSecret = process.env.SYNC_SECRET;
+  if (!cloudUrl || !syncSecret) return;
+
+  fetch(`${cloudUrl}/api/sync/settings`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Sync-Secret": syncSecret,
+    },
+    body: JSON.stringify(updates),
+    signal: AbortSignal.timeout(10_000),
+  }).catch((err) => {
+    logger.warn({ err }, "Settings push to cloud failed");
+  });
+}
+
 export function pushStatusToCloud(
   confirmationCode: string,
   updates: {

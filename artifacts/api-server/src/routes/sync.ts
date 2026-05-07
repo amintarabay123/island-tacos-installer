@@ -18,6 +18,26 @@ function checkSyncSecret(req: import("express").Request, res: import("express").
   return true;
 }
 
+// ── PATCH /sync/settings ─────────────────────────────────────────────────────
+// Called by the local server when admin saves settings, so the cloud stays in sync.
+// Protected by X-Sync-Secret header.
+router.patch("/sync/settings", async (req, res): Promise<void> => {
+  if (!checkSyncSecret(req, res)) return;
+  const updates = req.body as Record<string, string>;
+  if (!updates || typeof updates !== "object") {
+    res.status(400).json({ error: "Body must be a key-value object" });
+    return;
+  }
+  for (const [key, value] of Object.entries(updates)) {
+    if (typeof value !== "string") continue;
+    await db
+      .insert(storeSettingsTable)
+      .values({ key, value })
+      .onConflictDoUpdate({ target: storeSettingsTable.key, set: { value, updatedAt: new Date() } });
+  }
+  res.json({ ok: true });
+});
+
 // ── GET /sync/export ──────────────────────────────────────────────────────────
 // Returns a full snapshot of the menu for pushing to the cloud.
 // Protected by X-Sync-Secret header.
