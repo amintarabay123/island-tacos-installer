@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db, storeSettingsTable } from "@workspace/db";
+import { pushSettingsToCloud } from "../lib/online-orders-sync";
 
 const router = Router();
 
@@ -103,6 +104,7 @@ router.get("/settings", async (_req, res): Promise<void> => {
 // PATCH /api/settings — admin only (enforced in routes/index.ts)
 router.patch("/settings", async (req, res): Promise<void> => {
   const updates = req.body as Record<string, string>;
+  const saved: Record<string, string> = {};
   for (const [key, value] of Object.entries(updates)) {
     if (typeof value !== "string") continue;
     await db
@@ -112,7 +114,10 @@ router.patch("/settings", async (req, res): Promise<void> => {
         target: storeSettingsTable.key,
         set: { value, updatedAt: new Date() },
       });
+    saved[key] = value;
   }
+  // Push to cloud so online ordering site reflects the change immediately
+  pushSettingsToCloud(saved);
   res.json({ ok: true });
 });
 
