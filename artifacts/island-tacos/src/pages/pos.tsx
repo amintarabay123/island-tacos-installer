@@ -102,38 +102,61 @@ async function printReceiptLines(
 }
 
 function buildReceiptLines(order: Order, tendered?: number): { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean }[] {
+  const W = 32; // Munbyn 58mm paper = 32 chars
+  // Right-aligns `right` against `left`, truncating left if needed
+  const padLine = (left: string, right: string): string => {
+    const maxLeft = W - right.length - 1;
+    const l = left.length > maxLeft ? left.slice(0, maxLeft - 1) + "." : left;
+    return l + " ".repeat(Math.max(1, W - l.length - right.length)) + right;
+  };
+
   const lines: { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean }[] = [];
+
+  // ── Header ──────────────────────────────────────────────────────────────────
+  lines.push({ text: "================================", center: true });
   lines.push({ text: "ISLAND TACOS", bold: true, center: true, size: "large" });
+  lines.push({ text: "================================", center: true });
   lines.push({ text: "Wickhams Cay 1, Road Town, BVI", center: true });
   lines.push({ text: "Tel: (284) 544-8088", center: true });
   lines.push({ divider: true, text: "" });
-  lines.push({ text: `#${order.confirmationCode}  ${new Date(order.createdAt).toLocaleString()}` });
+
+  // ── Order info ──────────────────────────────────────────────────────────────
+  lines.push({ text: `Order #${order.confirmationCode}`, bold: true });
+  lines.push({ text: new Date(order.createdAt).toLocaleString() });
   lines.push({ text: `Customer: ${order.customerName || "Walk-in"}` });
   if (order.customerPhone) lines.push({ text: `Phone: ${order.customerPhone}` });
   lines.push({ text: `Payment: ${PAY_LABEL[order.paymentMethod] ?? order.paymentMethod}` });
   lines.push({ divider: true, text: "" });
+
+  // ── Items ───────────────────────────────────────────────────────────────────
   for (const item of order.items) {
-    lines.push({ text: `${item.quantity}x ${item.menuItemName}`, bold: true });
+    const label = `${item.quantity}x ${item.menuItemName}`;
+    const price = `$${item.subtotal.toFixed(2)}`;
+    lines.push({ text: padLine(label, price), bold: true });
     if (item.modifierSelections?.length) {
       for (const m of item.modifierSelections) {
         lines.push({ text: `  + ${m.name}${m.price > 0 ? ` $${m.price.toFixed(2)}` : ""}` });
       }
     }
     if (item.notes) lines.push({ text: `  Note: ${item.notes}` });
-    lines.push({ text: `$${item.subtotal.toFixed(2)}`, bold: false });
   }
+
+  // ── Totals ──────────────────────────────────────────────────────────────────
   lines.push({ divider: true, text: "" });
-  lines.push({ text: `Subtotal: ${fmt(order.subtotal)}` });
-  if (order.discountAmount > 0) lines.push({ text: `Discount: -${fmt(order.discountAmount)}` });
-  if (order.tax > 0) lines.push({ text: `Tax: ${fmt(order.tax)}` });
+  lines.push({ text: padLine("Subtotal:", fmt(order.subtotal)) });
+  if (order.discountAmount > 0) lines.push({ text: padLine("Discount:", `-${fmt(order.discountAmount)}`) });
+  if (order.tax > 0) lines.push({ text: padLine("Tax:", fmt(order.tax)) });
   lines.push({ text: `TOTAL: ${fmt(order.total)}`, bold: true, size: "large" });
   if (tendered != null) {
-    lines.push({ text: `Tendered: ${fmt(tendered)}` });
-    lines.push({ text: `Change: ${fmt(Math.max(0, tendered - order.total))}` });
+    lines.push({ text: padLine("Tendered:", fmt(tendered)) });
+    lines.push({ text: padLine("Change:", fmt(Math.max(0, tendered - order.total))) });
   }
-  lines.push({ divider: true, text: "" });
-  lines.push({ text: "Thank you for your visit!", center: true });
-  lines.push({ text: "islandtacosbvi.com", center: true });
+
+  // ── Footer ──────────────────────────────────────────────────────────────────
+  lines.push({ text: "================================", center: true });
+  lines.push({ text: "** THANK YOU! **", bold: true, center: true });
+  lines.push({ text: "orders.islandtacosbvi.com", center: true });
+  lines.push({ text: "Hasta luego!", center: true });
   lines.push({ text: "", center: true });
   return lines;
 }
