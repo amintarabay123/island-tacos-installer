@@ -2,7 +2,7 @@ import { Router } from "express";
 
 const router = Router();
 
-const ADMIN_PATH = process.env["ADMIN_PATH"] ?? "it-dav7dwn8";
+const ADMIN_PATH = process.env["ADMIN_PATH"] ?? "admin";
 
 const storeIcons = [
   { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

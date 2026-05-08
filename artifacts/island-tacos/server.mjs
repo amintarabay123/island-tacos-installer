@@ -88,8 +88,45 @@ async function proxyApi(req, res) {
   }
 }
 
+function serveLocalManifest(req, res) {
+  const referer = req.headers["referer"] ?? req.headers["referrer"] ?? "";
+  let pathname = "";
+  try { pathname = new URL(String(referer)).pathname; } catch { /* no-op */ }
+
+  let manifestFile;
+  if (pathname.includes("/pos")) {
+    manifestFile = "manifest-pos.json";
+  } else if (pathname.includes("/kitchen")) {
+    manifestFile = "manifest-kds.json";
+  } else if (pathname.includes("/display")) {
+    manifestFile = "manifest-display.json";
+  } else if (pathname.startsWith("/admin")) {
+    manifestFile = "manifest-admin.json";
+  } else {
+    manifestFile = "site.webmanifest";
+  }
+
+  const manifestPath = join(DIST, manifestFile);
+  readFile(manifestPath)
+    .then(content => {
+      res.writeHead(200, {
+        "Content-Type": "application/manifest+json",
+        "Cache-Control": "no-store",
+      });
+      res.end(content);
+    })
+    .catch(() => {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("Manifest not found");
+    });
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost`);
+
+  if (url.pathname === "/api/manifest.webmanifest") {
+    return serveLocalManifest(req, res);
+  }
 
   if (url.pathname.startsWith("/api")) {
     return proxyApi(req, res);
