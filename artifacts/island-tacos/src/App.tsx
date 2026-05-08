@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef } from "react";
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { ClerkProvider, useClerk } from "@clerk/react";
 import { Toaster } from "@/components/ui/toaster";
@@ -123,7 +123,7 @@ function Router() {
       {/* Catch-all: redirect old /admin paths to 404 so they're invisible */}
       <Route path="/admin" component={NotFound} />
       <Route path="/admin/:rest*" component={NotFound} />
-      <Route path="/kitchen" component={NotFound} />
+      <Route path="/kitchen"><Redirect to={adminRoutes.kitchen} /></Route>
       <Route path="/staff-login" component={NotFound} />
 
       <Route component={NotFound} />

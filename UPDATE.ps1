@@ -112,6 +112,16 @@ try {
     Write-Warn "Schema update skipped: $_ (non-fatal — server may still work)"
 }
 
+# Step 6b: Download updated server.mjs (local proxy server)
+Write-Step "Downloading server.mjs..."
+try {
+    Invoke-WebRequest "$CLOUD/api/download/server.mjs" `
+        -OutFile "$Root\artifacts\island-tacos\server.mjs" -UseBasicParsing -ErrorAction Stop
+    Write-OK "server.mjs updated."
+} catch {
+    Write-Warn "server.mjs update skipped: $_ (non-fatal — existing file will be used)"
+}
+
 # Step 7: Self-update — write fresh copies of UPDATE.bat and UPDATE.ps1 to disk.
 # Safe because this script runs from %TEMP%, not from C:\IslandTacos.
 # After this step, future runs of UPDATE.bat always get current scripts.
@@ -147,9 +157,9 @@ Write-Host "============================================" -ForegroundColor Yello
 if ($online) {
     Write-Host "   Update complete! Server is running." -ForegroundColor Green
     Write-Host ""
-    Write-Host "   POS:     http://localhost:3001/it-dav7dwn8/admin/pos" -ForegroundColor White
-    Write-Host "   Kitchen: http://localhost:3001/it-dav7dwn8/kitchen" -ForegroundColor White
-    Write-Host "   Admin:   http://localhost:3001/it-dav7dwn8/admin" -ForegroundColor White
+    Write-Host "   POS:     http://localhost:3001/admin/pos" -ForegroundColor White
+    Write-Host "   Kitchen: http://localhost:3001/admin/kitchen" -ForegroundColor White
+    Write-Host "   Admin:   http://localhost:3001/admin" -ForegroundColor White
 } else {
     Write-Host "   Files updated but health check failed." -ForegroundColor Red
     Write-Host "   Run: pm2 logs island-tacos --lines 30" -ForegroundColor Yellow

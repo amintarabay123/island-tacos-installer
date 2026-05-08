@@ -490,4 +490,18 @@ router.get("/download/run-import", async (req: Request, res: Response) => {
   }
 });
 
+// ── server.mjs proxy download ──────────────────────────────────────────────────
+// Windows machines can download the latest server.mjs via:
+//   Invoke-WebRequest "$CLOUD/api/download/server.mjs" -OutFile server.mjs
+router.get("/download/server.mjs", (req: Request, res: Response): void => {
+  const serverPath = path.resolve(PROJECT_ROOT, "artifacts", "island-tacos", "server.mjs");
+  if (!fs.existsSync(serverPath)) {
+    res.status(404).json({ error: "server.mjs not found" });
+    return;
+  }
+  res.setHeader("Content-Type", "application/javascript");
+  res.setHeader("Content-Disposition", 'attachment; filename="server.mjs"');
+  res.send(fs.readFileSync(serverPath, "utf-8"));
+});
+
 export default router;
