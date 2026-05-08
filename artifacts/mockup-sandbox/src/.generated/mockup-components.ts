@@ -9,6 +9,6 @@ export const modules: ModuleMap = {
   "./components/mockups/island-templates/DarkVibrant.tsx": () => import("../components/mockups/island-templates/DarkVibrant.tsx"),
   "./components/mockups/pos-dark/DarkDashboard.tsx": () => import("../components/mockups/pos-dark/DarkDashboard.tsx"),
   "./components/mockups/pos-dark/KDS.tsx": () => import("../components/mockups/pos-dark/KDS.tsx"),
-  "./components/mockups/receipt/Receipt.tsx": () => import("../components/mockups/receipt/Receipt.tsx"),
-  "./components/mockups/pos-redesign/SplitPanel.tsx": () => import("../components/mockups/pos-redesign/SplitPanel.tsx")
+  "./components/mockups/pos-redesign/SplitPanel.tsx": () => import("../components/mockups/pos-redesign/SplitPanel.tsx"),
+  "./components/mockups/receipt/Receipt.tsx": () => import("../components/mockups/receipt/Receipt.tsx")
 };
