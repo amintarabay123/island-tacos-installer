@@ -2,7 +2,7 @@
   "name": "Island Tacos — Kitchen",
   "short_name": "IT Kitchen",
   "description": "Island Tacos kitchen display system",
-  "start_url": "/kitchen",
+  "start_url": "/admin/kitchen",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0D0F17",
