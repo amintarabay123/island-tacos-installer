@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const DIST = join(__dirname, "dist", "public");
 const PORT = Number(process.env.PORT ?? 3001);
-const API_URL = process.env.API_SERVER_URL ?? "http://localhost:8080";
+
+// Default to production API so the local POS works without a local API server
+const API_URL = process.env.API_SERVER_URL ?? "https://orders.islandtacosbvi.com";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
