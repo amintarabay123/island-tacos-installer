@@ -2,7 +2,7 @@
   "name": "Island Tacos — POS",
   "short_name": "IT POS",
   "description": "Island Tacos point-of-sale terminal",
-  "start_url": "/pos",
+  "start_url": "/admin/pos",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0D0F17",

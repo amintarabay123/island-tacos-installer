@@ -2,7 +2,7 @@
   "name": "Island Tacos — Admin",
   "short_name": "IT Admin",
   "description": "Island Tacos admin dashboard",
-  "start_url": "/it-admin",
+  "start_url": "/admin",
   "scope": "/",
   "display": "standalone",
   "background_color": "#F5F0E8",
