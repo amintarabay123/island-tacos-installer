@@ -6,6 +6,7 @@ import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
 import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
 import { pushStatusToCloud } from "../lib/online-orders-sync";
+import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp } from "../lib/whatsapp";
 import nodemailer from "nodemailer";
 
 const mailer = nodemailer.createTransport({
@@ -505,6 +506,12 @@ router.post("/orders", async (req, res): Promise<void> => {
       console.error("[email] confirmation failed:", err?.message)
     );
   }
+  // Send WhatsApp confirmation for online orders with a phone number
+  if (order.source !== "pos" && order.customerPhone) {
+    sendOrderConfirmationWhatsApp(order).catch((err) =>
+      console.error("[whatsapp] confirmation failed:", err?.message)
+    );
+  }
 
   broadcastOrderEvent("order_created", order.id);
   res.status(201).json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
@@ -582,6 +589,7 @@ router.patch("/orders/sync-status", async (req, res): Promise<void> => {
   if (status === "ready") {
     if (order.customerEmail) sendReadyEmail(order).catch(() => {});
     if (order.customerPhone) sendReadySMS(order).catch(() => {});
+    if (order.customerPhone) sendOrderReadyWhatsApp(order).catch(() => {});
   }
   if (status === "cancelled" && order.customerPhone) {
     sendCancellationSMS(order, cancellationReason ?? null).catch(() => {});
@@ -767,6 +775,9 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
       if (order.customerPhone) {
         sendReadySMS(order).catch((err) =>
           console.error("[sms] ready notification failed:", err?.message)
+        );
+        sendOrderReadyWhatsApp(order).catch((err) =>
+          console.error("[whatsapp] ready notification failed:", err?.message)
         );
       }
     }

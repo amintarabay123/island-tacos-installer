@@ -22,6 +22,7 @@ import syncRouter from "./sync";
 import downloadsRouter from "./downloads";
 import financialsRouter from "./financials";
 import customsRouter from "./customs";
+import whatsappRouter from "./whatsapp";
 
 const router: IRouter = Router();
 
@@ -45,6 +46,7 @@ router.use(menuRouter);
 router.use(ordersRouter);
 router.use(paymentsRouter);
 router.use(webhooksRouter);
+router.use(whatsappRouter);
 router.use(uploadRouter);
 router.use(displayRouter);
 router.use(posEventsRouter);
