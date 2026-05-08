@@ -58,8 +58,13 @@ async function proxyApi(req, res) {
     });
     clearTimeout(timeout);
 
+    // Headers to drop: Node's fetch() auto-decompresses the body, so we must
+    // NOT forward content-encoding or content-length — the browser would try
+    // to decompress already-decompressed data and get garbage (empty pages).
+    const DROP_HEADERS = new Set(["content-encoding", "content-length", "transfer-encoding"]);
     const resHeaders = {};
     upstream.headers.forEach((v, k) => {
+      if (DROP_HEADERS.has(k.toLowerCase())) return;
       if (k.toLowerCase() === "set-cookie") {
         resHeaders[k] = rewriteSetCookie(v);
       } else {
