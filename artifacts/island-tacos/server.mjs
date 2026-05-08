@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const DIST = join(__dirname, "dist", "public");
-const PORT = Number(process.env.PORT ?? 18184);
+const PORT = Number(process.env.PORT ?? 3001);
+const API_URL = process.env.API_SERVER_URL ?? "http://localhost:8080";
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -26,8 +27,41 @@ const MIME = {
   ".webmanifest": "application/manifest+json",
 };
 
+async function proxyApi(req, res) {
+  const url = `${API_URL}${req.url}`;
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const body = Buffer.concat(chunks);
+
+  const headers = { ...req.headers };
+  delete headers["host"];
+
+  try {
+    const upstream = await fetch(url, {
+      method: req.method,
+      headers,
+      body: body.length > 0 ? body : undefined,
+      redirect: "manual",
+    });
+
+    const resHeaders = {};
+    upstream.headers.forEach((v, k) => { resHeaders[k] = v; });
+    res.writeHead(upstream.status, resHeaders);
+    res.end(Buffer.from(await upstream.arrayBuffer()));
+  } catch (err) {
+    res.writeHead(502, { "Content-Type": "text/plain" });
+    res.end("API proxy error: " + err.message);
+  }
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost`);
+
+  // Proxy all /api requests to the API server
+  if (url.pathname.startsWith("/api")) {
+    return proxyApi(req, res);
+  }
+
   let filePath = join(DIST, url.pathname);
 
   // Try the exact path first
@@ -35,7 +69,7 @@ const server = createServer(async (req, res) => {
     const info = await stat(filePath);
     if (info.isDirectory()) filePath = join(filePath, "index.html");
   } catch {
-    // Not found — SPA fallback to index.html
+    // Not found — SPA fallback to index.html so React Router handles the route
     filePath = join(DIST, "index.html");
   }
 
@@ -47,7 +81,6 @@ const server = createServer(async (req, res) => {
 
     res.writeHead(200, {
       "Content-Type": mime,
-      // No caching for HTML so the SPA always gets the latest shell
       "Cache-Control": isHtml ? "no-store" : "public, max-age=31536000, immutable",
     });
     res.end(content);
@@ -58,5 +91,6 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Serving ${DIST} on port ${PORT}`);
+  console.log(`Island Tacos local server on http://0.0.0.0:${PORT}`);
+  console.log(`API proxied to: ${API_URL}`);
 });
