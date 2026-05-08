@@ -45,13 +45,18 @@ async function proxyApi(req, res) {
   const headers = { ...req.headers };
   delete headers["host"];
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+
   try {
     const upstream = await fetch(url, {
       method: req.method,
       headers,
       body: body.length > 0 ? body : undefined,
       redirect: "manual",
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
 
     const resHeaders = {};
     upstream.headers.forEach((v, k) => {
@@ -71,8 +76,10 @@ async function proxyApi(req, res) {
     res.writeHead(upstream.status, resHeaders);
     res.end(Buffer.from(await upstream.arrayBuffer()));
   } catch (err) {
+    clearTimeout(timeout);
+    const msg = err.name === "AbortError" ? "API proxy timeout (10s)" : "API proxy error: " + err.message;
     res.writeHead(502, { "Content-Type": "text/plain" });
-    res.end("API proxy error: " + err.message);
+    res.end(msg);
   }
 }
 
