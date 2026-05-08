@@ -7,7 +7,6 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const DIST = join(__dirname, "dist", "public");
 const PORT = Number(process.env.PORT ?? 3001);
 
-// Default to production API so the local POS works without a local API server
 const API_URL = process.env.API_SERVER_URL ?? "https://orders.islandtacosbvi.com";
 
 const MIME = {
@@ -29,6 +28,14 @@ const MIME = {
   ".webmanifest": "application/manifest+json",
 };
 
+function rewriteSetCookie(cookieHeader) {
+  // Strip Domain and Secure so cookies work on localhost
+  return cookieHeader
+    .replace(/;\s*Domain=[^;]*/gi, "")
+    .replace(/;\s*Secure/gi, "")
+    .replace(/;\s*SameSite=None/gi, "; SameSite=Lax");
+}
+
 async function proxyApi(req, res) {
   const url = `${API_URL}${req.url}`;
   const chunks = [];
@@ -47,7 +54,20 @@ async function proxyApi(req, res) {
     });
 
     const resHeaders = {};
-    upstream.headers.forEach((v, k) => { resHeaders[k] = v; });
+    upstream.headers.forEach((v, k) => {
+      if (k.toLowerCase() === "set-cookie") {
+        resHeaders[k] = rewriteSetCookie(v);
+      } else {
+        resHeaders[k] = v;
+      }
+    });
+
+    // Handle multiple Set-Cookie headers (fetch merges them — split and rewrite each)
+    const raw = upstream.headers.getSetCookie?.();
+    if (raw && raw.length > 0) {
+      resHeaders["set-cookie"] = raw.map(rewriteSetCookie);
+    }
+
     res.writeHead(upstream.status, resHeaders);
     res.end(Buffer.from(await upstream.arrayBuffer()));
   } catch (err) {
@@ -59,19 +79,16 @@ async function proxyApi(req, res) {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://localhost`);
 
-  // Proxy all /api requests to the API server
   if (url.pathname.startsWith("/api")) {
     return proxyApi(req, res);
   }
 
   let filePath = join(DIST, url.pathname);
 
-  // Try the exact path first
   try {
     const info = await stat(filePath);
     if (info.isDirectory()) filePath = join(filePath, "index.html");
   } catch {
-    // Not found — SPA fallback to index.html so React Router handles the route
     filePath = join(DIST, "index.html");
   }
 
