@@ -54,6 +54,8 @@ TWILIO_FROM_NUMBER = "+14245448088"
 SYNC_SECRET = "sync123"
 SYNC_TARGET_URL = "https://orders.islandtacosbvi.com"
 TWILIO_WHATSAPP_ENABLED = "false"
+META_WHATSAPP_ENABLED = "false"
+META_VERIFY_TOKEN = "island-tacos-verify-2025"
 
 [userenv.production]
 VITE_CLERK_PROXY_URL = "https://order-direct-connect.replit.app/api/__clerk"

@@ -1,11 +1,10 @@
-import twilio from "twilio";
 import OpenAI from "openai";
 import { db, menuCategoriesTable, menuItemsTable, storeSettingsTable } from "@workspace/db";
 import { SETTING_DEFAULTS, formatOpenDays } from "../routes/settings";
 import { logger } from "./logger";
-import { formatBVIPhone } from "./phone-utils";
 
 const STORE_URL = (process.env.STORE_URL ?? "https://orders.islandtacosbvi.com").replace(/\/$/, "");
+const META_API_VERSION = "v21.0";
 
 // ── Conversation memory ───────────────────────────────────────────────────────
 
@@ -130,28 +129,48 @@ export async function handleInboundMessage(fromPhone: string, text: string): Pro
   }
 }
 
-// ── Outbound send helper ──────────────────────────────────────────────────────
+// ── Outbound send via Meta Cloud API ─────────────────────────────────────────
 
 export async function sendWhatsAppMessage(to: string, body: string): Promise<void> {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken  = process.env.TWILIO_AUTH_TOKEN;
-  const from       = process.env.TWILIO_WHATSAPP_FROM;
+  const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
+  const accessToken   = process.env.META_ACCESS_TOKEN;
 
-  if (!accountSid || !authToken || !from) {
-    logger.warn("[whatsapp] Missing TWILIO credentials or TWILIO_WHATSAPP_FROM — skipping outbound message");
+  if (!phoneNumberId || !accessToken) {
+    logger.warn("[whatsapp] Missing META_PHONE_NUMBER_ID or META_ACCESS_TOKEN — skipping");
     return;
   }
 
-  const toFormatted = to.startsWith("whatsapp:")
-    ? to
-    : `whatsapp:${formatBVIPhone(to)}`;
+  // Meta expects digits only, no +, no spaces
+  const toNormalized = to.replace(/\D/g, "");
 
   try {
-    const client = twilio(accountSid, authToken);
-    const msg = await client.messages.create({ from, to: toFormatted, body });
-    logger.info({ sid: msg.sid, to: toFormatted }, "[whatsapp] Message sent");
+    const response = await fetch(
+      `https://graph.facebook.com/${META_API_VERSION}/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: toNormalized,
+          type: "text",
+          text: { body },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      logger.error({ to: toNormalized, status: response.status, errData }, "[whatsapp] Send failed");
+      return;
+    }
+
+    const data = await response.json() as { messages?: { id: string }[] };
+    logger.info({ to: toNormalized, msgId: data.messages?.[0]?.id }, "[whatsapp] Message sent");
   } catch (err) {
-    logger.error({ err, to: toFormatted }, "[whatsapp] Send failed");
+    logger.error({ err, to: toNormalized }, "[whatsapp] Send error");
   }
 }
 

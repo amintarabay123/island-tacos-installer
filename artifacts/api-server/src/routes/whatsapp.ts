@@ -1,76 +1,98 @@
-import { Router, type IRouter } from "express";
-import twilio from "twilio";
-import { handleInboundMessage } from "../lib/whatsapp";
+import express, { Router, type IRouter } from "express";
+import crypto from "crypto";
+import { handleInboundMessage, sendWhatsAppMessage } from "../lib/whatsapp";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-/**
- * POST /whatsapp/webhook
- *
- * Twilio sends an application/x-www-form-urlencoded POST here when a customer
- * messages your WhatsApp Business number.
- *
- * Key fields from Twilio:
- *   Body  — the message text
- *   From  — customer's WhatsApp number, e.g. "whatsapp:+12843402291"
- *   To    — your WhatsApp number, e.g. "whatsapp:+14155238886"
- *
- * We respond with TwiML so Twilio delivers the reply directly.
- * If TWILIO_WHATSAPP_ENABLED is not "true", the endpoint returns 200 with no reply.
- */
-router.post("/whatsapp/webhook", async (req, res): Promise<void> => {
-  // Guard: must be explicitly enabled
-  if (process.env.TWILIO_WHATSAPP_ENABLED !== "true") {
-    res.status(200).send("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>");
-    return;
+// ── Webhook verification (GET) ────────────────────────────────────────────────
+// Meta calls this once when you save the webhook URL in the dashboard.
+// We reply with hub.challenge to confirm ownership.
+
+router.get("/whatsapp/webhook", (req, res): void => {
+  const mode      = req.query["hub.mode"];
+  const token     = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  const verifyToken = process.env.META_VERIFY_TOKEN;
+
+  if (mode === "subscribe" && token === verifyToken) {
+    logger.info("[whatsapp] Webhook verified by Meta");
+    res.status(200).send(challenge);
+  } else {
+    logger.warn({ mode, token }, "[whatsapp] Webhook verification failed");
+    res.status(403).send("Forbidden");
   }
+});
 
-  // Validate Twilio signature when auth token is available
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  if (authToken) {
-    const signature = req.headers["x-twilio-signature"] as string | undefined;
-    const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
-    const params = req.body as Record<string, string>;
+// ── Inbound messages (POST) ───────────────────────────────────────────────────
+// Meta sends JSON here for every inbound WhatsApp message.
+// We reply 200 immediately (Meta retries otherwise) and send the AI reply
+// via a separate outbound API call.
 
-    const valid = twilio.validateRequest(authToken, signature ?? "", url, params);
-    if (!valid) {
-      logger.warn({ url, signature }, "[whatsapp] Invalid Twilio signature — rejecting");
-      res.status(403).send("Forbidden");
-      return;
+router.post("/whatsapp/webhook", async (req, res): Promise<void> => {
+  // Always ack Meta immediately — they retry aggressively on non-200
+  res.status(200).json({ status: "ok" });
+
+  if (process.env.META_WHATSAPP_ENABLED !== "true") return;
+
+  // Verify x-hub-signature-256 when META_APP_SECRET is configured
+  const appSecret = process.env.META_APP_SECRET;
+  if (appSecret) {
+    const rawBody = (req as express.Request & { rawBody?: Buffer }).rawBody;
+    const sig     = (req.headers["x-hub-signature-256"] as string | undefined) ?? "";
+    if (rawBody) {
+      const expected = "sha256=" + crypto.createHmac("sha256", appSecret).update(rawBody).digest("hex");
+      const valid    = sig.length === expected.length &&
+                       crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+      if (!valid) {
+        logger.warn("[whatsapp] Invalid Meta signature — ignoring");
+        return;
+      }
     }
   }
 
-  const body: Record<string, string> = req.body as Record<string, string>;
-  const from    = body.From  ?? "";
-  const msgBody = (body.Body ?? "").trim();
+  // Parse Meta's webhook payload
+  type MetaEntry = {
+    changes?: {
+      value?: {
+        messages?: {
+          from: string;
+          type: string;
+          text?: { body: string };
+          id: string;
+        }[];
+        statuses?: unknown[];
+      };
+      field: string;
+    }[];
+  };
 
-  if (!from || !msgBody) {
-    res.status(200).send("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>");
-    return;
+  const payload = req.body as { object?: string; entry?: MetaEntry[] };
+
+  if (payload.object !== "whatsapp_business_account") return;
+
+  for (const entry of payload.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      if (change.field !== "messages") continue;
+      for (const msg of change.value?.messages ?? []) {
+        if (msg.type !== "text" || !msg.text?.body) continue;
+
+        const from = msg.from; // digits only, e.g. "12845448088"
+        const text = msg.text.body.trim();
+
+        logger.info({ from, text }, "[whatsapp] Inbound message");
+
+        try {
+          const reply = await handleInboundMessage(from, text);
+          await sendWhatsAppMessage(from, reply);
+        } catch (err) {
+          logger.error({ err, from }, "[whatsapp] Handler error");
+          await sendWhatsAppMessage(from, "Sorry, something went wrong. Please call us at (284) 544-8088 🌮");
+        }
+      }
+    }
   }
-
-  logger.info({ from, msgBody }, "[whatsapp] Inbound message");
-
-  let reply: string;
-  try {
-    reply = await handleInboundMessage(from, msgBody);
-  } catch (err) {
-    logger.error({ err }, "[whatsapp] Handler error");
-    reply = "Sorry, something went wrong. Please call us at (284) 544-8088 🌮";
-  }
-
-  // Escape XML special chars in the reply
-  const safe = reply
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-
-  res.setHeader("Content-Type", "text/xml");
-  res.status(200).send(
-    `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${safe}</Message></Response>`
-  );
 });
 
 export default router;
