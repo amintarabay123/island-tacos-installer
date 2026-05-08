@@ -43,8 +43,8 @@ export default function Home() {
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, Record<string, number>>>({});
   const [loadingModifiers, setLoadingModifiers] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
-  const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
-  const handleImgError = (id: string) => setBrokenImages(prev => new Set(prev).add(id));
+  const [brokenImages, setBrokenImages] = useState<Set<number>>(new Set());
+  const handleImgError = (id: number) => setBrokenImages(prev => new Set(prev).add(id));
 
   const { addItem } = useCart();
 
