@@ -19,7 +19,7 @@ qr.add_data(URL); qr.make(fit=True)
 qr_img = qr.make_image(
     image_factory=StyledPilImage,
     module_drawer=RoundedModuleDrawer(radius_ratio=1),
-    color_mask=SolidFillColorMask(back_color=(255,255,255), front_color=DARK),
+    color_mask=SolidFillColorMask(back_color=RED, front_color=DARK),
 ).convert("RGBA")
 print("qr", qr_img.size, flush=True)
 
@@ -29,7 +29,7 @@ W, H = qr_img.size
 ls = int(W * 0.20)
 logo.thumbnail((ls, ls), Image.LANCZOS)
 pad = 14
-bd = Image.new("RGBA", (logo.width+pad*2, logo.height+pad*2), (255,255,255,255))
+bd = Image.new("RGBA", (logo.width+pad*2, logo.height+pad*2), RED + (255,))
 qr_img.paste(bd, ((W-bd.width)//2, (H-bd.height)//2), bd)
 qr_img.paste(logo, ((W-logo.width)//2, (H-logo.height)//2), logo)
 print("logo embedded", flush=True)
@@ -65,14 +65,11 @@ wm_x = (card_w - wm.width) // 2
 wm_y = top_pad
 canvas.paste(wm, (wm_x, wm_y), wm)
 
-# White rounded card with QR
-card_x0 = side_pad - card_pad // 2
-card_y0 = top_pad + wm_h + gap
-card_x1 = card_x0 + W + card_pad
-card_y1 = card_y0 + H + card_pad
-draw.rounded_rectangle([(card_x0, card_y0), (card_x1, card_y1)],
-                       radius=36, fill=(255,255,255,255))
-canvas.paste(qr_img, (card_x0 + card_pad//2, card_y0 + card_pad//2), qr_img)
+# QR directly on red background (no white card)
+qr_x = (card_w - W) // 2
+qr_y = top_pad + wm_h + gap
+canvas.paste(qr_img, (qr_x, qr_y), qr_img)
+card_y1 = qr_y + H
 
 # Text under QR
 tf = ImageFont.truetype(FB, 70)
