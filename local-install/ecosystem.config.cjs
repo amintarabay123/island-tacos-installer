@@ -40,6 +40,7 @@ module.exports = {
         PORT: "3001",
         SERVE_STATIC_PATH: "./artifacts/island-tacos/dist/public",
         BASE_PATH: "/",
+        ADMIN_PATH: "admin",
       },
       watch: false,
       autorestart: true,
