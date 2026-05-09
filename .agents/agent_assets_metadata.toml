@@ -47,3 +47,9 @@ id = "4ew81lxvR2XSTvQ59PgbX"
 uri = "file://island-tacos-export.zip"
 type = "unspecified"
 title = "Island Tacos — Full Project Export (556 MB)"
+
+[[outputs]]
+id = "vRS65f6u8E-25nq9YWoJz"
+uri = "file://exports/island-tacos-order-qr.png"
+type = "image"
+title = "Island Tacos — Online Ordering QR Code"
