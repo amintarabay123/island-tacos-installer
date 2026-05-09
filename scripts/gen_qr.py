@@ -24,13 +24,16 @@ qr_img = qr.make_image(
 print("qr", qr_img.size, flush=True)
 
 # Embed center logo
-logo = Image.open("artifacts/island-tacos/public/logo.png").convert("RGBA")
+logo = Image.open("exports/logo_no_bg.png").convert("RGBA")
 W, H = qr_img.size
-ls = int(W * 0.20)
+ls = int(W * 0.26)
 logo.thumbnail((ls, ls), Image.LANCZOS)
-pad = 14
-bd = Image.new("RGBA", (logo.width+pad*2, logo.height+pad*2), RED + (255,))
-qr_img.paste(bd, ((W-bd.width)//2, (H-bd.height)//2), bd)
+# Clear a red square under the logo so QR modules don't show through
+clear_pad = 18
+clear_w = logo.width + clear_pad * 2
+clear_h = logo.height + clear_pad * 2
+clear = Image.new("RGBA", (clear_w, clear_h), RED + (255,))
+qr_img.paste(clear, ((W-clear_w)//2, (H-clear_h)//2), clear)
 qr_img.paste(logo, ((W-logo.width)//2, (H-logo.height)//2), logo)
 print("logo embedded", flush=True)
 
