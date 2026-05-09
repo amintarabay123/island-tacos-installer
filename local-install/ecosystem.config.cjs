@@ -39,7 +39,7 @@ module.exports = {
         // regardless of .env encoding or parsing issues on Windows.
         PORT: "3001",
         SERVE_STATIC_PATH: "./artifacts/island-tacos/dist/public",
-        BASE_PATH: "/it-dav7dwn8",
+        BASE_PATH: "/",
       },
       watch: false,
       autorestart: true,
