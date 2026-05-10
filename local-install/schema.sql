@@ -185,6 +185,7 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS source                TEXT         N
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method        TEXT         NOT NULL DEFAULT 'card';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status        TEXT         NOT NULL DEFAULT 'pending';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_type            TEXT         NOT NULL DEFAULT 'pickup';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS amount_tendered       NUMERIC(10,2);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address      TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email        TEXT         NOT NULL DEFAULT '';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone        TEXT         NOT NULL DEFAULT '';

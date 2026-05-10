@@ -339,6 +339,7 @@ router.get("/download/FIXDB.bat",            serveFile("local-install/FIXDB.bat"
 router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "text/plain; charset=utf-8"));
 router.get("/download/REINSTALL.ps1",        serveFile("local-install/REINSTALL.ps1",           "REINSTALL.ps1",        "text/plain; charset=utf-8"));
 router.get("/download/schema.sql",           serveFile("local-install/schema.sql",              "schema.sql",           "text/plain; charset=utf-8"));
+router.get("/download/migrate.mjs",          serveFile("local-install/migrate.mjs",             "migrate.mjs",          "text/plain; charset=utf-8"));
 router.get("/download/update-ip.ps1",        serveFile("local-install/update-ip.ps1",           "update-ip.ps1",        "text/plain; charset=utf-8"));
 router.get("/download/update-ip.bat",        serveFile("local-install/update-ip.bat",           "update-ip.bat",        "text/plain; charset=utf-8"));
 router.get("/download/import-sales",         serveFile("local-install/import-sales.cjs",        "import-sales.cjs",     "text/plain; charset=utf-8"));

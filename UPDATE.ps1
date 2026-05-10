@@ -81,7 +81,7 @@ if (-not $rule) {
 
 # Step 6: Apply database schema migrations
 # schema.sql uses IF NOT EXISTS throughout — completely safe to run on any DB.
-# This ensures every column and table the server expects actually exists locally.
+# Uses node + the api-server's bundled `pg` package (no psql required).
 Write-Step "Applying database schema updates..."
 try {
     $envFile = "$Root\.env"
@@ -91,22 +91,23 @@ try {
     }
     if (-not $dbUrl) { throw "DATABASE_URL not found in $envFile" }
 
-    $uri    = [Uri]$dbUrl
-    $dbUser = $uri.UserInfo.Split(':')[0]
-    $dbPass = $uri.UserInfo.Split(':')[1]
-    $dbHost = $uri.Host
-    $dbPort = if ($uri.Port -gt 0) { $uri.Port } else { 5432 }
-    $dbName = $uri.AbsolutePath.TrimStart('/')
+    $schemaTmp  = "$env:TEMP\it-schema.sql"
+    $migrateDst = "$Root\artifacts\api-server\migrate.mjs"
 
-    $schemaTmp = "$env:TEMP\it-schema.sql"
-    Invoke-WebRequest "$CLOUD/api/download/schema.sql" -OutFile $schemaTmp -UseBasicParsing -ErrorAction Stop
+    Invoke-WebRequest "$CLOUD/api/download/schema.sql"  -OutFile $schemaTmp  -UseBasicParsing -ErrorAction Stop
+    Invoke-WebRequest "$CLOUD/api/download/migrate.mjs" -OutFile $migrateDst -UseBasicParsing -ErrorAction Stop
 
-    $env:PGPASSWORD = $dbPass
-    $result = & psql -h $dbHost -p $dbPort -U $dbUser -d $dbName -f $schemaTmp 2>&1
+    $env:DATABASE_URL = $dbUrl
+    Push-Location "$Root\artifacts\api-server"
+    try {
+        $result = & node migrate.mjs $schemaTmp 2>&1
+        $code   = $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
     Remove-Item $schemaTmp -Force -ErrorAction SilentlyContinue
-    $env:PGPASSWORD = ""
 
-    if ($LASTEXITCODE -ne 0) { throw "psql exited $LASTEXITCODE`n$result" }
+    if ($code -ne 0) { throw "node migrate.mjs exited $code`n$result" }
     Write-OK "Database schema is up to date."
 } catch {
     Write-Warn "Schema update skipped: $_ (non-fatal — server may still work)"
