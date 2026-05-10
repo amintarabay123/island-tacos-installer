@@ -322,7 +322,7 @@ export default function Kitchen() {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await fetch("/api/orders");
+      const res = await fetch("/api/orders", { credentials: "include", headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch");
       const data: Order[] = await res.json();
       // KDS shows orders that:
@@ -470,7 +470,8 @@ export default function Kitchen() {
     try {
       await fetch(`/api/orders/${order.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ status: next }),
       });
       broadcastUpdate();
@@ -485,7 +486,8 @@ export default function Kitchen() {
     try {
       await fetch(`/api/orders/${order.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ kdsCleared: true }),
       });
       broadcastUpdate();
@@ -515,7 +517,8 @@ export default function Kitchen() {
     try {
       await fetch(`/api/orders/${order.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ kdsCleared: false }),
       });
       setHistoryOrders(prev => prev.filter(o => o.id !== order.id));

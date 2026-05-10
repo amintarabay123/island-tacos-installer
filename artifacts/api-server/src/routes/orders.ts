@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, desc, and, inArray, count, or, gte } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable, storeSettingsTable } from "@workspace/db";
 import { upsertCustomer } from "./customers";
@@ -8,6 +8,7 @@ import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
 import { pushStatusToCloud } from "../lib/online-orders-sync";
 import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp } from "../lib/whatsapp";
 import nodemailer from "nodemailer";
+import { requireStaffAuth } from "./auth";
 
 const mailer = nodemailer.createTransport({
   host: process.env.SMTP_HOST ?? "smtp.gmail.com",
@@ -273,7 +274,15 @@ async function sendCancellationSMS(order: OrderRow, reason: string | null) {
   }
 }
 
-router.get("/orders", async (req, res): Promise<void> => {
+// Carve-out: customer-facing track.tsx queries by ?customerPhone= (their own
+// history). All other listings (POS/KDS/admin) require staff auth.
+function requireStaffUnlessCustomerPhoneHistory(req: Request, res: Response, next: () => void): void {
+  const phoneFilter = (req.query as Record<string, string>).customerPhone;
+  if (phoneFilter) { next(); return; }
+  requireStaffAuth(req, res, next);
+}
+
+router.get("/orders", requireStaffUnlessCustomerPhoneHistory, async (req, res): Promise<void> => {
   const queryParsed = ListOrdersQueryParams.safeParse(req.query);
   if (!queryParsed.success) {
     res.status(400).json({ error: queryParsed.error.message });
@@ -670,7 +679,7 @@ router.get("/orders/online-sync", async (req, res): Promise<void> => {
   res.json(result);
 });
 
-router.get("/orders/:id", async (req, res): Promise<void> => {
+router.get("/orders/:id", requireStaffAuth, async (req, res): Promise<void> => {
   const params = GetOrderParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -691,7 +700,7 @@ router.get("/orders/:id", async (req, res): Promise<void> => {
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
 
-router.patch("/orders/:id", async (req, res): Promise<void> => {
+router.patch("/orders/:id", requireStaffAuth, async (req, res): Promise<void> => {
   const params = UpdateOrderStatusParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -796,8 +805,8 @@ router.patch("/orders/:id", async (req, res): Promise<void> => {
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
 
-router.post("/orders/:id/refund", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.post("/orders/:id/refund", requireStaffAuth, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   const { amount, reason, refundMethod = "cash" } = req.body as { amount: number; reason?: string; refundMethod?: string };
   if (!amount || amount <= 0) { res.status(400).json({ error: "amount required" }); return; }
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
@@ -812,14 +821,14 @@ router.post("/orders/:id/refund", async (req, res): Promise<void> => {
   res.status(201).json({ ...refund, amount: parseFloat(refund.amount) });
 });
 
-router.get("/orders/:id/refunds", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.get("/orders/:id/refunds", requireStaffAuth, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   const refunds = await db.select().from(refundsTable).where(eq(refundsTable.orderId, id));
   res.json(refunds.map(r => ({ ...r, amount: parseFloat(r.amount) })));
 });
 
-router.post("/orders/:id/email-receipt", async (req, res): Promise<void> => {
-  const id = parseInt(req.params.id);
+router.post("/orders/:id/email-receipt", requireStaffAuth, async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string);
   const { toEmail } = req.body as { toEmail?: string };
 
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);

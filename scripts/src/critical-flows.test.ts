@@ -148,8 +148,30 @@ describe("Phone normalization", () => {
 describe("Order API — modifier persistence", () => {
   let createdOrderId: number | null = null;
   let firstMenuItemId: number | null = null;
+  let authToken: string | null = null;
+
+  function authHeaders(): Record<string, string> {
+    return authToken ? { Authorization: `Bearer ${authToken}` } : {};
+  }
 
   beforeAll(async () => {
+    // Login so we can hit the now-protected order routes (GET/PATCH /orders/:id)
+    const pin = process.env.STAFF_PIN ?? process.env.ADMIN_PIN;
+    if (pin) {
+      const loginRes = await fetch(`${API}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      if (loginRes.ok) {
+        const data = await loginRes.json() as { token?: string };
+        if (data.token) authToken = data.token;
+      }
+    }
+    if (!authToken) {
+      console.warn("Skipping authed sub-tests: no STAFF_PIN/ADMIN_PIN env var or login failed");
+    }
+
     // Fetch a real menu item to use in the order
     const r = await fetch(`${API}/menu/items`);
     if (!r.ok) return;
@@ -224,8 +246,12 @@ describe("Order API — modifier persistence", () => {
       console.warn("Skipping: no order was created in previous test");
       return;
     }
+    if (!authToken) {
+      console.warn("Skipping: no auth token (GET /orders/:id is staff-only)");
+      return;
+    }
 
-    const r = await fetch(`${API}/orders/${createdOrderId}`);
+    const r = await fetch(`${API}/orders/${createdOrderId}`, { headers: authHeaders() });
     expect(r.ok).toBe(true);
 
     const order = await r.json() as {
@@ -240,10 +266,10 @@ describe("Order API — modifier persistence", () => {
 
   afterAll(async () => {
     // Cancel the test order so it doesn't clutter the KDS
-    if (createdOrderId) {
+    if (createdOrderId && authToken) {
       await fetch(`${API}/orders/${createdOrderId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ status: "cancelled" }),
       }).catch(() => {});
     }

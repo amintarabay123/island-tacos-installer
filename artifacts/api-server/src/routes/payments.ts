@@ -6,6 +6,7 @@ import {
   ConfirmPaymentBody,
 } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
+import { requireStaffAuth } from "./auth";
 
 const ATH_BASE = "https://payments.athmovil.com/api/business-transaction/ecommerce";
 
@@ -278,6 +279,13 @@ router.post("/payments/athmovil/check-status", async (req, res): Promise<void> =
         });
         const authText = await authRes.text();
         console.log(`[ATH] authorization response ${authRes.status}:`, authText.slice(0, 400));
+
+        // CRITICAL: do NOT mark the order paid unless ATH actually authorized.
+        // Previously this branch fell through and marked paid even on a 4xx/5xx.
+        if (!authRes.ok) {
+          res.status(502).json({ error: "ATH Móvil authorization failed", detail: authText });
+          return;
+        }
       }
 
       // Mark order paid
@@ -302,7 +310,9 @@ router.post("/payments/athmovil/check-status", async (req, res): Promise<void> =
   }
 });
 
-router.post("/payments/confirm", async (req, res): Promise<void> => {
+// Staff-only: marks an order paid by orderId. Without auth, anyone could mark
+// arbitrary orders as paid by guessing IDs.
+router.post("/payments/confirm", requireStaffAuth, async (req, res): Promise<void> => {
   const parsed = ConfirmPaymentBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

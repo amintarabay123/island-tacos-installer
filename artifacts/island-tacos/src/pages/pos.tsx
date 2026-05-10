@@ -899,7 +899,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/orders", { credentials: "include" });
+      const r = await fetch("/api/orders", { credentials: "include", headers: authHeaders() });
       const data: Order[] = await r.json();
       // Show all non-cancelled orders EXCEPT completed ones that are already paid —
       // completed+unpaid tickets must remain visible so staff can still edit/charge them.
@@ -962,7 +962,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   const voidTicket = async (id: number) => {
     await fetch(`/api/orders/${id}`, {
       method: "PATCH", credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ status: "cancelled" }),
     });
     load();
@@ -971,7 +971,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   const updateStatus = async (id: number, status: string) => {
     await fetch(`/api/orders/${id}`, {
       method: "PATCH", credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ status }),
     });
     load();
@@ -984,7 +984,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
       : chargeOrder.notes;
     await fetch(`/api/orders/${chargeOrder.id}`, {
       method: "PATCH", credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       // Set status:"completed" so the ticket is removed from held tickets.
       // "Charge & Hold" (completeWithPaymentAndHold) intentionally omits this.
       body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", status: "completed", ...(notes ? { notes } : {}) }),
@@ -1015,7 +1015,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
       : chargeOrder.notes;
     const r = await fetch(`/api/orders/${chargeOrder.id}`, {
       method: "PATCH", credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", ...(notes ? { notes } : {}) }),
     });
     if (!r.ok) { alert("Failed to save payment. Please try again."); return; }
@@ -1026,7 +1026,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   const completeOrder = async (id: number) => {
     await fetch(`/api/orders/${id}`, {
       method: "PATCH", credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ status: "completed" }),
     });
     load();
@@ -1036,7 +1036,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     const existingNotes = order.notes ? `${order.notes}\n${note}` : note;
     await fetch(`/api/orders/${order.id}`, {
       method: "PATCH", credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       // Do NOT set status:"completed" — KDS owns removal, payment only marks as paid.
       body: JSON.stringify({ actualPaymentMethod: "split", paymentStatus: "paid", notes: existingNotes }),
     });
@@ -1261,7 +1261,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   const [refireStatus, setRefireStatus] = useState<"idle" | "sent" | "error">("idle");
 
   useEffect(() => {
-    fetch("/api/orders", { credentials: "include" })
+    fetch("/api/orders", { credentials: "include", headers: authHeaders() })
       .then(r => r.json())
       .then((data: Order[]) => {
         const done = data
@@ -2648,7 +2648,7 @@ export default function POS() {
   useEffect(() => {
     const poll = async () => {
       try {
-        const r = await fetch("/api/orders?limit=500", { credentials: "include" });
+        const r = await fetch("/api/orders?limit=500", { credentials: "include", headers: authHeaders() });
         const data: Order[] = await r.json();
 
         // ── Online + phone order notifications ──
@@ -2723,7 +2723,8 @@ export default function POS() {
   const acceptOnline = async (id: number) => {
     await fetch(`/api/orders/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ status: "confirmed" }),
     });
     // Do NOT delete from seenOnlineIdsRef — keeping the ID prevents re-alerting
@@ -2736,7 +2737,8 @@ export default function POS() {
   const rejectOnline = async (id: number) => {
     await fetch(`/api/orders/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ status: "cancelled", cancellationReason: rejectReason || null }),
     });
     // Do NOT delete from seenOnlineIdsRef — same reason as acceptOnline above.
@@ -2905,14 +2907,14 @@ export default function POS() {
         if (resumedOrderId) {
           await fetch(`/api/orders/${resumedOrderId}`, {
             method: "PATCH", credentials: "include",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...authHeaders() },
             body: JSON.stringify({ status: "cancelled" }),
           });
         }
 
         const r = await fetch("/api/orders", {
           method: "POST", credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
             customerName: overrideName ?? (customerName || "Walk-in"),
             customerEmail: "",
@@ -3021,13 +3023,13 @@ export default function POS() {
         if (resumedOrderId) {
           await fetch(`/api/orders/${resumedOrderId}`, {
             method: "PATCH", credentials: "include",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...authHeaders() },
             body: JSON.stringify({ status: "cancelled" }),
           });
         }
         const r = await fetch("/api/orders", {
           method: "POST", credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
             customerName: customerName || "Walk-in",
             customerEmail: "",
