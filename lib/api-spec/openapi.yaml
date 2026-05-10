@@ -732,6 +732,8 @@ components:
           type: number
         total:
           type: number
+        amountTendered:
+          type: ["number", "null"]
         notes:
           type: ["string", "null"]
         cancellationReason:
@@ -817,6 +819,8 @@ components:
           enum: [online, pos, phone]
         discountAmount:
           type: number
+        amountTendered:
+          type: ["number", "null"]
         notes:
           type: ["string", "null"]
         scheduledPickupAt:
@@ -851,6 +855,8 @@ components:
         actualPaymentMethod:
           type: string
           enum: [cash, card, athmovil, split, complimentary]
+        amountTendered:
+          type: ["number", "null"]
         notes:
           type: ["string", "null"]
 

@@ -33,6 +33,8 @@ export interface Order {
   deliveryFee: number;
   total: number;
   /** @nullable */
+  amountTendered?: number | null;
+  /** @nullable */
   notes?: string | null;
   /** @nullable */
   cancellationReason?: string | null;

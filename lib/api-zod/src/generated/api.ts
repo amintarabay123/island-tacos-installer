@@ -225,6 +225,7 @@ export const ListOrdersResponseItem = zod.object({
   tax: zod.number(),
   deliveryFee: zod.number(),
   total: zod.number(),
+  amountTendered: zod.number().nullish(),
   notes: zod.string().nullish(),
   cancellationReason: zod.string().nullish(),
   kdsCleared: zod.boolean().nullish(),
@@ -277,6 +278,7 @@ export const CreateOrderBody = zod.object({
   paymentStatus: zod.enum(["pending", "paid"]).optional(),
   source: zod.enum(["online", "pos", "phone"]).optional(),
   discountAmount: zod.number().optional(),
+  amountTendered: zod.number().nullish(),
   notes: zod.string().nullish(),
   scheduledPickupAt: zod.coerce.date().nullish(),
   items: zod.array(
@@ -336,6 +338,7 @@ export const GetOrderResponse = zod.object({
   tax: zod.number(),
   deliveryFee: zod.number(),
   total: zod.number(),
+  amountTendered: zod.number().nullish(),
   notes: zod.string().nullish(),
   cancellationReason: zod.string().nullish(),
   kdsCleared: zod.boolean().nullish(),
@@ -393,6 +396,7 @@ export const UpdateOrderStatusBody = zod.object({
   actualPaymentMethod: zod
     .enum(["cash", "card", "athmovil", "split", "complimentary"])
     .optional(),
+  amountTendered: zod.number().nullish(),
   notes: zod.string().nullish(),
 });
 
@@ -426,6 +430,7 @@ export const UpdateOrderStatusResponse = zod.object({
   tax: zod.number(),
   deliveryFee: zod.number(),
   total: zod.number(),
+  amountTendered: zod.number().nullish(),
   notes: zod.string().nullish(),
   cancellationReason: zod.string().nullish(),
   kdsCleared: zod.boolean().nullish(),
@@ -495,6 +500,7 @@ export const TrackOrderResponse = zod.object({
   tax: zod.number(),
   deliveryFee: zod.number(),
   total: zod.number(),
+  amountTendered: zod.number().nullish(),
   notes: zod.string().nullish(),
   cancellationReason: zod.string().nullish(),
   kdsCleared: zod.boolean().nullish(),
@@ -624,6 +630,7 @@ export const GetRecentOrdersResponseItem = zod.object({
   tax: zod.number(),
   deliveryFee: zod.number(),
   total: zod.number(),
+  amountTendered: zod.number().nullish(),
   notes: zod.string().nullish(),
   cancellationReason: zod.string().nullish(),
   kdsCleared: zod.boolean().nullish(),

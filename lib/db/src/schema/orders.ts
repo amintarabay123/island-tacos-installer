@@ -20,6 +20,7 @@ export const ordersTable = pgTable("orders", {
   tax: numeric("tax", { precision: 10, scale: 2 }).notNull(),
   deliveryFee: numeric("delivery_fee", { precision: 10, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 10, scale: 2 }).notNull(),
+  amountTendered: numeric("amount_tendered", { precision: 10, scale: 2 }),
   notes: text("notes"),
   kdsCleared: boolean("kds_cleared").notNull().default(false),
   cancellationReason: text("cancellation_reason"),

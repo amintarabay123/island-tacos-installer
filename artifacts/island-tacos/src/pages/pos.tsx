@@ -25,6 +25,7 @@ type Order = {
   id: number; confirmationCode: string; customerName: string; status: string;
   paymentStatus: string; paymentMethod: string; source: string;
   subtotal: number; discountAmount: number; tax: number; total: number;
+  amountTendered?: number | null;
   notes?: string | null; createdAt: string; customerPhone?: string | null; customerEmail?: string | null;
   orderType?: string; estimatedReadyAt?: string | null; scheduledPickupAt?: string | null;
   items: { id: number; menuItemId: number; menuItemName: string; quantity: number; menuItemPrice: number; subtotal: number; modifierSelections?: CartModifier[] | null; notes?: string | null; alreadyMade?: boolean | null }[];
@@ -1015,7 +1016,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
       headers: { "Content-Type": "application/json", ...authHeaders() },
       // Set status:"completed" so the ticket is removed from held tickets.
       // "Charge & Hold" (completeWithPaymentAndHold) intentionally omits this.
-      body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", status: "completed", ...(notes ? { notes } : {}) }),
+      body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", status: "completed", ...(tendered != null ? { amountTendered: tendered } : {}), ...(notes ? { notes } : {}) }),
     });
     if (!r.ok) {
       const errData = await r.json().catch(() => ({})) as { error?: string };
@@ -1049,7 +1050,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     const r = await fetch(`/api/orders/${chargeOrder.id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", ...(notes ? { notes } : {}) }),
+      body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", ...(tendered != null ? { amountTendered: tendered } : {}), ...(notes ? { notes } : {}) }),
     });
     if (!r.ok) { alert("Failed to save payment. Please try again."); return; }
     setChargeOrder(null);
@@ -1374,6 +1375,12 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
               <div className="flex justify-between text-gray-900 font-bold text-base border-t border-gray-300 pt-1 mt-1">
                 <span>TOTAL</span><span>{fmt(selected.total)}</span>
               </div>
+              {selected.amountTendered != null && (
+                <>
+                  <div className="flex justify-between text-gray-700"><span>Tendered</span><span>{fmt(selected.amountTendered)}</span></div>
+                  <div className="flex justify-between text-gray-700"><span>Change</span><span>{fmt(Math.max(0, selected.amountTendered - selected.total))}</span></div>
+                </>
+              )}
             </div>
             <div className="border-t border-dashed border-gray-300 my-3"/>
             {orderRefunds.length > 0 && (
@@ -1427,7 +1434,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
               <button
                 onClick={async () => {
                   setPrinting(true); setPrintError(null);
-                  const result = await printReceiptLines(buildReceiptLines(selected));
+                  const result = await printReceiptLines(buildReceiptLines(selected, selected.amountTendered ?? undefined));
                   if (!result.ok) setPrintError(result.error ?? "Print failed");
                   setPrinting(false);
                 }}
@@ -2922,6 +2929,7 @@ export default function POS() {
           patchBody.actualPaymentMethod = method;
           patchBody.paymentStatus = "paid";
           patchBody.status = "completed";
+          if (tendered != null) patchBody.amountTendered = tendered;
         }
         // For "pending" (re-hold): just update notes/name if changed — keep status as-is
         const r = await fetch(`/api/orders/${resumedOrderId}`, {
@@ -2961,6 +2969,7 @@ export default function POS() {
             paymentStatus,
             source: "pos",
             discountAmount: discount,
+            ...(tendered != null && paymentStatus === "paid" ? { amountTendered: tendered } : {}),
             notes: (overrideNote ?? orderNotes) || null,
             items: cart.map(c => ({
               menuItemId: c.menuItemId,
@@ -3080,6 +3089,7 @@ export default function POS() {
             paymentStatus: "paid",
             source: "pos",
             discountAmount: discount,
+            ...(tendered != null ? { amountTendered: tendered } : {}),
             notes: noteWithSplit || null,
             items: cart.map(c => ({
               menuItemId: c.menuItemId,

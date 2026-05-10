@@ -19,5 +19,7 @@ export interface UpdateOrderStatusBody {
   paymentStatus?: UpdateOrderStatusBodyPaymentStatus;
   actualPaymentMethod?: UpdateOrderStatusBodyActualPaymentMethod;
   /** @nullable */
+  amountTendered?: number | null;
+  /** @nullable */
   notes?: string | null;
 }

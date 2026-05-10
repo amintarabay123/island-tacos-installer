@@ -1333,7 +1333,6 @@ export function useTrackOrder<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-
 /**
  * @summary Initiate a payment for an order
  */

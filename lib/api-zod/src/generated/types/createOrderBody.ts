@@ -25,6 +25,8 @@ export interface CreateOrderBody {
   source?: CreateOrderBodySource;
   discountAmount?: number;
   /** @nullable */
+  amountTendered?: number | null;
+  /** @nullable */
   notes?: string | null;
   /** @nullable */
   scheduledPickupAt?: Date | null;

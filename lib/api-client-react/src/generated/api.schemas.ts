@@ -185,6 +185,8 @@ export interface Order {
   deliveryFee: number;
   total: number;
   /** @nullable */
+  amountTendered?: number | null;
+  /** @nullable */
   notes?: string | null;
   /** @nullable */
   cancellationReason?: string | null;
@@ -258,12 +260,13 @@ export interface CreateOrderBody {
   source?: CreateOrderBodySource;
   discountAmount?: number;
   /** @nullable */
+  amountTendered?: number | null;
+  /** @nullable */
   notes?: string | null;
   /** @nullable */
   scheduledPickupAt?: string | null;
   items: CreateOrderItemInput[];
 }
-
 
 export type UpdateOrderStatusBodyStatus =
   (typeof UpdateOrderStatusBodyStatus)[keyof typeof UpdateOrderStatusBodyStatus];
@@ -307,6 +310,8 @@ export interface UpdateOrderStatusBody {
   kdsCleared?: boolean;
   paymentStatus?: UpdateOrderStatusBodyPaymentStatus;
   actualPaymentMethod?: UpdateOrderStatusBodyActualPaymentMethod;
+  /** @nullable */
+  amountTendered?: number | null;
   /** @nullable */
   notes?: string | null;
 }

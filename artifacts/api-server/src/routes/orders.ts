@@ -53,6 +53,7 @@ function formatOrder(order: Record<string, unknown>, items: Record<string, unkno
     tax: parseDecimal(order.tax),
     deliveryFee: parseDecimal(order.deliveryFee),
     total: parseDecimal(order.total),
+    amountTendered: order.amountTendered != null ? parseDecimal(order.amountTendered) : null,
     items: items.map((i) => ({
       ...i,
       menuItemPrice: parseDecimal(i.menuItemPrice),
@@ -478,6 +479,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       tax: String(tax),
       deliveryFee: String(deliveryFee),
       total: String(total),
+      amountTendered: parsed.data.amountTendered != null ? String(parsed.data.amountTendered) : null,
       notes: parsed.data.notes ?? null,
       estimatedReadyAt: scheduledPickupAtDate ?? estimatedReadyAt,
       scheduledPickupAt: scheduledPickupAtDate,
@@ -732,6 +734,9 @@ router.patch("/orders/:id", requireStaffAuth, async (req, res): Promise<void> =>
   }
   if (parsed.data.notes !== undefined) {
     updates.notes = parsed.data.notes ?? null;
+  }
+  if (parsed.data.amountTendered !== undefined) {
+    updates.amountTendered = parsed.data.amountTendered != null ? String(parsed.data.amountTendered) : null;
   }
   // Auto-mark as paid when completed from POS (not from KDS clear)
   if (parsed.data.status === "completed" && !parsed.data.paymentStatus && !parsed.data.kdsCleared) {
