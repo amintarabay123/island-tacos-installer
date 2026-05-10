@@ -528,10 +528,15 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHol
                 ))}
               </div>
               <Numpad value={tendered} onChange={setTendered} />
-              {parseFloat(tendered) >= total && (
+              {parseFloat(tendered || "0") >= total ? (
                 <div className="mt-4 bg-green-50 rounded-xl p-4 text-center">
                   <p className="text-gray-500 text-sm">Change due</p>
                   <p className="text-green-700 text-3xl font-black">{fmt(change)}</p>
+                </div>
+              ) : (
+                <div className="mt-4 bg-amber-50 rounded-xl p-4 text-center">
+                  <p className="text-gray-500 text-sm">Still owed</p>
+                  <p className="text-amber-700 text-3xl font-black">{fmt(total - parseFloat(tendered || "0"))}</p>
                 </div>
               )}
             </div>
