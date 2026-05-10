@@ -723,24 +723,24 @@ export default function Kitchen() {
                       <div className="flex flex-col gap-2">
                         {order.items.filter(isKdsItem).map((item) => (
                           item.alreadyMade ? (
-                            <div key={item.id} className="bg-gray-200/60 rounded px-3 py-2 opacity-50">
+                            <div key={item.id} className="bg-blue-50 border border-blue-200 rounded px-3 py-2">
                               <div className="flex items-baseline gap-2">
-                                <span className="text-green-400 text-base font-bold shrink-0">✓</span>
-                                <div className="flex items-baseline gap-2 line-through decoration-gray-400 flex-1">
-                                  <span className="text-lg font-semibold text-gray-400 leading-none">{item.quantity}×</span>
-                                  <span className="text-base font-medium text-gray-400 leading-snug">{item.menuItemName}</span>
+                                <span className="text-blue-500 text-base font-bold shrink-0">↻</span>
+                                <div className="flex items-baseline gap-2 flex-1">
+                                  <span className="text-lg font-semibold text-blue-700 leading-none">{item.quantity}×</span>
+                                  <span className="text-base font-medium text-blue-700 leading-snug">{item.menuItemName}</span>
                                 </div>
-                                <span className="text-xs text-gray-500 ml-auto shrink-0">done</span>
+                                <span className="text-[10px] uppercase tracking-wide text-blue-600 font-bold ml-auto shrink-0">already firing</span>
                               </div>
                               {(item.modifierSelections ?? []).length > 0 && (
-                                <div className="ml-6 mt-1 space-y-0.5 line-through decoration-gray-400">
+                                <div className="ml-6 mt-1 space-y-0.5">
                                   {(item.modifierSelections ?? []).map((m, i) => (
-                                    <div key={i} className="text-sm text-gray-400 font-medium">+ {m.name}</div>
+                                    <div key={i} className="text-sm text-blue-600 font-medium">+ {m.name}</div>
                                   ))}
                                 </div>
                               )}
                               {item.notes && (
-                                <div className="ml-6 mt-1 text-sm text-gray-400 font-medium line-through decoration-gray-400">{item.notes}</div>
+                                <div className="ml-6 mt-1 text-sm text-blue-600 font-medium">{item.notes}</div>
                               )}
                             </div>
                           ) : (() => {
