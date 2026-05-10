@@ -32,26 +32,33 @@ router.get("/shifts", async (_req, res): Promise<void> => {
 
 router.post("/shifts", async (req, res): Promise<void> => {
   const { openingFloat = 0, notes } = req.body as { openingFloat?: number; notes?: string };
-  const existing = await db
-    .select()
-    .from(shiftsTable)
-    .where(isNull(shiftsTable.closedAt))
-    .limit(1);
-  if (existing.length > 0) {
+  // Atomic insert-if-no-open-shift: prevents two concurrent POSTs from both
+  // creating shifts when the prior SELECT both returned empty (race condition).
+  const inserted = await db.execute<{ id: number; opening_float: string; opened_at: Date; closed_at: Date | null; closing_float: string | null; notes: string | null }>(sql`
+    INSERT INTO shifts (opening_float, notes)
+    SELECT ${String(openingFloat)}, ${notes ?? null}
+    WHERE NOT EXISTS (SELECT 1 FROM shifts WHERE closed_at IS NULL)
+    RETURNING *
+  `);
+  const row = inserted.rows[0];
+  if (!row) {
     res.status(409).json({ error: "A shift is already open" });
     return;
   }
-  const [shift] = await db.insert(shiftsTable).values({
-    openingFloat: String(openingFloat),
-    notes: notes ?? null,
-  }).returning();
   await db.insert(cashTransactionsTable).values({
-    shiftId: shift.id,
+    shiftId: row.id,
     type: "opening",
     amount: String(openingFloat),
     note: "Opening float",
   });
-  res.status(201).json({ ...shift, openingFloat: parseDecimal(shift.openingFloat) });
+  res.status(201).json({
+    id: row.id,
+    openingFloat: parseDecimal(row.opening_float),
+    openedAt: row.opened_at,
+    closedAt: row.closed_at,
+    closingFloat: row.closing_float ? parseDecimal(row.closing_float) : null,
+    notes: row.notes,
+  });
 });
 
 router.patch("/shifts/:id/close", async (req, res): Promise<void> => {

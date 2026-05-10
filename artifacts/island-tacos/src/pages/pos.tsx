@@ -1010,13 +1010,18 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     const notes = splitNote
       ? (chargeOrder.notes ? `${chargeOrder.notes}\n${splitNote}` : splitNote)
       : chargeOrder.notes;
-    await fetch(`/api/orders/${chargeOrder.id}`, {
+    const r = await fetch(`/api/orders/${chargeOrder.id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       // Set status:"completed" so the ticket is removed from held tickets.
       // "Charge & Hold" (completeWithPaymentAndHold) intentionally omits this.
       body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", status: "completed", ...(notes ? { notes } : {}) }),
     });
+    if (!r.ok) {
+      const errData = await r.json().catch(() => ({})) as { error?: string };
+      alert(errData.error ?? `Failed to save payment (${r.status}). Please try again.`);
+      return;
+    }
     // Update customer display to "completed" state
     fetch("/api/display", {
       method: "POST",
@@ -2933,11 +2938,15 @@ export default function POS() {
       } else {
         // New items were added — cancel old ticket and create a fresh order
         if (resumedOrderId) {
-          await fetch(`/api/orders/${resumedOrderId}`, {
+          const cancelRes = await fetch(`/api/orders/${resumedOrderId}`, {
             method: "PATCH", credentials: "include",
             headers: { "Content-Type": "application/json", ...authHeaders() },
             body: JSON.stringify({ status: "cancelled" }),
           });
+          if (!cancelRes.ok) {
+            const errData = await cancelRes.json().catch(() => ({})) as { error?: string };
+            throw new Error(errData.error ?? `Could not cancel previous ticket (${cancelRes.status}). Order not placed.`);
+          }
         }
 
         const r = await fetch("/api/orders", {
@@ -3049,11 +3058,15 @@ export default function POS() {
       } else {
         // New items added — cancel old ticket and create a new one
         if (resumedOrderId) {
-          await fetch(`/api/orders/${resumedOrderId}`, {
+          const cancelRes = await fetch(`/api/orders/${resumedOrderId}`, {
             method: "PATCH", credentials: "include",
             headers: { "Content-Type": "application/json", ...authHeaders() },
             body: JSON.stringify({ status: "cancelled" }),
           });
+          if (!cancelRes.ok) {
+            const errData = await cancelRes.json().catch(() => ({})) as { error?: string };
+            throw new Error(errData.error ?? `Could not cancel previous ticket (${cancelRes.status}). Order not placed.`);
+          }
         }
         const r = await fetch("/api/orders", {
           method: "POST", credentials: "include",
