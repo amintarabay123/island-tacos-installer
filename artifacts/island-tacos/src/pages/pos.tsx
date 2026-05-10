@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
@@ -165,12 +165,35 @@ function buildReceiptLines(order: Order, tendered?: number): { text: string; bol
 // ─── Numpad ──────────────────────────────────────────────────────────────────
 
 function Numpad({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // "pristine" = the value was set from outside (initial total or a quick-tender chip)
+  // and the next digit press should REPLACE it, not append. Once the user types or
+  // backspaces, pristine flips off and normal append behavior resumes.
+  const [pristine, setPristine] = useState(true);
+  const lastSetByNumpad = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (value !== lastSetByNumpad.current) setPristine(true);
+  }, [value]);
+
+  const set = (v: string) => {
+    lastSetByNumpad.current = v;
+    onChange(v);
+  };
+
   const press = (k: string) => {
-    if (k === "⌫") { onChange(value.slice(0, -1) || "0"); return; }
+    if (k === "⌫") { set(value.slice(0, -1) || "0"); setPristine(false); return; }
+    if (pristine) {
+      if (k === ".") set("0.");
+      else if (k === "00") set("0");
+      else set(k);
+      setPristine(false);
+      return;
+    }
     if (k === "." && value.includes(".")) return;
-    if (value === "0" && k !== ".") { onChange(k); return; }
+    if (value === "0" && k !== ".") { set(k); setPristine(false); return; }
     if (value.split(".")[1]?.length >= 2) return;
-    onChange(value === "0" ? k : value + k);
+    set(value === "0" ? k : value + k);
+    setPristine(false);
   };
   const keys = ["7","8","9","4","5","6","1","2","3","00","0","⌫"];
   return (
@@ -3237,7 +3260,13 @@ export default function POS() {
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-gray-900 font-bold text-base">{resumedOrderId ? "Resumed Ticket" : "New Order"}</h2>
               {cart.length > 0 && (
-                <button onClick={clearCart} className="text-gray-400 hover:text-red-600 text-xs font-semibold transition-colors">Clear</button>
+                <button
+                  onClick={clearCart}
+                  className="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 text-sm font-bold transition-colors flex items-center gap-1"
+                >
+                  <X className="w-4 h-4" />
+                  Clear
+                </button>
               )}
             </div>
           </div>
