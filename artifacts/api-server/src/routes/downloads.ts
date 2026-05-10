@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import path from "path";
 import os from "os";
 import fs from "fs";
+import { pipeline } from "stream/promises";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
 import { objectStorageClient, signObjectGetURL } from "../lib/objectStorage";
@@ -96,15 +97,20 @@ async function generateAndUpload(): Promise<void> {
 
     console.log("[installer] archive ready, uploading to GCS...");
 
-    // Step 2: upload to GCS
+    // Step 2: upload to GCS — stream from disk to avoid loading the full
+    // archive (~50+ MB) into memory, which OOM-kills the deployment.
     const bucket = getBucket();
     const file = bucket.file(GCS_OBJECT_NAME);
-    await file.save(fs.readFileSync(INSTALLER_CACHE), {
-      metadata: {
-        contentType: "application/gzip",
-        contentDisposition: 'attachment; filename="island-tacos-installer.tar.gz"',
-      },
-    });
+    await pipeline(
+      fs.createReadStream(INSTALLER_CACHE),
+      file.createWriteStream({
+        resumable: false,
+        metadata: {
+          contentType: "application/gzip",
+          contentDisposition: 'attachment; filename="island-tacos-installer.tar.gz"',
+        },
+      }),
+    );
 
     // Step 3: generate a signed GET URL (7 days) — bypasses Replit proxy, no public ACL needed
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
@@ -179,12 +185,16 @@ async function generateAndUploadFrontend(): Promise<void> {
 
     const bucket = getBucket();
     const file = bucket.file(FRONTEND_GCS_OBJECT);
-    await file.save(fs.readFileSync(FRONTEND_CACHE), {
-      metadata: {
-        contentType: "application/gzip",
-        contentDisposition: 'attachment; filename="island-tacos-frontend.tar.gz"',
-      },
-    });
+    await pipeline(
+      fs.createReadStream(FRONTEND_CACHE),
+      file.createWriteStream({
+        resumable: false,
+        metadata: {
+          contentType: "application/gzip",
+          contentDisposition: 'attachment; filename="island-tacos-frontend.tar.gz"',
+        },
+      }),
+    );
 
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
     frontendGcsUrl = await signObjectGetURL(bucketId, FRONTEND_GCS_OBJECT, 7 * 24 * 3600);
