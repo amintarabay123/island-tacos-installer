@@ -1,5 +1,15 @@
 # Island Tacos — Online Ordering & POS System
 
+## User preferences
+
+- **Root fixes only — no patches or temporary workarounds.** When a bug or issue is found, diagnose the underlying cause and fix it there. Do not paper over symptoms. If a quick patch is unavoidable for safety (e.g. stop the bleed during business hours), say so explicitly and schedule the real fix.
+- **Always re-verify after a change.** After any fix or new feature, re-check that:
+  1. The original issue is actually resolved (not just the symptom).
+  2. Nothing else broke as a side effect (run typecheck; trace call sites of changed functions; check related features that share the same code path).
+  3. Both deployment targets are consistent — cloud (Replit) AND the mini PC at the shop. A fix that only ships to one is incomplete.
+- **Goal: production-grade, stable system.** This product is intended to be sold to other restaurants. Code quality, error handling, observability, and consistency matter as much as features. Prefer robust solutions over clever ones.
+- **Don't deploy during business hours** unless the change is text/config-only and explicitly approved.
+
 ## Overview
 
 Custom full-stack online ordering + in-house POS system for Island Tacos (Wickhams Cay 1, Road Town, BVI — Mexican food). Designed as a complete replacement for Loyverse, covering online ordering, walk-in POS, Kitchen Display System (KDS), admin dashboard, and receipt printing. Pickup only.
