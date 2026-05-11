@@ -271,10 +271,13 @@ router.get("/download/frontend", (req: Request, res: Response): void => {
   }, 3000);
   req.on("close", () => clearInterval(poll));
 });
-// Pre-filled .env — requires ?pin=ADMIN_PIN query param
-// Injects all known secrets so the local server needs no manual editing
-router.get("/download/env", (req: Request, res: Response): void => {
-  const pin = req.query.pin as string | undefined;
+// Pre-filled .env — requires { pin: ADMIN_PIN } in the JSON request body.
+// Uses POST (not GET) so the PIN does not appear in URLs, proxy logs, browser
+// history, or referer headers. Injects all known secrets so the local server
+// needs no manual editing after install.
+router.post("/download/env", (req: Request, res: Response): void => {
+  const body = (req.body ?? {}) as { pin?: unknown };
+  const pin = typeof body.pin === "string" ? body.pin : undefined;
   if (!pin || pin !== process.env.ADMIN_PIN) {
     res.status(401).json({ error: "Invalid or missing pin" });
     return;

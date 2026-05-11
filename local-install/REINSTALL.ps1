@@ -44,11 +44,19 @@ Write-Host ""
 $AdminPin = Read-Host "Enter your Admin PIN"
 if (-not $AdminPin) { Write-Fail "Admin PIN is required." }
 
-# Verify PIN against cloud server before doing anything
+# Verify PIN against cloud server before doing anything.
+# PIN is sent in the JSON POST body (NOT in the URL) so it never appears
+# in proxy logs, browser history, or referer headers.
 Write-Step "Verifying Admin PIN with cloud server..."
+$envUrl  = "$CLOUD/api/download/env"
+$envBody = @{ pin = $AdminPin } | ConvertTo-Json -Compress
 try {
-    $testUrl = "$CLOUD/api/download/env?pin=$([uri]::EscapeDataString($AdminPin))"
-    $null = Invoke-WebRequest $testUrl -UseBasicParsing -ErrorAction Stop
+    $null = Invoke-WebRequest $envUrl `
+        -Method Post `
+        -Body $envBody `
+        -ContentType "application/json" `
+        -UseBasicParsing `
+        -ErrorAction Stop
     Write-OK "Admin PIN accepted."
 } catch {
     Write-Fail "Admin PIN rejected. Check your PIN and try again."
@@ -139,8 +147,11 @@ if ($pgCmd) {
 # ── Download pre-filled .env ──────────────────────────────────────────────────
 
 Write-Step "Downloading configuration (.env from cloud)..."
-$envUrl     = "$CLOUD/api/download/env?pin=$([uri]::EscapeDataString($AdminPin))"
-$envContent = (Invoke-WebRequest $envUrl -UseBasicParsing).Content
+$envContent = (Invoke-WebRequest $envUrl `
+    -Method Post `
+    -Body $envBody `
+    -ContentType "application/json" `
+    -UseBasicParsing).Content
 
 # Patch in the actual DB password
 $envContent = $envContent -replace "YOUR_DB_PASSWORD", $DbPassword
