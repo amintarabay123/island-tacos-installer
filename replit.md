@@ -58,7 +58,7 @@ Custom full-stack online ordering + in-house POS system for Island Tacos (Wickha
 - Required env vars: `SMS_GATEWAY_URL` (e.g. `http://192.168.1.42:8080`), `SMS_GATEWAY_USERNAME`, `SMS_GATEWAY_PASSWORD`. If unset, `sendSms()` is a no-op.
 - Both ready and cancellation SMS are restricted to BVI mobiles (`isBVIMobile` check) so the business SIM never gets billed for international SMS. International customers get email + WhatsApp.
 - Bodies are kept ≤ 160 chars (1 SMS segment) — cancellation reason is intentionally NOT included; staff follow up by phone.
-- **Twilio + Vapi were removed** (May 2026) due to runaway costs (~$280/mo SMS to BVI international rates). All `TWILIO_*` and `VAPI_*` env vars are no longer referenced or shipped in the local-install `.env`.
+- **Twilio is kept as a fallback** (used only when `SMS_GATEWAY_*` is unset or the gateway request fails). Once the phone is configured, Twilio is automatically bypassed. `VAPI_*` env vars were fully removed (May 2026).
 
 ## Loyverse Integration (Legacy/Minimal)
 
