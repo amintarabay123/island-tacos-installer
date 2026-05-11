@@ -117,6 +117,17 @@ No tax (BVI). Tax not applied at checkout.
 - `cash_transactions` — Pay-in/pay-out entries linked to shifts
 - `refunds` — Refund records linked to orders (amount, method, reason)
 
+## Settings: two tables, on purpose
+
+Two settings tables coexist by design — do NOT collapse them:
+
+- **`store_settings` (K/V, load-bearing).** Generic `key TEXT PK, value TEXT` store. Holds operational config edited from the existing admin UI: `open_time`, `close_time`, `open_days`, `cutoff_minutes`, `payment_methods`, `online_payment_methods`, `display_state`, etc. Edited via `GET/PATCH /api/settings`. Frontend admin pages depend on this shape — don't migrate keys out without updating every consumer.
+- **`store_profile` (typed, single row).** Strongly-typed identity columns: `store_name`, `phone`, `email`, `address`, `tax_rate`, `timezone`, `currency`. One row today, one row per tenant once multi-tenancy lands. Edited via `GET /api/store-settings` (public) and `PATCH /api/store-settings` (admin). This is where new identity/jurisdiction fields go — never add another hardcoded brand string in code, add a column here instead.
+
+Server-side helper `artifacts/api-server/src/lib/store-settings.ts` has a 60s in-memory cache; `PATCH /api/store-settings` calls `refreshStoreSettings()` to invalidate. Direct SQL UPDATEs to `store_profile` will appear stale for up to 60s.
+
+Migration: `local-install/schema.sql` lines 165–202 define `store_profile` + an idempotent seed. Already applied to the cloud DB on 2026-05-11. The mini PC will pick it up on the next `UPDATE.bat` run (idempotent — safe to re-run).
+
 ## Receipt Printing
 
 - `printReceiptLines()` + `buildReceiptLines()` in pos.tsx — unified receipt printer abstraction
