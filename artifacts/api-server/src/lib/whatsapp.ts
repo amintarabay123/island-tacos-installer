@@ -44,6 +44,9 @@ async function buildSystemPrompt(): Promise<string> {
 
   const hours   = settings.hours   ?? "11am – 7pm daily";
   const days    = formatOpenDays(settings.open_days);
+  // TODO(store-settings): replace the phone/address fallbacks with `(await getStoreSettings()).phone`
+  // and `(await getStoreSettings()).address` — the K/V `phone`/`address` keys are already shadowed by
+  // the store_profile overlay in /api/settings, so we can drop the dual-lookup in a follow-up.
   const phone   = settings.phone   ?? "284-544-8088";
   const address = settings.address ?? "Wickhams Cay 1, Road Town, BVI";
   const payment = settings.payment_methods ?? "ATH Móvil · Card · Apple Pay";
@@ -65,6 +68,7 @@ async function buildSystemPrompt(): Promise<string> {
     return `*${cat.name}*\n${lines.join("\n")}`;
   }).filter(Boolean).join("\n\n");
 
+  // TODO(store-settings): interpolate `${(await getStoreSettings()).storeName}` instead of the literal.
   return `You are the friendly WhatsApp assistant for Island Tacos, a Mexican taqueria in Road Town, British Virgin Islands.
 
 STORE INFO:
@@ -97,6 +101,7 @@ GUIDELINES:
 export async function handleInboundMessage(fromPhone: string, text: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
+    // TODO(store-settings): replace (284) 544-8088 with `${(await getStoreSettings()).phone}`
     return `Sorry, I can't respond right now. Please call us at (284) 544-8088 or order at ${STORE_URL} 🌮`;
   }
 
@@ -118,6 +123,7 @@ export async function handleInboundMessage(fromPhone: string, text: string): Pro
       ],
     });
 
+    // TODO(store-settings): replace (284) 544-8088 with `${(await getStoreSettings()).phone}`
     const reply = completion.choices[0]?.message?.content?.trim()
       ?? "Sorry, I didn't catch that — try again or call us at (284) 544-8088 🌮";
 
@@ -125,6 +131,7 @@ export async function handleInboundMessage(fromPhone: string, text: string): Pro
     return reply;
   } catch (err) {
     logger.error({ err }, "[whatsapp] OpenAI error");
+    // TODO(store-settings): replace (284) 544-8088 with `${(await getStoreSettings()).phone}`
     return `Sorry, something went wrong on my end. Please call us at (284) 544-8088 🌮`;
   }
 }
@@ -190,6 +197,7 @@ export async function sendOrderConfirmationWhatsApp(order: OrderLike): Promise<v
   const total = `$${parseFloat(order.total as string).toFixed(2)}`;
   const track = `${STORE_URL}/track?code=${order.confirmationCode}`;
 
+  // TODO(store-settings): interpolate `${(await getStoreSettings()).storeName}` instead of "Island Tacos"
   const body =
     `✅ Order confirmed, ${name}!\n\n` +
     `Your Island Tacos order *#${order.confirmationCode}* (${total}) is being prepared.\n\n` +

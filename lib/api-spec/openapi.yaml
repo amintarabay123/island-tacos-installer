@@ -17,6 +17,8 @@ tags:
     description: Payment processing
   - name: admin
     description: Admin/restaurant management
+  - name: store-settings
+    description: Per-store identity / brand / contact settings (one row per tenant)
 
 paths:
   /healthz:
@@ -473,6 +475,42 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Order"
+
+  /store-settings:
+    get:
+      operationId: getStoreSettings
+      tags: [store-settings]
+      summary: Read the active store profile (public — used by header, footer, emails, receipts)
+      responses:
+        "200":
+          description: Store profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSettings"
+    patch:
+      operationId: updateStoreSettings
+      tags: [store-settings]
+      summary: Partial-update the active store profile (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStoreSettingsBody"
+      responses:
+        "200":
+          description: Updated store profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSettings"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -965,4 +1003,64 @@ components:
         - cancelledOrders
         - completedBySource
         - popularItems
+
+    StoreSettings:
+      type: object
+      description: Per-store identity / brand / contact settings. One row per tenant.
+      properties:
+        id:
+          type: integer
+        storeName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        taxRate:
+          type: string
+          description: Decimal as string (e.g. "0", "0.0700"). Stored as NUMERIC(5,4) to avoid float drift.
+        timezone:
+          type: string
+          description: IANA timezone (e.g. "America/Tortola").
+        currency:
+          type: string
+          description: ISO 4217 currency code (e.g. "USD").
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - storeName
+        - phone
+        - email
+        - address
+        - taxRate
+        - timezone
+        - currency
+        - createdAt
+        - updatedAt
+
+    UpdateStoreSettingsBody:
+      type: object
+      description: Partial update. Any omitted field keeps its current value.
+      properties:
+        storeName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        taxRate:
+          type: string
+        timezone:
+          type: string
+        currency:
+          type: string
 

@@ -34,9 +34,11 @@ import type {
   Order,
   PaymentResult,
   PaymentSession,
+  StoreSettings,
   UpdateMenuCategoryBody,
   UpdateMenuItemBody,
   UpdateOrderStatusBody,
+  UpdateStoreSettingsBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -1692,3 +1694,164 @@ export function useGetRecentOrders<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Read the active store profile (public — used by header, footer, emails, receipts)
+ */
+export const getGetStoreSettingsUrl = () => {
+  return `/api/store-settings`;
+};
+
+export const getStoreSettings = async (
+  options?: RequestInit,
+): Promise<StoreSettings> => {
+  return customFetch<StoreSettings>(getGetStoreSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStoreSettingsQueryKey = () => {
+  return [`/api/store-settings`] as const;
+};
+
+export const getGetStoreSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStoreSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStoreSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStoreSettingsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getStoreSettings>>
+  > = ({ signal }) => getStoreSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStoreSettings>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStoreSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStoreSettings>>
+>;
+export type GetStoreSettingsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Read the active store profile (public — used by header, footer, emails, receipts)
+ */
+
+export function useGetStoreSettings<
+  TData = Awaited<ReturnType<typeof getStoreSettings>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getStoreSettings>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStoreSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Partial-update the active store profile (admin only)
+ */
+export const getUpdateStoreSettingsUrl = () => {
+  return `/api/store-settings`;
+};
+
+export const updateStoreSettings = async (
+  updateStoreSettingsBody: UpdateStoreSettingsBody,
+  options?: RequestInit,
+): Promise<StoreSettings> => {
+  return customFetch<StoreSettings>(getUpdateStoreSettingsUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateStoreSettingsBody),
+  });
+};
+
+export const getUpdateStoreSettingsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateStoreSettings>>,
+    TError,
+    { data: BodyType<UpdateStoreSettingsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateStoreSettings>>,
+  TError,
+  { data: BodyType<UpdateStoreSettingsBody> },
+  TContext
+> => {
+  const mutationKey = ["updateStoreSettings"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateStoreSettings>>,
+    { data: BodyType<UpdateStoreSettingsBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateStoreSettings(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateStoreSettingsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateStoreSettings>>
+>;
+export type UpdateStoreSettingsMutationBody = BodyType<UpdateStoreSettingsBody>;
+export type UpdateStoreSettingsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Partial-update the active store profile (admin only)
+ */
+export const useUpdateStoreSettings = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateStoreSettings>>,
+    TError,
+    { data: BodyType<UpdateStoreSettingsBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateStoreSettings>>,
+  TError,
+  { data: BodyType<UpdateStoreSettingsBody> },
+  TContext
+> => {
+  return useMutation(getUpdateStoreSettingsMutationOptions(options));
+};

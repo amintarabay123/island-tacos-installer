@@ -1,5 +1,9 @@
 import { Router } from "express";
 
+// TODO(store-settings): every "Island Tacos" literal in the manifest payloads
+// below (name, short_name, description for /, /pos, /kitchen, /display, /admin)
+// should read from getStoreSettings().storeName. Manifest is requested at
+// install-prompt time, so cached value is fine.
 const router = Router();
 
 const ADMIN_PATH = process.env["ADMIN_PATH"] ?? "admin";

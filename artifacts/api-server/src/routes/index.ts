@@ -16,6 +16,7 @@ import uploadRouter from "./upload";
 import displayRouter from "./display";
 import posEventsRouter from "./pos-events";
 import settingsRouter from "./settings";
+import storeSettingsRouter from "./store-settings";
 import employeesRouter from "./employees";
 import imageProxyRouter from "./image-proxy";
 import syncRouter from "./sync";
@@ -52,6 +53,7 @@ router.use(displayRouter);
 router.use(posEventsRouter);
 router.use(imageProxyRouter);
 router.use(settingsRouter); // GET is public; PATCH is guarded below
+router.use(storeSettingsRouter); // GET is public; PATCH is guarded below
 router.use(syncRouter);    // /sync/receive uses own X-Sync-Secret auth; /sync/push is admin-guarded below
 
 // Customer lookup: /customers/lookup is public (for online account page)
@@ -76,6 +78,10 @@ router.use(/^\/(admin|loyverse|reports|employees|financials)/, (req: Request, re
 router.use("/sync/push",   (req: Request, res: Response, next: NextFunction) => requireAdminAuth(req, res, next));
 router.use("/sync/export", (req: Request, res: Response, next: NextFunction) => requireAdminAuth(req, res, next));
 router.use("/settings", (req: Request, res: Response, next: NextFunction) => {
+  if (req.method === "PATCH") return requireAdminAuth(req, res, next);
+  next();
+});
+router.use("/store-settings", (req: Request, res: Response, next: NextFunction) => {
   if (req.method === "PATCH") return requireAdminAuth(req, res, next);
   next();
 });

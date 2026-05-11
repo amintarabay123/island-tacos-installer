@@ -61,6 +61,7 @@ export default function FbBrowserPrompt() {
     <div className="fixed inset-0 z-[9999] flex flex-col" style={{ backgroundColor: "#1A0C00" }}>
       {/* Top section — logo + message */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+        {/* TODO(store-settings): alt should be useStoreSettings().storeName */}
         <img
           src="/logo-wordmark.png"
           alt="Island Tacos"

@@ -70,6 +70,7 @@ export default function TrackOrder() {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12 text-center">
         <div className="w-full max-w-sm flex flex-col items-center gap-6">
+          {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
           <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Island Tacos</div>
 
           {/* Icon */}
@@ -198,6 +199,7 @@ function FullScreenState({
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12 text-center">
       <div className="w-full max-w-sm flex flex-col items-center gap-6">
         {/* Logo */}
+        {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
         <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Island Tacos</div>
 
         {/* Icon */}
@@ -540,6 +542,7 @@ function NoCodeView() {
           <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3">
             ← Back to Menu
           </Link>
+          {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
           <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Island Tacos</div>
           <h1 className="text-2xl font-black">Track Your Order</h1>
         </div>

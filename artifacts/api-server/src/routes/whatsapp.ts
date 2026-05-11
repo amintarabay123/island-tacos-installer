@@ -88,6 +88,7 @@ router.post("/whatsapp/webhook", async (req, res): Promise<void> => {
           await sendWhatsAppMessage(from, reply);
         } catch (err) {
           logger.error({ err, from }, "[whatsapp] Handler error");
+          // TODO(store-settings): replace (284) 544-8088 with `${(await getStoreSettings()).phone}`
           await sendWhatsAppMessage(from, "Sorry, something went wrong. Please call us at (284) 544-8088 🌮");
         }
       }

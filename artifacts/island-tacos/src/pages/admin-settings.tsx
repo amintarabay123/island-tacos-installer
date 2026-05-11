@@ -25,6 +25,10 @@ type Settings = {
 
 const DEFAULTS: Settings = {
   hours: "11am – 7pm daily",
+  // TODO(store-settings): phone/address now live in store_profile; this admin
+  // page should be split — identity fields edited via /api/store-settings,
+  // operational fields stay on /api/settings. Out of scope for the
+  // proof-of-pattern PR; see replit.md → User preferences for the rollout plan.
   phone: "284-544-8088",
   address: "Wickhams Cay 1, Road Town, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
@@ -69,6 +73,7 @@ type EmployeeForm = {
 const EMPTY_FORM: EmployeeForm = { name: "", role: "staff", pin: "", confirmPin: "" };
 
 export default function AdminSettings() {
+  // TODO(store-settings): use `${storeName} Settings` once page-meta accepts a getter
   useEffect(() => { setPageMeta("⚙️ Settings — Island Tacos", "⚙️"); }, []);
 
   const { toast } = useToast();

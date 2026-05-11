@@ -61,6 +61,7 @@ const DEFAULT_EXPENSES: ExpenseRow[] = [
 ];
 
 const EMPTY_DRAFT: DraftData = {
+  // TODO(store-settings): seed businessName + address from useStoreSettings() instead of hardcoding
   businessName: "Island Tacos", registrationNumber: "", address: "Wickhams Cay 1, Road Town, Tortola, BVI",
   directors: "", currencyCode: "USD",
   grossSales: 0, refunds: 0, otherIncome: 0, otherIncomeDesc: "", posDataFetched: false,
@@ -597,6 +598,7 @@ export default function AdminFinancials() {
                 <div key={d.id} className="bg-white border border-gray-100 rounded-xl px-5 py-4 flex items-center gap-4 shadow-sm">
                   <FileText className="w-6 h-6 text-emerald-500 shrink-0" />
                   <div className="flex-1 min-w-0">
+                    {/* TODO(store-settings): fallback should be useStoreSettings().storeName */}
                     <div className="font-semibold text-gray-900">{d.business_name || "Island Tacos"}</div>
                     <div className="text-sm text-gray-500">{d.period_start} → {d.period_end}</div>
                     <div className="text-xs text-gray-400 mt-0.5">Last saved {new Date(d.updated_at).toLocaleString()}</div>

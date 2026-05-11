@@ -6,13 +6,30 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type StoreSettings = { hours: string; phone: string; address: string; payment_methods: string; is_open: string; open_today: string; open_time: string; closes_orders_at: string; closed_today_reason?: string };
-const SETTING_DEFAULTS: StoreSettings = {
+// Operational settings live in the K/V `store_settings` table behind /api/settings:
+//   hours, open_time, close_time, cutoff_minutes, open_days, payment_methods, address.
+// Identity settings (storeName, phone, email, …) come from the typed
+// `store_profile` table via `useStoreSettings()` — see lib/use-store-settings.ts.
+//
+// TODO(store-settings): migrate `address` to read from `useStoreSettings()`
+// (it's already overlaid into /api/settings on the server, so this is a
+// near-mechanical follow-up).
+type OperationalSettings = {
+  hours: string;
+  address: string;
+  payment_methods: string;
+  is_open: string;
+  open_today: string;
+  open_time: string;
+  closes_orders_at: string;
+  closed_today_reason?: string;
+};
+const OPERATIONAL_DEFAULTS: OperationalSettings = {
   hours: "11am – 7pm daily",
-  phone: "284-544-8088",
   address: "Wickhams Cay 1, Road Town, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
   is_open: "true",
@@ -28,12 +45,12 @@ function formatTime(hhmm: string): string {
   return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
-function useStoreSettings() {
-  const [settings, setSettings] = useState<StoreSettings>(SETTING_DEFAULTS);
+function useOperationalSettings() {
+  const [settings, setSettings] = useState<OperationalSettings>(OPERATIONAL_DEFAULTS);
   useEffect(() => {
     fetch(`${API}/api/settings`)
       .then(r => r.json())
-      .then(data => setSettings({ ...SETTING_DEFAULTS, ...data }))
+      .then(data => setSettings({ ...OPERATIONAL_DEFAULTS, ...data }))
       .catch(() => {});
   }, []);
   return settings;
@@ -43,7 +60,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { items, total, removeItem, updateQuantity } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const settings = useStoreSettings();
+  const settings = useOperationalSettings();
+  const profile = useStoreSettings();
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -60,7 +78,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Brand */}
           <Link href="/" className="flex items-center select-none">
-            <img src="/logo-wordmark.png" alt="Island Tacos" className="h-10 w-auto dark:invert" />
+            <img src="/logo-wordmark.png" alt={profile.storeName} className="h-10 w-auto dark:invert" />
           </Link>
 
           {/* Desktop nav links */}
@@ -219,7 +237,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent side="left" className="w-72 p-0">
                 <div className="flex items-center justify-between px-6 py-5 border-b">
-                  <img src="/logo-wordmark.png" alt="Island Tacos" className="h-8 w-auto dark:invert" />
+                  <img src="/logo-wordmark.png" alt={profile.storeName} className="h-8 w-auto dark:invert" />
                   <button onClick={() => setMobileOpen(false)}>
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>
@@ -251,11 +269,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <footer className="border-t py-10 mt-8">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
-            <p className="font-bold text-sm">Island Tacos</p>
+            <p className="font-bold text-sm">{profile.storeName}</p>
             <p className="text-xs text-muted-foreground mt-1">
               Mexican food. Made fresh, every day.
             </p>
-            <p className="text-xs text-muted-foreground">{settings.phone}</p>
+            <p className="text-xs text-muted-foreground">{profile.phone}</p>
           </div>
           <div className="flex flex-wrap gap-6 text-xs text-muted-foreground">
             <span>{settings.address}</span>

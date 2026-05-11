@@ -15,6 +15,9 @@ function makeOpenAIClient(): OpenAI {
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0, timeout: 45000 });
 }
 
+// TODO(store-settings): replace hardcoded "Island Tacos" and "Road Town, British Virgin Islands"
+// with `(await getStoreSettings()).storeName` / .address. Prompt is rebuilt per request so the
+// extra DB hit is acceptable.
 const EXTRACT_PROMPT = `You are an invoice data extraction assistant for "Island Tacos", a food importer in Road Town, British Virgin Islands. Extract ALL data from this supplier invoice and return a single valid JSON object with EXACTLY this structure:
 
 {

@@ -158,6 +158,10 @@ const server = createServer(async (req, res) => {
   }
 });
 
+// TODO(store-settings): this banner is fine to leave hardcoded — server.mjs runs
+// before the DB is reachable, so we can't getStoreSettings() here. Long-term, the
+// banner should read the store name from a per-tenant license/config blob shipped
+// alongside the binary.
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Island Tacos local server on http://0.0.0.0:${PORT}`);
   console.log(`API proxied to: ${API_URL}`);

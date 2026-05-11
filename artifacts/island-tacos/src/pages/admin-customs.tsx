@@ -383,6 +383,7 @@ export default function AdminCustoms() {
   const [fSuppCity, setFSuppCity] = useState('');
   const [fSuppZip, setFSuppZip] = useState('');
   const [fSuppCountry, setFSuppCountry] = useState('');
+  // TODO(store-settings): seed from useStoreSettings().storeName
   const [fImpName, setFImpName] = useState('Island Tacos');
   const [fImpId, setFImpId] = useState('113917');
   const [fImpStreet, setFImpStreet] = useState('PO Box 643');
@@ -401,6 +402,7 @@ export default function AdminCustoms() {
   const [fInsurance, setFInsurance] = useState('0');
   const [fAlcohol, setFAlcohol] = useState('0');
   const [fFossil, setFFossil] = useState('0');
+  // TODO(store-settings): seed from useStoreSettings().storeName
   const [fDeclName, setFDeclName] = useState('Island Tacos');
   const [fDeclId, setFDeclId] = useState('100494');
   const [fDeclDate, setFDeclDate] = useState(todayStr);

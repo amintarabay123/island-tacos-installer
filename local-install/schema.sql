@@ -163,11 +163,43 @@ CREATE TABLE IF NOT EXISTS loyverse_daily_summary (
 
 -- ── Settings ──────────────────────────────────────────────────────────────────
 
+-- Operational config (open hours, payment methods, cutoff minutes, …)
+-- Generic key/value store. Edited via /api/settings.
 CREATE TABLE IF NOT EXISTS store_settings (
   key        VARCHAR(100) PRIMARY KEY,
   value      TEXT NOT NULL,
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+-- Store IDENTITY (brand, contact, jurisdiction). Typed columns, single row
+-- today (one row per tenant once multi-tenancy lands). Edited via
+-- /api/store-settings. See artifacts/api-server/src/lib/store-settings.ts.
+CREATE TABLE IF NOT EXISTS store_profile (
+  id          SERIAL PRIMARY KEY,
+  store_name  TEXT NOT NULL,
+  phone       TEXT NOT NULL,
+  email       TEXT NOT NULL,
+  address     TEXT NOT NULL,
+  tax_rate    NUMERIC(5,4) NOT NULL DEFAULT 0,
+  timezone    TEXT NOT NULL DEFAULT 'America/Tortola',
+  currency    TEXT NOT NULL DEFAULT 'USD',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Seed exactly one row on fresh installs. WHERE NOT EXISTS keeps this
+-- idempotent: running schema.sql again on an existing DB is a no-op.
+-- TODO(store-settings): when multi-tenancy lands, replace this seed with a
+-- per-tenant provisioning step in the central admin site.
+INSERT INTO store_profile (store_name, phone, email, address, tax_rate, timezone, currency)
+SELECT 'Island Tacos',
+       '284-544-8088',
+       'orders@islandtacosbvi.com',
+       'Wickhams Cay 1, Road Town, Tortola, BVI',
+       0,
+       'America/Tortola',
+       'USD'
+WHERE NOT EXISTS (SELECT 1 FROM store_profile);
 
 -- ── Incremental column additions (safe on existing DBs) ──────────────────────
 -- Add new columns here as ALTER TABLE ... ADD COLUMN IF NOT EXISTS
@@ -221,3 +253,4 @@ SELECT setval(pg_get_serial_sequence('cash_transactions','id'),COALESCE(MAX(id),
 SELECT setval(pg_get_serial_sequence('refunds','id'),        COALESCE(MAX(id),0)+1, false) FROM refunds;
 SELECT setval(pg_get_serial_sequence('customers','id'),      COALESCE(MAX(id),0)+1, false) FROM customers;
 SELECT setval(pg_get_serial_sequence('employees','id'),      COALESCE(MAX(id),0)+1, false) FROM employees;
+SELECT setval(pg_get_serial_sequence('store_profile','id'),  COALESCE(MAX(id),0)+1, false) FROM store_profile;

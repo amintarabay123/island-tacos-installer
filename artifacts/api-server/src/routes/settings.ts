@@ -1,11 +1,16 @@
 import { Router } from "express";
 import { db, storeSettingsTable } from "@workspace/db";
 import { pushSettingsToCloud } from "../lib/online-orders-sync";
+import { getStoreSettings } from "../lib/store-settings";
 
 const router = Router();
 
 export const SETTING_DEFAULTS: Record<string, string> = {
   hours: "11am – 7pm daily",
+  // TODO(store-settings): the K/V `phone` / `address` defaults are now shadowed by the
+  // store_profile overlay in GET /api/settings. Once all readers migrate to
+  // getStoreSettings() / useStoreSettings(), drop these two keys from SETTING_DEFAULTS
+  // and stop accepting them in PATCH /api/settings.
   phone: "284-544-8088",
   address: "Wickhams Cay 1, Road Town, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
@@ -86,11 +91,34 @@ export function computeStoreStatus(settings: Record<string, string>): {
   return { is_open, closes_orders_at, open_today: true };
 }
 
-// GET /api/settings — public, used by footer and display
-router.get("/settings", async (_req, res): Promise<void> => {
+// GET /api/settings — public, used by footer and display.
+// Returns the K/V operational config merged with computed open-status.
+// Identity fields (store_name, phone, address, email) are overlaid from
+// the typed `store_profile` table — that table is authoritative. The K/V
+// `phone` / `address` keys remain readable for back-compat but are
+// effectively shadowed; new code should consume `/api/store-settings`
+// directly via getStoreSettings() (server) or useGetStoreSettings() (client).
+router.get("/settings", async (req, res): Promise<void> => {
   const rows = await db.select().from(storeSettingsTable);
   const result: Record<string, string> = { ...SETTING_DEFAULTS };
   for (const row of rows) result[row.key] = row.value;
+
+  // Overlay store_profile fields. If the table is empty we fall back to the
+  // K/V defaults rather than 500-ing here, because this endpoint also drives
+  // the live online-ordering site and we don't want to take down the menu
+  // page just because the profile row hasn't been seeded yet.
+  try {
+    const profile = await getStoreSettings();
+    result.store_name = profile.storeName;
+    result.phone      = profile.phone;
+    result.email      = profile.email;
+    result.address    = profile.address;
+    result.timezone   = profile.timezone;
+    result.currency   = profile.currency;
+    result.tax_rate   = profile.taxRate;
+  } catch (err) {
+    req.log.warn({ err }, "store_profile not available — serving K/V defaults for /api/settings");
+  }
 
   const { is_open, closes_orders_at, open_today, closed_today_reason } = computeStoreStatus(result);
   result.is_open = is_open ? "true" : "false";

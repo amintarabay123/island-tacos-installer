@@ -151,6 +151,7 @@ export default function InstallPrompt() {
           {/* Main row */}
           <div className="flex items-center gap-3 px-4 py-4">
             {/* Icon */}
+            {/* TODO(store-settings): alt + headline should be useStoreSettings().storeName */}
             <img
               src="/icon.svg"
               alt="Island Tacos"

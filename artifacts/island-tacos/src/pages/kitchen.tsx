@@ -108,6 +108,7 @@ function isOverdue(createdAt: string, now: number): boolean {
 }
 
 export default function Kitchen() {
+  // TODO(store-settings): use `Kitchen — ${useStoreSettings().storeName}` once page-meta accepts a getter
   useEffect(() => { setPageMeta("Kitchen — Island Tacos", "🍳", { iconUrl: "/icon-kds-192.png", manifestUrl: "/manifest-kds.json" }); }, []);
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -564,6 +565,7 @@ export default function Kitchen() {
     <div className="min-h-screen bg-gray-100 text-gray-900 flex flex-col select-none overflow-hidden">
       <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-white border-b border-gray-200 shrink-0 gap-2 shadow-sm">
         <div className="flex items-center gap-2 min-w-0">
+          {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
           <span className="text-base sm:text-lg font-bold truncate">Island Tacos</span>
           <span className="text-gray-400 text-sm hidden sm:inline">· Kitchen Display</span>
         </div>

@@ -373,6 +373,38 @@ export interface AdminStats {
   popularItems: AdminStatsPopularItemsItem[];
 }
 
+/**
+ * Per-store identity / brand / contact settings. One row per tenant.
+ */
+export interface StoreSettings {
+  id: number;
+  storeName: string;
+  phone: string;
+  email: string;
+  address: string;
+  /** Decimal as string (e.g. "0", "0.0700"). Stored as NUMERIC(5,4) to avoid float drift. */
+  taxRate: string;
+  /** IANA timezone (e.g. "America/Tortola"). */
+  timezone: string;
+  /** ISO 4217 currency code (e.g. "USD"). */
+  currency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Partial update. Any omitted field keeps its current value.
+ */
+export interface UpdateStoreSettingsBody {
+  storeName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  taxRate?: string;
+  timezone?: string;
+  currency?: string;
+}
+
 export type ListMenuItemsParams = {
   categoryId?: number;
   available?: boolean;

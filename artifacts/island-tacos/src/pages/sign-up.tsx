@@ -54,6 +54,7 @@ export default function SignUpPage() {
       style={{ background: "linear-gradient(135deg, #0c0a09 0%, #1c1917 50%, #0c0a09 100%)" }}
     >
       <div className="mb-6 text-center">
+        {/* TODO(store-settings): replace "Island Tacos" with useStoreSettings().storeName */}
         <p className="text-stone-500 text-sm uppercase tracking-widest font-medium">Island Tacos · Road Town, BVI</p>
       </div>
       <div className="w-full max-w-sm">

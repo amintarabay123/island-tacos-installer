@@ -231,6 +231,7 @@ export function AthMovilInstructions({
           </li>
           <li className="flex gap-2">
             <span className="font-bold shrink-0">2.</span>
+            {/* TODO(store-settings): replace "Island Tacos" with useStoreSettings().storeName */}
             <span>Tap <strong>"Pay a Business"</strong> and search for <strong>Island Tacos</strong></span>
           </li>
           <li className="flex gap-2">

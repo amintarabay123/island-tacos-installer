@@ -64,6 +64,7 @@ function formatOrder(order: Record<string, unknown>, items: Record<string, unkno
 }
 
 const STORE_URL = process.env.STORE_URL ?? "https://orders.islandtacosbvi.com";
+// TODO(store-settings): replace fallback with `${(await getStoreSettings()).storeName} <${(await getStoreSettings()).email}>`
 const SMTP_FROM  = process.env.SMTP_FROM  ?? "Island Tacos <orders@islandtacosbvi.com>";
 
 function fmtMoney(n: unknown) { return `$${parseFloat(n as string).toFixed(2)}`; }
@@ -76,11 +77,13 @@ function emailShell(bodyContent: string) {
 <tr><td align="center">
 <table width="480" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
   <tr><td style="background:#1a1a1a;padding:24px 32px;text-align:center">
+    <!-- TODO(store-settings): use getStoreSettings().storeName (and .address) -->
     <div style="color:#e05a00;font-size:24px;font-weight:800;letter-spacing:1px">🌮 ISLAND TACOS</div>
     <div style="color:#999;font-size:12px;margin-top:4px">Wickhams Cay 1, Road Town, BVI</div>
   </td></tr>
   ${bodyContent}
   <tr><td style="padding:20px 32px;text-align:center;background:#fafaf8;border-top:1px solid #eee">
+    <!-- TODO(store-settings): use getStoreSettings().storeName + .email -->
     <div style="color:#aaa;font-size:12px">© Island Tacos · orders@islandtacosbvi.com</div>
   </td></tr>
 </table>
@@ -184,6 +187,7 @@ async function sendReadySMS(order: OrderRow) {
   const normalizedPhone = formatBVIPhone(order.customerPhone);
   if (!isBVIMobile(normalizedPhone)) return;
 
+  // TODO(store-settings): replace literal with `${(await getStoreSettings()).storeName}: order #…`
   const body = `Island Tacos: order #${order.confirmationCode} is ready for pickup!`;
   await sendSms(normalizedPhone, body);
 }
@@ -201,6 +205,7 @@ async function sendCancellationSMS(order: OrderRow, _reason: string | null) {
 
   // Kept short: 1 SMS segment. Reason is intentionally NOT included to keep
   // it under 160 chars; staff should follow up by phone for the details.
+  // TODO(store-settings): replace "Island Tacos" with .storeName and "(284) 544-8088" with .phone
   const body = `Island Tacos: sorry, order #${order.confirmationCode} was cancelled. Call (284) 544-8088.`;
   await sendSms(normalizedPhone, body);
 }
@@ -840,6 +845,7 @@ router.post("/orders/:id/email-receipt", requireStaffAuth, async (req, res): Pro
 </html>`;
 
   try {
+    // TODO(store-settings): replace fallback + subject with `${(await getStoreSettings()).storeName}` everywhere
     await mailer.sendMail({
       from: process.env.SMTP_FROM ?? "Island Tacos <orders@islandtacosbvi.com>",
       to: recipient,

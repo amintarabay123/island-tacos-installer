@@ -663,3 +663,67 @@ export const GetRecentOrdersResponseItem = zod.object({
   updatedAt: zod.coerce.date(),
 });
 export const GetRecentOrdersResponse = zod.array(GetRecentOrdersResponseItem);
+
+/**
+ * @summary Read the active store profile (public — used by header, footer, emails, receipts)
+ */
+export const GetStoreSettingsResponse = zod
+  .object({
+    id: zod.number(),
+    storeName: zod.string(),
+    phone: zod.string(),
+    email: zod.string(),
+    address: zod.string(),
+    taxRate: zod
+      .string()
+      .describe(
+        'Decimal as string (e.g. \"0\", \"0.0700\"). Stored as NUMERIC(5,4) to avoid float drift.',
+      ),
+    timezone: zod
+      .string()
+      .describe('IANA timezone (e.g. \"America\/Tortola\").'),
+    currency: zod.string().describe('ISO 4217 currency code (e.g. \"USD\").'),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  })
+  .describe(
+    "Per-store identity \/ brand \/ contact settings. One row per tenant.",
+  );
+
+/**
+ * @summary Partial-update the active store profile (admin only)
+ */
+export const UpdateStoreSettingsBody = zod
+  .object({
+    storeName: zod.string().optional(),
+    phone: zod.string().optional(),
+    email: zod.string().optional(),
+    address: zod.string().optional(),
+    taxRate: zod.string().optional(),
+    timezone: zod.string().optional(),
+    currency: zod.string().optional(),
+  })
+  .describe("Partial update. Any omitted field keeps its current value.");
+
+export const UpdateStoreSettingsResponse = zod
+  .object({
+    id: zod.number(),
+    storeName: zod.string(),
+    phone: zod.string(),
+    email: zod.string(),
+    address: zod.string(),
+    taxRate: zod
+      .string()
+      .describe(
+        'Decimal as string (e.g. \"0\", \"0.0700\"). Stored as NUMERIC(5,4) to avoid float drift.',
+      ),
+    timezone: zod
+      .string()
+      .describe('IANA timezone (e.g. \"America\/Tortola\").'),
+    currency: zod.string().describe('ISO 4217 currency code (e.g. \"USD\").'),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  })
+  .describe(
+    "Per-store identity \/ brand \/ contact settings. One row per tenant.",
+  );

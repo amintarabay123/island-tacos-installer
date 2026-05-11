@@ -282,6 +282,7 @@ export default function AdminReports() {
   </div>` : ""}
 
   <!-- Footer -->
+  <!-- TODO(store-settings): replace "Island Tacos" with useStoreSettings().storeName -->
   <div class="footer">
     <div class="footer-brand">Island Tacos · Confidential</div>
     <div class="footer-note">This report is generated from POS and online order data</div>
@@ -555,6 +556,7 @@ export default function AdminReports() {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         doc.setTextColor(...mid);
+        // TODO(store-settings): use useStoreSettings().storeName instead of literal "Island Tacos"
         doc.text("Island Tacos \u00B7 Confidential \u00B7 For internal use only", ML, 291);
         doc.text(`Page ${p} of ${pages}`, MR, 291, { align: "right" });
       }

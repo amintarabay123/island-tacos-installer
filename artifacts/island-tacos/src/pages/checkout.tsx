@@ -157,6 +157,7 @@ export default function Checkout() {
               </div>
               <h1 className="text-2xl font-black">Order placed!</h1>
               <p className="text-muted-foreground">
+                {/* TODO(store-settings): interpolate useStoreSettings().storeName */}
                 Waiting for Island Tacos to accept your order before we collect payment.
                 <br /><span className="text-sm">This usually takes under a minute.</span>
               </p>

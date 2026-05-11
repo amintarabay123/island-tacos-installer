@@ -57,6 +57,7 @@ export default function StaffLogin() {
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-8 px-4">
       <div className="text-center space-y-1">
+        {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
         <div className="text-2xl font-black text-white tracking-tight">Island Tacos</div>
         <div className="text-zinc-500 text-sm">Staff access</div>
       </div>

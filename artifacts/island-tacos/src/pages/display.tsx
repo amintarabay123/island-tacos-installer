@@ -104,6 +104,7 @@ export default function CustomerDisplay() {
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // TODO(store-settings): use `Customer Display — ${useStoreSettings().storeName}` once page-meta accepts a getter
     setPageMeta("Customer Display — Island Tacos", "🖥️", { iconUrl: "/icon-display-192.png", manifestUrl: "/manifest-display.json" });
   }, []);
 
@@ -161,6 +162,7 @@ function IdleScreen() {
       <div style={{ flex: 1, background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24, padding: "0 64px" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 80, lineHeight: 1, marginBottom: 20 }}>🌮</div>
+          {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
           <h1 style={{ fontSize: 52, fontWeight: 900, color: "#111827", margin: 0, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Island Tacos</h1>
           <p style={{ fontSize: 18, color: "#9ca3af", margin: "10px 0 0", fontWeight: 500 }}>Road Town, Tortola · BVI</p>
         </div>
@@ -226,6 +228,7 @@ function ActiveScreen({ state }: { state: DisplayState }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 40px", borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 22 }}>🌮</span>
+            {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
             <span style={{ fontWeight: 900, fontSize: 20, color: "#111827", letterSpacing: "-0.01em" }}>Island Tacos</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>

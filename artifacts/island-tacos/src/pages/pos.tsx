@@ -115,6 +115,9 @@ function buildReceiptLines(order: Order, tendered?: number): { text: string; bol
 
   // ── Header ──────────────────────────────────────────────────────────────────
   lines.push({ text: "================================", center: true });
+  // TODO(store-settings): replace "ISLAND TACOS" / address / "(284) 544-8088" with
+  // values from useStoreSettings() — receipt text is the single most visible piece
+  // of store identity in the SaaS context.
   lines.push({ text: "ISLAND TACOS", bold: true, center: true, size: "large" });
   lines.push({ text: "================================", center: true });
   lines.push({ text: "Wickhams Cay 1, Road Town, BVI", center: true });
@@ -1502,6 +1505,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                 >
                   📞 Call
                 </a>
+                {/* TODO(store-settings): interpolate ${useStoreSettings().storeName} instead of "Island Tacos" */}
                 <a
                   href={`https://wa.me/${selected.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${selected.customerName}, your Island Tacos order #${selected.confirmationCode} is ready for pickup! 🌮`)}`}
                   target="_blank"
@@ -2528,6 +2532,7 @@ function SplitPaymentModal({
 export default function POS() {
   const [, navigate] = useLocation();
 
+  // TODO(store-settings): use `POS — ${useStoreSettings().storeName}` once page-meta accepts a getter
   useEffect(() => { setPageMeta("POS — Island Tacos", "🖥️", { iconUrl: "/icon-pos-192.png", manifestUrl: "/manifest-pos.json" }); }, []);
 
   // Auth guard
@@ -3148,6 +3153,7 @@ export default function POS() {
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center gap-3">
+          {/* TODO(store-settings): use useStoreSettings().storeName for alt */}
           <img src="/logo.svg" alt="Island Tacos" className="h-8 w-8 object-contain rounded-lg"/>
           <span className="text-gray-400 text-sm font-medium hidden sm:block">Point of Sale</span>
         </div>

@@ -183,6 +183,7 @@ function Sidebar({
 
 export default function Admin() {
   useEffect(() => {
+    // TODO(store-settings): use `Admin — ${useStoreSettings().storeName}` once page-meta accepts a getter
     setPageMeta("Admin — Island Tacos", "⚙️", { iconUrl: "/icon-admin-192.png", manifestUrl: "/manifest-admin.json" });
   }, []);
 
@@ -469,6 +470,7 @@ export default function Admin() {
             </button>
             <div>
               <h1 className="font-black text-slate-800 text-base leading-tight">Dashboard</h1>
+              {/* TODO(store-settings): replace "Island Tacos" with useStoreSettings().storeName */}
               <p className="text-xs text-slate-400 leading-tight hidden sm:block">Island Tacos — Admin</p>
             </div>
           </div>
@@ -756,6 +758,7 @@ export default function Admin() {
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-sm text-slate-400">{order.customerPhone}</span>
                             <a href={`tel:${order.customerPhone}`} className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium transition-colors">📞 Call</a>
+                            {/* TODO(store-settings): interpolate useStoreSettings().storeName instead of "Island Tacos" in the wa.me text below */}
                             <a
                               href={`https://wa.me/${order.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${order.customerName}, your Island Tacos order #${order.confirmationCode} is ready for pickup! 🌮`)}`}
                               target="_blank" rel="noreferrer"
