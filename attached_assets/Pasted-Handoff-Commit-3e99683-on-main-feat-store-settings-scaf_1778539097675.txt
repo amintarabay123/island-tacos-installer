@@ -1,0 +1,31 @@
+Handoff
+Commit: 3e99683 on main — feat(store-settings): scaffold settings table, migrate store_name and phone end-to-end
+
+Files changed: 39 (5 new, 34 modified)
+
+New: lib/db/src/schema/store-profile.ts, artifacts/api-server/src/lib/store-settings.ts, artifacts/api-server/src/routes/store-settings.ts, artifacts/island-tacos/src/lib/use-store-settings.ts, two generated Zod types
+Modified product code: 19 source files (layout, pages, components, server routes, server lib)
+Modified infra: lib/db/src/schema/index.ts, lib/api-spec/openapi.yaml, local-install/schema.sql, .gitignore
+Modified generated: lib/api-zod/src/generated/*, lib/api-client-react/src/generated/* (re-emitted by Orval)
+TODOs added: 49 TODO(store-settings) comments across 26 product files. Grep TODO(store-settings) for the remaining work. Distribution highlights: pos.tsx 4, api-server/src/lib/whatsapp.ts 6, api-server/src/routes/orders.ts 6, track.tsx 3, display.tsx 3, admin.tsx 3.
+
+Intentionally NOT touched (out of scope):
+
+local-install/* (install scripts — separate tenant-agnostic effort)
+Root install scripts (install.sh, update.sh, INSTALL.*, UPDATE.*)
+public/manifest-*.json, public/site.webmanifest (JSON, no comments)
+public/docs/*.html (intentionally branded user docs)
+mockup-sandbox/**, attached_assets/**, generated client code, replit.md, index.html
+Surprises / questions for Replit
+
+There was already a table named store_settings (key/value, load-bearing — drives open hours, payment methods, online ordering availability). I went with Option A from the conflict question: added a NEW typed table named store_profile (the Drizzle export is storeProfileTable but the TypeScript type and helper keep the names the task asked for — StoreSettings and getStoreSettings). The two tables coexist; /api/settings overlays profile fields so the existing admin/settings UI keeps working without changes.
+
+Cloud DB migration is not automatic. The mini PC will pick up the new table on the next REINSTALL/UPDATE because it runs local-install/schema.sql. The cloud DB needs the same SQL applied once — exact statements are in local-install/schema.sql lines 165–202 (the CREATE TABLE store_profile + INSERT … WHERE NOT EXISTS block). Idempotent — safe to run twice.
+
+Phone migration is partially implicit. The K/V table already had phone="284-544-8088" as a default, and layout.tsx already read settings.phone from /api/settings. After my overlay change the value comes from store_profile automatically, so technically the migration was a server-side change without touching the frontend phone-read path. The store-name migration is the visible new wiring (profile.storeName in layout.tsx).
+
+Acceptance criterion note: the task said "header shows 'Island Tacos' sourced from the API" — the visible store name in layout.tsx is in the footer (<p>Island Tacos</p>) plus two logo alt attributes. I migrated all three. The actual header has only the logo image, no store name text.
+
+Verifying the cache: to test the 60 s invalidation, run UPDATE store_profile SET store_name='Test' WHERE id=1; then PATCH via /api/store-settings (any field) — the next GET will be authoritative because the PATCH calls refreshStoreSettings(). Without a PATCH, the GET will show stale data for up to 60 s after the SQL change. That's documented in lib/store-settings.ts.
+
+replit.md was not updated — the task said "DO ONLY THIS, NOTHING MORE." Worth a short follow-up paragraph in the "Long-term product vision (SaaS)" section once you've verified deployment, documenting the K/V-vs-profile split.
