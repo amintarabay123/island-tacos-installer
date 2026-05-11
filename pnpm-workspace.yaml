@@ -157,3 +157,10 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  # Security overrides for transitive dependencies (see `pnpm audit --prod`):
+  # - path-to-regexp <8.4.0  → ReDoS via wildcards / sequential optional groups (express 5)
+  # - picomatch <2.3.2       → ReDoS + glob injection (http-proxy-middleware → micromatch)
+  # - fast-xml-builder <1.1.7→ XXE / regex bypass (@google-cloud/storage → fast-xml-parser)
+  path-to-regexp: "^8.4.0"
+  picomatch: "^2.3.2"
+  fast-xml-builder: "^1.1.7"

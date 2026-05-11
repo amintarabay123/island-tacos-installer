@@ -139,3 +139,25 @@ No tax (BVI). Tax not applied at checkout.
 - Never change primary key ID column types (serial ↔ varchar) — use direct SQL via executeSql for schema changes
 - After adding new columns to `lib/db/src/schema/`, run `cd lib/db && npx tsc -p tsconfig.json` to rebuild declarations before typechecking api-server
 - `drizzle-kit push` may block on interactive prompts for unique constraint renames — use direct SQL ALTER TABLE instead
+
+## Known accepted risks (pnpm audit)
+
+These advisories are surfaced by `pnpm audit --prod` and have been reviewed and
+intentionally not patched. Re-evaluate during dependency upgrades.
+
+- **`@tootallnate/once` 2.0.0 — GHSA-vpq2-c234-7xj6 (LOW, "Incorrect Control
+  Flow Scoping")**
+  - Transitive path: `@google-cloud/storage → (retry-request →) teeny-request → http-proxy-agent → @tootallnate/once`.
+  - The vulnerable code only executes when GCS traffic is routed through an
+    **outbound HTTP proxy**. We do not configure an HTTP proxy for GCS — both
+    the Replit cloud server and the mini PC talk to `*.googleapis.com`
+    directly. The code path is unreachable in our deployments.
+  - A fix is only available in `@tootallnate/once` 3.x, which is a **major**
+    version bump. The versions of `http-proxy-agent` that pull this dep in pin
+    `^2.0.0`, so forcing 3.x via pnpm `overrides` breaks `http-proxy-agent` and
+    therefore `@google-cloud/storage`. The real fix is for upstream
+    `@google-cloud/storage` to drop `teeny-request` in favour of `gaxios`
+    (already in progress upstream).
+  - Action: leave at current version, recheck on each `@google-cloud/storage`
+    upgrade. If we ever start routing GCS calls through an HTTP proxy, this
+    must be patched first.
