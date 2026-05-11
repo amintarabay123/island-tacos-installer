@@ -9,6 +9,7 @@
   3. Both deployment targets are consistent — cloud (Replit) AND the mini PC at the shop. A fix that only ships to one is incomplete.
 - **Goal: production-grade, stable system.** This product is intended to be sold to other restaurants. Code quality, error handling, observability, and consistency matter as much as features. Prefer robust solutions over clever ones.
 - **Don't deploy during business hours** unless the change is text/config-only and explicitly approved.
+- **Branch convention for non-trivial changes.** Direct commits to `main` are fine for one-line fixes, config tweaks, and docs. Anything bigger (new feature, refactor touching 3+ files, schema change, dependency bump) goes on a `cursor/<topic>` or `replit/<topic>` branch and lands via PR. CI (`.github/workflows/ci.yml`) runs typecheck + audit + tests on every push and PR — a red CI must be green before merge. This prevents the "two AI agents silently overwrote each other on main" failure mode.
 
 ## Long-term product vision (SaaS)
 
