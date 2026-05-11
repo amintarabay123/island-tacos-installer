@@ -58,6 +58,8 @@ META_WHATSAPP_ENABLED = "true"
 META_VERIFY_TOKEN = "island-tacos-verify-2025"
 META_PHONE_NUMBER_ID = "1120794614445829"
 META_WHATSAPP_BUSINESS_ACCOUNT_ID = "956881270482368"
+SMS_GATEWAY_URL = "https://api.sms-gate.app/3rdparty/v1"
+SMS_GATEWAY_USERNAME = "islandtacos"
 
 [userenv.production]
 VITE_CLERK_PROXY_URL = "https://order-direct-connect.replit.app/api/__clerk"
