@@ -51,6 +51,15 @@ Custom full-stack online ordering + in-house POS system for Island Tacos (Wickha
 - **ATH Móvil Business** — `ATHMOVIL_PUBLIC_TOKEN`, `ATHMOVIL_PRIVATE_TOKEN` secrets configured
 - **Online (future)** — "Pay at Pickup" for online orders currently
 
+## SMS Notifications
+
+- Sent via `artifacts/api-server/src/lib/sms-gateway.ts`, which POSTs to an Android phone running the **SMS Gateway for Android** app (https://sms-gate.app).
+- Phone holds the BVI business SIM (284-544-8088) on an unlimited-SMS plan → effectively $0/message.
+- Required env vars: `SMS_GATEWAY_URL` (e.g. `http://192.168.1.42:8080`), `SMS_GATEWAY_USERNAME`, `SMS_GATEWAY_PASSWORD`. If unset, `sendSms()` is a no-op.
+- Both ready and cancellation SMS are restricted to BVI mobiles (`isBVIMobile` check) so the business SIM never gets billed for international SMS. International customers get email + WhatsApp.
+- Bodies are kept ≤ 160 chars (1 SMS segment) — cancellation reason is intentionally NOT included; staff follow up by phone.
+- **Twilio + Vapi were removed** (May 2026) due to runaway costs (~$280/mo SMS to BVI international rates). All `TWILIO_*` and `VAPI_*` env vars are no longer referenced or shipped in the local-install `.env`.
+
 ## Loyverse Integration (Legacy/Minimal)
 
 - `LOYVERSE_API_TOKEN` secret is present

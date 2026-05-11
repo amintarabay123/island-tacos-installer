@@ -7,6 +7,7 @@ import { broadcastOrderEvent } from "./pos-events";
 import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
 import { pushStatusToCloud } from "../lib/online-orders-sync";
 import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp } from "../lib/whatsapp";
+import { sendSms } from "../lib/sms-gateway";
 import nodemailer from "nodemailer";
 import { requireStaffAuth } from "./auth";
 
@@ -171,108 +172,37 @@ async function sendReadyEmail(order: OrderRow) {
 }
 
 /**
- * Send an "order ready" SMS via Twilio's HTTP API.
- * Requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER env vars.
+ * Send an "order ready" SMS through the on-site SMS Gateway phone
+ * (BVI business number, free per message via the unlimited cellular plan).
+ *
+ * Restricted to BVI mobiles to avoid international carrier charges from
+ * the business SIM. International customers get email/WhatsApp instead.
  */
 async function sendReadySMS(order: OrderRow) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken  = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_FROM_NUMBER ?? "+14245448088";
+  if (!order.customerPhone) return;
 
-  if (!accountSid || !authToken) {
-    console.warn("[sms] TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN not set — skipping");
-    return;
-  }
-  if (!order.customerPhone) {
-    console.log(`[sms] order ${order.confirmationCode} has no phone — skipping`);
-    return;
-  }
   const normalizedPhone = formatBVIPhone(order.customerPhone);
-  if (!isBVIMobile(normalizedPhone)) {
-    console.log(`[sms] ${order.customerPhone} (normalized: ${normalizedPhone}) is not a BVI mobile — skipping`);
-    return;
-  }
+  if (!isBVIMobile(normalizedPhone)) return;
 
-  const body =
-    `Hi ${order.customerName || "there"}! Your Island Tacos order` +
-    ` #${order.confirmationCode} is ready for pickup. Come on in!`;
-
-  const params = new URLSearchParams({ To: normalizedPhone, From: fromNumber, Body: body });
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
-
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${credentials}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
-    });
-
-    const text = await resp.text();
-    if (!resp.ok) {
-      console.error(`[sms] Twilio failed (${resp.status}): ${text}`);
-    } else {
-      const data = JSON.parse(text);
-      console.log(`[sms] Sent to ${normalizedPhone} for ${order.confirmationCode} — SID: ${data.sid}`);
-    }
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[sms] Send error: ${msg}`);
-  }
+  const body = `Island Tacos: order #${order.confirmationCode} is ready for pickup!`;
+  await sendSms(normalizedPhone, body);
 }
 
 /**
- * Send a cancellation SMS via Twilio when a phone/online order is rejected by the POS.
- * Sent to any phone number (not restricted to BVI mobiles) so tourists are also notified.
+ * Send a cancellation SMS when a phone/online order is rejected by the POS.
+ * Restricted to BVI mobiles (same reason as sendReadySMS — international SMS
+ * from the business SIM is not free).
  */
-async function sendCancellationSMS(order: OrderRow, reason: string | null) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken  = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_FROM_NUMBER ?? "+14245448088";
-
-  if (!accountSid || !authToken) {
-    console.warn("[sms] TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN not set — skipping cancellation SMS");
-    return;
-  }
-  if (!order.customerPhone) {
-    console.log(`[sms] order ${order.confirmationCode} has no phone — skipping cancellation SMS`);
-    return;
-  }
-
-  const reasonLine = reason ? ` Reason: ${reason}.` : "";
-  const body =
-    `Hi ${order.customerName || "there"}! Unfortunately we had to cancel your Island Tacos order` +
-    ` #${order.confirmationCode}.${reasonLine}` +
-    ` We're sorry for the inconvenience. Please call us at (284) 544-8088 if you have any questions.`;
+async function sendCancellationSMS(order: OrderRow, _reason: string | null) {
+  if (!order.customerPhone) return;
 
   const normalizedPhone = formatBVIPhone(order.customerPhone);
-  const params = new URLSearchParams({ To: normalizedPhone, From: fromNumber, Body: body });
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-  const credentials = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+  if (!isBVIMobile(normalizedPhone)) return;
 
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${credentials}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
-    });
-    const text = await resp.text();
-    if (!resp.ok) {
-      console.error(`[sms] Twilio cancellation failed (${resp.status}): ${text}`);
-    } else {
-      const data = JSON.parse(text);
-      console.log(`[sms] Cancellation SMS sent to ${normalizedPhone} for ${order.confirmationCode} — SID: ${data.sid}`);
-    }
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[sms] Cancellation send error: ${msg}`);
-  }
+  // Kept short: 1 SMS segment. Reason is intentionally NOT included to keep
+  // it under 160 chars; staff should follow up by phone for the details.
+  const body = `Island Tacos: sorry, order #${order.confirmationCode} was cancelled. Call (284) 544-8088.`;
+  await sendSms(normalizedPhone, body);
 }
 
 // Carve-out: customer-facing track.tsx queries by ?customerPhone= (their own

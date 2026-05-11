@@ -32,8 +32,7 @@
     "openai": "^6.34.0",
     "pg": "^8.20.0",
     "pino": "^9",
-    "pino-http": "^10",
-    "twilio": "^6.0.1"
+    "pino-http": "^10"
   },
   "devDependencies": {
     "@types/compression": "^1.8.1",
