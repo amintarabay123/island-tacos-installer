@@ -10,6 +10,21 @@
 - **Goal: production-grade, stable system.** This product is intended to be sold to other restaurants. Code quality, error handling, observability, and consistency matter as much as features. Prefer robust solutions over clever ones.
 - **Don't deploy during business hours** unless the change is text/config-only and explicitly approved.
 
+## Long-term product vision (SaaS)
+
+This system is being built toward a sellable product for other restaurants. Two deliverables drive every architectural choice:
+
+1. **One-USB installer for the in-shop side.** A single USB stick that, when plugged into a fresh mini PC and run, installs and configures EVERYTHING needed at the restaurant: Node, Postgres, the local API server, the POS/KDS in browser kiosk mode, printer drivers, auto-start on boot, auto-update. No manual fiddling. Owner enters: store name, owner email, license key. Done. Implication for current code: keep the local install bundle (`local-install/`, `UPDATE.bat`, `UPDATE.ps1`, `migrate.mjs`, `schema.sql`) clean, idempotent, and free of Island-Tacos-specific hardcoding (store name, branding, phone numbers, BVI-specific assumptions, etc.).
+
+2. **Central tenant admin website.** A web app where the SaaS owner (and eventually self-serve restaurants) can:
+   - Register a new restaurant (creates tenant in central DB)
+   - Provision a subdomain (e.g. `taqueriajoe.orderhub.app`) automatically with SSL
+   - Generate the restaurant's license key + sync secrets that the USB installer will accept
+   - View per-tenant billing, order volume, support status
+   - Push remote updates to a tenant's mini PC
+
+Implication for current code: anything that's currently a hardcoded constant ("Island Tacos", "284-544-8088", "Wickhams Cay 1", BVI tax = 0, "@islandtacosbvi.com" emails) should eventually move to a `store_settings` table or per-tenant config. Multi-tenancy doesn't have to be built today, but new code should NOT add more hardcoded brand strings — read from settings instead.
+
 ## Overview
 
 Custom full-stack online ordering + in-house POS system for Island Tacos (Wickhams Cay 1, Road Town, BVI — Mexican food). Designed as a complete replacement for Loyverse, covering online ordering, walk-in POS, Kitchen Display System (KDS), admin dashboard, and receipt printing. Pickup only.
