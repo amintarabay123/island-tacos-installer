@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { spawn } from "child_process";
 import { objectStorageClient, signObjectGetURL } from "../lib/objectStorage";
 import { pool } from "@workspace/db";
+import { requireAdminAuth } from "./auth";
 
 const router: IRouter = Router();
 
@@ -389,7 +390,7 @@ router.get("/download/project-url", (req: Request, res: Response): void => {
 // Download: Invoke-WebRequest -Uri ".../api/download/sales-export" -OutFile sales-export.json
 // Import:   node import-sales.cjs sales-export.json
 
-router.get("/download/sales-export", async (req: Request, res: Response): Promise<void> => {
+router.get("/download/sales-export", requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const client = await pool.connect();
     try {
