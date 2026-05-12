@@ -357,6 +357,16 @@ router.patch("/menu/items/:id", async (req, res): Promise<void> => {
     // stay sane and the storefront price ($0) is never shown (those items are also
     // hidden from the customer menu, see home.tsx).
     if (parsed.data.openPrice === true) updates.price = "0";
+    // Toggling open-price OFF requires an explicit positive price in the same request,
+    // otherwise the item would silently keep its previous $0 placeholder and start
+    // ringing up free at the POS / storefront.
+    if (parsed.data.openPrice === false) {
+      const p = parsed.data.price;
+      if (typeof p !== "number" || !(p > 0)) {
+        res.status(400).json({ error: "price (> 0) is required when disabling openPrice" });
+        return;
+      }
+    }
   }
   const body = req.body as Record<string, unknown>;
   if (body["sortOrder"] !== undefined) updates.sortOrder = body["sortOrder"];

@@ -914,15 +914,18 @@ function DiscountModal({ subtotal, onApply, onClose }: { subtotal: number; onApp
 
 // ─── Open-Price Modal (custom-priced item, e.g. "Misc") ─────────────────────
 
-function OpenPriceModal({ item, onConfirm, onClose }: {
+function OpenPriceModal({ item, onConfirm, onClose, initialPrice, initialNote }: {
   item: MenuItem;
   onConfirm: (price: number, note: string) => void;
   onClose: () => void;
+  initialPrice?: number;
+  initialNote?: string;
 }) {
-  const [val, setVal] = useState("0");
-  const [note, setNote] = useState("");
+  const [val, setVal] = useState(initialPrice && initialPrice > 0 ? initialPrice.toFixed(2) : "0");
+  const [note, setNote] = useState(initialNote ?? "");
   const price = parseFloat(val || "0");
   const valid = Number.isFinite(price) && price > 0 && note.trim().length > 0;
+  const isEdit = initialPrice !== undefined;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -962,7 +965,7 @@ function OpenPriceModal({ item, onConfirm, onClose }: {
             disabled={!valid}
             className="flex-1 h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-30 text-black font-bold transition-colors"
           >
-            Add {price > 0 ? fmt(price) : ""}
+            {isEdit ? "Save" : "Add"} {price > 0 ? fmt(price) : ""}
           </button>
         </div>
       </div>
@@ -2669,7 +2672,9 @@ export default function POS() {
   const [splitModal, setSplitModal] = useState(false);
   const [receiptModal, setReceiptModal] = useState<{ order: Order; tendered?: number } | null>(null);
   const [discountModal, setDiscountModal] = useState(false);
-  const [openPriceModal, setOpenPriceModal] = useState<{ item: MenuItem } | null>(null);
+  const [openPriceModal, setOpenPriceModal] = useState<{
+    item: MenuItem; editKey?: string; initialPrice?: number; initialNote?: string;
+  } | null>(null);
   const [holdModal, setHoldModal] = useState(false);
   const [ticketsOpen, setTicketsOpen] = useState(false);
   const [receiptsOpen, setReceiptsOpen] = useState(false);
@@ -2978,14 +2983,15 @@ export default function POS() {
   const editCartItem = async (cartItem: CartItem) => {
     const menuItem = allItems.find(i => i.id === cartItem.menuItemId);
     if (!menuItem) return;
-    // Open-price lines: reopen the OpenPriceModal so the cashier can adjust the price
-    // and description without having to remove and re-add the line.
+    // Open-price lines: reopen the OpenPriceModal pre-filled so the cashier can adjust
+    // the price and description in place. Cancelling preserves the original line.
     if (menuItem.openPrice || cartItem.priceOverride !== undefined) {
-      setOpenPriceModal({ item: menuItem });
-      // Replace the existing line on confirm by removing it first; the modal's onConfirm
-      // already calls pushToCart which appends a new line. Simpler than threading editKey
-      // through OpenPriceModal — open-price lines are always unique anyway.
-      setCart(prev => prev.filter(c => c.key !== cartItem.key));
+      setOpenPriceModal({
+        item: menuItem,
+        editKey: cartItem.key,
+        initialPrice: cartItem.price,
+        initialNote: cartItem.notes,
+      });
       return;
     }
     try {
@@ -3531,8 +3537,19 @@ export default function POS() {
       {openPriceModal && (
         <OpenPriceModal
           item={openPriceModal.item}
+          initialPrice={openPriceModal.initialPrice}
+          initialNote={openPriceModal.initialNote}
           onConfirm={(price, note) => {
-            pushToCart(openPriceModal.item, [], note, price);
+            const editKey = openPriceModal.editKey;
+            if (editKey) {
+              // Update the existing line in place — preserves quantity + position.
+              setCart(prev => prev.map(c => c.key === editKey
+                ? { ...c, price, notes: note, priceOverride: price }
+                : c
+              ));
+            } else {
+              pushToCart(openPriceModal.item, [], note, price);
+            }
             setOpenPriceModal(null);
           }}
           onClose={() => setOpenPriceModal(null)}
