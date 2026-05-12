@@ -2978,6 +2978,16 @@ export default function POS() {
   const editCartItem = async (cartItem: CartItem) => {
     const menuItem = allItems.find(i => i.id === cartItem.menuItemId);
     if (!menuItem) return;
+    // Open-price lines: reopen the OpenPriceModal so the cashier can adjust the price
+    // and description without having to remove and re-add the line.
+    if (menuItem.openPrice || cartItem.priceOverride !== undefined) {
+      setOpenPriceModal({ item: menuItem });
+      // Replace the existing line on confirm by removing it first; the modal's onConfirm
+      // already calls pushToCart which appends a new line. Simpler than threading editKey
+      // through OpenPriceModal — open-price lines are always unique anyway.
+      setCart(prev => prev.filter(c => c.key !== cartItem.key));
+      return;
+    }
     try {
       const r = await fetch(`/api/menu/items/${menuItem.id}/modifiers`, { credentials: "include" });
       const mods: Modifier[] = await r.json();
