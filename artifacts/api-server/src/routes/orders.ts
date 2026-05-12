@@ -354,7 +354,20 @@ router.post("/orders", async (req, res): Promise<void> => {
       res.status(400).json({ error: `Menu item "${menuItem.name}" is not available` });
       return;
     }
-    const price = parseFloat(menuItem.price as unknown as string);
+    // Open-price items (e.g. "Misc") let the cashier set a one-off price at the POS.
+    // We only honor priceOverride when the menu item is flagged openPrice — never trust
+    // a client-supplied price for normal items.
+    let price: number;
+    if (menuItem.openPrice) {
+      const override = item.priceOverride;
+      if (typeof override !== "number" || !Number.isFinite(override) || override <= 0) {
+        res.status(400).json({ error: `"${menuItem.name}" requires a price greater than 0` });
+        return;
+      }
+      price = override;
+    } else {
+      price = parseFloat(menuItem.price as unknown as string);
+    }
     const modifierTotal = (item.modifierSelections ?? []).reduce((s: number, m: { price?: number }) => s + (m.price ?? 0), 0);
     const itemSubtotal = (price + modifierTotal) * item.quantity;
     subtotal += itemSubtotal;

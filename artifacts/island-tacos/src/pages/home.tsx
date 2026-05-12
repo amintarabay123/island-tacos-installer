@@ -50,8 +50,11 @@ export default function Home() {
 
   const filteredItems = useMemo(() => {
     if (!items) return [];
-    if (activeCategory === null) return items;
-    return items.filter(item => item.categoryId === activeCategory);
+    // Open-price items (e.g. "Misc") are POS-only — they have no fixed price so they
+    // cannot be ordered online. Hide them from the customer storefront.
+    const visible = items.filter(item => !(item as { openPrice?: boolean }).openPrice);
+    if (activeCategory === null) return visible;
+    return visible.filter(item => item.categoryId === activeCategory);
   }, [items, activeCategory]);
 
   const [storeOpen, setStoreOpen] = useState(true);
@@ -90,9 +93,13 @@ export default function Home() {
 
   // Use sales-driven top sellers when available; fall back to manually-flagged items
   const popularItems = useMemo(() => {
-    if (topSellers && topSellers.length > 0) return topSellers;
+    // Open-price items are POS-only and must never appear in customer-facing lists.
+    // Server already filters /menu/popular by open_price=false; double-guard here in case
+    // an admin manually flagged one as popular before toggling open-price on.
+    const notOpenPrice = (it: { openPrice?: boolean }) => !it.openPrice;
+    if (topSellers && topSellers.length > 0) return topSellers.filter(notOpenPrice);
     if (!items) return [];
-    return items.filter(item => item.popular && item.available !== false).slice(0, 5);
+    return items.filter(item => item.popular && item.available !== false && notOpenPrice(item as { openPrice?: boolean })).slice(0, 5);
   }, [topSellers, items]);
 
   const extraPrice = useMemo(() => {

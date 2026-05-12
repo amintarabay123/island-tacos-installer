@@ -14,4 +14,9 @@ export interface CreateOrderItemInput {
   notes?: string | null;
   modifierSelections?: OrderItemModifier[] | null;
   alreadyMade?: boolean | null;
+  /**
+   * Per-unit price to use instead of the menu item's stored price. Only honored when the menu item has openPrice=true; ignored otherwise.
+   * @nullable
+   */
+  priceOverride?: number | null;
 }

@@ -610,6 +610,8 @@ components:
           type: boolean
         vegetarian:
           type: boolean
+        openPrice:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -622,6 +624,7 @@ components:
         - popular
         - spicy
         - vegetarian
+        - openPrice
         - createdAt
 
     CreateMenuItemBody:
@@ -647,10 +650,11 @@ components:
           type: boolean
         vegetarian:
           type: boolean
+        openPrice:
+          type: boolean
       required:
         - categoryId
         - name
-        - price
 
     UpdateMenuItemBody:
       type: object
@@ -674,6 +678,8 @@ components:
         spicy:
           type: boolean
         vegetarian:
+          type: boolean
+        openPrice:
           type: boolean
 
     OrderItemModifier:
@@ -828,6 +834,9 @@ components:
         alreadyMade:
           type: boolean
           nullable: true
+        priceOverride:
+          type: ["number", "null"]
+          description: "Per-unit price to use instead of the menu item's stored price. Only honored when the menu item has openPrice=true; ignored otherwise."
       required:
         - menuItemId
         - quantity

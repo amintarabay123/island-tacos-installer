@@ -21,5 +21,6 @@ export interface MenuItem {
   popular: boolean;
   spicy: boolean;
   vegetarian: boolean;
+  openPrice: boolean;
   createdAt: Date;
 }

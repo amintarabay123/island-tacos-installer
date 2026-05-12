@@ -155,6 +155,7 @@ router.get("/menu/popular", async (req, res): Promise<void> => {
     JOIN orders o ON o.id = oi.order_id
     JOIN menu_items mi ON mi.id = oi.menu_item_id
     WHERE mi.available = true
+      AND mi.open_price = false
       AND oi.menu_item_id IS NOT NULL
       ${days ? sql`AND o.created_at >= NOW() - (${days} || ' days')::interval` : sql``}
     GROUP BY mi.id
@@ -179,19 +180,28 @@ router.post("/menu/items", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  const openPrice = parsed.data.openPrice ?? false;
+  // openPrice items don't carry a fixed price — the cashier sets it at the POS.
+  // Coerce missing/zero price safely so the NOT NULL constraint stays satisfied.
+  const priceValue = openPrice ? 0 : (parsed.data.price ?? 0);
+  if (!openPrice && (parsed.data.price === undefined || parsed.data.price === null)) {
+    res.status(400).json({ error: "price is required unless openPrice is true" });
+    return;
+  }
   const [item] = await db
     .insert(menuItemsTable)
     .values({
       categoryId: parsed.data.categoryId,
       name: parsed.data.name,
       description: parsed.data.description ?? null,
-      price: String(parsed.data.price),
+      price: String(priceValue),
       imageUrl: parsed.data.imageUrl ?? null,
       posImageUrl: parsed.data.posImageUrl ?? null,
       available: parsed.data.available ?? true,
       popular: parsed.data.popular ?? false,
       spicy: parsed.data.spicy ?? false,
       vegetarian: parsed.data.vegetarian ?? false,
+      openPrice,
     })
     .returning();
   res.status(201).json({ ...item, price: parseFloat(item.price as unknown as string) });
@@ -341,6 +351,13 @@ router.patch("/menu/items/:id", async (req, res): Promise<void> => {
   if (parsed.data.popular !== undefined) updates.popular = parsed.data.popular;
   if (parsed.data.spicy !== undefined) updates.spicy = parsed.data.spicy;
   if (parsed.data.vegetarian !== undefined) updates.vegetarian = parsed.data.vegetarian;
+  if (parsed.data.openPrice !== undefined) {
+    updates.openPrice = parsed.data.openPrice;
+    // Open-price items don't carry a fixed price — normalize to 0 so reports/exports
+    // stay sane and the storefront price ($0) is never shown (those items are also
+    // hidden from the customer menu, see home.tsx).
+    if (parsed.data.openPrice === true) updates.price = "0";
+  }
   const body = req.body as Record<string, unknown>;
   if (body["sortOrder"] !== undefined) updates.sortOrder = body["sortOrder"];
   if (body["loyverseModifierIds"] !== undefined) updates.loyverseModifierIds = body["loyverseModifierIds"] ?? null;

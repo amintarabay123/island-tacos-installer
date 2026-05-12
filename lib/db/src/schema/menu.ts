@@ -29,6 +29,7 @@ export const menuItemsTable = pgTable("menu_items", {
   popular: boolean("popular").notNull().default(false),
   spicy: boolean("spicy").notNull().default(false),
   vegetarian: boolean("vegetarian").notNull().default(false),
+  openPrice: boolean("open_price").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   loyverseItemId: text("loyverse_item_id").unique(),
   loyverseVariantId: text("loyverse_variant_id"),

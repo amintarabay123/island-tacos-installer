@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
   popular               BOOLEAN NOT NULL DEFAULT false,
   spicy                 BOOLEAN NOT NULL DEFAULT false,
   vegetarian            BOOLEAN NOT NULL DEFAULT false,
+  open_price            BOOLEAN NOT NULL DEFAULT false,
   sort_order            INTEGER NOT NULL DEFAULT 0,
   loyverse_item_id      TEXT UNIQUE,
   loyverse_variant_id   TEXT,
@@ -231,6 +232,7 @@ ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS loyverse_modifier_ids  TEXT[];
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS popular                BOOLEAN      NOT NULL DEFAULT false;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS spicy                  BOOLEAN      NOT NULL DEFAULT false;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS vegetarian             BOOLEAN      NOT NULL DEFAULT false;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS open_price             BOOLEAN      NOT NULL DEFAULT false;
 -- modifiers
 ALTER TABLE modifiers ADD COLUMN IF NOT EXISTS unavailable_option_ids  TEXT[]       NOT NULL DEFAULT '{}';
 ALTER TABLE modifiers ADD COLUMN IF NOT EXISTS sort_order              INTEGER      NOT NULL DEFAULT 0;

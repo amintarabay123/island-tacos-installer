@@ -37,6 +37,7 @@ type MenuItemForm = {
   popular: boolean;
   spicy: boolean;
   vegetarian: boolean;
+  openPrice: boolean;
   selectedModifierIds: string[];
 };
 
@@ -51,6 +52,7 @@ const emptyForm: MenuItemForm = {
   popular: false,
   spicy: false,
   vegetarian: false,
+  openPrice: false,
   selectedModifierIds: [],
 };
 
@@ -303,14 +305,17 @@ export default function AdminMenu() {
       popular: item.popular,
       spicy: item.spicy,
       vegetarian: item.vegetarian,
+      openPrice: (item as { openPrice?: boolean }).openPrice ?? false,
       selectedModifierIds: (item as { loyverseModifierIds?: string[] }).loyverseModifierIds ?? [],
     });
     setDialog({ mode: "edit", id });
   };
 
   const handleSave = () => {
-    const price = parseFloat(form.price);
-    if (!form.name || isNaN(price) || !form.categoryId) return;
+    if (!form.name || !form.categoryId) return;
+    // Open-price items don't need a fixed price (cashier sets it at the POS).
+    const price = form.openPrice ? 0 : parseFloat(form.price);
+    if (!form.openPrice && isNaN(price)) return;
 
     const data = {
       categoryId: form.categoryId,
@@ -323,6 +328,7 @@ export default function AdminMenu() {
       popular: form.popular,
       spicy: form.spicy,
       vegetarian: form.vegetarian,
+      openPrice: form.openPrice,
       loyverseModifierIds: form.selectedModifierIds.length > 0 ? form.selectedModifierIds : null,
     };
 
@@ -682,14 +688,27 @@ export default function AdminMenu() {
               <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} />
             </div>
             <div className="space-y-2">
-              <Label>Price *</Label>
+              <div className="flex items-center justify-between">
+                <Label>Open Price</Label>
+                <Switch
+                  checked={form.openPrice}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, openPrice: v }))}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground -mt-1">
+                For misc/custom items. Cashier sets price + description at the POS. Hidden from the online store.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>{form.openPrice ? "Price" : "Price *"}</Label>
               <Input
                 type="number"
                 step="0.01"
                 min="0"
-                value={form.price}
+                value={form.openPrice ? "" : form.price}
                 onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                placeholder="0.00"
+                placeholder={form.openPrice ? "Set at POS" : "0.00"}
+                disabled={form.openPrice}
               />
             </div>
             {/* Online ordering image */}

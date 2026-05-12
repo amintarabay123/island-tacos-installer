@@ -11,7 +11,7 @@ export interface CreateMenuItemBody {
   name: string;
   /** @nullable */
   description?: string | null;
-  price: number;
+  price?: number;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */
@@ -20,4 +20,5 @@ export interface CreateMenuItemBody {
   popular?: boolean;
   spicy?: boolean;
   vegetarian?: boolean;
+  openPrice?: boolean;
 }

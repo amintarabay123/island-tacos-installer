@@ -20,4 +20,5 @@ export interface UpdateMenuItemBody {
   popular?: boolean;
   spicy?: boolean;
   vegetarian?: boolean;
+  openPrice?: boolean;
 }

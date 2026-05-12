@@ -60,6 +60,7 @@ export interface MenuItem {
   popular: boolean;
   spicy: boolean;
   vegetarian: boolean;
+  openPrice: boolean;
   createdAt: string;
 }
 
@@ -68,7 +69,7 @@ export interface CreateMenuItemBody {
   name: string;
   /** @nullable */
   description?: string | null;
-  price: number;
+  price?: number;
   /** @nullable */
   imageUrl?: string | null;
   /** @nullable */
@@ -77,6 +78,7 @@ export interface CreateMenuItemBody {
   popular?: boolean;
   spicy?: boolean;
   vegetarian?: boolean;
+  openPrice?: boolean;
 }
 
 export interface UpdateMenuItemBody {
@@ -93,6 +95,7 @@ export interface UpdateMenuItemBody {
   popular?: boolean;
   spicy?: boolean;
   vegetarian?: boolean;
+  openPrice?: boolean;
 }
 
 export interface OrderItemModifier {
@@ -208,6 +211,11 @@ export interface CreateOrderItemInput {
   notes?: string | null;
   modifierSelections?: OrderItemModifier[] | null;
   alreadyMade?: boolean | null;
+  /**
+   * Per-unit price to use instead of the menu item's stored price. Only honored when the menu item has openPrice=true; ignored otherwise.
+   * @nullable
+   */
+  priceOverride?: number | null;
 }
 
 export type CreateOrderBodyOrderType =

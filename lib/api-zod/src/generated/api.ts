@@ -93,6 +93,7 @@ export const ListMenuItemsResponseItem = zod.object({
   popular: zod.boolean(),
   spicy: zod.boolean(),
   vegetarian: zod.boolean(),
+  openPrice: zod.boolean(),
   createdAt: zod.coerce.date(),
 });
 export const ListMenuItemsResponse = zod.array(ListMenuItemsResponseItem);
@@ -104,13 +105,14 @@ export const CreateMenuItemBody = zod.object({
   categoryId: zod.number(),
   name: zod.string(),
   description: zod.string().nullish(),
-  price: zod.number(),
+  price: zod.number().optional(),
   imageUrl: zod.string().nullish(),
   posImageUrl: zod.string().nullish(),
   available: zod.boolean().optional(),
   popular: zod.boolean().optional(),
   spicy: zod.boolean().optional(),
   vegetarian: zod.boolean().optional(),
+  openPrice: zod.boolean().optional(),
 });
 
 /**
@@ -132,6 +134,7 @@ export const GetMenuItemResponse = zod.object({
   popular: zod.boolean(),
   spicy: zod.boolean(),
   vegetarian: zod.boolean(),
+  openPrice: zod.boolean(),
   createdAt: zod.coerce.date(),
 });
 
@@ -153,6 +156,7 @@ export const UpdateMenuItemBody = zod.object({
   popular: zod.boolean().optional(),
   spicy: zod.boolean().optional(),
   vegetarian: zod.boolean().optional(),
+  openPrice: zod.boolean().optional(),
 });
 
 export const UpdateMenuItemResponse = zod.object({
@@ -167,6 +171,7 @@ export const UpdateMenuItemResponse = zod.object({
   popular: zod.boolean(),
   spicy: zod.boolean(),
   vegetarian: zod.boolean(),
+  openPrice: zod.boolean(),
   createdAt: zod.coerce.date(),
 });
 
@@ -297,6 +302,12 @@ export const CreateOrderBody = zod.object({
         )
         .nullish(),
       alreadyMade: zod.boolean().nullish(),
+      priceOverride: zod
+        .number()
+        .nullish()
+        .describe(
+          "Per-unit price to use instead of the menu item's stored price. Only honored when the menu item has openPrice=true; ignored otherwise.",
+        ),
     }),
   ),
 });

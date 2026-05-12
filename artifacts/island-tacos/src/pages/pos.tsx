@@ -14,12 +14,16 @@ type MenuItem = {
   id: number; categoryId: number; name: string; description?: string | null;
   price: number; imageUrl?: string | null; posImageUrl?: string | null; available: boolean;
   popular: boolean; spicy: boolean; vegetarian: boolean;
+  openPrice?: boolean;
 };
 type CartModifier = { modifierId: string; optionId: string; name: string; price: number };
 type CartItem = {
   key: string; menuItemId: number; name: string; price: number;
   quantity: number; notes: string; modifierSelections: CartModifier[];
   alreadyMade?: boolean;
+  // Set when the line came from an open-price menu item — `price` then holds the
+  // cashier-entered amount which the server validates against menuItem.openPrice.
+  priceOverride?: number;
 };
 type Order = {
   id: number; confirmationCode: string; customerName: string; status: string;
@@ -908,6 +912,64 @@ function DiscountModal({ subtotal, onApply, onClose }: { subtotal: number; onApp
   );
 }
 
+// ─── Open-Price Modal (custom-priced item, e.g. "Misc") ─────────────────────
+
+function OpenPriceModal({ item, onConfirm, onClose }: {
+  item: MenuItem;
+  onConfirm: (price: number, note: string) => void;
+  onClose: () => void;
+}) {
+  const [val, setVal] = useState("0");
+  const [note, setNote] = useState("");
+  const price = parseFloat(val || "0");
+  const valid = Number.isFinite(price) && price > 0 && note.trim().length > 0;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="p-5 border-b border-gray-200">
+          <h2 className="text-gray-900 text-xl font-bold">{item.name}</h2>
+          <p className="text-gray-500 text-xs mt-0.5">Set price and describe the item</p>
+        </div>
+        <div className="p-5">
+          <div className="bg-gray-100 rounded-xl p-3 text-gray-900 text-3xl font-mono font-bold text-right mb-3">
+            ${val}
+          </div>
+          <div className="grid grid-cols-4 gap-2 mb-2">
+            {[1, 2, 5, 10].map(q => (
+              <button key={q} onClick={() => setVal(String(q))}
+                className="h-10 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm font-semibold transition-colors">
+                {fmt(q)}
+              </button>
+            ))}
+          </div>
+          <Numpad value={val} onChange={setVal} />
+          <div className="mt-3">
+            <label className="text-xs font-semibold text-gray-700 block mb-1">Description (required)</label>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="What is this item? Goes on the receipt + KDS."
+              rows={2}
+              className="w-full rounded-xl border border-gray-200 p-2 text-sm text-gray-900 focus:outline-none focus:border-[#F5A623]"
+            />
+          </div>
+        </div>
+        <div className="p-5 border-t border-gray-200 flex gap-3">
+          <button onClick={onClose} className="flex-1 h-12 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-100 transition-colors">Cancel</button>
+          <button
+            onClick={() => { onConfirm(price, note.trim()); }}
+            disabled={!valid}
+            className="flex-1 h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-30 text-black font-bold transition-colors"
+          >
+            Add {price > 0 ? fmt(price) : ""}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Tickets Drawer (Held + Live Queue tabs) ─────────────────────────────────
 
 function elapsedLabel(createdAt: string, now: number): { label: string; cls: string } {
@@ -1267,7 +1329,9 @@ function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
           {item.popular && <span title="Popular" className="text-xs">⭐</span>}
         </div>
       </div>
-      <span className="text-amber-500 font-bold text-sm">{fmt(item.price)}</span>
+      <span className="text-amber-500 font-bold text-sm">
+        {item.openPrice ? "Set Price" : fmt(item.price)}
+      </span>
     </button>
   );
 }
@@ -2605,6 +2669,7 @@ export default function POS() {
   const [splitModal, setSplitModal] = useState(false);
   const [receiptModal, setReceiptModal] = useState<{ order: Order; tendered?: number } | null>(null);
   const [discountModal, setDiscountModal] = useState(false);
+  const [openPriceModal, setOpenPriceModal] = useState<{ item: MenuItem } | null>(null);
   const [holdModal, setHoldModal] = useState(false);
   const [ticketsOpen, setTicketsOpen] = useState(false);
   const [receiptsOpen, setReceiptsOpen] = useState(false);
@@ -2854,6 +2919,11 @@ export default function POS() {
 
   // Add item to cart
   const addItem = async (item: MenuItem) => {
+    // Open-price items (e.g. "Misc") prompt for a one-off price + note before going in the cart.
+    if (item.openPrice) {
+      setOpenPriceModal({ item });
+      return;
+    }
     // Check for modifiers
     try {
       const r = await fetch(`/api/menu/items/${item.id}/modifiers`, { credentials: "include" });
@@ -2867,21 +2937,32 @@ export default function POS() {
     pushToCart(item, []);
   };
 
-  const pushToCart = (item: MenuItem, sels: CartModifier[], note = "") => {
+  const pushToCart = (item: MenuItem, sels: CartModifier[], note = "", priceOverride?: number) => {
     // Drinks (sendToKds=false) added to a resumed ticket are marked alreadyMade so they
     // don't trigger a cancel+recreate of the order or a KDS re-fire.
     const cat = categories.find(c => c.id === item.categoryId);
     const isDrink = cat ? !cat.sendToKds : false;
     const alreadyMade = (resumedOrderId && isDrink) ? true : undefined;
-    // Try to merge with existing identical item (only when no note)
-    const existingKey = !note ? cart.find(c =>
-      c.menuItemId === item.id && c.notes === "" &&
+    const unitPrice = priceOverride ?? item.price;
+    // Open-price lines are always unique (one-off custom item) — never merge.
+    const existingKey = (!note && priceOverride === undefined) ? cart.find(c =>
+      c.menuItemId === item.id && c.notes === "" && c.priceOverride === undefined &&
       JSON.stringify(c.modifierSelections) === JSON.stringify(sels)
     )?.key : undefined;
     if (existingKey) {
       setCart(cart.map(c => c.key === existingKey ? { ...c, quantity: c.quantity + 1 } : c));
     } else {
-      setCart([...cart, { key: uid(), menuItemId: item.id, name: item.name, price: item.price, quantity: 1, notes: note, modifierSelections: sels, ...(alreadyMade !== undefined ? { alreadyMade } : {}) }]);
+      setCart([...cart, {
+        key: uid(),
+        menuItemId: item.id,
+        name: item.name,
+        price: unitPrice,
+        quantity: 1,
+        notes: note,
+        modifierSelections: sels,
+        ...(alreadyMade !== undefined ? { alreadyMade } : {}),
+        ...(priceOverride !== undefined ? { priceOverride } : {}),
+      }]);
     }
     // Auto-switch to cart panel on mobile
     if (window.innerWidth < 640) setMobileView("cart");
@@ -2976,13 +3057,21 @@ export default function POS() {
             discountAmount: discount,
             ...(tendered != null && paymentStatus === "paid" ? { amountTendered: tendered } : {}),
             notes: (overrideNote ?? orderNotes) || null,
-            items: cart.map(c => ({
-              menuItemId: c.menuItemId,
-              quantity: c.quantity,
-              notes: c.notes || null,
-              modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
-              alreadyMade: c.alreadyMade ?? false,
-            })),
+            items: cart.map(c => {
+              // Resumed tickets lose the priceOverride flag in transit (the persisted order
+              // item only carries the unit price). Re-derive it for any line whose menu item
+              // is openPrice so the server-side validation is satisfied on resubmit.
+              const mi = allItems.find(i => i.id === c.menuItemId);
+              const override = c.priceOverride ?? (mi?.openPrice ? c.price : undefined);
+              return {
+                menuItemId: c.menuItemId,
+                quantity: c.quantity,
+                notes: c.notes || null,
+                modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
+                alreadyMade: c.alreadyMade ?? false,
+                ...(override !== undefined ? { priceOverride: override } : {}),
+              };
+            }),
           }),
         });
         if (!r.ok) {
@@ -3096,13 +3185,21 @@ export default function POS() {
             discountAmount: discount,
             ...(tendered != null ? { amountTendered: tendered } : {}),
             notes: noteWithSplit || null,
-            items: cart.map(c => ({
-              menuItemId: c.menuItemId,
-              quantity: c.quantity,
-              notes: c.notes || null,
-              modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
-              alreadyMade: c.alreadyMade ?? false,
-            })),
+            items: cart.map(c => {
+              // Resumed tickets lose the priceOverride flag in transit (the persisted order
+              // item only carries the unit price). Re-derive it for any line whose menu item
+              // is openPrice so the server-side validation is satisfied on resubmit.
+              const mi = allItems.find(i => i.id === c.menuItemId);
+              const override = c.priceOverride ?? (mi?.openPrice ? c.price : undefined);
+              return {
+                menuItemId: c.menuItemId,
+                quantity: c.quantity,
+                notes: c.notes || null,
+                modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
+                alreadyMade: c.alreadyMade ?? false,
+                ...(override !== undefined ? { priceOverride: override } : {}),
+              };
+            }),
           }),
         });
         if (!r.ok) {
@@ -3420,6 +3517,17 @@ export default function POS() {
       </div>
 
       {/* ── Modals ── */}
+
+      {openPriceModal && (
+        <OpenPriceModal
+          item={openPriceModal.item}
+          onConfirm={(price, note) => {
+            pushToCart(openPriceModal.item, [], note, price);
+            setOpenPriceModal(null);
+          }}
+          onClose={() => setOpenPriceModal(null)}
+        />
+      )}
 
       {modifierModal && (
         <ModifierModal
