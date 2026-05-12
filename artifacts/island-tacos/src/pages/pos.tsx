@@ -1038,7 +1038,8 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     const n = (v: unknown) => parseFloat(String(v)) || 0;
     fetch("/api/display", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({
         status: "active",
         items: o.items.map(i => ({
@@ -1094,7 +1095,8 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     // Update customer display to "completed" state
     fetch("/api/display", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({
         status: "completed",
         items: [],
@@ -1262,7 +1264,8 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
             const n = (v: unknown) => parseFloat(String(v)) || 0;
             fetch("/api/display", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              headers: { "Content-Type": "application/json", ...authHeaders() },
               body: JSON.stringify({
                 status: "active",
                 items: chargeOrder.items.map(i => ({
@@ -2885,7 +2888,8 @@ export default function POS() {
   useEffect(() => {
     fetch("/api/display", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ status: "idle", items: [], subtotal: 0, tax: 0, total: 0 }),
     }).catch(() => {});
   }, []);
@@ -2915,7 +2919,8 @@ export default function POS() {
         : { status: "idle", items: [], subtotal: 0, tax: 0, total: 0 };
       fetch("/api/display", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(body),
       }).catch(() => {});
     }, 50);
@@ -3102,7 +3107,8 @@ export default function POS() {
         displayCompletedAt.current = Date.now();
         fetch("/api/display", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
             status: "completed",
             items: [],
