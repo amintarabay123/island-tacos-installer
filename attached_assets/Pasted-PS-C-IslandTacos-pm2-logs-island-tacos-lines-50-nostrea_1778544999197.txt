@@ -1,0 +1,59 @@
+PS C:\IslandTacos> pm2 logs island-tacos --lines 50 --nostream
+[TAILING] Tailing last 50 lines for [island-tacos] process (change the value with --lines option)
+C:\Users\amint\.pm2\logs\island-tacos-error.log last 50 lines:
+0|island-t | 2026-05-07 14:57:21: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-07 18:15:58: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-07 18:16:23: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 11:38:51: [sms] Twilio failed (400): {"code":21610,"message":"Attempt to send to unsubscribed recipient","more_info":"https://www.twilio.com/docs/errors/21610","status":400}
+0|island-t | 2026-05-08 11:56:18: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 11:56:50: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 16:01:11: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 16:01:15: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 16:20:28: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 16:20:58: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 16:53:38: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 16:53:42: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 17:00:04: [sms] Twilio failed (400): {"code":21211,"message":"Invalid 'To' Phone Number: +1284456XXXX","more_info":"https://www.twilio.com/docs/errors/21211","status":400}
+0|island-t | 2026-05-08 17:14:10: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 17:14:13: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 17:22:14: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 17:22:19: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 17:30:33: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 17:30:36: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 17:48:47: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 17:48:50: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 19:18:37: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 19:18:42: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 19:25:34: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-08 19:25:39: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-09 09:19:22: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-09 09:19:50: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-09 10:52:17: [sms] Twilio failed (400): {"code":21610,"message":"Attempt to send to unsubscribed recipient","more_info":"https://www.twilio.com/docs/errors/21610","status":400}
+0|island-t | 2026-05-09 10:56:42: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-09 10:57:08: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-09 11:55:12: [sms] Twilio failed (400): {"code":21610,"message":"Attempt to send to unsubscribed recipient","more_info":"https://www.twilio.com/docs/errors/21610","status":400}
+0|island-t | 2026-05-09 12:43:15: [sms] Twilio failed (400): {"code":21610,"message":"Attempt to send to unsubscribed recipient","more_info":"https://www.twilio.com/docs/errors/21610","status":400}
+0|island-t | 2026-05-10 09:03:59: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-10 09:04:30: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-10 09:21:50: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-10 09:21:54: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 09:10:59: [sms] Twilio failed (400): {"code":21635,"message":"'To' number +1284468XXXX cannot be a landline","more_info":"https://www.twilio.com/docs/errors/21635","status":400}
+0|island-t | 2026-05-11 11:49:21: [sms] Twilio failed (400): {"code":21635,"message":"'To' number +1284852XXXX cannot be a landline","more_info":"https://www.twilio.com/docs/errors/21635","status":400}
+0|island-t | 2026-05-11 11:55:53: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 11:56:26: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 14:50:05: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 14:50:38: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 16:00:23: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 16:00:25: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 16:02:12: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 16:02:16: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 17:06:40: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 17:06:44: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 17:10:15: [frontend] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+0|island-t | 2026-05-11 17:10:19: [installer] error: request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106
+
+C:\Users\amint\.pm2\logs\island-tacos-out.log last 50 lines:
+0|island-t | 17064,"hostname":"IslandTacos","req":{"id":110,"method":"GET","url":"/api/orders"},"res":{"statusCode":200},"responseTime":182,"msg":"request completed"}
+0|island-t | 2026-05-11 17:13:53: {"level":30,"time":1778544833602,"pid":17064,"hostname":"IslandTacos","req":{"id":111,"method":"GET","url":"/api/orders"},"res":{"statusCode":200},"responseTime":56,"msg":"request completed"}
+0|island-t | 2026-05-11 17:13:54: {"level":30,"time":1778544834657,"pid":17064,"hostname":"IslandTacos","req":{"id":112,"method":"GET","url":"/api/orders"},"res":{"statusCode":200},"responseTime":196,"msg":"request completed"}
+0|island-t | 2026-05-11 17:14:00: {"level":30,"time":1778544840022,"pid":17064,"hostname":"IslandTacos","req":{"id":113,"method":"GET","url":"/api/orders"},"res":{"statusC
