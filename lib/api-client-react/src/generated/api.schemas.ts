@@ -60,6 +60,7 @@ export interface MenuItem {
   popular: boolean;
   spicy: boolean;
   vegetarian: boolean;
+  /** When true, POS must collect unit price per line; online menu hides the item. */
   openPrice: boolean;
   createdAt: string;
 }
@@ -207,6 +208,8 @@ export interface Order {
 export interface CreateOrderItemInput {
   menuItemId: number;
   quantity: number;
+  /** Required when the menu item has openPrice; ignored otherwise (server uses DB price). */
+  unitPrice?: number;
   /** @nullable */
   notes?: string | null;
   modifierSelections?: OrderItemModifier[] | null;

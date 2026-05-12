@@ -93,7 +93,11 @@ export const ListMenuItemsResponseItem = zod.object({
   popular: zod.boolean(),
   spicy: zod.boolean(),
   vegetarian: zod.boolean(),
-  openPrice: zod.boolean(),
+  openPrice: zod
+    .boolean()
+    .describe(
+      "When true, POS must collect unit price per line; online menu hides the item.",
+    ),
   createdAt: zod.coerce.date(),
 });
 export const ListMenuItemsResponse = zod.array(ListMenuItemsResponseItem);
@@ -134,7 +138,11 @@ export const GetMenuItemResponse = zod.object({
   popular: zod.boolean(),
   spicy: zod.boolean(),
   vegetarian: zod.boolean(),
-  openPrice: zod.boolean(),
+  openPrice: zod
+    .boolean()
+    .describe(
+      "When true, POS must collect unit price per line; online menu hides the item.",
+    ),
   createdAt: zod.coerce.date(),
 });
 
@@ -171,7 +179,11 @@ export const UpdateMenuItemResponse = zod.object({
   popular: zod.boolean(),
   spicy: zod.boolean(),
   vegetarian: zod.boolean(),
-  openPrice: zod.boolean(),
+  openPrice: zod
+    .boolean()
+    .describe(
+      "When true, POS must collect unit price per line; online menu hides the item.",
+    ),
   createdAt: zod.coerce.date(),
 });
 
@@ -290,6 +302,12 @@ export const CreateOrderBody = zod.object({
     zod.object({
       menuItemId: zod.number(),
       quantity: zod.number(),
+      unitPrice: zod
+        .number()
+        .optional()
+        .describe(
+          "Required when the menu item has openPrice; ignored otherwise (server uses DB price).",
+        ),
       notes: zod.string().nullish(),
       modifierSelections: zod
         .array(

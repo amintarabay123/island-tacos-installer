@@ -73,17 +73,41 @@ export function pushStatusToCloud(
   if (!cloudUrl || !syncSecret) return; // running on cloud — skip
 
   const url = `${cloudUrl}/api/orders/sync-status`;
-  fetch(url, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${syncSecret}`,
-    },
-    body: JSON.stringify({ confirmationCode, ...updates }),
-    signal: AbortSignal.timeout(10_000),
-  }).catch((err) => {
-    logger.warn({ err, confirmationCode }, "Status write-back to cloud failed");
-  });
+  const body = JSON.stringify({ confirmationCode, ...updates });
+
+  void (async () => {
+    const maxAttempts = 5;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${syncSecret}`,
+          },
+          body,
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (res.ok) return;
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+      } catch (err) {
+        const isLast = attempt === maxAttempts - 1;
+        if (isLast) {
+          logger.error(
+            { err, confirmationCode, attempts: maxAttempts },
+            "Status write-back to cloud failed after all retries — cloud order may be stale",
+          );
+          return;
+        }
+        logger.warn(
+          { err, confirmationCode, attempt: attempt + 1 },
+          "Status write-back to cloud failed; retrying",
+        );
+        await new Promise((r) => setTimeout(r, Math.min(30_000, 500 * 2 ** attempt)));
+      }
+    }
+  })();
 }
 
 export function startOnlineOrdersSync(): void {

@@ -10,6 +10,8 @@ import type { OrderItemModifier } from "./orderItemModifier";
 export interface CreateOrderItemInput {
   menuItemId: number;
   quantity: number;
+  /** Required when the menu item has openPrice; ignored otherwise (server uses DB price). */
+  unitPrice?: number;
   /** @nullable */
   notes?: string | null;
   modifierSelections?: OrderItemModifier[] | null;

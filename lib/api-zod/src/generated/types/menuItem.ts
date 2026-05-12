@@ -21,6 +21,7 @@ export interface MenuItem {
   popular: boolean;
   spicy: boolean;
   vegetarian: boolean;
+  /** When true, POS must collect unit price per line; online menu hides the item. */
   openPrice: boolean;
   createdAt: Date;
 }
