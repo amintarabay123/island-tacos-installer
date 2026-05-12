@@ -40,6 +40,66 @@ router.get("/print/bridge.js", (_req, res): void => {
 // Public download routes (no auth required)
 router.use(downloadsRouter);
 
+// ── Per-route auth gates that must run BEFORE the corresponding routers below.
+// Order matters: express middleware runs in registration order, so any gate that
+// protects routes inside a router must be `router.use(...)`'d before that router.
+//
+// Path normalization is critical: express by default has both `case sensitive
+// routing` and `strict routing` OFF, so `/MENU/items`, `/menu/items/`, and
+// `/menu/items` all hit the same handler. If we compared raw `req.path` we'd
+// gate the canonical form but let the case/trailing-slash variants slip past.
+// `normalizePath` mirrors express's matching: lowercase + drop trailing slash
+// (but keep "/").
+function normalizePath(p: string): string {
+  const lower = p.toLowerCase();
+  if (lower.length > 1 && lower.endsWith("/")) return lower.slice(0, -1);
+  return lower;
+}
+
+router.use((req: Request, res: Response, next: NextFunction) => {
+  const path = normalizePath(req.path);
+  const isMutation = req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS";
+
+  // /menu/*: GETs are public for the storefront, but every mutation (and the
+  // staff-only /menu/soldout list which leaks every item id) requires staff
+  // auth. Closes the long-standing gap where anyone on the internet could
+  // POST/PATCH/DELETE menu items, categories, modifiers, soldout toggles, and
+  // reorders.
+  if (path === "/menu" || path.startsWith("/menu/")) {
+    const isSoldoutRead = path.startsWith("/menu/soldout") && !isMutation;
+    if (isMutation || isSoldoutRead) return requireStaffAuth(req, res, next);
+    return next();
+  }
+
+  // /upload (POST) and /storage/uploads/request-url (POST): both create GCS
+  // objects using the shop's storage quota. Staff only. The matching GETs that
+  // serve uploaded images stay public so the storefront can render menu
+  // photos.
+  if (isMutation && (path === "/upload" || path === "/storage/uploads/request-url")) {
+    return requireStaffAuth(req, res, next);
+  }
+
+  // /display (POST) is the POS pushing cart state to the customer-facing
+  // display. GET stays public so the display device can poll/SSE without a
+  // session.
+  if (path === "/display" && req.method === "POST") {
+    return requireStaffAuth(req, res, next);
+  }
+
+  // /pos/events SSE leaks order events to anyone listening. POS-only.
+  if (path === "/pos/events") return requireStaffAuth(req, res, next);
+
+  // /admin/uploaded-images is defined inside uploadRouter (which is mounted
+  // BEFORE the /admin/* admin guard further down), so the existing /admin/*
+  // prefix middleware never sees it. Gate it explicitly here. Owner-only —
+  // it lists every uploaded image across the store.
+  if (path === "/admin/uploaded-images" || path.startsWith("/admin/uploaded-images/")) {
+    return requireAdminAuth(req, res, next);
+  }
+
+  return next();
+});
+
 // Public routes (upload requires staff auth; /uploads static serving is public)
 router.use(healthRouter);
 router.use(manifestRouter);
