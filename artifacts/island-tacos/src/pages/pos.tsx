@@ -420,6 +420,20 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
               rows={2}
               className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 text-sm placeholder-gray-400 resize-none focus:outline-none focus:border-amber-400/60 transition-colors"
             />
+          </div>
+          {/* Action buttons — always visible at bottom */}
+          <div className="flex-shrink-0 p-5 pt-2 flex gap-3 pb-safe">
+            <button onClick={onClose} className="flex-1 h-12 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-100 transition-colors">Cancel</button>
+            <button onClick={handleConfirm} disabled={!!validationError}
+              className="flex-2 flex-grow h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-50 text-black font-bold transition-colors">
+              Add to Order · {fmt(total)}
+            </button>
+          </div>
+        </div>
+    </div>
+  );
+}
+
 // ─── Payment Modal ────────────────────────────────────────────────────────────
 
 function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHold }: {

@@ -39,7 +39,6 @@ type MenuItemForm = {
   popular: boolean;
   spicy: boolean;
   vegetarian: boolean;
-  openPrice: boolean;
   selectedModifierIds: string[];
 };
 
@@ -55,7 +54,6 @@ const emptyForm: MenuItemForm = {
   popular: false,
   spicy: false,
   vegetarian: false,
-  openPrice: false,
   selectedModifierIds: [],
 };
 
