@@ -261,8 +261,6 @@ function RetryImg({ src, alt, className }: { src: string; alt: string; className
   );
 }
 
-// ─── Modifier Modal ───────────────────────────────────────────────────────────
-
 function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections = [], initialNote = "" }: {
   item: MenuItem; modifiers: Modifier[];
   onConfirm: (sels: CartModifier[], note: string) => void; onClose: () => void;
@@ -422,20 +420,6 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
               rows={2}
               className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 text-sm placeholder-gray-400 resize-none focus:outline-none focus:border-amber-400/60 transition-colors"
             />
-          </div>
-          {/* Action buttons — always visible at bottom */}
-          <div className="flex-shrink-0 p-5 pt-2 flex gap-3 pb-safe">
-            <button onClick={onClose} className="flex-1 h-12 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-100 transition-colors">Cancel</button>
-            <button onClick={handleConfirm} disabled={!!validationError}
-              className="flex-2 flex-grow h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-50 text-black font-bold transition-colors">
-              Add to Order · {fmt(total)}
-            </button>
-          </div>
-        </div>
-    </div>
-  );
-}
-
 // ─── Payment Modal ────────────────────────────────────────────────────────────
 
 function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHold }: {
@@ -2938,8 +2922,9 @@ export default function POS() {
     try {
       const r = await fetch(`/api/menu/items/${item.id}/modifiers`, { credentials: "include" });
       const mods: Modifier[] = await r.json();
-      if (mods.length > 0) {
-        setModifierModal({ item, mods });
+      const m = Array.isArray(mods) ? mods : [];
+      if (m.length > 0) {
+        setModifierModal({ item, mods: m });
         return;
       }
     } catch {}
@@ -3002,10 +2987,11 @@ export default function POS() {
     try {
       const r = await fetch(`/api/menu/items/${menuItem.id}/modifiers`, { credentials: "include" });
       const mods: Modifier[] = await r.json();
-      if (mods.length > 0 || cartItem.notes) {
+      const m = Array.isArray(mods) ? mods : [];
+      if (m.length > 0 || cartItem.notes) {
         setModifierModal({
           item: menuItem,
-          mods,
+          mods: m,
           editKey: cartItem.key,
           initialSelections: cartItem.modifierSelections,
           initialNote: cartItem.notes,
@@ -3583,11 +3569,13 @@ export default function POS() {
           initialNote={modifierModal.initialNote}
           onConfirm={(sels, note) => {
             if (modifierModal.editKey) {
-              // Replace the existing cart item's modifiers and note in-place
-              setCart(prev => prev.map(c => c.key === modifierModal.editKey
-                ? { ...c, modifierSelections: sels, notes: note }
-                : c
-              ));
+              setCart((prev) =>
+                prev.map((c) =>
+                  c.key === modifierModal.editKey
+                    ? { ...c, modifierSelections: sels, notes: note }
+                    : c,
+                ),
+              );
             } else {
               pushToCart(modifierModal.item, sels, note);
             }
