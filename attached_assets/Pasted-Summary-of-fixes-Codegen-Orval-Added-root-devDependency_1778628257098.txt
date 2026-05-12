@@ -1,0 +1,29 @@
+Summary of fixes
+Codegen / Orval
+Added root devDependency @esbuild/darwin-arm64@0.27.3 so Orval’s React client step can load esbuild on darwin-arm64. pnpm --filter @workspace/api-spec run codegen now finishes (Zod + api-client-react) and pnpm run typecheck is clean.
+
+POST /api/orders — open price + unitPrice (artifacts/api-server/src/routes/orders.ts)
+For each line: if the menu row has openPrice, the server requires a positive unitPrice on the request and uses that for math and stored line price; otherwise it uses the DB list price and ignores client unitPrice. Non–open-price lines still require a positive list price.
+
+Customer site (artifacts/island-tacos/src/pages/home.tsx)
+
+webItems: drops openPrice rows so they never appear online.
+Category tabs: only categories that still have at least one web item (after that filter).
+Active tab: resets if the current category disappears.
+Best sellers: when using /api/menu/popular, only keeps rows whose id is still in webItems.
+Admin menu (artifacts/island-tacos/src/pages/admin-menu.tsx)
+
+Form + API payload: openPrice, validation (list price rules with/without open price), table shows “Open” instead of $0.00 when applicable.
+useToast + onError / onSettled (with reset()) on item/category create/update/delete and KDS toggle so failures surface and mutations don’t feel stuck.
+POS (artifacts/island-tacos/src/pages/pos.tsx)
+
+MenuItem.openPrice, ItemCard: shows “Open” instead of a misleading $0.00.
+Modifier modal: for open-price items, unit price field; totals and confirm use it; onConfirm can pass { unitPrice }.
+addItem: opens the modifier flow when openPrice even if there are no modifier groups (so staff always enters price).
+pushToCart: takes optional unitPrice, merge key includes price for open-price lines.
+editCartItem: reopens the modal for open-price lines (to change price / modifiers / note).
+Orders: orderItemsPayload() adds unitPrice: c.price when the loaded menu row has openPrice (used for both pay and pay-and-hold POST /api/orders bodies).
+Earlier thread items (menu routes, store settings self-heal/PATCH, pushStatusToCloud retries, schema/OpenAPI/codegen) remain as in your repo’s current diff; this session focused on finishing orders, home, admin-menu, POS, esbuild, and verification.
+
+Do you want me to commit these changes and push everything to GitHub?
+If yes, say whether you prefer one commit or split commits, and confirm the remote branch (e.g. main vs a feature branch). I have not run git commit or git push yet.
