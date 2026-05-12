@@ -9,7 +9,7 @@ import { pushStatusToCloud } from "../lib/online-orders-sync";
 import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp } from "../lib/whatsapp";
 import { sendSms } from "../lib/sms-gateway";
 import nodemailer from "nodemailer";
-import { requireStaffAuth } from "./auth";
+import { requireStaffAuth, isStaffAuthenticated } from "./auth";
 
 const mailer = nodemailer.createTransport({
   host: process.env.SMTP_HOST ?? "smtp.gmail.com",
@@ -356,9 +356,15 @@ router.post("/orders", async (req, res): Promise<void> => {
     }
     // Open-price items (e.g. "Misc") let the cashier set a one-off price at the POS.
     // We only honor priceOverride when the menu item is flagged openPrice — never trust
-    // a client-supplied price for normal items.
+    // a client-supplied price for normal items. Open-price is also a staff-only feature:
+    // unauthenticated callers (the public storefront) must NOT be able to order them,
+    // otherwise anyone could POST a $0.01 order for a "Misc" item.
     let price: number;
     if (menuItem.openPrice) {
+      if (!isStaffAuthenticated(req)) {
+        res.status(403).json({ error: `"${menuItem.name}" can only be added from the POS` });
+        return;
+      }
       const override = item.priceOverride;
       if (typeof override !== "number" || !Number.isFinite(override) || override <= 0) {
         res.status(400).json({ error: `"${menuItem.name}" requires a price greater than 0` });

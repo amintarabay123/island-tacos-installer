@@ -3,6 +3,7 @@ import { eq, sql, inArray } from "drizzle-orm";
 import { proxyImageUrl, prewarmImageCache } from "./image-proxy";
 import { db, menuCategoriesTable, menuItemsTable, modifiersTable, orderItemsTable } from "@workspace/db";
 import { pushSoldOutItemToCloud, pushSoldOutModifierOptionToCloud } from "../lib/online-orders-sync";
+import { isStaffAuthenticated } from "./auth";
 import {
   CreateMenuCategoryBody,
   UpdateMenuCategoryParams,
@@ -116,15 +117,25 @@ router.get("/menu/items", async (req, res): Promise<void> => {
     query = query.where(eq(menuItemsTable.available, queryParsed.data.available));
   }
   const items = await query;
+  // Hide open-price items (e.g. "Misc") from anonymous callers. They're a POS-only
+  // feature with a $0 placeholder price; exposing them publicly enables a low-effort
+  // exploit where an attacker reads the item id and POSTs an order with a
+  // self-supplied priceOverride. Staff sessions still see them so admin/POS work.
+  const staff = isStaffAuthenticated(req);
+  const visible = staff ? items : items.filter((i) => !i.openPrice);
   // Pre-warm image cache so all Loyverse images are ready before the browser asks
-  prewarmImageCache(items.flatMap(i => [i.imageUrl, i.posImageUrl]));
-  const result = items.map((item) => ({
+  prewarmImageCache(visible.flatMap(i => [i.imageUrl, i.posImageUrl]));
+  const result = visible.map((item) => ({
     ...item,
     price: parseFloat(item.price as unknown as string),
     imageUrl: proxyImageUrl(item.imageUrl),
     posImageUrl: proxyImageUrl(item.posImageUrl),
   }));
-  res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=120");
+  // No public cache when the response varies by auth — otherwise the proxy could
+  // hand a staff-cached body (with open-price items) to an anonymous client.
+  // Vary tells well-behaved caches to key on the auth identity too.
+  res.set("Vary", "Cookie, Authorization");
+  res.set("Cache-Control", staff ? "private, max-age=0, no-store" : "public, max-age=30, stale-while-revalidate=120");
   res.json(result);
 });
 
@@ -221,6 +232,14 @@ router.get("/menu/items/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Item not found" });
     return;
   }
+  // Open-price items are POS-only — return 404 to anonymous callers so this endpoint
+  // can't be used to fish for the item id (paired with the /menu/items list filter).
+  if (item.openPrice && !isStaffAuthenticated(req)) {
+    res.status(404).json({ error: "Item not found" });
+    return;
+  }
+  res.set("Vary", "Cookie, Authorization");
+  res.set("Cache-Control", "private, max-age=0, no-store");
   res.json({ ...item, price: parseFloat(item.price as unknown as string), imageUrl: proxyImageUrl(item.imageUrl), posImageUrl: proxyImageUrl(item.posImageUrl) });
 });
 
@@ -230,6 +249,11 @@ router.get("/menu/items/:id/modifiers", async (req, res): Promise<void> => {
 
   const [item] = await db.select().from(menuItemsTable).where(eq(menuItemsTable.id, id));
   if (!item) { res.status(404).json({ error: "Item not found" }); return; }
+  // Don't leak open-price item existence via the modifiers endpoint either.
+  if (item.openPrice && !isStaffAuthenticated(req)) {
+    res.status(404).json({ error: "Item not found" });
+    return;
+  }
 
   const modifierIds = item.loyverseModifierIds ?? [];
   if (modifierIds.length === 0) { res.json([]); return; }

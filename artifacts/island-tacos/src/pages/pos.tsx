@@ -3543,10 +3543,23 @@ export default function POS() {
             const editKey = openPriceModal.editKey;
             if (editKey) {
               // Update the existing line in place — preserves quantity + position.
-              setCart(prev => prev.map(c => c.key === editKey
-                ? { ...c, price, notes: note, priceOverride: price }
-                : c
-              ));
+              // If the price or description actually changed on a resumed/alreadyMade
+              // line, clear `alreadyMade`. Otherwise the "no new items → patch only"
+              // submit path silently skips the item update and the new price/desc
+              // never reaches the DB. Re-firing to KDS is correct here too: for an
+              // open-price item the description is what tells the kitchen what to
+              // make, so a change is worth re-notifying.
+              setCart(prev => prev.map(c => {
+                if (c.key !== editKey) return c;
+                const changed = c.price !== price || c.notes !== note;
+                return {
+                  ...c,
+                  price,
+                  notes: note,
+                  priceOverride: price,
+                  alreadyMade: changed ? false : c.alreadyMade,
+                };
+              }));
             } else {
               pushToCart(openPriceModal.item, [], note, price);
             }

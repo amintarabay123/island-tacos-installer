@@ -68,6 +68,12 @@ function getAuthData(req: Request) {
   return getTokenFromRequest(req.headers.cookie);
 }
 
+// Non-throwing variant for endpoints that serve both staff and public — lets the
+// handler tailor its response (e.g. hide open-price items from anonymous menu fetches).
+export function isStaffAuthenticated(req: Request): boolean {
+  return getAuthData(req)?.staffAuthed === true;
+}
+
 export function requireStaffAuth(req: Request, res: Response, next: () => void): void {
   const data = getAuthData(req);
   if (data?.staffAuthed !== true) {
