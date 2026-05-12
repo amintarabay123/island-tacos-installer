@@ -32,7 +32,7 @@ interface ModifierGroup {
 
 export default function Home() {
   const { data: categories, isLoading: loadingCategories } = useListMenuCategories();
-  const { data: items, isLoading: loadingItems } = useListMenuItems({ available: true });
+  const { data: items, isLoading: loadingItems } = useListMenuItems();
 
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -92,7 +92,7 @@ export default function Home() {
   const popularItems = useMemo(() => {
     if (topSellers && topSellers.length > 0) return topSellers;
     if (!items) return [];
-    return items.filter(item => item.popular).slice(0, 5);
+    return items.filter(item => item.popular && item.available !== false).slice(0, 5);
   }, [topSellers, items]);
 
   const extraPrice = useMemo(() => {
@@ -164,6 +164,7 @@ export default function Home() {
   };
 
   const openItemModal = async (item: any) => {
+    if (item.available === false) return;
     // Give the popup a fresh attempt even if the grid image had a transient failure
     setBrokenImages(prev => { const next = new Set(prev); next.delete(item.id); return next; });
     setSelectedItem(item);
@@ -327,41 +328,64 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:gap-x-8 divide-border">
-              {filteredItems.map((item) => (
+              {filteredItems.map((item) => {
+                const soldOut = item.available === false;
+                return (
                 <div
                   key={item.id}
-                  className="flex items-start gap-4 py-4 md:py-5 group cursor-pointer hover:bg-muted/30 -mx-2 px-2 md:-mx-3 md:px-3 rounded-lg transition-colors border-b md:border-b border-border"
-                  onClick={() => openItemModal(item)}
+                  aria-disabled={soldOut}
+                  className={`flex items-start gap-4 py-4 md:py-5 group -mx-2 px-2 md:-mx-3 md:px-3 rounded-lg transition-colors border-b md:border-b border-border ${
+                    soldOut ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-muted/30"
+                  }`}
+                  onClick={() => { if (!soldOut) openItemModal(item); }}
                 >
-                  <div className="w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-lg bg-muted overflow-hidden">
+                  <div className="relative w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-lg bg-muted overflow-hidden">
                     {item.imageUrl && !brokenImages.has(item.id) ? (
-                      <img src={item.imageUrl} alt={item.name} onError={() => handleImgError(item.id)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <img src={item.imageUrl} alt={item.name} onError={() => handleImgError(item.id)} className={`w-full h-full object-cover transition-transform duration-300 ${soldOut ? "grayscale" : "group-hover:scale-105"}`} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-2xl font-bold">
                         {item.name.charAt(0)}
+                      </div>
+                    )}
+                    {soldOut && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                        <span className="-rotate-12 border-2 border-white text-white text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded">Sold Out</span>
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3 mb-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm">{item.name}</span>
-                        {item.popular && <span className="text-[10px] font-bold bg-secondary/15 text-secondary-foreground px-1.5 py-0.5 rounded uppercase tracking-wide">Popular</span>}
-                        {item.spicy && <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded uppercase tracking-wide">Spicy</span>}
-                        {item.vegetarian && <span className="text-[10px] font-bold bg-accent/15 text-accent px-1.5 py-0.5 rounded uppercase tracking-wide">Veg</span>}
+                        <span className={`font-semibold text-sm ${soldOut ? "line-through text-muted-foreground" : ""}`}>{item.name}</span>
+                        {soldOut && <span className="text-[10px] font-bold bg-muted text-muted-foreground px-1.5 py-0.5 rounded uppercase tracking-wide">Sold Out</span>}
+                        {!soldOut && item.popular && <span className="text-[10px] font-bold bg-secondary/15 text-secondary-foreground px-1.5 py-0.5 rounded uppercase tracking-wide">Popular</span>}
+                        {!soldOut && item.spicy && <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded uppercase tracking-wide">Spicy</span>}
+                        {!soldOut && item.vegetarian && <span className="text-[10px] font-bold bg-accent/15 text-accent px-1.5 py-0.5 rounded uppercase tracking-wide">Veg</span>}
                       </div>
-                      <span className="text-sm font-semibold shrink-0">${item.price.toFixed(2)}</span>
+                      <span className={`text-sm font-semibold shrink-0 ${soldOut ? "line-through text-muted-foreground" : ""}`}>${item.price.toFixed(2)}</span>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.description}</p>
-                    <button
-                      className="mt-2 text-xs font-semibold flex items-center gap-1 border border-border rounded-full px-3 py-1 hover:bg-foreground hover:text-background hover:border-foreground transition-colors"
-                      onClick={(e) => { e.stopPropagation(); openItemModal(item); }}
-                    >
-                      <Plus className="w-3 h-3" /> Add
-                    </button>
+                    {soldOut ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="mt-2 text-xs font-semibold flex items-center gap-1 border border-border rounded-full px-3 py-1 text-muted-foreground cursor-not-allowed bg-muted/50"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Sold Out
+                      </button>
+                    ) : (
+                      <button
+                        className="mt-2 text-xs font-semibold flex items-center gap-1 border border-border rounded-full px-3 py-1 hover:bg-foreground hover:text-background hover:border-foreground transition-colors"
+                        onClick={(e) => { e.stopPropagation(); openItemModal(item); }}
+                      >
+                        <Plus className="w-3 h-3" /> Add
+                      </button>
+                    )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
