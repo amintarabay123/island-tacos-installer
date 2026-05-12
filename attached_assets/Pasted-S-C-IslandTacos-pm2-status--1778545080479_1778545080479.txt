@@ -1,0 +1,24 @@
+S C:\IslandTacos> pm2 status
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ island-tacos       │ fork     │ 4    │ online    │ 0%       │ 276.1mb  │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+PS C:\IslandTacos> pm2 logs island-tacos --lines 200 --nostream | Select-String "sms"
+
+0|island-t | 2026-05-08 11:38:51: [sms] Twilio failed (400): {"code":21610,"message":"Attempt to send to unsubscribed
+recipient","more_info":"https://www.twilio.com/docs/errors/21610","status":400}
+0|island-t | 2026-05-08 17:00:04: [sms] Twilio failed (400): {"code":21211,"message":"Invalid 'To' Phone Number:
++1284456XXXX","more_info":"https://www.twilio.com/docs/errors/21211","status":400}
+0|island-t | 2026-05-09 10:52:17: [sms] Twilio failed (400): {"code":21610,"message":"Attempt to send to unsubscribed
+recipient","more_info":"https://www.twilio.com/docs/errors/21610","status":400}
+0|island-t | 2026-05-09 11:55:12: [sms] Twilio failed (400): {"code":21610,"message":"Attempt to send to unsubscribed
+recipient","more_info":"https://www.twilio.com/docs/errors/21610","status":400}
+0|island-t | 2026-05-09 12:43:15: [sms] Twilio failed (400): {"code":21610,"message":"Attempt to send to unsubscribed
+recipient","more_info":"https://www.twilio.com/docs/errors/21610","status":400}
+0|island-t | 2026-05-11 09:10:59: [sms] Twilio failed (400): {"code":21635,"message":"'To' number +1284468XXXX cannot
+be a landline","more_info":"https://www.twilio.com/docs/errors/21635","status":400}
+0|island-t | 2026-05-11 11:49:21: [sms] Twilio failed (400): {"code":21635,"message":"'To' number +1284852XXXX cannot
+be a landline","more_info":"https://www.twilio.com/docs/errors/21635","status":400}
+0|island-t | 2026-05-11 17:12:55: {"level":30,"time":1778544775932,"pid":17064,"hostname":"IslandTacos","to":"+12844991
+449","id":"_oQWc4NbrEQKhHe-QZ-RG","msg":"[sms] sent via gateway"}
