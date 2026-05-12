@@ -45,3 +45,104 @@ jobs:
 
       - name: Run tests
         run: pnpm -r --if-present run test
+
+  anon-auth-matrix:
+    # Boots the api-server against a real Postgres and curls every interesting
+    # route as an anonymous client. Catches the "router mounted before its
+    # guard" failure mode that typecheck cannot see.
+    name: Anon-auth matrix (API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ituser
+          POSTGRES_PASSWORD: itpass
+          POSTGRES_DB: islandtacos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ituser -d islandtacos"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://ituser:itpass@localhost:5432/islandtacos
+      PORT: "8080"
+      NODE_ENV: test
+      SESSION_SECRET: ci-session-secret-not-real
+      ADMIN_PIN: "0000"
+      STAFF_PIN: "1111"
+      SYNC_SECRET: ci-sync-secret-not-real
+      # Disable side-effect integrations so the server boots clean in CI
+      LOYVERSE_API_TOKEN: ""
+      TWILIO_ACCOUNT_SID: ""
+      TWILIO_AUTH_TOKEN: ""
+      META_ACCESS_TOKEN: ""
+      ATHMOVIL_PRIVATE_TOKEN: ""
+      ATHMOVIL_PUBLIC_TOKEN: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply schema (idempotent — same file the mini PC runs)
+        run: PGPASSWORD=itpass psql -h localhost -U ituser -d islandtacos -f local-install/schema.sql
+
+      - name: Build api-server
+        run: pnpm --filter @workspace/api-server run build
+
+      - name: Start api-server in background
+        run: |
+          node --enable-source-maps artifacts/api-server/dist/index.mjs > /tmp/api-server.log 2>&1 &
+          echo $! > /tmp/api-server.pid
+
+      - name: Wait for /api/healthz
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf http://localhost:8080/api/healthz > /dev/null; then
+              echo "api-server up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "api-server did not start in 40s. Logs:"
+          cat /tmp/api-server.log
+          exit 1
+
+      - name: Run anon-auth matrix
+        env:
+          API_BASE: http://localhost:8080
+        run: pnpm --filter @workspace/scripts run check:auth
+
+      - name: Dump api-server logs on failure
+        if: failure()
+        run: |
+          echo "=== api-server log tail ==="
+          tail -200 /tmp/api-server.log || true
+
+      - name: Stop api-server
+        if: always()
+        run: |
+          if [ -f /tmp/api-server.pid ]; then
+            kill "$(cat /tmp/api-server.pid)" 2>/dev/null || true
+          fi

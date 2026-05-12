@@ -9,7 +9,11 @@
   3. Both deployment targets are consistent — cloud (Replit) AND the mini PC at the shop. A fix that only ships to one is incomplete.
 - **Goal: production-grade, stable system.** This product is intended to be sold to other restaurants. Code quality, error handling, observability, and consistency matter as much as features. Prefer robust solutions over clever ones.
 - **Don't deploy during business hours** unless the change is text/config-only and explicitly approved.
-- **Branch convention for non-trivial changes.** Direct commits to `main` are fine for one-line fixes, config tweaks, and docs. Anything bigger (new feature, refactor touching 3+ files, schema change, dependency bump) goes on a `cursor/<topic>` or `replit/<topic>` branch and lands via PR. CI (`.github/workflows/ci.yml`) runs typecheck + audit + tests on every push and PR — a red CI must be green before merge. This prevents the "two AI agents silently overwrote each other on main" failure mode.
+- **Branch convention for non-trivial changes.** Direct commits to `main` are fine for one-line fixes, config tweaks, and docs. Anything bigger (new feature, refactor touching 3+ files, schema change, dependency bump) goes on a `cursor/<topic>` or `replit/<topic>` branch and lands via PR. CI (`.github/workflows/ci.yml`) runs typecheck + audit + tests + the **anon-auth matrix** on every push and PR — a red CI must be green before merge. This prevents the "two AI agents silently overwrote each other on main" failure mode.
+
+## CI: anon-auth matrix
+
+A bash script (`scripts/src/anon-auth-matrix.sh`, runnable as `pnpm --filter @workspace/scripts run check:auth`) hits every interesting API route as an anonymous client and asserts the response code matches the expected gate posture (public → 200, staff/admin → 401|403, M2M sync → 401 without secret / 200 with). The CI job `anon-auth-matrix` in `.github/workflows/ci.yml` boots a Postgres service, applies `local-install/schema.sql`, builds and starts api-server, and runs the script. This catches the "router mounted before its guard" failure mode that typecheck cannot see — the exact bug class that produced the May 2026 dead-guard cleanup. **When you add a new route, add it to the matrix in the same PR.**
 
 ## Long-term product vision (SaaS)
 
