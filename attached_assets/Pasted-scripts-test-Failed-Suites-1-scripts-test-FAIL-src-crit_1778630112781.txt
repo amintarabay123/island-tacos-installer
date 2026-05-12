@@ -1,0 +1,56 @@
+scripts test: ⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+scripts test:  FAIL  src/critical-flows.test.ts > Order API — modifier persistence
+scripts test: TypeError: fetch failed
+scripts test: {
+scripts test:   stack: 'AggregateError: \n' +
+scripts test:     '    at internalConnectMultiple (node:net:1142:49)\n' +
+scripts test:     '    at afterConnectMultiple (node:net:1723:7)',
+scripts test:   errors: [
+scripts test:     {
+scripts test:       stack: 'Error: connect ECONNREFUSED ::1:80\n' +
+scripts test:         '    at createConnectionError (node:net:1686:14)\n' +
+scripts test:         '    at afterConnectMultiple (node:net:1716:16)',
+scripts test:       message: 'connect ECONNREFUSED ::1:80',
+scripts test:       errno: -111,
+scripts test:       code: 'ECONNREFUSED',
+scripts test:       syscall: 'connect',
+scripts test:       address: '::1',
+scripts test:       port: 80,
+scripts test:       constructor: 'Function<Error>',
+scripts test:       name: 'Error',
+scripts test:       toString: 'Function<toString>'
+scripts test:     },
+scripts test:     {
+scripts test:       stack: 'Error: connect ECONNREFUSED 127.0.0.1:80\n' +
+scripts test:         '    at createConnectionError (node:net:1686:14)\n' +
+scripts test:         '    at afterConnectMultiple (node:net:1716:16)',
+scripts test:       message: 'connect ECONNREFUSED 127.0.0.1:80',
+scripts test:       errno: -111,
+scripts test:       code: 'ECONNREFUSED',
+scripts test:       syscall: 'connect',
+scripts test:       address: '127.0.0.1',
+scripts test:       port: 80,
+scripts test:       constructor: 'Function<Error>',
+scripts test:       name: 'Error',
+scripts test:       toString: 'Function<toString>'
+scripts test:     }
+scripts test:   ],
+scripts test:   code: 'ECONNREFUSED',
+scripts test:   constructor: 'Function<AggregateError>',
+scripts test:   name: 'Caused by: AggregateError',
+scripts test:   message: '',
+scripts test:   toString: 'Function<toString>',
+scripts test:   stacks: []
+scripts test: }
+scripts test: ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+scripts test: Serialized Error: { errors: [ { stack: 'Error: connect ECONNREFUSED ::1:80\n    at createConnectionError (node:net:1686:14)\n    at afterConnectMultiple (node:net:1716:16)', message: 'connect ECONNREFUSED ::1:80', errno: -111, code: 'ECONNREFUSED', syscall: 'connect', address: '::1', port: 80, constructor: 'Function<Error>', name: 'Error', toString: 'Function<toString>' }, { stack: 'Error: connect ECONNREFUSED 127.0.0.1:80\n    at createConnectionError (node:net:1686:14)\n    at afterConnectMultiple (node:net:1716:16)', message: 'connect ECONNREFUSED 127.0.0.1:80', errno: -111, code: 'ECONNREFUSED', syscall: 'connect', address: '127.0.0.1', port: 80, constructor: 'Function<Error>', name: 'Error', toString: 'Function<toString>' } ], code: 'ECONNREFUSED' }
+scripts test: ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+scripts test:  Test Files  1 failed (1)
+scripts test:       Tests  19 passed | 3 skipped (22)
+scripts test:    Start at  23:52:16
+scripts test:    Duration  250ms (transform 45ms, setup 0ms, import 59ms, tests 48ms, environment 0ms)
+scripts test: Failed
+/home/runner/work/island-tacos-installer/island-tacos-installer/scripts:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/scripts@0.0.0 test: `vitest run --reporter=verbose`
+Exit status 1
+Error: Process completed with exit code 1.

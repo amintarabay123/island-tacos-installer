@@ -145,7 +145,21 @@ describe("Phone normalization", () => {
 // ─── 3. API integration — modifier persistence ────────────────────────────────
 // Verifies the full round-trip: POS sends modifiers → server stores → GET returns them.
 
-describe("Order API — modifier persistence", () => {
+// These tests require a running api-server. The CI `verify` job runs unit
+// tests only and does NOT boot a server, so the block must skip cleanly when
+// the API isn't reachable (otherwise `fetch` throws ECONNREFUSED before
+// vitest can even mark the test as skipped). The `anon-auth-matrix` CI job
+// already covers live-server integration via the bash matrix script.
+// Locally: `pnpm dev` running → these tests run automatically.
+let apiAvailable = false;
+try {
+  const r = await fetch(`${API}/healthz`);
+  apiAvailable = r.ok;
+} catch {
+  apiAvailable = false;
+}
+
+describe.skipIf(!apiAvailable)("Order API — modifier persistence", () => {
   let createdOrderId: number | null = null;
   let firstMenuItemId: number | null = null;
   let authToken: string | null = null;
