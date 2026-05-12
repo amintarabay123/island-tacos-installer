@@ -194,7 +194,28 @@ export default function Home() {
     }
   };
 
-  const allCategories = [{ id: null, name: "All" }, ...(categories?.sort((a, b) => a.sortOrder - b.sortOrder) ?? [])];
+  // Filter empty categories client-side. The server now returns ALL categories
+  // (admin/POS/KDS need that), so the customer storefront has to skip any
+  // category that has no available, non-open-price items — otherwise an empty
+  // "Misc" tab would show up with the "No items in this category right now"
+  // message. Mirrors the old server-side INNER JOIN, just done where it
+  // belongs (presentation layer).
+  const visibleCategories = useMemo(() => {
+    if (!categories) return [];
+    if (!items) return categories;
+    const catIdsWithItems = new Set(
+      items
+        .filter(
+          (i) =>
+            i.available !== false &&
+            !(i as { openPrice?: boolean }).openPrice,
+        )
+        .map((i) => i.categoryId),
+    );
+    return categories.filter((c) => catIdsWithItems.has(c.id));
+  }, [categories, items]);
+
+  const allCategories = [{ id: null, name: "All" }, ...visibleCategories.slice().sort((a, b) => a.sortOrder - b.sortOrder)];
 
   return (
     <Layout>

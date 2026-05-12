@@ -22,18 +22,21 @@ const router: IRouter = Router();
 // ---- Categories ----
 
 router.get("/menu/categories", async (_req, res): Promise<void> => {
+  // Return ALL categories — this endpoint is ground truth and is consumed by
+  // the admin menu page (which MUST see empty categories so newly created ones
+  // are visible — otherwise the admin can't add the first item to them and
+  // ends up creating duplicates), the POS, and the KDS as well as the customer
+  // home page. Customer-facing filtering of empty categories happens
+  // client-side in home.tsx using the items list it already fetches.
+  // (Previously this used an INNER JOIN on menu_items WHERE available=true,
+  // which silently hid every empty category from EVERYONE — that's the bug
+  // that produced 4 duplicate "Misc" rows in prod on 2026-05-12.)
   const categories = await db
-    .select({ category: menuCategoriesTable })
+    .select()
     .from(menuCategoriesTable)
-    .innerJoin(
-      menuItemsTable,
-      eq(menuItemsTable.categoryId, menuCategoriesTable.id)
-    )
-    .where(sql`${menuItemsTable.available} = true`)
-    .groupBy(menuCategoriesTable.id)
     .orderBy(menuCategoriesTable.sortOrder);
   res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=120");
-  res.json(categories.map((r) => r.category));
+  res.json(categories);
 });
 
 router.post("/menu/categories", async (req, res): Promise<void> => {
