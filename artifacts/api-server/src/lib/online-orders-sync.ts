@@ -64,6 +64,8 @@ export function pushStatusToCloud(
     kdsCleared?: boolean;
     estimatedReadyAt?: Date | null;
     cancellationReason?: string | null;
+    paymentStatus?: string;
+    amountTendered?: string | null;
   },
 ): void {
   const cloudUrl = process.env.SYNC_TARGET_URL?.replace(/\/$/, "");

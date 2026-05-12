@@ -504,13 +504,15 @@ router.patch("/orders/sync-status", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Unauthorized" }); return;
   }
 
-  const { confirmationCode, status, kdsCleared, estimatedReadyAt, cancellationReason } =
+  const { confirmationCode, status, kdsCleared, estimatedReadyAt, cancellationReason, paymentStatus, amountTendered } =
     req.body as {
       confirmationCode: string;
       status?: string;
       kdsCleared?: boolean;
       estimatedReadyAt?: string | null;
       cancellationReason?: string | null;
+      paymentStatus?: string;
+      amountTendered?: string | null;
     };
 
   if (!confirmationCode) { res.status(400).json({ error: "confirmationCode required" }); return; }
@@ -520,6 +522,8 @@ router.patch("/orders/sync-status", async (req, res): Promise<void> => {
   if (kdsCleared !== undefined)        updates.kdsCleared = kdsCleared;
   if (estimatedReadyAt !== undefined)  updates.estimatedReadyAt = estimatedReadyAt ? new Date(estimatedReadyAt) : null;
   if (cancellationReason !== undefined) updates.cancellationReason = cancellationReason ?? null;
+  if (paymentStatus !== undefined)     updates.paymentStatus = paymentStatus;
+  if (amountTendered !== undefined)    updates.amountTendered = amountTendered;
 
   if (Object.keys(updates).length === 0) { res.json({ ok: true }); return; }
 
@@ -677,6 +681,12 @@ router.patch("/orders/:id", requireStaffAuth, async (req, res): Promise<void> =>
   if (parsed.data.status === "completed" && !parsed.data.paymentStatus && !parsed.data.kdsCleared) {
     updates.paymentStatus = "paid";
   }
+  // Void/cancel: reset payment so the order doesn't count as a sale in reports
+  // or in the shift Z-report's expected cash. Order row is preserved as audit trail.
+  if (parsed.data.status === "cancelled" && !parsed.data.paymentStatus) {
+    updates.paymentStatus = "pending";
+    updates.amountTendered = null;
+  }
 
   let order;
   if (Object.keys(updates).length === 0) {
@@ -712,6 +722,11 @@ router.patch("/orders/:id", requireStaffAuth, async (req, res): Promise<void> =>
       kdsCleared:           parsed.data.kdsCleared,
       estimatedReadyAt:     parsed.data.estimatedReadyAt ? new Date(parsed.data.estimatedReadyAt) : undefined,
       cancellationReason:   parsed.data.cancellationReason,
+      // Propagate any payment-state changes (explicit from client OR implicit from
+      // the auto-paid-on-complete / auto-pending-on-cancel logic above) so cloud
+      // stays in sync with local. Without this, voided orders count as paid on cloud.
+      paymentStatus:        updates.paymentStatus as string | undefined,
+      amountTendered:       updates.amountTendered as string | null | undefined,
     });
   } else {
     // Cloud (or local POS orders): send notifications directly from this server.
