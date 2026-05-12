@@ -48,14 +48,31 @@ export default function Home() {
 
   const { addItem } = useCart();
 
+  /** Customer storefront: available, non-open-price items only (open price is POS-only). */
+  const webItems = useMemo(
+    () => (items ?? []).filter((item) => !item.openPrice && item.available !== false),
+    [items],
+  );
+
+  const categoryIdsWithWebItems = useMemo(
+    () => new Set(webItems.map((i) => i.categoryId)),
+    [webItems],
+  );
+
+  const menuCategories = useMemo(() => {
+    const sorted = [...(categories ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+    return sorted.filter((c) => categoryIdsWithWebItems.has(c.id));
+  }, [categories, categoryIdsWithWebItems]);
+
+  useEffect(() => {
+    if (activeCategory === null) return;
+    if (!menuCategories.some((c) => c.id === activeCategory)) setActiveCategory(null);
+  }, [menuCategories, activeCategory]);
+
   const filteredItems = useMemo(() => {
-    if (!items) return [];
-    // Open-price items (e.g. "Misc") are POS-only — they have no fixed price so they
-    // cannot be ordered online. Hide them from the customer storefront.
-    const visible = items.filter(item => !(item as { openPrice?: boolean }).openPrice);
-    if (activeCategory === null) return visible;
-    return visible.filter(item => item.categoryId === activeCategory);
-  }, [items, activeCategory]);
+    if (activeCategory === null) return webItems;
+    return webItems.filter((item) => item.categoryId === activeCategory);
+  }, [webItems, activeCategory]);
 
   const [storeOpen, setStoreOpen] = useState(true);
   const [openToday, setOpenToday] = useState(true);
@@ -92,15 +109,17 @@ export default function Home() {
   }, []);
 
   // Use sales-driven top sellers when available; fall back to manually-flagged items
+  const webItemIds = useMemo(() => new Set(webItems.map((i) => i.id)), [webItems]);
+
   const popularItems = useMemo(() => {
-    // Open-price items are POS-only and must never appear in customer-facing lists.
-    // Server already filters /menu/popular by open_price=false; double-guard here in case
-    // an admin manually flagged one as popular before toggling open-price on.
-    const notOpenPrice = (it: { openPrice?: boolean }) => !it.openPrice;
-    if (topSellers && topSellers.length > 0) return topSellers.filter(notOpenPrice);
-    if (!items) return [];
-    return items.filter(item => item.popular && item.available !== false && notOpenPrice(item as { openPrice?: boolean })).slice(0, 5);
-  }, [topSellers, items]);
+    const notOpen = (it: { openPrice?: boolean }) => !it.openPrice;
+    if (topSellers && topSellers.length > 0) {
+      return topSellers.filter(
+        (t: { id: number; openPrice?: boolean }) => notOpen(t) && webItemIds.has(t.id),
+      );
+    }
+    return webItems.filter((item) => item.popular).slice(0, 5);
+  }, [topSellers, webItems, webItemIds]);
 
   const extraPrice = useMemo(() => {
     let extra = 0;
@@ -194,28 +213,7 @@ export default function Home() {
     }
   };
 
-  // Filter empty categories client-side. The server now returns ALL categories
-  // (admin/POS/KDS need that), so the customer storefront has to skip any
-  // category that has no available, non-open-price items — otherwise an empty
-  // "Misc" tab would show up with the "No items in this category right now"
-  // message. Mirrors the old server-side INNER JOIN, just done where it
-  // belongs (presentation layer).
-  const visibleCategories = useMemo(() => {
-    if (!categories) return [];
-    if (!items) return categories;
-    const catIdsWithItems = new Set(
-      items
-        .filter(
-          (i) =>
-            i.available !== false &&
-            !(i as { openPrice?: boolean }).openPrice,
-        )
-        .map((i) => i.categoryId),
-    );
-    return categories.filter((c) => catIdsWithItems.has(c.id));
-  }, [categories, items]);
-
-  const allCategories = [{ id: null, name: "All" }, ...visibleCategories.slice().sort((a, b) => a.sortOrder - b.sortOrder)];
+  const allCategories = [{ id: null, name: "All" }, ...menuCategories];
 
   return (
     <Layout>
