@@ -86,6 +86,19 @@ Custom full-stack online ordering + in-house POS system for Island Tacos (Wickha
 - Bodies are kept ≤ 160 chars (1 SMS segment) — cancellation reason is intentionally NOT included; staff follow up by phone.
 - **Twilio is kept as a fallback** (used only when `SMS_GATEWAY_*` is unset or the gateway request fails). Once the phone is configured, Twilio is automatically bypassed. `VAPI_*` env vars were fully removed (May 2026).
 
+### SMS Gateway operational notes (learned the hard way 2026-05-11)
+
+- **Cloud Replit must NOT have `SMS_GATEWAY_*` set.** The phone is on the shop LAN (192.168.x.x) and unreachable from cloud. If you set the vars in cloud, every cloud-side SMS attempt waits 8s for a TCP timeout before falling back to Twilio. Cloud → Twilio only. Mini PC → gateway, with Twilio as fallback.
+- **`SMS_GATEWAY_*` lives in the mini PC's `C:\IslandTacos\.env`**, not in the cloud env or anywhere version-controlled.
+- **PM2 does NOT reload `.env` on `pm2 restart <name>`.** It reuses the env captured at first start. To pick up changed env vars on the mini PC, run: `pm2 restart local-install/ecosystem.config.cjs --update-env` (re-reads the config file, which re-runs `loadEnv`). A plain `pm2 restart island-tacos` will silently keep using the stale env — symptom: gateway code path is never hit even though the vars are in `.env`.
+- **The Android app needs SMS + Phone permissions** or sends silently fail with `getCarrierConfig` errors. Check Settings → Apps → SMS Gateway → Permissions before declaring it broken. Also set Battery → **Unrestricted** so Android doesn't freeze the app overnight.
+- **Default app username is `sms`** (not anything custom). Password starts as "Not set" — must be set manually in the app's Settings → Credentials → Password before the gateway will accept any requests.
+- **Test must originate from the local POS at the mini PC**, not from cloud admin. Cloud admin → cloud's Twilio. Local POS → local's gateway.
+- **Sanity-check log lines** in `pm2 logs island-tacos`:
+  - ✅ `[sms] sent via gateway` — working as intended.
+  - ⚠️ `[sms] sent via Twilio` (with no preceding gateway error) — env vars not loaded; PM2 needs `--update-env`.
+  - ❌ `[sms] gateway send failed` / `gateway send error` — auth, URL, or network problem.
+
 ## Loyverse Integration (Legacy/Minimal)
 
 - `LOYVERSE_API_TOKEN` secret is present
