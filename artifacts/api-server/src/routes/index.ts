@@ -97,6 +97,25 @@ router.use((req: Request, res: Response, next: NextFunction) => {
     return requireAdminAuth(req, res, next);
   }
 
+  // PATCH /settings, PATCH /store-settings, POST /sync/push, POST /sync/pull.
+  // These were previously declared as "guarded below" in this file, but their
+  // routers were mounted BEFORE the guards, so the routers handled the request
+  // before the guards ever ran — i.e. the guards were dead code and the routes
+  // were effectively unauthenticated. Gating them here (before the routers) is
+  // the actual fix.
+  //
+  // /sync/pull triggers a destructive cloud→local menu replace; it is called
+  // from the admin UI with a PIN session, never machine-to-machine.
+  //
+  // /sync/export is intentionally NOT gated here: it is the cloud→mini-PC
+  // M2M pull endpoint, authenticated by `X-Sync-Secret` inside sync.ts. Adding
+  // an admin gate would break `pullMenuFromCloud()`, which only sends the
+  // header. Likewise /sync/receive is M2M with `X-Sync-Secret`.
+  if (path === "/settings" && req.method === "PATCH") return requireAdminAuth(req, res, next);
+  if (path === "/store-settings" && req.method === "PATCH") return requireAdminAuth(req, res, next);
+  if (path === "/sync/push" && isMutation) return requireAdminAuth(req, res, next);
+  if (path === "/sync/pull" && isMutation) return requireAdminAuth(req, res, next);
+
   return next();
 });
 
@@ -131,19 +150,13 @@ router.use(/^\/(shifts|cash-transactions|print)/, (req: Request, res: Response, 
 router.use(shiftsRouter);
 router.use(printRouter);
 
-// Admin + Loyverse + Settings PATCH + Sync push/export: owner only
+// Admin + Loyverse / Reports / Employees / Financials: owner only.
+// (settings PATCH, store-settings PATCH, sync/push, sync/export are gated up
+// in the centralized middleware block above — see comment there. They used to
+// be declared here but the routers were already mounted by this point, so the
+// guards never ran.)
 router.use(/^\/(admin|loyverse|reports|employees|financials)/, (req: Request, res: Response, next: NextFunction) => {
   requireAdminAuth(req, res, next);
-});
-router.use("/sync/push",   (req: Request, res: Response, next: NextFunction) => requireAdminAuth(req, res, next));
-router.use("/sync/export", (req: Request, res: Response, next: NextFunction) => requireAdminAuth(req, res, next));
-router.use("/settings", (req: Request, res: Response, next: NextFunction) => {
-  if (req.method === "PATCH") return requireAdminAuth(req, res, next);
-  next();
-});
-router.use("/store-settings", (req: Request, res: Response, next: NextFunction) => {
-  if (req.method === "PATCH") return requireAdminAuth(req, res, next);
-  next();
 });
 
 router.use(adminRouter);
