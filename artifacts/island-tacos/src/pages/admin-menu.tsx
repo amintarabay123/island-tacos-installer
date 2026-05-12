@@ -332,12 +332,15 @@ export default function AdminMenu() {
       loyverseModifierIds: form.selectedModifierIds.length > 0 ? form.selectedModifierIds : null,
     };
 
-    const done = () => { invalidateItems(); setDialog(null); };
+    // onSettled so the dialog ALWAYS closes; surface errors via alert so silent
+    // 400/401s don't strand the user (same fix as handleCatSave above).
+    const close = () => { invalidateItems(); setDialog(null); };
+    const onError = (e: Error) => { alert(`Could not save item: ${e.message}`); };
 
     if (dialog?.mode === "create") {
-      createItem.mutate({ data }, { onSuccess: done });
+      createItem.mutate({ data }, { onSettled: close, onError });
     } else if (dialog?.mode === "edit" && dialog.id) {
-      updateItem.mutate({ id: dialog.id, data }, { onSuccess: done });
+      updateItem.mutate({ id: dialog.id, data }, { onSettled: close, onError });
     }
   };
 
@@ -391,14 +394,29 @@ export default function AdminMenu() {
 
   const handleCatSave = () => {
     if (!catForm.name.trim()) return;
-    const done = () => {
+    // Use onSettled so the dialog ALWAYS closes after the request resolves —
+    // success or failure. The previous version only closed on success, which
+    // meant any silent error left the dialog open with no feedback, and the
+    // user would re-click Save and create duplicate rows. (Two duplicate
+    // "Misc" categories were created in prod 2026-05-12 from exactly this.)
+    const close = () => {
       queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() });
       setCatDialog(null);
     };
+    const onError = (e: Error) => {
+      // Surface the actual error message so we can debug instead of a silent stall.
+      alert(`Could not save category: ${e.message}`);
+    };
     if (catDialog?.mode === "create") {
-      createCategory.mutate({ data: { name: catForm.name, icon: catForm.icon || null, sendToKds: catForm.sendToKds } }, { onSuccess: done });
+      createCategory.mutate(
+        { data: { name: catForm.name, icon: catForm.icon || null, sendToKds: catForm.sendToKds } },
+        { onSettled: close, onError },
+      );
     } else if (catDialog?.mode === "edit" && catDialog.id) {
-      updateCategory.mutate({ id: catDialog.id, data: { name: catForm.name, icon: catForm.icon || null, sendToKds: catForm.sendToKds } as Parameters<typeof updateCategory.mutate>[0]["data"] }, { onSuccess: done });
+      updateCategory.mutate(
+        { id: catDialog.id, data: { name: catForm.name, icon: catForm.icon || null, sendToKds: catForm.sendToKds } as Parameters<typeof updateCategory.mutate>[0]["data"] },
+        { onSettled: close, onError },
+      );
     }
   };
 

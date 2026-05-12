@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, storeProfileTable, updateStoreProfileSchema } from "@workspace/db";
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
   getStoreSettings,
   refreshStoreSettings,
@@ -37,29 +37,19 @@ router.patch("/store-settings", async (req: Request, res: Response): Promise<voi
     return;
   }
 
-  // Single-row model — pick the lowest id (matches getStoreSettings()).
-  const existing = await db
-    .select({ id: storeProfileTable.id })
-    .from(storeProfileTable)
-    .orderBy(asc(storeProfileTable.id))
-    .limit(1);
-
-  const row = existing[0];
-  if (!row) {
-    res.status(500).json({
-      error: "Store profile not seeded — run local-install/schema.sql",
-    });
-    return;
-  }
+  // Route through getStoreSettings() so the self-heal seed runs if the table
+  // is empty — otherwise PATCH would 500 on a fresh DB even though GET would
+  // have transparently seeded. Same accessor, same singleton invariant.
+  const existing = await getStoreSettings();
 
   const [updated] = await db
     .update(storeProfileTable)
     .set({ ...updates, updatedAt: new Date() })
-    .where(eq(storeProfileTable.id, row.id))
+    .where(eq(storeProfileTable.id, existing.id))
     .returning();
 
   refreshStoreSettings();
-  req.log.info({ id: row.id, keys: Object.keys(updates) }, "store profile updated");
+  req.log.info({ id: existing.id, keys: Object.keys(updates) }, "store profile updated");
   res.json(updated);
 });
 

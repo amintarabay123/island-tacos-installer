@@ -381,14 +381,29 @@ router.patch("/menu/items/:id", async (req, res): Promise<void> => {
     // stay sane and the storefront price ($0) is never shown (those items are also
     // hidden from the customer menu, see home.tsx).
     if (parsed.data.openPrice === true) updates.price = "0";
-    // Toggling open-price OFF requires an explicit positive price in the same request,
-    // otherwise the item would silently keep its previous $0 placeholder and start
-    // ringing up free at the POS / storefront.
+    // The "price > 0 required" rule only applies when the caller is actually
+    // transitioning open-price OFF (true → false). If the item was already
+    // openPrice=false, accept the save as-is — admins routinely re-save existing
+    // $0 / placeholder rows (e.g. legacy Misc items) without touching price.
+    // Without this guard the form is permanently un-savable for any existing
+    // $0 fixed-price row, since the admin UI always sends `openPrice` in the body.
     if (parsed.data.openPrice === false) {
       const p = parsed.data.price;
-      if (typeof p !== "number" || !(p > 0)) {
-        res.status(400).json({ error: "price (> 0) is required when disabling openPrice" });
-        return;
+      const newPositivePriceProvided = typeof p === "number" && p > 0;
+      if (!newPositivePriceProvided) {
+        const [existing] = await db
+          .select({ openPrice: menuItemsTable.openPrice })
+          .from(menuItemsTable)
+          .where(eq(menuItemsTable.id, params.data.id))
+          .limit(1);
+        if (!existing) {
+          res.status(404).json({ error: "Item not found" });
+          return;
+        }
+        if (existing.openPrice === true) {
+          res.status(400).json({ error: "price (> 0) is required when disabling openPrice" });
+          return;
+        }
       }
     }
   }
