@@ -131,10 +131,10 @@ router.post("/sync/receive", async (req, res): Promise<void> => {
     if (items.length > 0) {
       await tx.insert(menuItemsTable).values(
         items.map(({ id, categoryId, name, description, price, imageUrl, posImageUrl,
-                      available, popular, spicy, vegetarian, sortOrder,
+                      available, popular, spicy, vegetarian, openPrice, sortOrder,
                       loyverseItemId, loyverseVariantId, loyverseModifierIds }) => ({
           id, categoryId, name, description, price, imageUrl, posImageUrl,
-          available, popular, spicy, vegetarian, sortOrder,
+          available, popular, spicy, vegetarian, openPrice: openPrice ?? false, sortOrder,
           loyverseItemId: loyverseItemId ?? null,
           loyverseVariantId: loyverseVariantId ?? null,
           loyverseModifierIds: loyverseModifierIds ?? null,
@@ -253,10 +253,10 @@ export async function pullMenuFromCloud(): Promise<
     if (items.length > 0) {
       await tx.insert(menuItemsTable).values(
         items.map(({ id, categoryId, name, description, price, imageUrl, posImageUrl,
-                      available, popular, spicy, vegetarian, sortOrder,
+                      available, popular, spicy, vegetarian, openPrice, sortOrder,
                       loyverseItemId, loyverseVariantId, loyverseModifierIds }) => ({
           id, categoryId, name, description, price, imageUrl, posImageUrl,
-          available, popular, spicy, vegetarian, sortOrder,
+          available, popular, spicy, vegetarian, openPrice: openPrice ?? false, sortOrder,
           loyverseItemId: loyverseItemId ?? null,
           loyverseVariantId: loyverseVariantId ?? null,
           loyverseModifierIds: loyverseModifierIds ?? null,
