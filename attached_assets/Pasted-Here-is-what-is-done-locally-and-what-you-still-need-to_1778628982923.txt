@@ -1,0 +1,40 @@
+Here is what is done locally and what you still need to run on your machine.
+
+Branch and commits (4 logical commits)
+Branch: cursor/openprice-end-to-end (from your previous main at 3e99683).
+
+a52c540 — feat(api-server): openPrice menu data and POST /orders unitPrice
+API server (orders, menu, store-settings, online-orders-sync), menu_items.open_price schema + local-install/schema.sql, OpenAPI, Zod + api.schemas codegen.
+
+b0d718a — feat(island-tacos): admin openPrice controls and hide open items on home
+admin-menu.tsx, home.tsx.
+
+220c98f — feat(pos): open-price unit entry, cart merge, and order unitPrice payload
+pos.tsx.
+
+805fba6 — chore: add @esbuild/darwin-arm64 for Orval on Apple Silicon
+package.json, pnpm-lock.yaml.
+
+Local repo user.name / user.email were set only in this clone (to satisfy Git) as amintarabay123 + amintarabay123@users.noreply.github.com. If you want your usual author, run something like:
+
+git checkout cursor/openprice-end-to-end && git rebase origin/main -x "git commit --amend --reset-author --no-edit"
+(after git pull and fixing any conflicts), or amend the four commits manually.
+
+Push and PR (needs your credentials)
+git push from this environment did not finish (typical when Git is waiting on your GitHub auth). On your Mac, run:
+
+cd /Users/amintarabay/island-tacos
+git fetch origin main
+git pull origin main   # stay at or past d7ca97a as you wanted
+git checkout cursor/openprice-end-to-end
+git rebase origin/main   # resolve conflicts if any, then:
+git push -u origin cursor/openprice-end-to-end
+Open a PR into main (starts CI including anon-auth matrix + typecheck):
+
+Compare cursor/openprice-end-to-end → main (create PR)
+
+Suggested PR title: Open price end-to-end (orders, admin, home, POS) + esbuild codegen
+
+Suggested body (short): describe the four commits; note that POST /orders requires unitPrice for openPrice lines and ignores it for fixed-price lines; customer site hides open-price items; POS collects unit price and sends unitPrice in the order payload.
+
+gh is not installed here, so the PR has to be created in the browser or with gh pr create on your side if you install the GitHub CLI.
