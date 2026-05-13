@@ -38,6 +38,9 @@ CREATE INDEX IF NOT EXISTS menu_items_category_id_idx ON menu_items(category_id)
 CREATE INDEX IF NOT EXISTS menu_items_available_idx   ON menu_items(available);
 CREATE INDEX IF NOT EXISTS menu_items_sort_order_idx  ON menu_items(sort_order);
 
+-- Open-price items (e.g. Misc / custom) — POS collects unit price at checkout.
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS open_price BOOLEAN NOT NULL DEFAULT false;
+
 CREATE TABLE IF NOT EXISTS modifiers (
   id                    SERIAL PRIMARY KEY,
   loyverse_id           TEXT UNIQUE NOT NULL,

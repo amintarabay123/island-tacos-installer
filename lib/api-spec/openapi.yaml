@@ -612,6 +612,7 @@ components:
           type: boolean
         openPrice:
           type: boolean
+          description: When true, POS must collect unit price per line; online menu hides the item.
         createdAt:
           type: string
           format: date-time
@@ -824,6 +825,9 @@ components:
           type: integer
         quantity:
           type: integer
+        unitPrice:
+          type: number
+          description: Required when the menu item has openPrice; ignored otherwise (server uses DB price).
         notes:
           type: ["string", "null"]
         modifierSelections:

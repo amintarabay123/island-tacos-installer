@@ -261,8 +261,6 @@ function RetryImg({ src, alt, className }: { src: string; alt: string; className
   );
 }
 
-// ─── Modifier Modal ───────────────────────────────────────────────────────────
-
 function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections = [], initialNote = "" }: {
   item: MenuItem; modifiers: Modifier[];
   onConfirm: (sels: CartModifier[], note: string) => void; onClose: () => void;
@@ -2938,8 +2936,9 @@ export default function POS() {
     try {
       const r = await fetch(`/api/menu/items/${item.id}/modifiers`, { credentials: "include" });
       const mods: Modifier[] = await r.json();
-      if (mods.length > 0) {
-        setModifierModal({ item, mods });
+      const m = Array.isArray(mods) ? mods : [];
+      if (m.length > 0) {
+        setModifierModal({ item, mods: m });
         return;
       }
     } catch {}
@@ -3002,10 +3001,11 @@ export default function POS() {
     try {
       const r = await fetch(`/api/menu/items/${menuItem.id}/modifiers`, { credentials: "include" });
       const mods: Modifier[] = await r.json();
-      if (mods.length > 0 || cartItem.notes) {
+      const m = Array.isArray(mods) ? mods : [];
+      if (m.length > 0 || cartItem.notes) {
         setModifierModal({
           item: menuItem,
-          mods,
+          mods: m,
           editKey: cartItem.key,
           initialSelections: cartItem.modifierSelections,
           initialNote: cartItem.notes,
@@ -3583,11 +3583,13 @@ export default function POS() {
           initialNote={modifierModal.initialNote}
           onConfirm={(sels, note) => {
             if (modifierModal.editKey) {
-              // Replace the existing cart item's modifiers and note in-place
-              setCart(prev => prev.map(c => c.key === modifierModal.editKey
-                ? { ...c, modifierSelections: sels, notes: note }
-                : c
-              ));
+              setCart((prev) =>
+                prev.map((c) =>
+                  c.key === modifierModal.editKey
+                    ? { ...c, modifierSelections: sels, notes: note }
+                    : c,
+                ),
+              );
             } else {
               pushToCart(modifierModal.item, sels, note);
             }

@@ -14,6 +14,7 @@ import {
   getListMenuCategoriesQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,13 +32,13 @@ type MenuItemForm = {
   name: string;
   description: string;
   price: string;
+  openPrice: boolean;
   imageUrl: string;
   posImageUrl: string;
   available: boolean;
   popular: boolean;
   spicy: boolean;
   vegetarian: boolean;
-  openPrice: boolean;
   selectedModifierIds: string[];
 };
 
@@ -46,17 +47,18 @@ const emptyForm: MenuItemForm = {
   name: "",
   description: "",
   price: "",
+  openPrice: false,
   imageUrl: "",
   posImageUrl: "",
   available: true,
   popular: false,
   spicy: false,
   vegetarian: false,
-  openPrice: false,
   selectedModifierIds: [],
 };
 
 export default function AdminMenu() {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: categories } = useListMenuCategories();
   const { data: items, isLoading } = useListMenuItems();
@@ -260,7 +262,19 @@ export default function AdminMenu() {
   const handleToggleKds = (catId: number, sendToKds: boolean) => {
     updateCategory.mutate(
       { id: catId, data: { sendToKds } },
-      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() }) }
+      {
+        onError: (e) => {
+          toast({
+            title: "Could not update category",
+            description: e instanceof Error ? e.message : String(e),
+            variant: "destructive",
+          });
+        },
+        onSettled: () => {
+          updateCategory.reset();
+          void queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() });
+        },
+      },
     );
   };
 
@@ -299,13 +313,13 @@ export default function AdminMenu() {
       name: item.name,
       description: item.description ?? "",
       price: String(item.price),
+      openPrice: item.openPrice ?? false,
       imageUrl: item.imageUrl ?? "",
       posImageUrl: (item as { posImageUrl?: string | null }).posImageUrl ?? "",
       available: item.available,
       popular: item.popular,
       spicy: item.spicy,
       vegetarian: item.vegetarian,
-      openPrice: (item as { openPrice?: boolean }).openPrice ?? false,
       selectedModifierIds: (item as { loyverseModifierIds?: string[] }).loyverseModifierIds ?? [],
     });
     setDialog({ mode: "edit", id });
@@ -313,42 +327,72 @@ export default function AdminMenu() {
 
   const handleSave = () => {
     if (!form.name || !form.categoryId) return;
-    // Open-price items don't need a fixed price (cashier sets it at the POS).
     const price = form.openPrice ? 0 : parseFloat(form.price);
-    if (!form.openPrice && isNaN(price)) return;
+    if (!form.openPrice && (!Number.isFinite(price) || price <= 0)) {
+      toast({ title: "Enter a valid list price, or enable open pricing for POS-only items.", variant: "destructive" });
+      return;
+    }
 
     const data = {
       categoryId: form.categoryId,
       name: form.name,
       description: form.description || null,
       price,
+      openPrice: form.openPrice,
       imageUrl: form.imageUrl || null,
       posImageUrl: form.posImageUrl || null,
       available: form.available,
       popular: form.popular,
       spicy: form.spicy,
       vegetarian: form.vegetarian,
-      openPrice: form.openPrice,
       loyverseModifierIds: form.selectedModifierIds.length > 0 ? form.selectedModifierIds : null,
     };
 
-    // onSettled so the dialog ALWAYS closes; surface errors via alert so silent
-    // 400/401s don't strand the user (same fix as handleCatSave above).
-    const close = () => { invalidateItems(); setDialog(null); };
-    const onError = (e: Error) => { alert(`Could not save item: ${e.message}`); };
+    const close = () => {
+      invalidateItems();
+      setDialog(null);
+    };
+    const onErr = (e: unknown) => {
+      toast({
+        title: "Could not save item",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    };
 
     if (dialog?.mode === "create") {
-      createItem.mutate({ data }, { onSettled: close, onError });
+      createItem.mutate({ data }, {
+        onError: onErr,
+        onSettled: () => {
+          createItem.reset();
+          close();
+        },
+      });
     } else if (dialog?.mode === "edit" && dialog.id) {
-      updateItem.mutate({ id: dialog.id, data }, { onSettled: close, onError });
+      updateItem.mutate({ id: dialog.id, data }, {
+        onError: onErr,
+        onSettled: () => {
+          updateItem.reset();
+          close();
+        },
+      });
     }
   };
 
   const handleToggleAvailable = (id: number, available: boolean) => {
     updateItem.mutate({ id, data: { available } }, {
+      onError: (e) => {
+        toast({
+          title: "Could not update availability",
+          description: e instanceof Error ? e.message : String(e),
+          variant: "destructive",
+        });
+      },
+      onSettled: () => {
+        updateItem.reset();
+      },
       onSuccess: () => {
         if (!available) {
-          // Move hidden item to the very bottom of the ordered list, then persist
           setOrderedIds((prev) => {
             const next = prev.filter((x) => x !== id).concat(id);
             saveReorder(next);
@@ -403,31 +447,64 @@ export default function AdminMenu() {
       queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() });
       setCatDialog(null);
     };
-    const onError = (e: Error) => {
-      // Surface the actual error message so we can debug instead of a silent stall.
-      alert(`Could not save category: ${e.message}`);
+    const onErr = (e: unknown) => {
+      toast({
+        title: "Could not save category",
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
     };
     if (catDialog?.mode === "create") {
       createCategory.mutate(
         { data: { name: catForm.name, icon: catForm.icon || null, sendToKds: catForm.sendToKds } },
-        { onSettled: close, onError },
+        { onError: onErr, onSettled: () => { createCategory.reset(); close(); } },
       );
     } else if (catDialog?.mode === "edit" && catDialog.id) {
       updateCategory.mutate(
         { id: catDialog.id, data: { name: catForm.name, icon: catForm.icon || null, sendToKds: catForm.sendToKds } as Parameters<typeof updateCategory.mutate>[0]["data"] },
-        { onSettled: close, onError },
+        { onError: onErr, onSettled: () => { updateCategory.reset(); close(); } },
       );
     }
   };
 
   const handleCatDelete = (id: number, name: string) => {
     if (!window.confirm(`Delete category "${name}"? Items in it will need to be reassigned.`)) return;
-    deleteCategory.mutate({ id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() }) });
+    deleteCategory.mutate(
+      { id },
+      {
+        onError: (e) => {
+          toast({
+            title: "Could not delete category",
+            description: e instanceof Error ? e.message : String(e),
+            variant: "destructive",
+          });
+        },
+        onSettled: () => {
+          deleteCategory.reset();
+          void queryClient.invalidateQueries({ queryKey: getListMenuCategoriesQueryKey() });
+        },
+      },
+    );
   };
 
   const handleDelete = (id: number) => {
     if (!window.confirm("Delete this item?")) return;
-    deleteItem.mutate({ id }, { onSuccess: invalidateItems });
+    deleteItem.mutate(
+      { id },
+      {
+        onError: (e) => {
+          toast({
+            title: "Could not delete item",
+            description: e instanceof Error ? e.message : String(e),
+            variant: "destructive",
+          });
+        },
+        onSettled: () => {
+          deleteItem.reset();
+          invalidateItems();
+        },
+      },
+    );
   };
 
   const handleBulkDelete = async () => {
@@ -641,7 +718,13 @@ export default function AdminMenu() {
                         </div>
                       </td>
                       <td className="p-3 hidden sm:table-cell text-muted-foreground">{cat?.name}</td>
-                      <td className="p-3 text-right font-bold">${item.price.toFixed(2)}</td>
+                      <td className="p-3 text-right font-bold">
+                        {item.openPrice ? (
+                          <span className="text-muted-foreground text-sm font-medium">Open</span>
+                        ) : (
+                          `$${item.price.toFixed(2)}`
+                        )}
+                      </td>
                       <td className="p-3 text-center">
                         <Switch
                           checked={item.available}
@@ -706,27 +789,26 @@ export default function AdminMenu() {
               <Textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} />
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Open Price</Label>
-                <Switch
-                  checked={form.openPrice}
-                  onCheckedChange={(v) => setForm((f) => ({ ...f, openPrice: v }))}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground -mt-1">
-                For misc/custom items. Cashier sets price + description at the POS. Hidden from the online store.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>{form.openPrice ? "Price" : "Price *"}</Label>
+              <Label>List price {form.openPrice ? "(optional display; POS uses entered price)" : "*"}</Label>
               <Input
                 type="number"
                 step="0.01"
                 min="0"
-                value={form.openPrice ? "" : form.price}
+                value={form.price}
                 onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                placeholder={form.openPrice ? "Set at POS" : "0.00"}
+                placeholder="0.00"
                 disabled={form.openPrice}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="open-price" className="text-sm font-medium cursor-pointer">Open price (POS)</Label>
+                <p className="text-xs text-muted-foreground">Staff enters the amount at checkout. Hidden from the public menu.</p>
+              </div>
+              <Switch
+                id="open-price"
+                checked={form.openPrice}
+                onCheckedChange={(openPrice) => setForm((f) => ({ ...f, openPrice }))}
               />
             </div>
             {/* Online ordering image */}

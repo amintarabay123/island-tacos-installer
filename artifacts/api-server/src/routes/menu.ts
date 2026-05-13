@@ -21,6 +21,8 @@ const router: IRouter = Router();
 
 // ---- Categories ----
 
+// All categories (admin/POS need empty categories to add first item). Customer
+// site filters to non-empty tabs in home.tsx.
 router.get("/menu/categories", async (_req, res): Promise<void> => {
   // Return ALL categories — this endpoint is ground truth and is consumed by
   // the admin menu page (which MUST see empty categories so newly created ones
@@ -43,6 +45,16 @@ router.post("/menu/categories", async (req, res): Promise<void> => {
   const parsed = CreateMenuCategoryBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const nameNorm = parsed.data.name.trim().toLowerCase();
+  const [dup] = await db
+    .select({ id: menuCategoriesTable.id })
+    .from(menuCategoriesTable)
+    .where(sql`lower(trim(${menuCategoriesTable.name})) = ${nameNorm}`)
+    .limit(1);
+  if (dup) {
+    res.status(409).json({ error: "A category with this name already exists" });
     return;
   }
   const [category] = await db

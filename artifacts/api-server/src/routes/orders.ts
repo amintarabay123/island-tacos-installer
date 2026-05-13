@@ -354,33 +354,33 @@ router.post("/orders", async (req, res): Promise<void> => {
       res.status(400).json({ error: `Menu item "${menuItem.name}" is not available` });
       return;
     }
-    // Open-price items (e.g. "Misc") let the cashier set a one-off price at the POS.
-    // We only honor priceOverride when the menu item is flagged openPrice — never trust
-    // a client-supplied price for normal items. Open-price is also a staff-only feature:
-    // unauthenticated callers (the public storefront) must NOT be able to order them,
-    // otherwise anyone could POST a $0.01 order for a "Misc" item.
-    let price: number;
+    let unitPrice: number;
     if (menuItem.openPrice) {
       if (!isStaffAuthenticated(req)) {
         res.status(403).json({ error: `"${menuItem.name}" can only be added from the POS` });
         return;
       }
-      const override = item.priceOverride;
+      const override = item.unitPrice ?? item.priceOverride;
       if (typeof override !== "number" || !Number.isFinite(override) || override <= 0) {
         res.status(400).json({ error: `"${menuItem.name}" requires a price greater than 0` });
         return;
       }
-      price = override;
+      unitPrice = Math.round(override * 100) / 100;
     } else {
-      price = parseFloat(menuItem.price as unknown as string);
+      const listPrice = parseFloat(String(menuItem.price));
+      if (!Number.isFinite(listPrice) || listPrice <= 0) {
+        res.status(400).json({ error: `Invalid list price for "${menuItem.name}"` });
+        return;
+      }
+      unitPrice = listPrice;
     }
     const modifierTotal = (item.modifierSelections ?? []).reduce((s: number, m: { price?: number }) => s + (m.price ?? 0), 0);
-    const itemSubtotal = (price + modifierTotal) * item.quantity;
+    const itemSubtotal = (unitPrice + modifierTotal) * item.quantity;
     subtotal += itemSubtotal;
     orderItemsData.push({
       menuItemId: item.menuItemId,
       menuItemName: menuItem.name,
-      menuItemPrice: price,
+      menuItemPrice: unitPrice,
       quantity: item.quantity,
       notes: item.notes ?? null,
       modifierSelections: item.modifierSelections ?? null,
