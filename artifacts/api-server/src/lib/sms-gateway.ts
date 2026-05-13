@@ -22,6 +22,15 @@ export interface SendSmsResult {
 }
 
 export async function sendSms(toE164: string, body: string): Promise<SendSmsResult> {
+  // Hard kill switch. Cloud Replit sets SMS_DISABLED=true so that admin cleanup
+  // operations (cancelling stale duplicate orders that drifted in via sync)
+  // never fire customer-facing SMS through Twilio. The mini PC leaves this
+  // unset so real customer notifications go out via the local gateway.
+  if (process.env.SMS_DISABLED === "true") {
+    logger.info({ to: toE164 }, "[sms] disabled via SMS_DISABLED — skipping send");
+    return { ok: false, error: "sms_disabled" };
+  }
+
   // Try local gateway first.
   const gatewayConfigured =
     process.env.SMS_GATEWAY_URL &&
