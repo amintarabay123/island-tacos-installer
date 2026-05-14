@@ -1,6 +1,5 @@
 import { useEffect, useState, type ComponentType } from "react";
 
-import RetroDungeonGame from "./RetroDungeonGame";
 import { modules as discoveredModules } from "./.generated/mockup-components";
 
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
@@ -141,7 +140,7 @@ function App() {
     );
   }
 
-  return <RetroDungeonGame />;
+  return <Gallery />;
 }
 
 export default App;

@@ -22,8 +22,7 @@
       "sharp",
       "better-sqlite3",
       "bcrypt",
-      "bcryptjs",
-      "tesseract.js"
+      "bcryptjs"
     ]
   }
 }
