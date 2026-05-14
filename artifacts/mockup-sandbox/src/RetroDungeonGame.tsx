@@ -486,13 +486,18 @@ function DungeonView({ state }: { state: GameState }) {
         {forwardBlocked ? (
           <>
             <div className="brick-grid" />
-            <div className="torch torch-left">🔥</div>
-            <div className="torch torch-right">🔥</div>
+            <div className="wood-door">
+              <span className="door-ring" />
+            </div>
+            <div className="wall-torch">
+              <span className="flame" />
+              <span className="sconce" />
+            </div>
           </>
         ) : (
           <>
             <div className="hall-mouth" />
-            <div className="distant-door">▥</div>
+            <div className="distant-door" />
           </>
         )}
       </div>
@@ -570,6 +575,49 @@ function GameLog({ log }: { log: string[] }) {
       {log.map((entry, index) => (
         <p key={`${entry}-${index}`}>{entry}</p>
       ))}
+    </div>
+  );
+}
+
+function HeroPortrait({ hero }: { hero: Hero }) {
+  const palette = {
+    mira: { hair: "#a55a2d", cloak: "#4aa65a", accent: "#f1d476" },
+    oren: { hair: "#2b7bd8", cloak: "#2456a8", accent: "#f0b64c" },
+    pip: { hair: "#d88b38", cloak: "#7eb94d", accent: "#f1d476" },
+  }[hero.id];
+
+  return (
+    <svg className="hero-portrait" viewBox="0 0 88 88" aria-hidden="true">
+      <rect width="88" height="88" fill="#07133d" />
+      <rect x="6" y="6" width="76" height="76" fill="#102d79" />
+      <path d="M18 75 C24 50 64 50 70 75 Z" fill={palette.cloak} />
+      <path d="M24 28 C26 13 63 11 66 32 L62 54 L27 54 Z" fill={palette.hair} />
+      <circle cx="44" cy="42" r="19" fill="#ffd19f" />
+      <path d="M22 40 C29 20 60 20 67 40 C54 34 40 33 22 40 Z" fill={palette.hair} />
+      <rect x="33" y="40" width="6" height="6" fill="#17214c" />
+      <rect x="51" y="40" width="6" height="6" fill="#17214c" />
+      <rect x="39" y="55" width="14" height="4" fill="#bb5a62" />
+      <path d="M18 76 H70 L62 62 H26 Z" fill={palette.cloak} />
+      <rect x="36" y="65" width="16" height="8" fill={palette.accent} />
+      {hero.id === "pip" && <path d="M18 29 L46 8 L72 29 Z" fill="#7eb94d" />}
+    </svg>
+  );
+}
+
+function HeroCard({ hero }: { hero: Hero }) {
+  const hpPercent = `${Math.max(0, Math.round((hero.hp / hero.maxHp) * 100))}%`;
+  const mpPercent = `${Math.max(0, Math.round((hero.mp / hero.maxMp) * 100))}%`;
+
+  return (
+    <div className="classic-hero-card">
+      <HeroPortrait hero={hero} />
+      <div className="classic-hero-info">
+        <strong>{hero.name}</strong>
+        <span>HP {hero.hp} / {hero.maxHp}</span>
+        <div className="stat-bar hp-bar"><i style={{ width: hpPercent }} /></div>
+        <span>MP {hero.mp} / {hero.maxMp}</span>
+        <div className="stat-bar mp-bar"><i style={{ width: mpPercent }} /></div>
+      </div>
     </div>
   );
 }
@@ -871,6 +919,15 @@ export default function RetroDungeonGame() {
     });
   }
 
+  function defend() {
+    setState((current) => {
+      if (!current.battle) {
+        return current;
+      }
+      return enemyAttack(current, current.battle, "The party braces behind their shields.");
+    });
+  }
+
   function runAway() {
     setState((current) => ({
       ...current,
@@ -920,13 +977,15 @@ export default function RetroDungeonGame() {
   return (
     <main className="retro-game-shell">
       <section className="game-cabinet">
-        <div className="game-header">
-          <div>
-            <p className="eyebrow">A tiny original dungeon quest</p>
-            <h1>Moonveil Gate</h1>
+        {["title", "town", "victory", "gameover"].includes(state.screen) && (
+          <div className="game-header">
+            <div>
+              <p className="eyebrow">A tiny original dungeon quest</p>
+              <h1>Moonveil Gate</h1>
+            </div>
+            <div className="gold-box">Gold {state.gold}</div>
           </div>
-          <div className="gold-box">Gold {state.gold}</div>
-        </div>
+        )}
 
         {state.screen === "title" && (
           <div className="title-screen pixel-panel">
@@ -983,28 +1042,32 @@ export default function RetroDungeonGame() {
         )}
 
         {(state.screen === "dungeon" || state.screen === "chest") && (
-          <div className="play-layout">
+          <div className="play-layout classic-play-layout">
             <DungeonView state={state} />
-            <div className="side-stack">
-              <HeroPanel heroes={state.heroes} />
+            <div className="classic-hud-row">
+              <div className="classic-menu pixel-panel">
+                <button onClick={moveForward}>Forward</button>
+                <button onClick={() => turn(-1)}>Turn Left</button>
+                <button onClick={() => turn(1)}>Turn Right</button>
+                <button onClick={useMoonDrop}>Moon Drop</button>
+                <button onClick={useLanternOil}>Lantern Oil</button>
+                <button onClick={descendStairs}>Stairs</button>
+                <button onClick={() => setState((current) => ({ ...current, screen: "town" }))}>
+                  Town
+                </button>
+              </div>
+              {state.heroes.map((hero) => (
+                <HeroCard hero={hero} key={hero.id} />
+              ))}
+            </div>
+            <div className="classic-sub-row">
               <div className="pixel-panel inventory-panel">
-                <h3>Pack</h3>
-                <p>Moon Drops: {state.inventory.moonDrops}</p>
-                <p>Ember Seeds: {state.inventory.emberSeeds}</p>
-                <p>Lantern Oil: {state.inventory.lanternOil}</p>
+                <strong>Pack</strong>
+                <span>Moon Drops {state.inventory.moonDrops}</span>
+                <span>Ember Seeds {state.inventory.emberSeeds}</span>
+                <span>Lantern Oil {state.inventory.lanternOil}</span>
               </div>
               <MiniMap state={state} />
-            </div>
-            <div className="command-window pixel-panel">
-              <button onClick={() => turn(-1)}>Turn Left</button>
-              <button onClick={moveForward}>Forward</button>
-              <button onClick={() => turn(1)}>Turn Right</button>
-              <button onClick={useMoonDrop}>Moon Drop</button>
-              <button onClick={useLanternOil}>Lantern Oil</button>
-              <button onClick={descendStairs}>Stairs</button>
-              <button onClick={() => setState((current) => ({ ...current, screen: "town" }))}>
-                Return Town
-              </button>
             </div>
             <GameLog log={state.log} />
           </div>
@@ -1019,7 +1082,7 @@ export default function RetroDungeonGame() {
         )}
 
         {state.screen === "battle" && state.battle && (
-          <div className="battle-layout">
+          <div className="battle-layout classic-play-layout">
             <div className="battle-stage">
               <div className="battle-floor" />
               <div className="enemy-line">
@@ -1032,12 +1095,17 @@ export default function RetroDungeonGame() {
                 ))}
               </div>
             </div>
-            <HeroPanel heroes={state.heroes} />
-            <div className="command-window battle-menu pixel-panel">
-              <button onClick={attack}>1 Fight</button>
-              <button onClick={castSpark}>2 Magic · Spark</button>
-              <button onClick={throwEmberSeed}>3 Item · Ember</button>
-              <button onClick={runAway}>4 Run</button>
+            <div className="classic-hud-row">
+              <div className="classic-menu battle-menu pixel-panel">
+                <button onClick={attack}>Attack</button>
+                <button onClick={castSpark}>Magic</button>
+                <button onClick={throwEmberSeed}>Items</button>
+                <button onClick={defend}>Defend</button>
+                <button onClick={runAway}>Run</button>
+              </div>
+              {state.heroes.map((hero) => (
+                <HeroCard hero={hero} key={hero.id} />
+              ))}
             </div>
             <GameLog log={state.log} />
           </div>
@@ -1099,7 +1167,7 @@ export default function RetroDungeonGame() {
         }
 
         .game-cabinet {
-          width: min(980px, 100%);
+          width: min(1024px, 100%);
           min-height: min(760px, calc(100vh - 32px));
           border: 4px solid #f6d05f;
           border-radius: 8px;
@@ -1312,13 +1380,13 @@ export default function RetroDungeonGame() {
         .battle-layout {
           display: grid;
           grid-template-columns: minmax(0, 1fr);
-          gap: 12px;
-          padding: 14px;
+          gap: 10px;
+          padding: 8px;
         }
 
         .dungeon-window,
         .battle-stage {
-          min-height: 430px;
+          min-height: 438px;
           border: 4px solid #05091c;
           background: #10143c;
           overflow: hidden;
@@ -1334,7 +1402,7 @@ export default function RetroDungeonGame() {
           isolation: isolate;
           background:
             radial-gradient(circle at 50% 42%, rgba(116, 206, 255, 0.16), transparent 17rem),
-            linear-gradient(180deg, #101a58 0%, #0a0e2d 54%, #07091d 100%);
+            linear-gradient(180deg, #1c2d55 0%, #1b273d 50%, #1f232c 100%);
         }
 
         .ceiling,
@@ -1348,17 +1416,21 @@ export default function RetroDungeonGame() {
         .ceiling {
           top: 0;
           background:
-            linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
-            repeating-linear-gradient(90deg, #344aa8 0 42px, #2a3e95 42px 84px);
-          clip-path: polygon(0 0, 100% 0, 68% 48%, 32% 48%);
+            linear-gradient(#1b2637 4px, transparent 4px),
+            linear-gradient(90deg, #1b2637 4px, transparent 4px),
+            linear-gradient(180deg, #405169, #29384f);
+          background-size: 100% 46px, 70px 100%, auto;
+          clip-path: polygon(0 0, 100% 0, 72% 35%, 28% 35%);
         }
 
         .floor {
           bottom: 0;
           background:
-            repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 3px, transparent 3px 72px),
-            repeating-linear-gradient(0deg, #27347f 0 34px, #202b70 34px 68px);
-          clip-path: polygon(32% 0, 68% 0, 100% 100%, 0 100%);
+            linear-gradient(#2b302c 4px, transparent 4px),
+            linear-gradient(90deg, #2b302c 4px, transparent 4px),
+            linear-gradient(180deg, #596052, #34382f);
+          background-size: 100% 50px, 78px 100%, auto;
+          clip-path: polygon(28% 0, 72% 0, 100% 100%, 0 100%);
         }
 
         .side-wall {
@@ -1367,11 +1439,11 @@ export default function RetroDungeonGame() {
           bottom: 0;
           width: 43%;
           background:
-            linear-gradient(90deg, rgba(5, 9, 28, 0.38), transparent 48%, rgba(255, 255, 255, 0.08)),
-            linear-gradient(#233486 3px, transparent 3px),
-            linear-gradient(90deg, #233486 3px, transparent 3px),
-            #3348a8;
-          background-size: auto, 100% 42px, 58px 100%, auto;
+            linear-gradient(90deg, rgba(5, 9, 28, 0.44), transparent 55%, rgba(255, 255, 255, 0.1)),
+            linear-gradient(#172234 4px, transparent 4px),
+            linear-gradient(90deg, #172234 4px, transparent 4px),
+            linear-gradient(180deg, #566a82, #34475e);
+          background-size: auto, 100% 58px, 82px 100%, auto;
           opacity: 1;
         }
 
@@ -1397,13 +1469,13 @@ export default function RetroDungeonGame() {
           display: grid;
           place-items: center;
           background:
-            linear-gradient(#243484 3px, transparent 3px),
-            linear-gradient(90deg, #243484 3px, transparent 3px),
-            linear-gradient(180deg, #4b61c0, #2d3f98);
-          background-size: 100% 42px, 58px 100%, auto;
-          border: 5px solid #0b1138;
+            linear-gradient(#182234 4px, transparent 4px),
+            linear-gradient(90deg, #182234 4px, transparent 4px),
+            linear-gradient(180deg, #60748b, #364a62);
+          background-size: 100% 58px, 82px 100%, auto;
+          border: 5px solid #111824;
           box-shadow:
-            inset 0 0 0 5px #6b7cdb,
+            inset 0 0 0 5px rgba(213, 224, 226, 0.25),
             0 14px 0 rgba(0, 0, 0, 0.26);
         }
 
@@ -1453,6 +1525,70 @@ export default function RetroDungeonGame() {
           margin-left: 34px;
           background: #fff0a3;
           border-radius: 50%;
+        }
+
+        .wood-door {
+          position: relative;
+          width: min(154px, 38%);
+          height: 62%;
+          align-self: end;
+          margin-bottom: -2px;
+          background:
+            linear-gradient(90deg, transparent 0 20%, rgba(66, 34, 16, 0.45) 20% 23%, transparent 23% 47%, rgba(66, 34, 16, 0.45) 47% 50%, transparent 50% 74%, rgba(66, 34, 16, 0.45) 74% 77%, transparent 77%),
+            linear-gradient(180deg, #8a4d28 0 48%, #2a2530 48% 56%, #8a4d28 56% 100%);
+          border: 7px solid #222a32;
+          border-radius: 72px 72px 8px 8px;
+          box-shadow:
+            0 0 0 12px #697681,
+            0 0 0 18px #263240,
+            inset 0 0 0 3px #c1864b;
+          z-index: 4;
+        }
+
+        .door-ring {
+          position: absolute;
+          right: 24px;
+          top: 52%;
+          width: 24px;
+          height: 24px;
+          border: 5px solid #1e2530;
+          border-radius: 50%;
+          box-shadow: 0 0 0 3px #74818d;
+        }
+
+        .wall-torch {
+          position: absolute;
+          right: 17%;
+          top: 28%;
+          width: 54px;
+          height: 118px;
+          z-index: 6;
+          filter: drop-shadow(0 0 18px #ffbd55);
+        }
+
+        .flame {
+          position: absolute;
+          left: 50%;
+          top: 0;
+          width: 34px;
+          height: 54px;
+          transform: translateX(-50%);
+          background:
+            radial-gradient(circle at 50% 62%, #fff6a3 0 18%, transparent 19%),
+            radial-gradient(circle at 50% 58%, #ffda55 0 35%, transparent 36%),
+            linear-gradient(180deg, #ff4d25, #ff9f2e);
+          clip-path: polygon(50% 0, 70% 30%, 92% 58%, 72% 100%, 28% 100%, 8% 58%, 31% 31%);
+        }
+
+        .sconce {
+          position: absolute;
+          left: 50%;
+          top: 48px;
+          width: 16px;
+          height: 54px;
+          transform: translateX(-50%);
+          background: linear-gradient(180deg, #776a55, #241d1a);
+          border: 3px solid #14131a;
         }
 
         .torch {
@@ -1511,17 +1647,7 @@ export default function RetroDungeonGame() {
         }
 
         .place-label {
-          position: absolute;
-          left: 14px;
-          right: 14px;
-          bottom: 12px;
-          z-index: 8;
-          color: #fff0a3;
-          background: rgba(8, 11, 37, 0.76);
-          border: 3px solid #5fb8ff;
-          border-radius: 8px;
-          padding: 10px 12px;
-          font-weight: 900;
+          display: none;
         }
 
         .side-stack {
@@ -1605,6 +1731,135 @@ export default function RetroDungeonGame() {
           border-color: #fff6cf;
         }
 
+        .classic-hud-row {
+          display: grid;
+          grid-template-columns: 170px repeat(3, minmax(0, 1fr));
+          gap: 8px;
+        }
+
+        .classic-menu {
+          display: grid;
+          align-content: center;
+          gap: 0;
+          padding: 10px 12px;
+        }
+
+        .classic-menu button {
+          position: relative;
+          background: transparent;
+          border: 0;
+          box-shadow: none;
+          border-radius: 0;
+          color: #fff;
+          font-size: clamp(18px, 2.2vw, 25px);
+          line-height: 1.05;
+          padding: 2px 4px 2px 24px;
+          text-shadow: 3px 3px 0 #06113b;
+        }
+
+        .classic-menu button:first-child::before {
+          content: "";
+          position: absolute;
+          left: 4px;
+          top: 8px;
+          border-top: 10px solid transparent;
+          border-bottom: 10px solid transparent;
+          border-left: 14px solid #fff;
+          filter: drop-shadow(2px 2px 0 #06113b);
+        }
+
+        .classic-menu button:hover {
+          transform: none;
+          filter: brightness(1.2);
+          color: #fff4a8;
+        }
+
+        .classic-hero-card {
+          display: grid;
+          grid-template-columns: 88px minmax(0, 1fr);
+          gap: 12px;
+          align-items: center;
+          min-height: 132px;
+          padding: 10px;
+          border: 3px solid #f6d05f;
+          border-radius: 7px;
+          background: linear-gradient(180deg, #183d9f, #0d236f);
+          box-shadow:
+            inset 0 0 0 3px #74ceff,
+            inset 0 0 0 7px rgba(4, 13, 48, 0.34);
+        }
+
+        .hero-portrait {
+          display: block;
+          width: 88px;
+          height: 88px;
+          border: 4px solid #07133d;
+          box-shadow: 0 0 0 2px #74ceff;
+          image-rendering: pixelated;
+        }
+
+        .classic-hero-info {
+          display: grid;
+          gap: 5px;
+          min-width: 0;
+        }
+
+        .classic-hero-info strong {
+          color: #fff;
+          font-size: clamp(22px, 2.8vw, 28px);
+          line-height: 1;
+          text-shadow: 3px 3px 0 #06113b;
+        }
+
+        .classic-hero-info span {
+          color: #f7f1c5;
+          font-size: 17px;
+          font-weight: 900;
+          line-height: 1;
+          text-shadow: 2px 2px 0 #06113b;
+        }
+
+        .stat-bar {
+          height: 12px;
+          background: #07133d;
+          border: 2px solid #07133d;
+          box-shadow: 0 0 0 1px #74ceff;
+        }
+
+        .stat-bar i {
+          display: block;
+          height: 100%;
+        }
+
+        .hp-bar i {
+          background: linear-gradient(90deg, #63e965, #b7ff62);
+        }
+
+        .mp-bar i {
+          background: linear-gradient(90deg, #4ed8ff, #9af0ff);
+        }
+
+        .classic-sub-row {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 8px;
+        }
+
+        .classic-sub-row .inventory-panel {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          min-height: 44px;
+        }
+
+        .classic-sub-row .inventory-panel strong,
+        .classic-sub-row .inventory-panel span {
+          color: #f7f1c5;
+          font-size: 14px;
+          font-weight: 900;
+          margin: 0;
+        }
+
         .command-window {
           grid-column: 1 / -1;
           display: grid;
@@ -1615,12 +1870,21 @@ export default function RetroDungeonGame() {
 
         .message-window {
           grid-column: 1 / -1;
-          min-height: 112px;
-          padding: 12px 16px;
+          min-height: 78px;
+          padding: 14px 18px;
         }
 
         .message-window p {
           margin: 0 0 6px;
+          color: #fff;
+          font-size: clamp(18px, 2.4vw, 27px);
+          font-weight: 900;
+          line-height: 1.12;
+          text-shadow: 3px 3px 0 #06113b;
+        }
+
+        .message-window p:not(:first-child) {
+          display: none;
         }
 
         .modal-panel {
