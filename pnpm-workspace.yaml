@@ -68,9 +68,16 @@ catalog:
 autoInstallPeers: false
 
 onlyBuiltDependencies:
+  - '@clerk/shared'
   - '@swc/core'
+  - better-sqlite3
+  - bcrypt
+  - bcryptjs
+  - core-js
   - esbuild
   - msw
+  - sharp
+  - tesseract.js
   - unrs-resolver
 
 overrides:
