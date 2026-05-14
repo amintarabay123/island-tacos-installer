@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 type Direction = 0 | 1 | 2 | 3;
 type HeroId = "mira" | "oren" | "pip";
 type Screen = "title" | "town" | "dungeon" | "battle" | "chest" | "victory" | "gameover";
+type SfxKind = "menu" | "step" | "turn" | "coin" | "heal" | "hit" | "magic" | "danger" | "win";
+type VisualEffect = "step" | "turn" | "hit" | "magic" | "coin" | "heal" | "danger" | "win";
 
 interface Hero {
   id: HeroId;
@@ -350,6 +352,52 @@ function levelHeroes(heroes: Hero[]): { heroes: Hero[]; messages: string[] } {
   return { heroes: nextHeroes, messages };
 }
 
+function playRetroTone(kind: SfxKind, audioContextRef: { current: AudioContext | null }): void {
+  const AudioContextCtor =
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+  if (!AudioContextCtor) {
+    return;
+  }
+
+  const context = audioContextRef.current ?? new AudioContextCtor();
+  audioContextRef.current = context;
+
+  if (context.state === "suspended") {
+    void context.resume();
+  }
+
+  const patterns: Record<SfxKind, Array<[number, number, OscillatorType]>> = {
+    menu: [[660, 0.045, "square"]],
+    step: [[130, 0.035, "triangle"], [92, 0.045, "triangle"]],
+    turn: [[220, 0.035, "square"]],
+    coin: [[740, 0.05, "square"], [988, 0.08, "square"]],
+    heal: [[392, 0.08, "sine"], [523, 0.08, "sine"], [659, 0.12, "sine"]],
+    hit: [[88, 0.06, "sawtooth"], [64, 0.08, "square"]],
+    magic: [[330, 0.06, "triangle"], [660, 0.08, "triangle"], [990, 0.12, "sine"]],
+    danger: [[146, 0.08, "square"], [110, 0.12, "square"]],
+    win: [[523, 0.08, "square"], [659, 0.08, "square"], [784, 0.16, "square"]],
+  };
+
+  let offset = 0;
+  patterns[kind].forEach(([frequency, duration, type]) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const start = context.currentTime + offset;
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(0.06, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.02);
+    offset += duration * 0.72;
+  });
+}
+
 function enemyAttack(state: GameState, enemies: Enemy[], message: string): GameState {
   const attackers = enemies.filter((enemy) => enemy.hp > 0);
   if (attackers.length === 0) {
@@ -512,40 +560,63 @@ function DungeonView({ state }: { state: GameState }) {
 }
 
 function BattleSprite({ enemy }: { enemy: Enemy }) {
+  const style = { "--enemy": enemy.color } as CSSProperties;
+
   if (enemy.sprite === "bat") {
     return (
-      <div className="enemy-sprite bat" style={{ "--enemy": enemy.color } as CSSProperties}>
-        <span>▲</span>
-        <b>◆</b>
-        <span>▲</span>
+      <div className="enemy-sprite svg-enemy" style={style}>
+        <svg viewBox="0 0 150 120" aria-hidden="true">
+          <path d="M72 48 C45 16 20 24 10 56 C29 48 43 62 55 78 Z" fill="#7f62d9" stroke="#1a1740" strokeWidth="6" />
+          <path d="M78 48 C105 16 130 24 140 56 C121 48 107 62 95 78 Z" fill="#7f62d9" stroke="#1a1740" strokeWidth="6" />
+          <ellipse cx="75" cy="68" rx="30" ry="34" fill="#b778ff" stroke="#1a1740" strokeWidth="6" />
+          <circle cx="64" cy="62" r="6" fill="#fff" />
+          <circle cx="88" cy="62" r="6" fill="#fff" />
+          <path d="M64 82 Q75 92 88 82" fill="none" stroke="#1a1740" strokeWidth="5" strokeLinecap="round" />
+        </svg>
       </div>
     );
   }
 
   if (enemy.sprite === "imp") {
     return (
-      <div className="enemy-sprite imp" style={{ "--enemy": enemy.color } as CSSProperties}>
-        <span>▲</span>
-        <b>☻</b>
-        <span>▲</span>
+      <div className="enemy-sprite svg-enemy" style={style}>
+        <svg viewBox="0 0 150 130" aria-hidden="true">
+          <path d="M35 36 L48 9 L59 40 Z" fill="#6fcc5e" stroke="#17351b" strokeWidth="6" />
+          <path d="M115 36 L102 9 L91 40 Z" fill="#6fcc5e" stroke="#17351b" strokeWidth="6" />
+          <ellipse cx="75" cy="70" rx="47" ry="48" fill="#75dc65" stroke="#17351b" strokeWidth="7" />
+          <circle cx="58" cy="63" r="7" fill="#fff6a3" />
+          <circle cx="92" cy="63" r="7" fill="#fff6a3" />
+          <path d="M55 91 Q75 104 96 91" fill="none" stroke="#17351b" strokeWidth="6" strokeLinecap="round" />
+          <path d="M36 88 L18 108 M114 88 L132 108" stroke="#17351b" strokeWidth="8" strokeLinecap="round" />
+        </svg>
       </div>
     );
   }
 
   if (enemy.sprite === "knight") {
     return (
-      <div className="enemy-sprite knight" style={{ "--enemy": enemy.color } as CSSProperties}>
-        <span>◈</span>
-        <b>♜</b>
-        <small>Lantern Knight</small>
+      <div className="enemy-sprite svg-enemy boss-enemy" style={style}>
+        <svg viewBox="0 0 170 150" aria-hidden="true">
+          <path d="M86 13 L132 38 L121 124 H49 L38 38 Z" fill="#f4c85a" stroke="#3f2f17" strokeWidth="7" />
+          <path d="M58 49 H114 V88 H58 Z" fill="#2d3b66" stroke="#3f2f17" strokeWidth="6" />
+          <path d="M62 51 H110 L102 77 H70 Z" fill="#fff0a3" opacity="0.4" />
+          <circle cx="85" cy="101" r="19" fill="#ff7a2d" stroke="#3f2f17" strokeWidth="6" />
+          <path d="M85 78 C104 99 99 124 85 132 C69 119 68 96 85 78 Z" fill="#ffe667" />
+          <path d="M43 73 L15 101 M127 73 L155 101" stroke="#3f2f17" strokeWidth="9" strokeLinecap="round" />
+        </svg>
       </div>
     );
   }
 
   return (
-    <div className="enemy-sprite slime" style={{ "--enemy": enemy.color } as CSSProperties}>
-      <b>●</b>
-      <small>● ●</small>
+    <div className="enemy-sprite svg-enemy" style={style}>
+      <svg viewBox="0 0 150 115" aria-hidden="true">
+        <path d="M28 83 C28 35 55 16 75 16 C95 16 122 35 122 83 C122 104 28 104 28 83 Z" fill="#55cfff" stroke="#12446a" strokeWidth="7" />
+        <ellipse cx="58" cy="67" rx="8" ry="11" fill="#fff" />
+        <ellipse cx="92" cy="67" rx="8" ry="11" fill="#fff" />
+        <path d="M60 86 Q75 96 92 86" fill="none" stroke="#12446a" strokeWidth="6" strokeLinecap="round" />
+        <path d="M52 36 C66 26 88 27 100 39" fill="none" stroke="#d8fbff" strokeWidth="8" strokeLinecap="round" opacity="0.75" />
+      </svg>
     </div>
   );
 }
@@ -565,6 +636,92 @@ function MiniMap({ state }: { state: GameState }) {
           );
         }),
       )}
+    </div>
+  );
+}
+
+function ItemIcon({ id }: { id: keyof Inventory }) {
+  if (id === "lanternOil") {
+    return (
+      <svg className="item-icon" viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="17" y="11" width="14" height="7" fill="#44516b" />
+        <rect x="13" y="18" width="22" height="22" rx="5" fill="#34425f" stroke="#18223b" strokeWidth="3" />
+        <circle cx="24" cy="30" r="9" fill="#ffd95a" />
+        <path d="M24 21 C34 30 28 38 24 39 C18 35 19 27 24 21 Z" fill="#ff8b2d" />
+      </svg>
+    );
+  }
+
+  if (id === "emberSeeds") {
+    return (
+      <svg className="item-icon" viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M24 6 C37 18 35 36 24 43 C13 36 11 19 24 6 Z" fill="#ff6b2f" stroke="#7e2d20" strokeWidth="3" />
+        <path d="M25 16 C31 24 29 34 23 37 C19 31 20 23 25 16 Z" fill="#ffe26f" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className="item-icon" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M24 7 C28 15 39 15 42 24 C34 24 31 31 33 40 C27 35 21 35 15 40 C17 31 14 24 6 24 C9 15 20 15 24 7 Z" fill="#72d85e" stroke="#285c2b" strokeWidth="3" />
+      <path d="M24 12 V40" stroke="#285c2b" strokeWidth="3" />
+    </svg>
+  );
+}
+
+function ShopScene() {
+  return (
+    <div className="shop-scene" aria-label="Cozy village supply shop">
+      <svg className="shop-art" viewBox="0 0 960 310" role="img">
+        <defs>
+          <linearGradient id="woodWall" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#7a4b24" />
+            <stop offset="1" stopColor="#3f2417" />
+          </linearGradient>
+          <linearGradient id="counterWood" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#b77735" />
+            <stop offset="1" stopColor="#59321e" />
+          </linearGradient>
+          <radialGradient id="lampGlow" cx="30%" cy="28%" r="42%">
+            <stop offset="0" stopColor="#ffe78a" stopOpacity="0.9" />
+            <stop offset="0.45" stopColor="#ff9f35" stopOpacity="0.26" />
+            <stop offset="1" stopColor="#000" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect width="960" height="310" fill="url(#woodWall)" />
+        {Array.from({ length: 12 }, (_, i) => (
+          <rect key={i} x={i * 82} y="0" width="6" height="310" fill="#2e1a12" opacity="0.45" />
+        ))}
+        <rect x="0" y="230" width="960" height="80" fill="url(#counterWood)" />
+        <rect x="0" y="218" width="960" height="15" fill="#d99b4f" />
+        <rect x="70" y="40" width="120" height="120" rx="8" fill="#9ed8ff" stroke="#4d2a18" strokeWidth="9" />
+        <path d="M83 143 L133 82 L190 143 Z" fill="#65b85e" />
+        <path d="M83 143 L126 104 L158 143 Z" fill="#d6f2ff" />
+        <rect x="640" y="58" width="210" height="112" fill="#4a2a18" stroke="#26160f" strokeWidth="8" />
+        {[0, 1, 2].map((row) => (
+          <line key={row} x1="650" y1={93 + row * 34} x2="840" y2={93 + row * 34} stroke="#24150e" strokeWidth="6" />
+        ))}
+        {["#72d85e", "#ffd95a", "#8b6fff", "#4fd6ff", "#ff6b2f"].map((color, i) => (
+          <circle key={color} cx={676 + i * 34} cy={78 + (i % 2) * 42} r="13" fill={color} stroke="#25140e" strokeWidth="4" />
+        ))}
+        <g className="shopkeeper-art">
+          <path d="M402 220 C410 130 550 130 558 220 Z" fill="#3d9d5b" />
+          <circle cx="480" cy="116" r="58" fill="#ffd0a0" stroke="#5b2a1a" strokeWidth="6" />
+          <path d="M420 105 C432 38 532 34 545 108 C506 78 466 78 420 105 Z" fill="#2faa64" />
+          <path d="M436 63 C462 20 521 33 537 70 C503 54 469 54 436 63 Z" fill="#3fc774" />
+          <rect x="450" y="112" width="9" height="12" fill="#2d2030" />
+          <rect x="504" y="112" width="9" height="12" fill="#2d2030" />
+          <path d="M458 145 C472 158 493 158 508 145" fill="none" stroke="#9d4c4e" strokeWidth="5" strokeLinecap="round" />
+          <path d="M378 226 C390 188 424 172 456 198 L456 232 Z" fill="#fff3d5" />
+          <path d="M582 226 C570 188 536 172 504 198 L504 232 Z" fill="#fff3d5" />
+        </g>
+        <g className="lamp-art">
+          <line x1="282" y1="0" x2="282" y2="44" stroke="#23150f" strokeWidth="7" />
+          <rect x="258" y="44" width="48" height="64" rx="10" fill="#263449" stroke="#1b1210" strokeWidth="6" />
+          <ellipse cx="282" cy="75" rx="17" ry="25" fill="#ffd75e" />
+        </g>
+        <rect width="960" height="310" fill="url(#lampGlow)" />
+      </svg>
     </div>
   );
 }
@@ -625,8 +782,18 @@ function HeroCard({ hero }: { hero: Hero }) {
 export default function RetroDungeonGame() {
   const saved = useSavedGame();
   const [state, setState] = useState<GameState>(saved);
+  const [visualEffect, setVisualEffect] = useState<VisualEffect | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const livingHeroes = useMemo(() => aliveHeroes(state.heroes), [state.heroes]);
+
+  function feedback(sound: SfxKind, effect: VisualEffect | null = null): void {
+    playRetroTone(sound, audioContextRef);
+    if (effect) {
+      setVisualEffect(effect);
+      window.setTimeout(() => setVisualEffect(null), 260);
+    }
+  }
 
   useEffect(() => {
     try {
@@ -637,6 +804,7 @@ export default function RetroDungeonGame() {
   }, [state]);
 
   function startGame() {
+    feedback("menu");
     setState((current) => ({
       ...current,
       screen: "town",
@@ -645,15 +813,18 @@ export default function RetroDungeonGame() {
   }
 
   function newGame() {
+    feedback("menu");
     setState({ ...createInitialState(), screen: "town" });
   }
 
   function resetGame() {
+    feedback("danger", "danger");
     window.localStorage.removeItem(SAVE_KEY);
     setState(createInitialState());
   }
 
   function restAtInn() {
+    feedback("heal", "heal");
     setState((current) => {
       if (current.gold < 6) {
         return addLog(current, "The innkeeper asks for 6 gold.");
@@ -668,6 +839,7 @@ export default function RetroDungeonGame() {
   }
 
   function buyItem(item: ItemDef) {
+    feedback("coin", "coin");
     setState((current) => {
       if (current.gold < item.price) {
         return addLog(current, "Not enough gold.");
@@ -685,6 +857,7 @@ export default function RetroDungeonGame() {
   }
 
   function enterDungeon() {
+    feedback("step", "step");
     setState((current) => ({
       ...current,
       screen: "dungeon",
@@ -693,6 +866,7 @@ export default function RetroDungeonGame() {
   }
 
   function turn(amount: -1 | 1) {
+    feedback("turn", "turn");
     setState((current) => ({
       ...current,
       dir: ((current.dir + amount + 4) % 4) as Direction,
@@ -701,6 +875,7 @@ export default function RetroDungeonGame() {
   }
 
   function moveForward() {
+    feedback("step", "step");
     setState((current) => {
       if (current.screen !== "dungeon") {
         return current;
@@ -760,6 +935,7 @@ export default function RetroDungeonGame() {
   }
 
   function useMoonDrop() {
+    feedback("heal", "heal");
     setState((current) => {
       if (current.inventory.moonDrops <= 0) {
         return addLog(current, "No Moon Drops left.");
@@ -779,6 +955,7 @@ export default function RetroDungeonGame() {
   }
 
   function useLanternOil() {
+    feedback("magic", "magic");
     setState((current) => {
       if (current.inventory.lanternOil <= 0) {
         return addLog(current, "No Lantern Oil left.");
@@ -794,6 +971,7 @@ export default function RetroDungeonGame() {
   }
 
   function openChest() {
+    feedback("coin", "coin");
     setState((current) => {
       const chestKey = keyFor(current.floor, current.pos);
       const reward = CHEST_REWARDS[chestKey];
@@ -816,6 +994,7 @@ export default function RetroDungeonGame() {
   }
 
   function descendStairs() {
+    feedback("step", "step");
     setState((current) => {
       if (current.floor === 1 || currentCell(current).event !== "stairs") {
         return addLog(current, "There are no stairs here.");
@@ -835,6 +1014,7 @@ export default function RetroDungeonGame() {
   }
 
   function attack() {
+    feedback("hit", "hit");
     setState((current) => {
       if (!current.battle) {
         return current;
@@ -862,6 +1042,7 @@ export default function RetroDungeonGame() {
   }
 
   function castSpark() {
+    feedback("magic", "magic");
     setState((current) => {
       if (!current.battle) {
         return current;
@@ -893,6 +1074,7 @@ export default function RetroDungeonGame() {
   }
 
   function throwEmberSeed() {
+    feedback("magic", "magic");
     setState((current) => {
       if (!current.battle) {
         return current;
@@ -920,6 +1102,7 @@ export default function RetroDungeonGame() {
   }
 
   function defend() {
+    feedback("menu");
     setState((current) => {
       if (!current.battle) {
         return current;
@@ -929,6 +1112,7 @@ export default function RetroDungeonGame() {
   }
 
   function runAway() {
+    feedback("step", "step");
     setState((current) => ({
       ...current,
       screen: "dungeon",
@@ -975,7 +1159,7 @@ export default function RetroDungeonGame() {
   }, [state.screen, state.dir, state.pos, state.battle, livingHeroes]);
 
   return (
-    <main className="retro-game-shell">
+    <main className={`retro-game-shell ${visualEffect ? `fx-${visualEffect}` : ""}`}>
       <section className="game-cabinet">
         {["title", "town", "victory", "gameover"].includes(state.screen) && (
           <div className="game-header">
@@ -1005,30 +1189,21 @@ export default function RetroDungeonGame() {
 
         {state.screen === "town" && (
           <div className="town-screen">
-            <div className="town-art pixel-panel">
-              <div className="shopkeeper">☺</div>
-              <div>
-                <h2>Moonveil Village</h2>
-                <p>
-                  Mira, Oren, and Pip stand before the old gate. Mira the shopkeeper
-                  has packed the last supplies by candlelight.
-                </p>
-              </div>
+            <div className="town-art">
+              <ShopScene />
+              <div className="gold-box town-gold">Gold {state.gold} G</div>
             </div>
             <div className="town-columns">
-              <div className="pixel-panel">
-                <h3>Village Menu</h3>
-                <div className="menu-grid">
-                  <button onClick={enterDungeon}>Enter Gate</button>
-                  <button onClick={restAtInn}>Rest at Inn · 6g</button>
-                  <button onClick={useMoonDrop}>Use Moon Drop</button>
-                  <button onClick={resetGame}>Reset Save</button>
-                </div>
+              <div className="pixel-panel town-command-panel">
+                <button onClick={enterDungeon}>Enter Gate</button>
+                <button onClick={restAtInn}>Rest at Inn</button>
+                <button onClick={useMoonDrop}>Use Herb</button>
+                <button onClick={resetGame}>Reset</button>
               </div>
-              <div className="pixel-panel">
-                <h3>Supply Counter</h3>
+              <div className="pixel-panel shop-list-panel">
                 {ITEMS.map((item) => (
                   <button className="shop-row" key={item.id} onClick={() => buyItem(item)}>
+                    <ItemIcon id={item.id} />
                     <span>
                       <strong>{item.name}</strong>
                       <small>{item.description}</small>
@@ -1305,18 +1480,42 @@ export default function RetroDungeonGame() {
         }
 
         .town-screen {
-          padding: 22px;
+          padding: 8px;
         }
 
         .town-art {
-          display: flex;
-          gap: 24px;
-          align-items: center;
-          padding: 24px;
-          min-height: 180px;
-          background:
-            linear-gradient(90deg, rgba(247, 190, 77, 0.1), transparent),
-            linear-gradient(180deg, #202070, #11164a);
+          position: relative;
+          min-height: 310px;
+          overflow: hidden;
+          border: 4px solid #06113b;
+          box-shadow: inset 0 0 0 4px #ffffff, inset 0 0 0 8px #183d9f;
+          background: #5b351f;
+        }
+
+        .shop-scene,
+        .shop-art {
+          width: 100%;
+          height: 100%;
+          min-height: 310px;
+          display: block;
+        }
+
+        .shopkeeper-art {
+          animation: shopkeeper-bob 2.4s ease-in-out infinite;
+          transform-origin: 480px 170px;
+        }
+
+        .lamp-art {
+          animation: lantern-sway 2.8s ease-in-out infinite;
+          transform-origin: 282px 0;
+        }
+
+        .town-gold {
+          position: absolute;
+          right: 18px;
+          top: 18px;
+          min-width: 170px;
+          text-align: center;
         }
 
         .shopkeeper {
@@ -1340,9 +1539,22 @@ export default function RetroDungeonGame() {
 
         .town-columns {
           display: grid;
-          grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-          gap: 18px;
-          margin-top: 18px;
+          grid-template-columns: 220px minmax(0, 1fr);
+          gap: 8px;
+          margin-top: 8px;
+        }
+
+        .town-command-panel {
+          display: grid;
+          gap: 8px;
+          align-content: start;
+          padding: 14px;
+        }
+
+        .shop-list-panel {
+          display: grid;
+          gap: 8px;
+          padding: 14px;
         }
 
         .town-columns .pixel-panel,
@@ -1365,7 +1577,20 @@ export default function RetroDungeonGame() {
           gap: 12px;
           align-items: center;
           width: 100%;
-          margin-bottom: 10px;
+          margin-bottom: 0;
+          min-height: 64px;
+        }
+
+        .shop-row > span {
+          flex: 1;
+        }
+
+        .item-icon {
+          width: 44px;
+          height: 44px;
+          flex: 0 0 44px;
+          image-rendering: pixelated;
+          filter: drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.35));
         }
 
         .shop-row small {
@@ -1904,11 +2129,11 @@ export default function RetroDungeonGame() {
         .battle-stage {
           min-height: 430px;
           background:
-            radial-gradient(circle at 50% 58%, rgba(255, 207, 90, 0.18), transparent 17rem),
-            linear-gradient(#243484 3px, transparent 3px),
-            linear-gradient(90deg, #243484 3px, transparent 3px),
-            linear-gradient(180deg, #344aa8 0%, #1b286f 48%, #0a0e2d 100%);
-          background-size: auto, 100% 44px, 62px 100%, auto;
+            radial-gradient(circle at 50% 58%, rgba(255, 238, 136, 0.22), transparent 17rem),
+            linear-gradient(#303d4c 4px, transparent 4px),
+            linear-gradient(90deg, #303d4c 4px, transparent 4px),
+            linear-gradient(180deg, #647487 0%, #3d4f62 48%, #222b38 100%);
+          background-size: auto, 100% 50px, 76px 100%, auto;
         }
 
         .battle-floor {
@@ -1919,7 +2144,7 @@ export default function RetroDungeonGame() {
           height: 42%;
           background:
             repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 3px, transparent 3px 72px),
-            repeating-linear-gradient(0deg, #27347f 0 34px, #202b70 34px 68px);
+            repeating-linear-gradient(0deg, #626553 0 34px, #4a4d40 34px 68px);
           clip-path: polygon(18% 0, 82% 0, 100% 100%, 0 100%);
         }
 
@@ -1948,43 +2173,61 @@ export default function RetroDungeonGame() {
         }
 
         .enemy-sprite {
-          width: 154px;
+          width: 178px;
           height: 154px;
           display: grid;
           place-items: center;
           color: var(--enemy);
-          filter: saturate(1.25) drop-shadow(0 14px 0 rgba(0, 0, 0, 0.26));
-          text-shadow: 5px 5px 0 #080b25;
+          filter: saturate(1.2) drop-shadow(0 14px 0 rgba(0, 0, 0, 0.28));
+          animation: enemy-idle 1.8s ease-in-out infinite;
         }
 
-        .enemy-sprite b {
-          font-size: 118px;
-          line-height: 0.8;
+        .enemy-sprite svg {
+          width: 100%;
+          height: 100%;
+          overflow: visible;
         }
 
-        .enemy-sprite small {
-          color: #080b25;
-          font-weight: 900;
+        .boss-enemy {
+          width: 210px;
+          height: 178px;
         }
 
-        .bat,
-        .imp {
-          grid-template-columns: 1fr auto 1fr;
-          gap: 2px;
+        .enemy-card strong {
+          color: #fff;
+          font-size: 18px;
+          text-shadow: 2px 2px 0 #06113b;
         }
 
-        .bat span,
-        .imp span {
-          font-size: 54px;
+        .enemy-card span {
+          text-shadow: 2px 2px 0 #06113b;
         }
 
-        .knight {
-          color: #ffcf5a;
+        .fx-hit .enemy-sprite {
+          animation: enemy-hit 220ms ease-out;
         }
 
-        .knight small {
-          color: #fff0a3;
-          text-shadow: none;
+        .fx-magic .battle-stage::after,
+        .fx-heal .game-cabinet::after,
+        .fx-coin .game-cabinet::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 50;
+          animation: screen-flash 260ms ease-out;
+        }
+
+        .fx-magic .battle-stage::after {
+          background: radial-gradient(circle, rgba(131, 221, 255, 0.45), transparent 58%);
+        }
+
+        .fx-heal .game-cabinet::after {
+          background: radial-gradient(circle, rgba(125, 255, 125, 0.28), transparent 56%);
+        }
+
+        .fx-coin .game-cabinet::after {
+          background: radial-gradient(circle, rgba(255, 231, 113, 0.3), transparent 56%);
         }
 
         .battle-layout .hero-panel {
@@ -1994,6 +2237,87 @@ export default function RetroDungeonGame() {
 
         .battle-menu {
           grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .fx-step .dungeon-window {
+          animation: step-bob 180ms ease-out;
+        }
+
+        .fx-turn .dungeon-window {
+          animation: turn-bob 180ms ease-out;
+        }
+
+        .fx-danger .game-cabinet {
+          animation: danger-shake 220ms ease-out;
+        }
+
+        .fx-win .game-cabinet {
+          animation: win-pop 360ms ease-out;
+        }
+
+        .wall-torch,
+        .torch-art,
+        .torch-flame,
+        .torch-flame-core {
+          animation: torch-flicker 800ms steps(2, end) infinite;
+          transform-origin: center;
+        }
+
+        @keyframes step-bob {
+          0% { transform: translateY(0) scale(1); }
+          45% { transform: translateY(8px) scale(1.012); }
+          100% { transform: translateY(0) scale(1); }
+        }
+
+        @keyframes turn-bob {
+          0% { transform: translateX(0); }
+          45% { transform: translateX(9px); }
+          100% { transform: translateX(0); }
+        }
+
+        @keyframes danger-shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-8px); }
+          50% { transform: translateX(8px); }
+          75% { transform: translateX(-4px); }
+        }
+
+        @keyframes win-pop {
+          0% { transform: scale(1); filter: brightness(1); }
+          45% { transform: scale(1.018); filter: brightness(1.35); }
+          100% { transform: scale(1); filter: brightness(1); }
+        }
+
+        @keyframes screen-flash {
+          0% { opacity: 0; }
+          35% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+
+        @keyframes enemy-idle {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+
+        @keyframes enemy-hit {
+          0%, 100% { transform: translateX(0); filter: brightness(1); }
+          30% { transform: translateX(-12px); filter: brightness(1.8); }
+          60% { transform: translateX(10px); }
+        }
+
+        @keyframes torch-flicker {
+          0%, 100% { transform: scale(1); filter: brightness(1); }
+          50% { transform: scale(1.06, 0.95); filter: brightness(1.22); }
+        }
+
+        @keyframes shopkeeper-bob {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+
+        @keyframes lantern-sway {
+          0%, 100% { transform: rotate(-2deg); }
+          50% { transform: rotate(2deg); }
         }
 
         @media (max-width: 880px) {
