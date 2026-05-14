@@ -520,41 +520,197 @@ function HeroPanel({ heroes }: { heroes: Hero[] }) {
 
 function DungeonView({ state }: { state: GameState }) {
   const forwardBlocked = hasWall(state, state.dir);
-  const leftBlocked = hasWall(state, ((state.dir + 3) % 4) as Direction);
-  const rightBlocked = hasWall(state, ((state.dir + 1) % 4) as Direction);
   const cell = currentCell(state);
+  const wallBlocks = Array.from({ length: 48 }, (_, i) => {
+    const row = Math.floor(i / 8);
+    const col = i % 8;
+    return {
+      x: 222 + col * 74 + (row % 2) * 16,
+      y: 64 + row * 44,
+      width: col === 7 ? 56 : 72,
+      height: 42,
+    };
+  });
+  const floorTiles = Array.from({ length: 35 }, (_, i) => {
+    const row = Math.floor(i / 7);
+    const col = i % 7;
+    return {
+      x: 206 + col * 88 - row * 24,
+      y: 278 + row * 31,
+      width: 86,
+      height: 30,
+    };
+  });
 
   return (
-    <div className="dungeon-window" aria-label="Dungeon view">
-      <div className="ceiling" />
-      <div className="floor" />
-      <div className={`side-wall left ${leftBlocked ? "blocked" : ""}`} />
-      <div className={`side-wall right ${rightBlocked ? "blocked" : ""}`} />
-      <div className={`far-wall ${forwardBlocked ? "blocked" : ""}`}>
+    <div className="dungeon-window art-window" aria-label="Dungeon view">
+      <svg className="scene-art" viewBox="0 0 1024 448" role="img" aria-label="Original stone dungeon chamber">
+        <defs>
+          <linearGradient id="stoneFace" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#65788b" />
+            <stop offset="1" stopColor="#33485c" />
+          </linearGradient>
+          <linearGradient id="stoneSide" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="#26384b" />
+            <stop offset="1" stopColor="#6c8092" />
+          </linearGradient>
+          <linearGradient id="floorStone" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#77796a" />
+            <stop offset="1" stopColor="#3d433b" />
+          </linearGradient>
+          <radialGradient id="dungeonTorchGlow" cx="69%" cy="36%" r="32%">
+            <stop offset="0" stopColor="#ffe078" stopOpacity="0.9" />
+            <stop offset="0.45" stopColor="#ff9f35" stopOpacity="0.28" />
+            <stop offset="1" stopColor="#000" stopOpacity="0" />
+          </radialGradient>
+          <clipPath id="leftWallClip"><polygon points="0,0 228,64 228,330 0,448" /></clipPath>
+          <clipPath id="rightWallClip"><polygon points="1024,0 796,64 796,330 1024,448" /></clipPath>
+          <clipPath id="floorClip"><polygon points="228,330 796,330 1024,448 0,448" /></clipPath>
+        </defs>
+
+        <rect width="1024" height="448" fill="#182435" />
+        <g clipPath="url(#leftWallClip)">
+          <rect width="260" height="448" fill="url(#stoneSide)" />
+          {Array.from({ length: 42 }, (_, i) => {
+            const row = Math.floor(i / 4);
+            const col = i % 4;
+            return (
+              <rect
+                key={`lw-${i}`}
+                x={-18 + col * 70 + (row % 2) * 26}
+                y={row * 45}
+                width="74"
+                height="43"
+                rx="5"
+                fill="none"
+                stroke="#172331"
+                strokeWidth="4"
+              />
+            );
+          })}
+        </g>
+        <g clipPath="url(#rightWallClip)">
+          <rect x="764" width="260" height="448" fill="url(#stoneSide)" />
+          {Array.from({ length: 42 }, (_, i) => {
+            const row = Math.floor(i / 4);
+            const col = i % 4;
+            return (
+              <rect
+                key={`rw-${i}`}
+                x={780 + col * 70 + (row % 2) * 26}
+                y={row * 45}
+                width="74"
+                height="43"
+                rx="5"
+                fill="none"
+                stroke="#172331"
+                strokeWidth="4"
+              />
+            );
+          })}
+        </g>
+
+        <g>
+          <rect x="224" y="64" width="572" height="268" fill="url(#stoneFace)" />
+          {wallBlocks.map((block, i) => (
+            <rect
+              key={`wall-${i}`}
+              x={block.x}
+              y={block.y}
+              width={block.width}
+              height={block.height}
+              rx="5"
+              fill="none"
+              stroke="#1a2735"
+              strokeWidth="4"
+            />
+          ))}
+        </g>
+
+        <g>
+          <polygon points="226,0 798,0 796,64 224,64" fill="#2b3746" />
+          {Array.from({ length: 24 }, (_, i) => (
+            <rect
+              key={`ceil-${i}`}
+              x={226 + (i % 8) * 72}
+              y={Math.floor(i / 8) * 22}
+              width="70"
+              height="22"
+              fill="none"
+              stroke="#172331"
+              strokeWidth="3"
+            />
+          ))}
+        </g>
+
+        <g clipPath="url(#floorClip)">
+          <rect y="300" width="1024" height="148" fill="url(#floorStone)" />
+          {floorTiles.map((tile, i) => (
+            <rect
+              key={`floor-${i}`}
+              x={tile.x}
+              y={tile.y}
+              width={tile.width}
+              height={tile.height}
+              rx="4"
+              fill="none"
+              stroke="#30362f"
+              strokeWidth="4"
+            />
+          ))}
+        </g>
+
         {forwardBlocked ? (
-          <>
-            <div className="brick-grid" />
-            <div className="wood-door">
-              <span className="door-ring" />
-            </div>
-            <div className="wall-torch">
-              <span className="flame" />
-              <span className="sconce" />
-            </div>
-          </>
+          <g className="door-art">
+            <path d="M423 310 V183 C423 126 601 126 601 183 V310 Z" fill="#79858b" />
+            <path d="M448 310 V188 C448 150 576 150 576 188 V310 Z" fill="#864b24" />
+            <path d="M448 196 H576 M448 254 H576" stroke="#242631" strokeWidth="12" />
+            {Array.from({ length: 5 }, (_, i) => (
+              <line key={`door-plank-${i}`} x1={470 + i * 24} y1="158" x2={470 + i * 24} y2="310" stroke="#4f2a18" strokeWidth="5" />
+            ))}
+            <circle cx="548" cy="238" r="18" fill="none" stroke="#1e2630" strokeWidth="7" />
+            <circle cx="548" cy="238" r="25" fill="none" stroke="#8e9695" strokeWidth="4" />
+          </g>
         ) : (
-          <>
-            <div className="hall-mouth" />
-            <div className="distant-door" />
-          </>
+          <g className="door-art">
+            <path d="M412 320 V176 C412 118 612 118 612 176 V320 Z" fill="#111827" />
+            <path d="M456 320 V188 C456 154 568 154 568 188 V320 Z" fill="#060913" />
+            <rect x="472" y="220" width="80" height="100" fill="#182846" />
+          </g>
         )}
-      </div>
-      {cell.event === "chest" && <div className="chest-sprite">▰</div>}
-      {cell.event === "stairs" && <div className="stairs-sprite">▟▙</div>}
-      {cell.event === "fountain" && <div className="fountain-sprite">♒</div>}
-      <div className="place-label">
-        F{state.floor + 1} · {cell.label ?? "Passage"} · Facing {DIR_LABELS[state.dir]}
-      </div>
+
+        <g className="torch-art">
+          <rect x="704" y="178" width="20" height="66" fill="#2a1a16" />
+          <rect x="686" y="198" width="56" height="14" fill="#1b1515" />
+          <path className="torch-flame" d="M714 106 C746 142 736 177 714 194 C686 171 688 138 714 106 Z" fill="#ff6a26" />
+          <path className="torch-flame-core" d="M716 134 C731 154 728 176 714 184 C700 169 703 150 716 134 Z" fill="#fff07a" />
+        </g>
+        <rect width="1024" height="448" fill="url(#dungeonTorchGlow)" />
+
+        {cell.event === "chest" && (
+          <g className="treasure-art">
+            <rect x="442" y="312" width="138" height="72" rx="8" fill="#9a5526" stroke="#2b1b15" strokeWidth="8" />
+            <rect x="442" y="312" width="138" height="32" rx="8" fill="#d58b35" stroke="#2b1b15" strokeWidth="8" />
+            <rect x="500" y="313" width="22" height="70" fill="#f2d168" stroke="#2b1b15" strokeWidth="5" />
+          </g>
+        )}
+        {cell.event === "stairs" && (
+          <g className="stairs-art">
+            {[0, 1, 2, 3].map((step) => (
+              <rect key={step} x={386 + step * 42} y={352 - step * 24} width={252 - step * 48} height="24" fill="#7f8890" stroke="#222d37" strokeWidth="5" />
+            ))}
+          </g>
+        )}
+        {cell.event === "fountain" && (
+          <g className="fountain-art">
+            <ellipse cx="512" cy="358" rx="86" ry="30" fill="#36577a" stroke="#d8e3e5" strokeWidth="7" />
+            <ellipse cx="512" cy="350" rx="56" ry="17" fill="#79dfff" />
+            <path d="M512 242 C548 290 540 336 512 344 C484 332 476 290 512 242 Z" fill="#75dfff" stroke="#e5fbff" strokeWidth="6" />
+            <circle cx="512" cy="278" r="14" fill="#e7fbff" />
+          </g>
+        )}
+      </svg>
+      <div className="screen-vignette" />
     </div>
   );
 }
@@ -1628,6 +1784,36 @@ export default function RetroDungeonGame() {
           background:
             radial-gradient(circle at 50% 42%, rgba(116, 206, 255, 0.16), transparent 17rem),
             linear-gradient(180deg, #1c2d55 0%, #1b273d 50%, #1f232c 100%);
+        }
+
+        .art-window {
+          background: #182435;
+        }
+
+        .scene-art {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          display: block;
+          image-rendering: pixelated;
+        }
+
+        .screen-vignette {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background:
+            radial-gradient(circle at 50% 45%, transparent 0 54%, rgba(0, 0, 0, 0.22) 85%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 20%, rgba(0, 0, 0, 0.2));
+          mix-blend-mode: multiply;
+        }
+
+        .door-art,
+        .treasure-art,
+        .stairs-art,
+        .fountain-art {
+          filter: drop-shadow(0 12px 0 rgba(0, 0, 0, 0.26));
         }
 
         .ceiling,
