@@ -1088,24 +1088,26 @@ export default function RetroDungeonGame() {
         .retro-game-shell {
           min-height: 100vh;
           background:
-            radial-gradient(circle at 15% 10%, rgba(92, 72, 186, 0.32), transparent 28rem),
-            radial-gradient(circle at 85% 0%, rgba(39, 158, 216, 0.22), transparent 22rem),
-            linear-gradient(180deg, #11112d 0%, #060711 100%);
-          color: #fff6cf;
+            radial-gradient(circle at 50% -12%, rgba(68, 90, 211, 0.34), transparent 34rem),
+            linear-gradient(180deg, #080b22 0%, #02030c 100%);
+          color: #f7f1c5;
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           justify-content: center;
-          padding: 22px;
+          padding: 16px;
           font-family: "Trebuchet MS", "Lucida Console", monospace;
         }
 
         .game-cabinet {
-          width: min(1180px, 100%);
-          min-height: min(760px, calc(100vh - 44px));
-          border: 6px solid #f0bd4e;
-          border-radius: 18px;
-          background: #151540;
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55), inset 0 0 0 4px #533a93;
+          width: min(980px, 100%);
+          min-height: min(760px, calc(100vh - 32px));
+          border: 4px solid #f6d05f;
+          border-radius: 8px;
+          background: #080b22;
+          box-shadow:
+            0 18px 60px rgba(0, 0, 0, 0.62),
+            inset 0 0 0 3px #121a55,
+            inset 0 0 0 7px #1f64b9;
           overflow: hidden;
           position: relative;
         }
@@ -1115,9 +1117,9 @@ export default function RetroDungeonGame() {
           justify-content: space-between;
           gap: 16px;
           align-items: center;
-          background: linear-gradient(180deg, #28206b, #14133a);
-          border-bottom: 4px solid #f0bd4e;
-          padding: 18px 22px;
+          background: linear-gradient(180deg, #182773, #0c1442);
+          border-bottom: 4px solid #f6d05f;
+          padding: 12px 18px;
         }
 
         .eyebrow {
@@ -1133,11 +1135,11 @@ export default function RetroDungeonGame() {
         }
 
         h1 {
-          color: #fff0a3;
-          font-size: clamp(30px, 5vw, 52px);
+          color: #fff4a8;
+          font-size: clamp(26px, 4vw, 42px);
           line-height: 0.95;
           margin: 0;
-          text-shadow: 4px 4px 0 #53266d;
+          text-shadow: 3px 3px 0 #15133e;
         }
 
         h2 {
@@ -1156,11 +1158,11 @@ export default function RetroDungeonGame() {
         }
 
         button {
-          background: linear-gradient(180deg, #2859bd, #173078);
-          color: #fff6cf;
-          border: 3px solid #97d7ff;
-          border-radius: 8px;
-          box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.22), 0 4px 0 #07173e;
+          background: linear-gradient(180deg, #2366c8 0%, #143e91 52%, #0e2870 100%);
+          color: #fff7cf;
+          border: 3px solid #89d8ff;
+          border-radius: 5px;
+          box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.24), 0 3px 0 #051646;
           cursor: pointer;
           font: inherit;
           font-weight: 800;
@@ -1184,10 +1186,13 @@ export default function RetroDungeonGame() {
         .message-window,
         .hero-panel,
         .mini-map {
-          border: 4px solid #f0bd4e;
-          background: linear-gradient(180deg, #17266e, #0d174c);
-          box-shadow: inset 0 0 0 3px #5fb8ff, 0 8px 0 rgba(0, 0, 0, 0.18);
-          border-radius: 12px;
+          border: 3px solid #f6d05f;
+          background: linear-gradient(180deg, #183d9f, #0d236f);
+          box-shadow:
+            inset 0 0 0 3px #74ceff,
+            inset 0 0 0 7px rgba(4, 13, 48, 0.34),
+            0 5px 0 rgba(0, 0, 0, 0.24);
+          border-radius: 7px;
         }
 
         .gold-box {
@@ -1274,7 +1279,16 @@ export default function RetroDungeonGame() {
 
         .town-columns .pixel-panel,
         .inventory-panel {
-          padding: 18px;
+          padding: 12px;
+        }
+
+        .inventory-panel h3 {
+          margin-bottom: 8px;
+        }
+
+        .inventory-panel p {
+          margin-bottom: 6px;
+          font-size: 13px;
         }
 
         .shop-row {
@@ -1297,24 +1311,30 @@ export default function RetroDungeonGame() {
         .play-layout,
         .battle-layout {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) 310px;
-          gap: 18px;
-          padding: 20px;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 12px;
+          padding: 14px;
         }
 
         .dungeon-window,
         .battle-stage {
-          min-height: 390px;
-          border: 5px solid #070b25;
+          min-height: 430px;
+          border: 4px solid #05091c;
           background: #10143c;
           overflow: hidden;
           position: relative;
-          box-shadow: inset 0 0 0 4px #5fb8ff;
+          box-shadow:
+            inset 0 0 0 4px #69ccff,
+            inset 0 0 0 8px #112161;
+          image-rendering: pixelated;
         }
 
         .dungeon-window {
-          perspective: 700px;
+          perspective: 620px;
           isolation: isolate;
+          background:
+            radial-gradient(circle at 50% 42%, rgba(116, 206, 255, 0.16), transparent 17rem),
+            linear-gradient(180deg, #101a58 0%, #0a0e2d 54%, #07091d 100%);
         }
 
         .ceiling,
@@ -1327,47 +1347,64 @@ export default function RetroDungeonGame() {
 
         .ceiling {
           top: 0;
-          background: repeating-linear-gradient(90deg, #293280 0 38px, #20286d 38px 76px);
-          clip-path: polygon(0 0, 100% 0, 70% 50%, 30% 50%);
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent),
+            repeating-linear-gradient(90deg, #344aa8 0 42px, #2a3e95 42px 84px);
+          clip-path: polygon(0 0, 100% 0, 68% 48%, 32% 48%);
         }
 
         .floor {
           bottom: 0;
-          background: repeating-linear-gradient(90deg, #1b225c 0 42px, #151b4d 42px 84px);
-          clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%);
+          background:
+            repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 3px, transparent 3px 72px),
+            repeating-linear-gradient(0deg, #27347f 0 34px, #202b70 34px 68px);
+          clip-path: polygon(32% 0, 68% 0, 100% 100%, 0 100%);
         }
 
         .side-wall {
           position: absolute;
           top: 0;
           bottom: 0;
-          width: 38%;
-          background: repeating-linear-gradient(180deg, #2b358a 0 30px, #222b77 30px 60px);
-          opacity: 0.92;
+          width: 43%;
+          background:
+            linear-gradient(90deg, rgba(5, 9, 28, 0.38), transparent 48%, rgba(255, 255, 255, 0.08)),
+            linear-gradient(#233486 3px, transparent 3px),
+            linear-gradient(90deg, #233486 3px, transparent 3px),
+            #3348a8;
+          background-size: auto, 100% 42px, 58px 100%, auto;
+          opacity: 1;
         }
 
         .side-wall.left {
           left: 0;
-          clip-path: polygon(0 0, 78% 26%, 78% 74%, 0 100%);
+          clip-path: polygon(0 0, 82% 24%, 82% 76%, 0 100%);
         }
 
         .side-wall.right {
           right: 0;
-          clip-path: polygon(22% 26%, 100% 0, 100% 100%, 22% 74%);
+          transform: scaleX(-1);
+          clip-path: polygon(18% 24%, 100% 0, 100% 100%, 18% 76%);
         }
 
         .side-wall:not(.blocked) {
-          opacity: 0.34;
+          opacity: 0.52;
+          filter: brightness(0.74);
         }
 
         .far-wall {
           position: absolute;
-          inset: 22% 28%;
+          inset: 18% 30% 22%;
           display: grid;
           place-items: center;
-          background: #303a91;
-          border: 5px solid #11164a;
-          box-shadow: inset 0 0 0 4px #5564c5;
+          background:
+            linear-gradient(#243484 3px, transparent 3px),
+            linear-gradient(90deg, #243484 3px, transparent 3px),
+            linear-gradient(180deg, #4b61c0, #2d3f98);
+          background-size: 100% 42px, 58px 100%, auto;
+          border: 5px solid #0b1138;
+          box-shadow:
+            inset 0 0 0 5px #6b7cdb,
+            0 14px 0 rgba(0, 0, 0, 0.26);
         }
 
         .far-wall:not(.blocked) {
@@ -1380,40 +1417,58 @@ export default function RetroDungeonGame() {
           position: absolute;
           inset: 0;
           background:
-            linear-gradient(#1f2a75 3px, transparent 3px),
-            linear-gradient(90deg, #1f2a75 3px, transparent 3px);
-          background-size: 56px 36px;
-          opacity: 0.72;
+            linear-gradient(90deg, transparent 0 48%, rgba(255,255,255,0.08) 48% 52%, transparent 52%),
+            radial-gradient(circle at 50% 50%, rgba(5, 9, 28, 0.08), transparent 55%);
+          opacity: 0.8;
         }
 
         .hall-mouth {
-          width: 58%;
-          height: 100%;
-          background: linear-gradient(180deg, #080b25, #131946);
-          border-left: 7px solid #5564c5;
-          border-right: 7px solid #5564c5;
+          width: 56%;
+          height: 112%;
+          background:
+            radial-gradient(circle at 50% 70%, rgba(116, 206, 255, 0.16), transparent 46%),
+            linear-gradient(180deg, #070a22, #121a52);
+          border-left: 8px solid #6b7cdb;
+          border-right: 8px solid #6b7cdb;
+          box-shadow: inset 0 0 0 5px #06091c;
         }
 
         .distant-door {
           position: absolute;
-          color: #ffcf5a;
-          font-size: 58px;
+          width: 74px;
+          height: 94px;
+          display: grid;
+          place-items: center;
+          color: #ffe184;
+          background: linear-gradient(90deg, #8a4d28 0 15%, #c77b39 15% 85%, #8a4d28 85%);
+          border: 5px solid #ffe184;
+          border-radius: 40px 40px 8px 8px;
+          font-size: 0;
+        }
+
+        .distant-door::after {
+          content: "";
+          width: 10px;
+          height: 10px;
+          margin-left: 34px;
+          background: #fff0a3;
+          border-radius: 50%;
         }
 
         .torch {
           position: absolute;
-          top: 22%;
+          top: 26%;
           z-index: 2;
-          font-size: 30px;
-          filter: drop-shadow(0 0 12px #ffcf5a);
+          font-size: 34px;
+          filter: drop-shadow(0 0 10px #ffcf5a) drop-shadow(0 0 18px #f06536);
         }
 
         .torch-left {
-          left: 18px;
+          left: 28px;
         }
 
         .torch-right {
-          right: 18px;
+          right: 28px;
         }
 
         .chest-sprite,
@@ -1421,29 +1476,38 @@ export default function RetroDungeonGame() {
         .fountain-sprite {
           position: absolute;
           left: 50%;
-          bottom: 17%;
+          bottom: 15%;
           transform: translateX(-50%);
           z-index: 5;
           display: grid;
           place-items: center;
-          width: 92px;
-          height: 68px;
-          border: 4px solid #fff0a3;
-          border-radius: 14px;
-          font-size: 46px;
+          width: 104px;
+          height: 76px;
+          border: 5px solid #fff0a3;
+          border-radius: 8px;
+          font-size: 0;
           color: #5b2e21;
-          background: linear-gradient(180deg, #ffcf5a, #bd6f32);
+          background:
+            linear-gradient(90deg, transparent 44%, #7b421d 44% 56%, transparent 56%),
+            linear-gradient(180deg, #ffdf65 0 45%, #b96b2e 45% 100%);
           box-shadow: 0 10px 0 rgba(0, 0, 0, 0.24);
         }
 
         .stairs-sprite {
-          color: #cde9ff;
-          background: linear-gradient(180deg, #5262c2, #232a75);
+          width: 120px;
+          height: 78px;
+          background:
+            linear-gradient(180deg, transparent 0 22%, #cde9ff 22% 34%, transparent 34% 45%, #91b7ff 45% 58%, transparent 58% 68%, #536dd6 68% 84%, transparent 84%),
+            #17215f;
         }
 
         .fountain-sprite {
-          color: #08233e;
-          background: linear-gradient(180deg, #74e3ff, #4a76db);
+          width: 104px;
+          height: 104px;
+          border-radius: 50% 50% 12px 12px;
+          background:
+            radial-gradient(circle at 50% 28%, #e7fbff 0 14%, #74e3ff 15% 34%, transparent 35%),
+            linear-gradient(180deg, #74e3ff, #4a76db);
         }
 
         .place-label {
@@ -1462,23 +1526,29 @@ export default function RetroDungeonGame() {
 
         .side-stack {
           display: grid;
-          gap: 14px;
+          grid-template-columns: minmax(0, 1.5fr) minmax(190px, 0.7fr) auto;
+          gap: 12px;
+          align-items: stretch;
         }
 
         .hero-panel {
-          padding: 12px;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          padding: 10px;
         }
 
         .hero-row {
           display: grid;
-          grid-template-columns: 80px 1fr;
-          gap: 10px;
-          padding: 9px 0;
-          border-bottom: 2px solid rgba(151, 215, 255, 0.28);
+          gap: 6px;
+          padding: 8px;
+          min-height: 76px;
+          border: 2px solid rgba(116, 206, 255, 0.28);
+          background: rgba(4, 13, 48, 0.2);
         }
 
         .hero-row:last-child {
-          border-bottom: 0;
+          border-bottom: 2px solid rgba(116, 206, 255, 0.28);
         }
 
         .hero-row strong,
@@ -1488,31 +1558,33 @@ export default function RetroDungeonGame() {
 
         .hero-row strong {
           color: #fff0a3;
+          font-size: 16px;
         }
 
         .hero-row span,
         .bars {
           color: #cde9ff;
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .bars {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 6px;
+          grid-template-columns: 1fr;
+          gap: 2px;
         }
 
         .mini-map {
           display: grid;
-          grid-template-columns: repeat(4, 34px);
-          gap: 5px;
+          grid-template-columns: repeat(4, 28px);
+          gap: 4px;
           justify-content: center;
-          padding: 13px;
+          align-content: center;
+          padding: 10px;
         }
 
         .map-cell {
-          width: 34px;
-          height: 34px;
+          width: 28px;
+          height: 28px;
           display: grid;
           place-items: center;
           background: #080b25;
@@ -1537,14 +1609,14 @@ export default function RetroDungeonGame() {
           grid-column: 1 / -1;
           display: grid;
           grid-template-columns: repeat(7, minmax(0, 1fr));
-          gap: 10px;
-          padding: 12px;
+          gap: 8px;
+          padding: 10px;
         }
 
         .message-window {
           grid-column: 1 / -1;
-          min-height: 120px;
-          padding: 14px 18px;
+          min-height: 112px;
+          padding: 12px 16px;
         }
 
         .message-window p {
@@ -1566,10 +1638,13 @@ export default function RetroDungeonGame() {
         }
 
         .battle-stage {
-          min-height: 360px;
+          min-height: 430px;
           background:
-            radial-gradient(circle at 50% 62%, rgba(255, 207, 90, 0.16), transparent 18rem),
-            linear-gradient(180deg, #14184b, #090c2a);
+            radial-gradient(circle at 50% 58%, rgba(255, 207, 90, 0.18), transparent 17rem),
+            linear-gradient(#243484 3px, transparent 3px),
+            linear-gradient(90deg, #243484 3px, transparent 3px),
+            linear-gradient(180deg, #344aa8 0%, #1b286f 48%, #0a0e2d 100%);
+          background-size: auto, 100% 44px, 62px 100%, auto;
         }
 
         .battle-floor {
@@ -1578,7 +1653,9 @@ export default function RetroDungeonGame() {
           right: 0;
           bottom: 0;
           height: 42%;
-          background: repeating-linear-gradient(90deg, #1d255f 0 50px, #151b4d 50px 100px);
+          background:
+            repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 3px, transparent 3px 72px),
+            repeating-linear-gradient(0deg, #27347f 0 34px, #202b70 34px 68px);
           clip-path: polygon(18% 0, 82% 0, 100% 100%, 0 100%);
         }
 
@@ -1607,17 +1684,17 @@ export default function RetroDungeonGame() {
         }
 
         .enemy-sprite {
-          width: 132px;
-          height: 132px;
+          width: 154px;
+          height: 154px;
           display: grid;
           place-items: center;
           color: var(--enemy);
-          filter: drop-shadow(0 12px 0 rgba(0, 0, 0, 0.22));
-          text-shadow: 4px 4px 0 #080b25;
+          filter: saturate(1.25) drop-shadow(0 14px 0 rgba(0, 0, 0, 0.26));
+          text-shadow: 5px 5px 0 #080b25;
         }
 
         .enemy-sprite b {
-          font-size: 96px;
+          font-size: 118px;
           line-height: 0.8;
         }
 
@@ -1634,7 +1711,7 @@ export default function RetroDungeonGame() {
 
         .bat span,
         .imp span {
-          font-size: 42px;
+          font-size: 54px;
         }
 
         .knight {
@@ -1661,6 +1738,14 @@ export default function RetroDungeonGame() {
           }
 
           .play-layout {
+            grid-template-columns: 1fr;
+          }
+
+          .side-stack {
+            grid-template-columns: 1fr;
+          }
+
+          .hero-panel {
             grid-template-columns: 1fr;
           }
 
