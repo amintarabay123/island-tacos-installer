@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { RefreshCw, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
@@ -992,6 +992,23 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   const [chargeOrder, setChargeOrder] = useState<Order | null>(null);
   const [splitChargeOrder, setSplitChargeOrder] = useState<Order | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [search, setSearch] = useState("");
+
+  const filteredOrders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return orders;
+    const qDigits = q.replace(/\D/g, "");
+    return orders.filter(o => {
+      if ((o.customerName ?? "").toLowerCase().includes(q)) return true;
+      if ((o.confirmationCode ?? "").toLowerCase().includes(q)) return true;
+      if (qDigits && o.customerPhone) {
+        const phoneDigits = o.customerPhone.replace(/\D/g, "");
+        if (phoneDigits.endsWith(qDigits)) return true;
+      }
+      if (o.items.some(i => (i.menuItemName ?? "").toLowerCase().includes(q))) return true;
+      return false;
+    });
+  }, [orders, search]);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
 
   const load = useCallback(async () => {
@@ -1162,14 +1179,45 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
       <div className="fixed inset-0 bg-black/70 flex justify-end z-50" onClick={onClose}>
         <div className="bg-white w-full max-w-sm h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
           <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-gray-900 text-xl font-bold">Orders{orders.length > 0 ? ` (${orders.length})` : ""}</h2>
+            <h2 className="text-gray-900 text-xl font-bold">
+              Orders{orders.length > 0 ? (search.trim() ? ` (${filteredOrders.length} of ${orders.length})` : ` (${orders.length})`) : ""}
+            </h2>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-2xl">×</button>
           </div>
+
+          {orders.length > 0 && (
+            <div className="px-4 pt-3 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10">
+              <div className="relative">
+                <input
+                  type="search"
+                  inputMode="search"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search name, code, item, or last 4 of phone…"
+                  className="w-full bg-gray-100 border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#F5A623] focus:bg-white"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    aria-label="Clear search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-gray-300 hover:bg-gray-400 text-white text-xs flex items-center justify-center"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {loading && <p className="text-gray-400 text-center py-8">Loading…</p>}
             {!loading && orders.length === 0 && <p className="text-gray-400 text-center py-8">No active orders</p>}
-            {!loading && orders.map(o => (
+            {!loading && orders.length > 0 && filteredOrders.length === 0 && (
+              <p className="text-gray-400 text-center py-8">No orders match "{search}"</p>
+            )}
+            {!loading && filteredOrders.map(o => (
               <div key={o.id} className="bg-gray-100 rounded-xl p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div>
