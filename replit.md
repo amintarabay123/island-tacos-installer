@@ -111,6 +111,40 @@ Custom full-stack online ordering + in-house POS system for Island Tacos (Wickha
 - Orders are NO LONGER auto-pushed to Loyverse — the system is self-contained
 - Schema columns retained: `loyverse_id`, `loyverse_item_id`, `loyverse_variant_id`, `loyverse_modifier_ids`
 
+## Frontend tarball pipeline (UPDATE.bat path)
+
+The mini PC's `UPDATE.bat` fetches the latest server bundle and frontend
+tarball from `https://orders.islandtacosbvi.com/api/download/{server,frontend}`.
+The server bundle is served directly from the cloud api-server's filesystem.
+The frontend tarball is served from a GCS object (`installer/island-tacos-frontend.tar.gz`)
+because it's too large for the Replit reverse proxy.
+
+**Who writes the GCS frontend tarball:** the island-tacos build's `postbuild`
+step (`artifacts/island-tacos/scripts/upload-tarball.mjs`). It tars
+`dist/public/` and uploads to GCS at the end of every `pnpm --filter
+@workspace/island-tacos run build`. This runs in the frontend artifact's
+container during deploy, where `dist/public/` actually exists.
+
+**Who does NOT write it:** the api-server. Earlier code attempted to
+regenerate the tarball lazily on api-server startup, but in the current
+multi-artifact deployment the api-server's container does not contain
+`artifacts/island-tacos/dist/public/`, so any tar attempt silently failed and
+the GCS object stayed stale (this caused a week-long bug where frontend fixes
+never reached the mini PC — fixed 2026-05-15). The api-server now only signs
+the existing GCS object on startup; it never regenerates.
+
+**Local dev / CI:** the postbuild script no-ops cleanly unless
+`UPLOAD_FRONTEND_TARBALL=1` is set. That env var is set ONLY in the
+island-tacos artifact's `[services.production.build.env]` block, which fires
+during deploy. Local `pnpm build` runs and CI builds therefore cannot
+overwrite the production GCS object even when the bucket env happens to be
+present (e.g. inside this Replit workspace).
+
+**If a deploy ships frontend changes that don't appear on the mini PC:**
+check the deploy's island-tacos build logs for the `[postbuild:frontend-tarball]`
+lines. A non-zero exit there fails the build loudly. The previous failure
+mode (silent stale tarball) is no longer possible.
+
 ## Tax Rate
 
 No tax (BVI). Tax not applied at checkout.

@@ -18,9 +18,18 @@ localPort = 18184
 run = "pnpm --filter @workspace/island-tacos run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/island-tacos", "run", "build" ]
 publicDir = "artifacts/island-tacos/dist/public"
 serve = "static"
+
+[services.production.build]
+args = [ "pnpm", "--filter", "@workspace/island-tacos", "run", "build" ]
+
+[services.production.build.env]
+# Opt-in for the postbuild step (artifacts/island-tacos/scripts/upload-tarball.mjs)
+# to upload the freshly built dist/public/ as a tarball to GCS, where the mini
+# PC's UPDATE.bat fetches it via /api/download/frontend. Local dev builds and
+# CI builds intentionally do NOT set this so they can't overwrite prod.
+UPLOAD_FRONTEND_TARBALL = "1"
 
 [[services.production.rewrites]]
 from = "/*"
