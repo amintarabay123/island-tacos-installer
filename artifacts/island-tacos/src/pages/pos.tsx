@@ -2996,11 +2996,11 @@ export default function POS() {
   };
 
   const pushToCart = (item: MenuItem, sels: CartModifier[], note = "", priceOverride?: number) => {
-    // Drinks (sendToKds=false) added to a resumed ticket are marked alreadyMade so they
-    // don't trigger a cancel+recreate of the order or a KDS re-fire.
-    const cat = categories.find(c => c.id === item.categoryId);
-    const isDrink = cat ? !cat.sendToKds : false;
-    const alreadyMade = (resumedOrderId && isDrink) ? true : undefined;
+    // New items added during a resumed ticket leave alreadyMade undefined so the
+    // save path detects the cart change and runs cancel+create. Existing lines on
+    // the resumed ticket keep their alreadyMade=true flag, which is what protects
+    // kitchen items from being re-fired to KDS — including when a non-KDS line
+    // (e.g. a drink) is the only thing being added.
     const unitPrice = priceOverride ?? item.price;
     // Open-price lines are always unique (one-off custom item) — never merge.
     const existingKey = (!note && priceOverride === undefined) ? cart.find(c =>
@@ -3018,7 +3018,6 @@ export default function POS() {
         quantity: 1,
         notes: note,
         modifierSelections: sels,
-        ...(alreadyMade !== undefined ? { alreadyMade } : {}),
         ...(priceOverride !== undefined ? { priceOverride } : {}),
       }]);
     }
