@@ -31,11 +31,11 @@ let gcsPublicUrl: string | null = null;
 let generating = false;
 
 // ── Frontend dist — GCS-backed (bypasses Replit proxy size limit) ─────────────
-const FRONTEND_CACHE        = path.join(os.tmpdir(), "island-tacos-frontend-cache.tar.gz");
+// The actual upload happens in the island-tacos build's postbuild step.
+// See the long comment above initFrontendCache() below.
 const FRONTEND_GCS_OBJECT   = "installer/island-tacos-frontend.tar.gz";
 
 let frontendGcsUrl: string | null = null;
-let frontendGenerating = false;
 
 const EXCLUDE = [
   "--exclude=./.git",
@@ -151,63 +151,13 @@ async function initInstallerCache(): Promise<void> {
 // Kick off on startup (don't await — non-blocking)
 initInstallerCache().catch(console.error);
 
-async function generateAndUploadFrontend(): Promise<void> {
-  if (frontendGenerating) return;
-  frontendGenerating = true;
-  frontendGcsUrl = null;
-
-  console.log("[frontend] generating archive...");
-
-  const distDir = path.join(PROJECT_ROOT, "artifacts", "island-tacos", "dist", "public");
-
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const tmp = FRONTEND_CACHE + ".tmp";
-      const out = fs.createWriteStream(tmp);
-      const tar = spawn("tar", [
-        "-czf", "-",
-        "-C", distDir,
-        "--exclude=./island-tacos-installer.tar.gz", // 51 MB — not needed on mini PC
-        "--exclude=./docs",                          // install docs — not needed at runtime
-        ".",
-      ]);
-
-      tar.stdout.pipe(out);
-
-      out.on("error", (err) => { tar.kill(); fs.unlink(tmp, () => {}); reject(err); });
-      tar.on("error", (err) => { fs.unlink(tmp, () => {}); reject(err); });
-      tar.on("close", (code) => {
-        if (code !== 0) { fs.unlink(tmp, () => {}); reject(new Error(`tar exited ${code}`)); return; }
-        fs.rename(tmp, FRONTEND_CACHE, (err) => { if (err) reject(err); else resolve(); });
-      });
-    });
-
-    console.log("[frontend] archive ready, uploading to GCS...");
-
-    const bucket = getBucket();
-    const file = bucket.file(FRONTEND_GCS_OBJECT);
-    await pipeline(
-      fs.createReadStream(FRONTEND_CACHE),
-      file.createWriteStream({
-        resumable: false,
-        metadata: {
-          contentType: "application/gzip",
-          contentDisposition: 'attachment; filename="island-tacos-frontend.tar.gz"',
-        },
-      }),
-    );
-
-    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
-    frontendGcsUrl = await signObjectGetURL(bucketId, FRONTEND_GCS_OBJECT, 7 * 24 * 3600);
-    console.log("[frontend] available at:", frontendGcsUrl);
-
-  } catch (err) {
-    console.error("[frontend] error:", err instanceof Error ? err.message : err);
-  } finally {
-    frontendGenerating = false;
-  }
-}
-
+// On startup: sign the existing GCS frontend object (if any) so /api/download/frontend
+// can serve it immediately. The api-server NEVER regenerates this archive itself —
+// in multi-artifact deployments the frontend's `dist/public/` does not exist on the
+// api-server's filesystem, so any tar attempt here would silently fail and leave the
+// GCS object stale. Regeneration is owned by the island-tacos build's `postbuild`
+// step (artifacts/island-tacos/scripts/upload-tarball.mjs), which runs in the
+// frontend artifact's container where dist/public is guaranteed present.
 async function initFrontendCache(): Promise<void> {
   try {
     const bucket = getBucket();
@@ -216,15 +166,13 @@ async function initFrontendCache(): Promise<void> {
     if (exists) {
       const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
       frontendGcsUrl = await signObjectGetURL(bucketId, FRONTEND_GCS_OBJECT, 7 * 24 * 3600);
-      console.log("[frontend] existing GCS object signed — regenerating in background...");
+      console.log("[frontend] existing GCS object signed — fresh tarball is uploaded by the island-tacos build's postbuild step.");
+    } else {
+      console.warn("[frontend] no GCS object found — UPDATE.bat will fail until the next island-tacos deploy regenerates it.");
     }
-  } catch {
-    // No existing object or GCS unavailable — will generate fresh
+  } catch (err) {
+    console.error("[frontend] init failed:", err instanceof Error ? err.message : err);
   }
-
-  generateAndUploadFrontend().catch((err) => {
-    console.error("[frontend] background generation failed:", err);
-  });
 }
 
 initFrontendCache().catch(console.error);
@@ -255,21 +203,31 @@ router.get("/download/menu-import.sql",      serveFile("local-install/menu-impor
 router.get("/download/menu-patch.sql",       serveFile("local-install/menu-patch.sql",          "menu-patch.sql",       "text/plain; charset=utf-8"));
 router.get("/download/server",               serveFile("artifacts/api-server/dist/index.mjs",   "index.mjs",            "application/octet-stream"));
 
-// Frontend dist download — GCS-backed signed URL (bypasses Replit proxy size limit)
-router.get("/download/frontend", (req: Request, res: Response): void => {
+// Frontend dist download — GCS-backed signed URL (bypasses Replit proxy size limit).
+// The GCS object is written by the island-tacos build's postbuild step; this route
+// only signs it. If the cached signed URL is missing (startup signing failed, or
+// transient bucket error), try once on-demand instead of waiting for a server
+// restart — otherwise the mini PC's UPDATE.bat would 503 indefinitely.
+router.get("/download/frontend", async (_req: Request, res: Response): Promise<void> => {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
   if (frontendGcsUrl) { res.json({ url: frontendGcsUrl }); return; }
 
-  const deadline = Date.now() + 5 * 60 * 1000;
-  const poll = setInterval(() => {
-    if (frontendGcsUrl) { clearInterval(poll); res.json({ url: frontendGcsUrl }); }
-    else if (Date.now() > deadline) {
-      clearInterval(poll);
-      res.status(503).json({ error: "Frontend is still being prepared. Please retry in a minute." });
+  try {
+    const bucket = getBucket();
+    const file = bucket.file(FRONTEND_GCS_OBJECT);
+    const [exists] = await file.exists();
+    if (!exists) {
+      res.status(503).json({ error: "Frontend tarball not found in object storage. Trigger a deploy of the island-tacos artifact to regenerate it." });
+      return;
     }
-  }, 3000);
-  req.on("close", () => clearInterval(poll));
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
+    frontendGcsUrl = await signObjectGetURL(bucketId, FRONTEND_GCS_OBJECT, 7 * 24 * 3600);
+    res.json({ url: frontendGcsUrl });
+  } catch (err) {
+    console.error("[frontend] on-demand sign failed:", err instanceof Error ? err.message : err);
+    res.status(503).json({ error: "Frontend tarball signing failed. Please retry shortly." });
+  }
 });
 // Pre-filled .env — requires { pin: ADMIN_PIN } in the JSON request body.
 // Uses POST (not GET) so the PIN does not appear in URLs, proxy logs, browser
