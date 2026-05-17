@@ -2568,11 +2568,14 @@ function SplitPaymentModal({
 
   const cancelCashCollection = () => {
     if (!cashCollectingFor) return;
-    // User backed out before entering an amount — clear the cash assignment so
-    // the item shows as "Pay with…" again instead of being stuck pending.
     const key = cashCollectingFor;
-    setAssignments(prev => { const next = { ...prev }; delete next[key]; return next; });
-    setCashReceipts(prev => { const next = { ...prev }; delete next[key]; return next; });
+    // If the user was RE-editing an already-collected receipt, cancel just
+    // closes the overlay — keep the prior receipt + assignment intact.
+    // If this was a first-time collection (no receipt yet), drop the cash
+    // assignment so the item doesn't get stuck in "cash pending".
+    if (!cashReceipts[key]) {
+      setAssignments(prev => { const next = { ...prev }; delete next[key]; return next; });
+    }
     setCashCollectingFor(null);
   };
 
