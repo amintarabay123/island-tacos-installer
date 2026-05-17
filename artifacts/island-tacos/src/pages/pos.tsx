@@ -2442,8 +2442,10 @@ function SplitPaymentModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  // Cash-collection step (shown after Confirm if any items were assigned to cash)
-  const [cashCollecting, setCashCollecting] = useState(false);
+  // Per-item cash receipts: key = item.key, value = {tendered, change} once collected.
+  const [cashReceipts, setCashReceipts] = useState<Record<string, { tendered: number; change: number }>>({});
+  // Which item is currently being cash-collected (null = no cash overlay open).
+  const [cashCollectingFor, setCashCollectingFor] = useState<string | null>(null);
   const [cashTendered, setCashTendered] = useState("0");
 
   const lineTotal = (item: CartItem) =>
@@ -2452,35 +2454,76 @@ function SplitPaymentModal({
   const rawTotal = cart.reduce((s, i) => s + lineTotal(i), 0);
   const scale = rawTotal > 0 ? total / rawTotal : 1;
 
-  const assignItems = (keys: string[], method: string) => {
-    setAssignments(prev => { const next = { ...prev }; for (const k of keys) next[k] = method; return next; });
-    setSelected(new Set());
+  const scaledItemAmount = (item: CartItem) => Math.round(lineTotal(item) * scale * 100) / 100;
+
+  // ─── Per-item assignment + cash flow ─────────────────────────────────────
+  const openCashFor = (itemKey: string) => {
+    const item = cart.find(i => i.key === itemKey);
+    if (!item) return;
+    const amt = scaledItemAmount(item);
+    setCashTendered(String(Math.ceil(amt)));
+    setCashCollectingFor(itemKey);
   };
 
-  const assignAll = (method: string) => {
-    const next: Record<string, string> = {};
-    for (const item of cart) next[item.key] = method;
-    setAssignments(next);
-    setSelected(new Set());
+  // Assign one item to a method. Cash assignments immediately open the cash overlay
+  // for that item only (so each customer paying cash gets their own tendered/change).
+  const pickMethodForItem = (itemKey: string, method: string) => {
+    if (!method) {
+      // "Pay with…" / cleared
+      setAssignments(prev => { const next = { ...prev }; delete next[itemKey]; return next; });
+      setCashReceipts(prev => { const next = { ...prev }; delete next[itemKey]; return next; });
+      return;
+    }
+    setAssignments(prev => ({ ...prev, [itemKey]: method }));
+    if (method !== "cash") {
+      // Card/ATH — no collection step, drop any stale cash receipt.
+      setCashReceipts(prev => { const next = { ...prev }; delete next[itemKey]; return next; });
+    } else if (!cashReceipts[itemKey]) {
+      // Cash and not yet collected — prompt now.
+      openCashFor(itemKey);
+    }
   };
+
+  // Bulk assign for multi-select. For cash, marks all selected as cash and opens
+  // the first one's collection step; subsequent ones are queued (the user will be
+  // prompted for each in turn after each Save).
+  const bulkAssign = (keys: string[], method: string) => {
+    setAssignments(prev => { const next = { ...prev }; for (const k of keys) next[k] = method; return next; });
+    setSelected(new Set());
+    if (method !== "cash") {
+      setCashReceipts(prev => {
+        const next = { ...prev }; for (const k of keys) delete next[k]; return next;
+      });
+    } else {
+      const firstUncollected = keys.find(k => !cashReceipts[k]);
+      if (firstUncollected) openCashFor(firstUncollected);
+    }
+  };
+
+  const assignAll = (method: string) => bulkAssign(cart.map(i => i.key), method);
 
   const toggleSelect = (key: string) => {
     setSelected(prev => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   };
 
-  const removeAssignment = (key: string) => {
-    setAssignments(prev => { const next = { ...prev }; delete next[key]; return next; });
+  const clearAll = () => { setAssignments({}); setCashReceipts({}); setSelected(new Set()); };
+
+  // An item is "ready to place" if: it has a non-cash method, OR cash + receipt collected.
+  const itemPaid = (item: CartItem): boolean => {
+    const m = assignments[item.key];
+    if (!m) return false;
+    if (m === "cash") return !!cashReceipts[item.key];
+    return true;
   };
 
-  const clearAll = () => { setAssignments({}); setSelected(new Set()); };
-
-  const allAssigned = cart.length > 0 && cart.every(i => assignments[i.key]);
+  const allPaid = cart.length > 0 && cart.every(itemPaid);
+  const allAssigned = cart.length > 0 && cart.every(i => !!assignments[i.key]);
 
   const methodTotals: Record<string, { amount: number; keys: string[] }> = {};
   let unassignedAmt = 0;
   for (const item of cart) {
     const method = assignments[item.key];
-    const amt = lineTotal(item) * scale;
+    const amt = scaledItemAmount(item);
     if (method) {
       if (!methodTotals[method]) methodTotals[method] = { amount: 0, keys: [] };
       methodTotals[method].amount += amt;
@@ -2490,56 +2533,73 @@ function SplitPaymentModal({
     }
   }
 
-  const cashAmount = Math.round((methodTotals.cash?.amount ?? 0) * 100) / 100;
+  const totalCashChange = Object.values(cashReceipts).reduce((s, r) => s + r.change, 0);
+
+  // ─── Cash overlay state (computed from cashCollectingFor) ────────────────
+  const cashItem = cashCollectingFor ? cart.find(i => i.key === cashCollectingFor) ?? null : null;
+  const cashItemAmount = cashItem ? scaledItemAmount(cashItem) : 0;
   const cashTenderedNum = parseFloat(cashTendered || "0");
-  const cashChange = Math.max(0, Math.round((cashTenderedNum - cashAmount) * 100) / 100);
-  const cashTenderedEnough = cashTenderedNum + 0.005 >= cashAmount;
+  const cashChangeForItem = Math.max(0, Math.round((cashTenderedNum - cashItemAmount) * 100) / 100);
+  const cashTenderedEnough = cashTenderedNum + 0.005 >= cashItemAmount;
 
-  const finalizeOrder = () => {
-    if (submitting || confirmed) return; // guard against double-tap during async onConfirm
-    setSubmitting(true);
-    const groups: SplitGroup[] = Object.entries(methodTotals).map(([method, { amount, keys }]) => ({
-      method, amount: Math.round(amount * 100) / 100, itemKeys: keys,
-    }));
-    const noteParts = groups.map(g => {
-      const names = g.itemKeys.map(k => { const it = cart.find(i => i.key === k); return it ? `${it.quantity}× ${it.name}` : k; }).join(", ");
-      const sm = SPLIT_METHODS.find(x => x.key === g.method);
-      return `${sm?.icon ?? ""} ${sm?.label ?? g.method} ${fmt(g.amount)} — ${names}`;
-    });
-    if (cashAmount > 0 && cashTenderedNum > 0) {
-      noteParts.push(`💵 Cash tendered ${fmt(cashTenderedNum)} | Change ${fmt(cashChange)}`);
-    }
-    onConfirm(groups, `SPLIT:\n${noteParts.join("\n")}`);
-    setConfirmed(true);
-  };
-
-  const handleConfirm = () => {
-    // If cash is part of the split, route through the cash-collection step first
-    // so staff can record amount tendered and see change due (same UX as the
-    // single-cash flow in PaymentModal).
-    if (cashAmount > 0 && !cashCollecting) {
-      setCashTendered(String(Math.ceil(cashAmount)));
-      setCashCollecting(true);
-      return;
-    }
-    finalizeOrder();
-  };
-
-  // Quick-tender suggestions for the cash step (next round-up, $20/$50/$100 if above total).
   const cashQuick = (() => {
     const result: number[] = [];
     const add = (v: number) => {
       const r = Math.round(v * 100) / 100;
-      if (r >= cashAmount && !result.includes(r)) result.push(r);
+      if (r >= cashItemAmount && !result.includes(r)) result.push(r);
     };
-    add(cashAmount);
-    add(Math.ceil(cashAmount / 5) * 5);
-    add(Math.ceil(cashAmount / 10) * 10);
-    add(Math.ceil(cashAmount / 20) * 20);
-    add(50);
-    add(100);
-    return result.sort((a, b) => a - b).slice(0, 5);
+    add(cashItemAmount);
+    add(Math.ceil(cashItemAmount / 5) * 5);
+    add(Math.ceil(cashItemAmount / 10) * 10);
+    add(Math.ceil(cashItemAmount / 20) * 20);
+    add(20); add(50); add(100);
+    return result.filter(v => v >= cashItemAmount).sort((a, b) => a - b).slice(0, 5);
   })();
+
+  const saveCashReceipt = () => {
+    if (!cashCollectingFor || !cashTenderedEnough) return;
+    const key = cashCollectingFor;
+    setCashReceipts(prev => ({ ...prev, [key]: { tendered: cashTenderedNum, change: cashChangeForItem } }));
+    setCashCollectingFor(null);
+    // If other items are assigned to cash but not yet collected, chain to the next one.
+    const nextKey = cart.find(i => i.key !== key && assignments[i.key] === "cash" && !cashReceipts[i.key])?.key;
+    if (nextKey) setTimeout(() => openCashFor(nextKey), 0);
+  };
+
+  const cancelCashCollection = () => {
+    if (!cashCollectingFor) return;
+    // User backed out before entering an amount — clear the cash assignment so
+    // the item shows as "Pay with…" again instead of being stuck pending.
+    const key = cashCollectingFor;
+    setAssignments(prev => { const next = { ...prev }; delete next[key]; return next; });
+    setCashReceipts(prev => { const next = { ...prev }; delete next[key]; return next; });
+    setCashCollectingFor(null);
+  };
+
+  const finalizeOrder = () => {
+    if (submitting || confirmed) return;
+    setSubmitting(true);
+    const groups: SplitGroup[] = Object.entries(methodTotals).map(([method, { amount, keys }]) => ({
+      method, amount: Math.round(amount * 100) / 100, itemKeys: keys,
+    }));
+    const lines: string[] = [];
+    for (const item of cart) {
+      const m = assignments[item.key];
+      if (!m) continue;
+      const sm = SPLIT_METHODS.find(x => x.key === m);
+      const amt = scaledItemAmount(item);
+      const base = `${sm?.icon ?? ""} ${sm?.label ?? m} ${fmt(amt)} — ${item.quantity}× ${item.name}`;
+      if (m === "cash") {
+        const r = cashReceipts[item.key];
+        if (r) lines.push(`${base} (tendered ${fmt(r.tendered)}, change ${fmt(r.change)})`);
+        else lines.push(base);
+      } else {
+        lines.push(base);
+      }
+    }
+    onConfirm(groups, `SPLIT:\n${lines.join("\n")}`);
+    setConfirmed(true);
+  };
 
   // ─── Final confirmation screen (order placed) ────────────────────────────
   if (confirmed) {
@@ -2550,23 +2610,38 @@ function SplitPaymentModal({
             <span className="text-3xl">✅</span>
             <div>
               <p className="text-gray-900 font-black text-lg">Order Placed!</p>
-              <p className="text-green-700 text-sm">Collect from each method below</p>
+              <p className="text-green-700 text-sm">Hand back change if any</p>
             </div>
           </div>
           <div className="p-5 space-y-3">
-            {Object.entries(methodTotals).map(([method, { amount }]) => {
-              const sm = SPLIT_METHODS.find(x => x.key === method);
+            {cart.map(item => {
+              const m = assignments[item.key];
+              if (!m) return null;
+              const sm = SPLIT_METHODS.find(x => x.key === m);
+              const amt = scaledItemAmount(item);
+              const r = m === "cash" ? cashReceipts[item.key] : undefined;
               return (
-                <div key={method} className="flex items-center justify-between bg-gray-100 rounded-xl px-4 py-3.5 border border-gray-200">
-                  <span className="text-gray-900 text-base font-semibold">{sm?.icon} {sm?.label ?? method}</span>
-                  <span className="text-[#F5A623] text-2xl font-black">{fmt(Math.round(amount * 100) / 100)}</span>
+                <div key={item.key} className="bg-gray-100 rounded-xl px-4 py-3 border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-900 text-sm font-semibold truncate">
+                      {item.quantity > 1 && <span className="text-[#F5A623] font-black mr-1">{item.quantity}×</span>}
+                      {item.name}
+                    </span>
+                    <span className="text-[#F5A623] text-lg font-black flex-shrink-0 ml-2">{sm?.icon} {fmt(amt)}</span>
+                  </div>
+                  {r && r.change > 0.005 && (
+                    <div className="mt-1 flex items-center justify-between text-xs">
+                      <span className="text-gray-500">Tendered {fmt(r.tendered)}</span>
+                      <span className="text-green-700 font-bold">Change {fmt(r.change)}</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
-            {cashAmount > 0 && cashChange > 0.005 && (
+            {totalCashChange > 0.005 && (
               <div className="bg-green-50 rounded-xl px-4 py-3 flex items-center justify-between border border-green-300">
-                <span className="text-green-700 text-sm font-semibold">Cash change due</span>
-                <span className="text-green-700 text-xl font-black">{fmt(cashChange)}</span>
+                <span className="text-green-700 text-sm font-semibold">Total change due</span>
+                <span className="text-green-700 text-2xl font-black">{fmt(totalCashChange)}</span>
               </div>
             )}
           </div>
@@ -2580,62 +2655,7 @@ function SplitPaymentModal({
     );
   }
 
-  // ─── Cash collection step (numpad + change) ──────────────────────────────
-  if (cashCollecting) {
-    return (
-      <div className="fixed inset-0 bg-black/75 flex items-end sm:items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-gray-200 flex flex-col max-h-[90vh]">
-          <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-            <div>
-              <p className="text-gray-900 font-black text-lg">💵 Collect Cash</p>
-              <p className="text-gray-500 text-sm">Cash portion of split: <span className="text-[#F5A623] font-bold">{fmt(cashAmount)}</span></p>
-            </div>
-            <button onClick={() => setCashCollecting(false)} className="text-gray-400 hover:text-gray-900 text-2xl font-bold w-8 h-8 flex items-center justify-center transition-colors">×</button>
-          </div>
-
-          <div className="p-5 overflow-y-auto">
-            <p className="text-gray-500 text-sm mb-2">Amount tendered</p>
-            <div className="bg-gray-100 rounded-xl p-3 text-gray-900 text-3xl font-mono font-bold text-right mb-3">
-              ${cashTendered}
-            </div>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {cashQuick.map(q => (
-                <button key={q} onClick={() => setCashTendered(String(q))}
-                  className={`flex-1 min-w-[56px] h-10 rounded-xl text-sm font-semibold transition-colors ${
-                    parseFloat(cashTendered) === q
-                      ? "bg-[#F5A623] text-black"
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-900"
-                  }`}>
-                  {fmt(q)}
-                </button>
-              ))}
-            </div>
-            <Numpad value={cashTendered} onChange={setCashTendered} />
-            {cashTenderedEnough ? (
-              <div className="mt-4 bg-green-50 rounded-xl p-4 text-center border border-green-200">
-                <p className="text-green-700 text-sm font-semibold">Change due</p>
-                <p className="text-green-700 text-3xl font-black mt-1">{fmt(cashChange)}</p>
-              </div>
-            ) : (
-              <div className="mt-4 bg-red-50 rounded-xl p-3 text-center border border-red-200">
-                <p className="text-red-600 text-sm font-semibold">Short by {fmt(cashAmount - cashTenderedNum)}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="p-5 border-t border-gray-200 flex gap-3 flex-shrink-0">
-            <button onClick={() => setCashCollecting(false)} disabled={submitting} className="h-12 px-5 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Back</button>
-            <button onClick={finalizeOrder} disabled={!cashTenderedEnough || submitting}
-              className="flex-1 h-12 rounded-xl font-black text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[#F5A623] hover:bg-[#E09520] text-black">
-              {submitting ? "Placing order…" : "✓ Confirm & Charge"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Main assign-items screen ────────────────────────────────────────────
+  // ─── Main assign-items screen (with optional cash overlay on top) ────────
   return (
     <div className="fixed inset-0 bg-black/75 flex items-end sm:items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-sm sm:max-w-2xl shadow-2xl border border-gray-200 flex flex-col max-h-[90vh]">
@@ -2644,10 +2664,9 @@ function SplitPaymentModal({
         <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between gap-3 flex-shrink-0">
           <div className="min-w-0">
             <p className="text-gray-900 font-black text-lg">✂ Split Payment</p>
-            <p className="text-gray-500 text-sm">Pick a payment method for each item</p>
+            <p className="text-gray-500 text-sm">Pick a method for each item — cash collects right away</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Quick-assign all */}
             <select
               value=""
               onChange={e => { if (e.target.value) assignAll(e.target.value); }}
@@ -2668,16 +2687,21 @@ function SplitPaymentModal({
           {cart.map(item => {
             const isSelected = selected.has(item.key);
             const method = assignments[item.key];
-            const sm = method ? SPLIT_METHODS.find(x => x.key === method) : null;
-            const itemAmt = lineTotal(item) * scale;
+            const isPaid = itemPaid(item);
+            const isCashPending = method === "cash" && !cashReceipts[item.key];
+            const itemAmt = scaledItemAmount(item);
+            const r = method === "cash" ? cashReceipts[item.key] : undefined;
             return (
-              <div key={item.key} className={`rounded-xl border transition-all ${method ? "border-green-700/60 bg-green-50" : isSelected ? "border-[#F5A623] bg-[#F5A623]/10" : "border-gray-200 bg-gray-50"}`}>
+              <div key={item.key} className={`rounded-xl border transition-all ${
+                isPaid ? "border-green-500 bg-green-50"
+                : isCashPending ? "border-amber-400 bg-amber-50"
+                : isSelected ? "border-[#F5A623] bg-[#F5A623]/10"
+                : "border-gray-200 bg-gray-50"
+              }`}>
                 <div className="flex items-center gap-3 px-3 py-3">
-                  {/* Checkbox for multi-select bulk assign */}
                   <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.key)}
                     className="w-5 h-5 rounded accent-orange-400 cursor-pointer flex-shrink-0" />
 
-                  {/* Item name + modifiers */}
                   <div className="flex-1 min-w-0">
                     <p className="text-gray-900 text-sm font-semibold leading-tight">
                       {item.quantity > 1 && <span className="text-[#F5A623] font-black mr-1">{item.quantity}×</span>}
@@ -2686,24 +2710,28 @@ function SplitPaymentModal({
                     {item.modifierSelections.length > 0 && (
                       <p className="text-gray-500 text-xs truncate">{item.modifierSelections.map(m => m.name).join(", ")}</p>
                     )}
+                    {r && (
+                      <p className="text-green-700 text-xs font-semibold mt-0.5">
+                        Tendered {fmt(r.tendered)}{r.change > 0.005 ? ` • Change ${fmt(r.change)}` : ""}
+                      </p>
+                    )}
                   </div>
 
-                  {/* Line total */}
                   <span className="text-gray-900 text-sm font-bold flex-shrink-0 w-16 text-right">{fmt(itemAmt)}</span>
 
-                  {/* Method dropdown — bigger tap target than the old 3-icon row */}
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {isPaid && <span className="text-green-600 text-lg flex-shrink-0" title="Paid">✓</span>}
+                    {method === "cash" && r && (
+                      <button onClick={() => openCashFor(item.key)} title="Re-enter cash"
+                        className="h-11 px-2 text-xs text-gray-500 hover:text-gray-900 underline">edit</button>
+                    )}
                     <select
                       value={method ?? ""}
-                      onChange={e => {
-                        const v = e.target.value;
-                        if (v) assignItems([item.key], v);
-                        else removeAssignment(item.key);
-                      }}
+                      onChange={e => pickMethodForItem(item.key, e.target.value)}
                       className={`h-11 px-3 rounded-xl text-sm font-semibold cursor-pointer border transition-colors min-w-[140px] ${
-                        method
-                          ? "bg-green-100 border-green-300 text-green-900"
-                          : "bg-white border-gray-300 text-gray-700 hover:border-gray-400"
+                        isPaid ? "bg-green-100 border-green-300 text-green-900"
+                        : isCashPending ? "bg-amber-100 border-amber-300 text-amber-900"
+                        : "bg-white border-gray-300 text-gray-700 hover:border-gray-400"
                       }`}
                       aria-label={`Payment method for ${item.name}`}
                     >
@@ -2726,7 +2754,7 @@ function SplitPaymentModal({
               <span className="text-[#F5A623] text-sm font-black flex-shrink-0">{selected.size} item{selected.size > 1 ? "s" : ""}</span>
               <span className="text-gray-500 text-xs flex-shrink-0">pay with:</span>
               {SPLIT_METHODS.map(sm => (
-                <button key={sm.key} onClick={() => assignItems(Array.from(selected), sm.key)}
+                <button key={sm.key} onClick={() => bulkAssign(Array.from(selected), sm.key)}
                   className="flex-1 min-w-[80px] h-10 rounded-xl text-sm font-black transition-colors bg-white hover:bg-gray-100 text-gray-900 border border-gray-300">
                   {sm.icon} {sm.label}
                 </button>
@@ -2748,8 +2776,13 @@ function SplitPaymentModal({
           })}
           {unassignedAmt > 0.005 && (
             <div className="flex justify-between text-sm">
-              <span className="text-red-600">⚠ Unassigned</span>
-              <span className="text-red-600 font-bold">{fmt(Math.round(unassignedAmt * 100) / 100)}</span>
+              <span className="text-amber-700">⚠ Not yet assigned</span>
+              <span className="text-amber-700 font-bold">{fmt(Math.round(unassignedAmt * 100) / 100)}</span>
+            </div>
+          )}
+          {allAssigned && !allPaid && (
+            <div className="flex justify-between text-sm">
+              <span className="text-amber-700">⚠ Cash still to collect for {cart.filter(i => assignments[i.key] === "cash" && !cashReceipts[i.key]).length} item(s)</span>
             </div>
           )}
           <div className="flex justify-between text-base font-black border-t border-gray-200 pt-2">
@@ -2768,12 +2801,65 @@ function SplitPaymentModal({
               Clear
             </button>
           )}
-          <button onClick={handleConfirm} disabled={!allAssigned || submitting}
+          <button onClick={finalizeOrder} disabled={!allPaid || submitting}
             className="flex-1 h-12 rounded-xl font-black text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[#F5A623] hover:bg-[#E09520] text-black">
-            {submitting ? "Placing order…" : allAssigned ? (cashAmount > 0 ? "Next: Collect Cash" : "✓ Confirm & Charge") : "Assign all items first"}
+            {submitting ? "Placing order…" : allPaid ? "✓ Place Order" : !allAssigned ? "Assign all items first" : "Collect remaining cash first"}
           </button>
         </div>
       </div>
+
+      {/* Per-item cash overlay — opens when user picks Cash for an item */}
+      {cashItem && (
+        <div className="fixed inset-0 bg-black/85 z-[60] flex items-end sm:items-center justify-center p-4" onClick={cancelCashCollection}>
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-gray-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+              <div className="min-w-0">
+                <p className="text-gray-900 font-black text-base truncate">💵 Cash for {cashItem.quantity > 1 ? `${cashItem.quantity}× ` : ""}{cashItem.name}</p>
+                <p className="text-gray-500 text-sm">Amount due: <span className="text-[#F5A623] font-bold">{fmt(cashItemAmount)}</span></p>
+              </div>
+              <button onClick={cancelCashCollection} className="text-gray-400 hover:text-gray-900 text-2xl font-bold w-8 h-8 flex items-center justify-center transition-colors">×</button>
+            </div>
+
+            <div className="p-5 overflow-y-auto">
+              <p className="text-gray-500 text-sm mb-2">Amount tendered</p>
+              <div className="bg-gray-100 rounded-xl p-3 text-gray-900 text-3xl font-mono font-bold text-right mb-3">
+                ${cashTendered}
+              </div>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {cashQuick.map(q => (
+                  <button key={q} onClick={() => setCashTendered(String(q))}
+                    className={`flex-1 min-w-[56px] h-10 rounded-xl text-sm font-semibold transition-colors ${
+                      parseFloat(cashTendered) === q
+                        ? "bg-[#F5A623] text-black"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-900"
+                    }`}>
+                    {fmt(q)}
+                  </button>
+                ))}
+              </div>
+              <Numpad value={cashTendered} onChange={setCashTendered} />
+              {cashTenderedEnough ? (
+                <div className="mt-4 bg-green-50 rounded-xl p-4 text-center border border-green-200">
+                  <p className="text-green-700 text-sm font-semibold">Change due</p>
+                  <p className="text-green-700 text-3xl font-black mt-1">{fmt(cashChangeForItem)}</p>
+                </div>
+              ) : (
+                <div className="mt-4 bg-red-50 rounded-xl p-3 text-center border border-red-200">
+                  <p className="text-red-600 text-sm font-semibold">Short by {fmt(cashItemAmount - cashTenderedNum)}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-gray-200 flex gap-3 flex-shrink-0">
+              <button onClick={cancelCashCollection} className="h-12 px-5 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-100 transition-colors">Cancel</button>
+              <button onClick={saveCashReceipt} disabled={!cashTenderedEnough}
+                className="flex-1 h-12 rounded-xl font-black text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[#F5A623] hover:bg-[#E09520] text-black">
+                ✓ Save & Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
