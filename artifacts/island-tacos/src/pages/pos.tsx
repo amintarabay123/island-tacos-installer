@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { memo, useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { RefreshCw, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
@@ -1356,8 +1356,19 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
 }
 
 // ─── Item Card ────────────────────────────────────────────────────────────────
+// MEMOIZED. The parent POS component re-renders every 8s when the order poll
+// returns, and on every cart change, search keystroke, etc. Without this memo,
+// 100+ ItemCard + RetryImg components re-render and remount their image state
+// each time → 1-2s main-thread freeze on the mini PC, exactly matching the
+// "POS randomly freezes while scrolling" symptom reported 2026-05-20.
+//
+// Comparator intentionally ignores `onClick` identity — the parent recreates
+// it inline (`() => addItem(item)`) on every render, but the behaviour is
+// identical for a given `item`, so a referential change is meaningless. The
+// `item` itself comes from state set once by the menu fetch, so identity is
+// stable across renders.
 
-function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
+const ItemCard = memo(function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -1388,7 +1399,7 @@ function ItemCard({ item, onClick }: { item: MenuItem; onClick: () => void }) {
       </span>
     </button>
   );
-}
+}, (prev, next) => prev.item === next.item);
 
 // ─── Receipts Drawer ─────────────────────────────────────────────────────────
 
