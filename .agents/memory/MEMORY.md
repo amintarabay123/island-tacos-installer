@@ -1,0 +1,3 @@
+- [Pending-order popup backlog gaps](pending-order-popup-gaps.md) — POS new-order popup has no auto-expiry, no triage UI, no batched accept/reject; tackle together next time we touch it.
+- [POS stale-closure trap](pos-stale-closure-trap.md) — memoized ItemCard caches its onClick; any cart mutator reachable from it must use functional setCart(prev=>…) or it wipes state.
+- [Resumed-ticket PATCH-vs-recreate rule](resumed-ticket-patch-rule.md) — PATCH /api/orders/:id doesn't accept items, so any structural change to a resumed ticket MUST go through cancel+recreate, not PATCH.
