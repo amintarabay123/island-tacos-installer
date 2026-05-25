@@ -2919,6 +2919,21 @@ export default function POS() {
   const [orderNotes, setOrderNotes] = useState("");
   const [discount, setDiscount] = useState(0);
   const [resumedOrderId, setResumedOrderId] = useState<number | null>(null);
+  // Snapshot of resumed-ticket lines (key → quantity) taken at resume time.
+  // Used to detect whether the cashier modified the resumed lines (removed an
+  // item or changed a quantity). If unchanged, we PATCH the existing order
+  // in-place (keeps it on KDS). If ANY structural change happened, we MUST
+  // cancel + recreate so the new item list actually persists — the PATCH
+  // endpoint does not accept an items array, so without this check a removed
+  // item silently stays on the saved order (bug seen 2026-05-20).
+  const resumedSnapshotRef = useRef<Map<string, number>>(new Map());
+  const resumedItemsUnchanged = useCallback((): boolean => {
+    const snap = resumedSnapshotRef.current;
+    if (snap.size === 0) return true; // not a resumed ticket
+    const madeLines = cart.filter(c => c.alreadyMade);
+    if (madeLines.length !== snap.size) return false; // line removed
+    return madeLines.every(c => snap.get(c.key) === c.quantity);
+  }, [cart]);
 
   const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -3296,6 +3311,7 @@ export default function POS() {
 
   const clearCart = () => {
     setCart([]); setCustomerName(""); setCustomerPhone(""); setOrderNotes(""); setDiscount(0); setResumedOrderId(null);
+    resumedSnapshotRef.current = new Map();
   };
 
   // Place order
@@ -3304,10 +3320,13 @@ export default function POS() {
     setSubmitting(true);
     try {
       let order: Order;
-      const noNewItems = resumedOrderId && cart.every(c => c.alreadyMade);
+      // PATCH-in-place only when no new items AND no resumed lines were
+      // removed/qty-changed — the PATCH endpoint doesn't accept items, so any
+      // structural change must go through cancel + recreate or it's silently lost.
+      const noNewItems = resumedOrderId && cart.every(c => c.alreadyMade) && resumedItemsUnchanged();
 
       if (noNewItems) {
-        // No new items added — patch the existing order in-place so it stays on KDS.
+        // Unchanged resumed ticket — patch the existing order in-place so it stays on KDS.
         // Cancel+create would remove it from KDS and the new order would be invisible
         // (all items alreadyMade → KDS filter skips it entirely).
         const notes = (overrideNote ?? orderNotes) || undefined;
@@ -3443,7 +3462,9 @@ export default function POS() {
       const noteWithSplit = splitNote
         ? (orderNotes ? `${orderNotes}\n${splitNote}` : splitNote)
         : (orderNotes || undefined);
-      const noNewItems = resumedOrderId && cart.every(c => c.alreadyMade);
+      // Same guard as placeOrder: PATCH only when nothing about the resumed
+      // lines has changed; structural edits force cancel + recreate.
+      const noNewItems = resumedOrderId && cart.every(c => c.alreadyMade) && resumedItemsUnchanged();
 
       if (noNewItems) {
         // No new items — patch existing order's payment without touching status or KDS state
@@ -3536,6 +3557,8 @@ export default function POS() {
 
   const handleResume = (items: CartItem[], name: string, phone: string, note: string, disc: number, orderId: number) => {
     setCart(items); setCustomerName(name); setCustomerPhone(phone); setOrderNotes(note); setDiscount(disc); setResumedOrderId(orderId);
+    // Snapshot original lines so we can later detect removals / qty edits.
+    resumedSnapshotRef.current = new Map(items.map(i => [i.key, i.quantity]));
   };
 
   const handleTicketPaymentComplete = (order: Order, tendered?: number) => {
