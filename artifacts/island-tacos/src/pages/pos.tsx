@@ -3249,16 +3249,24 @@ export default function POS() {
     // the resumed ticket keep their alreadyMade=true flag, which is what protects
     // kitchen items from being re-fired to KDS — including when a non-KDS line
     // (e.g. a drink) is the only thing being added.
+    //
+    // IMPORTANT: use the functional form of setCart. This function is called via
+    // the memoized ItemCard's onClick, which caches a closure over an OLDER
+    // `cart` value. Reading `cart` from this closure would wipe items added
+    // after the ItemCard last rendered — e.g. resuming a held ticket then
+    // tapping a new item caused the new item to replace all resumed lines
+    // (bug seen 2026-05-25, caused by the ItemCard memo added 2026-05-25).
     const unitPrice = priceOverride ?? item.price;
-    // Open-price lines are always unique (one-off custom item) — never merge.
-    const existingKey = (!note && priceOverride === undefined) ? cart.find(c =>
-      c.menuItemId === item.id && c.notes === "" && c.priceOverride === undefined &&
-      JSON.stringify(c.modifierSelections) === JSON.stringify(sels)
-    )?.key : undefined;
-    if (existingKey) {
-      setCart(cart.map(c => c.key === existingKey ? { ...c, quantity: c.quantity + 1 } : c));
-    } else {
-      setCart([...cart, {
+    setCart(prev => {
+      // Open-price lines are always unique (one-off custom item) — never merge.
+      const existingKey = (!note && priceOverride === undefined) ? prev.find(c =>
+        c.menuItemId === item.id && c.notes === "" && c.priceOverride === undefined &&
+        JSON.stringify(c.modifierSelections) === JSON.stringify(sels)
+      )?.key : undefined;
+      if (existingKey) {
+        return prev.map(c => c.key === existingKey ? { ...c, quantity: c.quantity + 1 } : c);
+      }
+      return [...prev, {
         key: uid(),
         menuItemId: item.id,
         name: item.name,
@@ -3267,17 +3275,17 @@ export default function POS() {
         notes: note,
         modifierSelections: sels,
         ...(priceOverride !== undefined ? { priceOverride } : {}),
-      }]);
-    }
+      }];
+    });
     // Auto-switch to cart panel on mobile
     if (window.innerWidth < 640) setMobileView("cart");
   };
 
-  const removeItem = (key: string) => setCart(cart.filter(c => c.key !== key));
+  const removeItem = (key: string) => setCart(prev => prev.filter(c => c.key !== key));
   const changeQty = (key: string, delta: number) => {
-    setCart(cart.map(c => c.key === key ? { ...c, quantity: Math.max(1, c.quantity + delta) } : c));
+    setCart(prev => prev.map(c => c.key === key ? { ...c, quantity: Math.max(1, c.quantity + delta) } : c));
   };
-  const setItemNote = (key: string, note: string) => setCart(cart.map(c => c.key === key ? { ...c, notes: note } : c));
+  const setItemNote = (key: string, note: string) => setCart(prev => prev.map(c => c.key === key ? { ...c, notes: note } : c));
 
   // Re-open the modifier modal pre-filled with a cart item's current selections
   const editCartItem = async (cartItem: CartItem) => {
