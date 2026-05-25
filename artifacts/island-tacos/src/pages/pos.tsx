@@ -4056,12 +4056,22 @@ export default function POS() {
                         ✕ Reject
                       </button>
                     </div>
-                    <button
-                      onClick={() => setPopupOrders(prev => prev.filter((o) => o.id !== order.id))}
-                      className="w-full h-9 rounded-xl text-gray-400 hover:text-gray-700 text-sm transition-colors"
-                    >
-                      Handle Later
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setPopupOrders(prev => prev.filter((o) => o.id !== order.id))}
+                        className="flex-1 h-9 rounded-xl text-gray-400 hover:text-gray-700 text-sm transition-colors"
+                      >
+                        Handle Later
+                      </button>
+                      {popupOrders.length > 1 && (
+                        <button
+                          onClick={() => setPopupOrders([])}
+                          className="flex-1 h-9 rounded-xl text-gray-400 hover:text-gray-700 text-sm transition-colors border border-gray-200"
+                        >
+                          Dismiss All ({popupOrders.length})
+                        </button>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
