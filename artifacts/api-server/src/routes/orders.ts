@@ -941,6 +941,21 @@ router.post("/orders/:id/add-items", requireStaffAuth, async (req, res): Promise
     });
   }
 
+  // If the kitchen has already started this order, mark existing items as alreadyMade
+  // so the KDS addon-card split fires: new items get their own "Accept" card while
+  // the original items stay in their current column (Preparing / Ready).
+  // For "confirmed" orders (kitchen hasn't touched it yet), skip — all items
+  // should appear together in the same Accept card.
+  if (order.status === "preparing" || order.status === "ready") {
+    await db
+      .update(orderItemsTable)
+      .set({ alreadyMade: true })
+      .where(and(
+        eq(orderItemsTable.orderId, order.id),
+        eq(orderItemsTable.alreadyMade, false),
+      ));
+  }
+
   await db.insert(orderItemsTable).values(newItemsData.map(d => ({ ...d, orderId: order.id })));
 
   // Recalculate order totals
