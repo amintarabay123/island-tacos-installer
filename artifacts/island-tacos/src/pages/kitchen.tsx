@@ -170,14 +170,16 @@ export default function Kitchen() {
     return () => clearInterval(id);
   }, [fetchCategoryData]);
 
-  // Returns true if an item should appear on the KDS (based on its category's sendToKds flag)
-  const isKdsItem = (item: OrderItem): boolean => {
+  // Returns true if an item should appear on the KDS (based on its category's sendToKds flag).
+  // Wrapped in useCallback so fetchOrders can list it as a dependency without triggering
+  // the polling loop on every render — this only recreates when category data actually changes.
+  const isKdsItem = useCallback((item: OrderItem): boolean => {
     if (!item.menuItemId) return true; // unknown item — show it to be safe
     const categoryId = menuItemCategoryMap.get(item.menuItemId);
     if (categoryId === undefined) return true; // no category info — show it
     const cat = kdsCategories.find(c => c.id === categoryId);
     return cat ? cat.sendToKds : true; // default to showing
-  };
+  }, [kdsCategories, menuItemCategoryMap]);
 
   // Uncollected order tracking: orderId → timestamp when we first saw it as "ready"
   const readyTimestampsRef = useRef<Map<number, number>>(new Map());
@@ -452,7 +454,7 @@ export default function Kitchen() {
     } catch {
       setError("Connection lost — retrying…");
     }
-  }, [playChime, playUrgentChime, sendNotification]);
+  }, [playChime, playUrgentChime, sendNotification, isKdsItem]);
 
   // Use recursive setTimeout instead of setInterval so next poll only starts
   // after the previous fetch completes — prevents overlapping in-flight requests
