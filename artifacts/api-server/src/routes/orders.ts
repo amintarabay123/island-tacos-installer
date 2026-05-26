@@ -860,6 +860,109 @@ router.post("/orders/:id/items/mark-made", requireStaffAuth, async (req, res): P
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
 
+/**
+ * Append new items to an existing order without cancelling/recreating it.
+ *
+ * Used by the POS when a customer adds items to a held or in-progress ticket.
+ * Existing items keep their alreadyMade flag; new items are inserted with alreadyMade=false.
+ * The order subtotal and total are recalculated to reflect the additions.
+ *
+ * This replaces the cancel+recreate pattern for the "add-on only" case, which was
+ * causing (1) the order to disappear from the KDS when only a drink was added and
+ * (2) items in "Preparing" to jump back to the "Accept" column.
+ */
+router.post("/orders/:id/add-items", requireStaffAuth, async (req, res): Promise<void> => {
+  const params = GetOrderParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+
+  const parsed = CreateOrderBody.shape.items.safeParse(
+    Array.isArray((req.body as { items?: unknown }).items) ? (req.body as { items: unknown[] }).items : null
+  );
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+  if (parsed.data.length === 0) { res.status(400).json({ error: "Must supply at least one item" }); return; }
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.data.id));
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+  if (order.status === "cancelled") { res.status(400).json({ error: "Cannot add items to a cancelled order" }); return; }
+
+  // Validate + price each new item (same logic as order creation)
+  const nonNullIds = parsed.data.map((i) => i.menuItemId).filter((id): id is number => id != null);
+  const menuItems = nonNullIds.length > 0
+    ? await db.select().from(menuItemsTable).where(
+        nonNullIds.length === 1 ? eq(menuItemsTable.id, nonNullIds[0]) : inArray(menuItemsTable.id, nonNullIds)
+      )
+    : [];
+  const menuItemMap = new Map(menuItems.map(m => [m.id, m]));
+
+  type ModifierSelection = { modifierId: string; optionId: string; name: string; price: number };
+  let addedSubtotal = 0;
+  const newItemsData: {
+    menuItemId: number | null; menuItemName: string; menuItemPrice: string;
+    quantity: number; notes: string | null; modifierSelections: ModifierSelection[] | null;
+    alreadyMade: boolean; subtotal: string;
+  }[] = [];
+
+  for (const item of parsed.data) {
+    let itemName: string;
+    let price: number;
+    if (item.menuItemId == null) {
+      if (!item.menuItemName || typeof item.menuItemPrice !== "number") {
+        res.status(400).json({ error: "Deleted menu item must supply menuItemName and menuItemPrice" }); return;
+      }
+      itemName = item.menuItemName;
+      price = item.menuItemPrice;
+    } else {
+      const menuItem = menuItemMap.get(item.menuItemId);
+      if (!menuItem) { res.status(400).json({ error: `Menu item ${item.menuItemId} not found` }); return; }
+      if (!menuItem.available) { res.status(400).json({ error: `Menu item "${menuItem.name}" is not available` }); return; }
+      if (menuItem.openPrice) {
+        const override = item.priceOverride;
+        if (typeof override !== "number" || !Number.isFinite(override) || override <= 0) {
+          res.status(400).json({ error: `"${menuItem.name}" requires a price greater than 0` }); return;
+        }
+        price = override;
+      } else {
+        price = parseFloat(menuItem.price as unknown as string);
+      }
+      itemName = menuItem.name;
+    }
+    const modifierTotal = (item.modifierSelections ?? []).reduce((s: number, m: { price?: number }) => s + (m.price ?? 0), 0);
+    const itemSubtotal = (price + modifierTotal) * item.quantity;
+    addedSubtotal += itemSubtotal;
+    newItemsData.push({
+      menuItemId: item.menuItemId ?? null,
+      menuItemName: itemName,
+      menuItemPrice: String(price),
+      quantity: item.quantity,
+      notes: item.notes ?? null,
+      modifierSelections: item.modifierSelections ?? null,
+      alreadyMade: false,
+      subtotal: String(itemSubtotal),
+    });
+  }
+
+  await db.insert(orderItemsTable).values(newItemsData.map(d => ({ ...d, orderId: order.id })));
+
+  // Recalculate order totals
+  const oldSubtotal = parseFloat(order.subtotal as unknown as string);
+  const discount = parseFloat((order.discountAmount ?? "0") as unknown as string);
+  const newSubtotal = oldSubtotal + addedSubtotal;
+  const newSubtotalAfterDiscount = Math.max(0, newSubtotal - discount);
+  const newTax = Math.round(newSubtotalAfterDiscount * TAX_RATE * 100) / 100;
+  const newTotal = Math.round((newSubtotalAfterDiscount + newTax) * 100) / 100;
+
+  const [updatedOrder] = await db
+    .update(ordersTable)
+    .set({ subtotal: String(newSubtotal), tax: String(newTax), total: String(newTotal) })
+    .where(eq(ordersTable.id, order.id))
+    .returning();
+
+  const allItems = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+
+  broadcastOrderEvent("order_updated", order.id);
+  res.json(formatOrder(updatedOrder as unknown as Record<string, unknown>, allItems as unknown as Record<string, unknown>[]));
+});
+
 router.post("/orders/:id/refund", requireStaffAuth, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const { amount, reason, refundMethod = "cash" } = req.body as { amount: number; reason?: string; refundMethod?: string };

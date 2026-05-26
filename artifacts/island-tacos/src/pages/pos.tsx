@@ -3358,12 +3358,18 @@ export default function POS() {
       // PATCH-in-place only when no new items AND no resumed lines were
       // removed/qty-changed — the PATCH endpoint doesn't accept items, so any
       // structural change must go through cancel + recreate or it's silently lost.
-      const noNewItems = resumedOrderId && cart.every(c => c.alreadyMade) && resumedItemsUnchanged();
+      // Detect add-on scenario: new items added to resumed ticket but original lines
+      // untouched (no qty changes, no removals). Use add-items endpoint instead of
+      // cancel+recreate so the original order keeps its KDS position and status column.
+      // cancel+recreate was causing: (1) order disappearing from KDS when only a drink
+      // was added, and (2) items in "Preparing" jumping back to "Accept".
+      const newCartItems = cart.filter(c => !c.alreadyMade);
+      const existingUnchanged = resumedItemsUnchanged();
+      const noNewItems = resumedOrderId && newCartItems.length === 0 && existingUnchanged;
+      const addOnOnly = resumedOrderId && newCartItems.length > 0 && existingUnchanged;
 
       if (noNewItems) {
         // Unchanged resumed ticket — patch the existing order in-place so it stays on KDS.
-        // Cancel+create would remove it from KDS and the new order would be invisible
-        // (all items alreadyMade → KDS filter skips it entirely).
         const notes = (overrideNote ?? orderNotes) || undefined;
         const patchBody: Record<string, unknown> = { ...(notes ? { notes } : {}) };
         if (paymentStatus === "paid") {
@@ -3384,8 +3390,54 @@ export default function POS() {
         }
         order = await r.json();
         if (!order?.items) throw new Error("Order response missing items");
+      } else if (addOnOnly) {
+        // Add-on items only, existing lines untouched — append to the existing order.
+        // The original order stays on KDS with its current status and column position.
+        const addR = await fetch(`/api/orders/${resumedOrderId}/add-items`, {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            items: newCartItems.map(c => {
+              const mi = allItems.find(i => i.id === c.menuItemId);
+              const override = c.priceOverride ?? (mi?.openPrice ? c.price : undefined);
+              return {
+                menuItemId: c.menuItemId ?? null,
+                menuItemName: c.name,
+                menuItemPrice: c.price,
+                quantity: c.quantity,
+                notes: c.notes || null,
+                modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
+                ...(override !== undefined ? { priceOverride: override } : {}),
+              };
+            }),
+          }),
+        });
+        if (!addR.ok) {
+          const errData = await addR.json().catch(() => ({})) as { error?: string };
+          throw new Error(errData.error ?? `Failed to add items (${addR.status})`);
+        }
+        // PATCH payment / hold state on the same order
+        const notes = (overrideNote ?? orderNotes) || undefined;
+        const patchBody: Record<string, unknown> = { ...(notes ? { notes } : {}) };
+        if (paymentStatus === "paid") {
+          patchBody.actualPaymentMethod = method;
+          patchBody.paymentStatus = "paid";
+          patchBody.status = "completed";
+          if (tendered != null) patchBody.amountTendered = tendered;
+        }
+        const patchR = await fetch(`/api/orders/${resumedOrderId}`, {
+          method: "PATCH", credentials: "include",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify(patchBody),
+        });
+        if (!patchR.ok) {
+          const errData = await patchR.json().catch(() => ({})) as { error?: string };
+          throw new Error(errData.error ?? `Order failed (${patchR.status})`);
+        }
+        order = await patchR.json();
+        if (!order?.items) throw new Error("Order response missing items");
       } else {
-        // New items were added — cancel old ticket and create a fresh order
+        // Existing items were changed (qty or removed) — cancel old and create fresh order
         if (resumedOrderId) {
           const cancelRes = await fetch(`/api/orders/${resumedOrderId}`, {
             method: "PATCH", credentials: "include",
@@ -3466,11 +3518,11 @@ export default function POS() {
         setReceiptModal({ order, tendered });
         // Paying a resumed ticket removes it from the held count; new paid orders don't affect it
         setTicketCount(tc => Math.max(0, tc + (resumedOrderId ? -1 : 0)));
-      } else if (!noNewItems) {
+      } else if (!noNewItems && !addOnOnly) {
         // First-time hold of a brand-new ticket: add it to the held count
         setTicketCount(tc => tc + 1);
       }
-      // Re-hold (noNewItems && pending): ticket was already counted — no change needed
+      // Re-hold (noNewItems or addOnOnly + pending): ticket already counted — no change
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : "Failed to place order. Please try again.");
@@ -3501,9 +3553,11 @@ export default function POS() {
       const noteWithSplit = splitNote
         ? (orderNotes ? `${orderNotes}\n${splitNote}` : splitNote)
         : (orderNotes || undefined);
-      // Same guard as placeOrder: PATCH only when nothing about the resumed
-      // lines has changed; structural edits force cancel + recreate.
-      const noNewItems = resumedOrderId && cart.every(c => c.alreadyMade) && resumedItemsUnchanged();
+      // Same three-way guard as placeOrder: PATCH-in-place / add-items / cancel+recreate.
+      const hpNewCartItems = cart.filter(c => !c.alreadyMade);
+      const hpExistingUnchanged = resumedItemsUnchanged();
+      const noNewItems = resumedOrderId && hpNewCartItems.length === 0 && hpExistingUnchanged;
+      const addOnOnly = resumedOrderId && hpNewCartItems.length > 0 && hpExistingUnchanged;
 
       if (noNewItems) {
         // No new items — patch existing order's payment without touching status or KDS state
@@ -3520,8 +3574,46 @@ export default function POS() {
           const errData = await r.json().catch(() => ({})) as { error?: string };
           throw new Error(errData.error ?? `Order failed (${r.status})`);
         }
+      } else if (addOnOnly) {
+        // Add-on items only — append to existing order, then patch payment
+        const addR = await fetch(`/api/orders/${resumedOrderId}/add-items`, {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            items: hpNewCartItems.map(c => {
+              const mi = allItems.find(i => i.id === c.menuItemId);
+              const override = c.priceOverride ?? (mi?.openPrice ? c.price : undefined);
+              return {
+                menuItemId: c.menuItemId ?? null,
+                menuItemName: c.name,
+                menuItemPrice: c.price,
+                quantity: c.quantity,
+                notes: c.notes || null,
+                modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
+                ...(override !== undefined ? { priceOverride: override } : {}),
+              };
+            }),
+          }),
+        });
+        if (!addR.ok) {
+          const errData = await addR.json().catch(() => ({})) as { error?: string };
+          throw new Error(errData.error ?? `Failed to add items (${addR.status})`);
+        }
+        const patchR = await fetch(`/api/orders/${resumedOrderId}`, {
+          method: "PATCH", credentials: "include",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            actualPaymentMethod: method,
+            paymentStatus: "paid",
+            ...(noteWithSplit ? { notes: noteWithSplit } : {}),
+          }),
+        });
+        if (!patchR.ok) {
+          const errData = await patchR.json().catch(() => ({})) as { error?: string };
+          throw new Error(errData.error ?? `Order failed (${patchR.status})`);
+        }
       } else {
-        // New items added — cancel old ticket and create a new one
+        // Existing items were changed — cancel old ticket and create a new one
         if (resumedOrderId) {
           const cancelRes = await fetch(`/api/orders/${resumedOrderId}`, {
             method: "PATCH", credentials: "include",
@@ -3548,9 +3640,6 @@ export default function POS() {
             ...(tendered != null ? { amountTendered: tendered } : {}),
             notes: noteWithSplit || null,
             items: cart.map(c => {
-              // Resumed tickets lose the priceOverride flag in transit (the persisted order
-              // item only carries the unit price). Re-derive it for any line whose menu item
-              // is openPrice so the server-side validation is satisfied on resubmit.
               const mi = allItems.find(i => i.id === c.menuItemId);
               const override = c.priceOverride ?? (mi?.openPrice ? c.price : undefined);
               return {
@@ -3573,7 +3662,8 @@ export default function POS() {
       }
       clearCart();
       setResumedOrderId(null);
-      setTicketCount(tc => tc + (noNewItems ? 0 : 1));
+      // addOnOnly: ticket was already held, now paid — decrement same as noNewItems path
+      setTicketCount(tc => tc + (noNewItems || addOnOnly ? 0 : 1));
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to hold order. Please try again.");
     } finally {
