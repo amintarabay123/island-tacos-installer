@@ -203,7 +203,7 @@ function Numpad({ value, onChange }: { value: string; onChange: (v: string) => v
     set(value === "0" ? k : value + k);
     setPristine(false);
   };
-  const keys = ["7","8","9","4","5","6","1","2","3","00","0","⌫"];
+  const keys = ["7","8","9","4","5","6","1","2","3",".","0","⌫"];
   return (
     <div className="grid grid-cols-3 gap-2 mt-3">
       {keys.map(k => (
