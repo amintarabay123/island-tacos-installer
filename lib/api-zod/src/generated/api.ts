@@ -475,6 +475,89 @@ export const UpdateOrderStatusResponse = zod.object({
 });
 
 /**
+ * Used by the Kitchen Display when staff finish making the items on an
+ADD-ON card. Sets `alreadyMade = true` on the listed `order_items`
+rows that belong to the given order. Does NOT change the order's
+overall status — the parent order may still be in `preparing`.
+
+ * @summary Mark a subset of an order's items as already made (staff/KDS)
+ */
+export const MarkOrderItemsMadeParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const MarkOrderItemsMadeBody = zod.object({
+  itemIds: zod
+    .array(zod.number())
+    .describe(
+      "IDs of order_items rows on this order to mark as alreadyMade=true.",
+    ),
+});
+
+export const MarkOrderItemsMadeResponse = zod.object({
+  id: zod.number(),
+  confirmationCode: zod.string(),
+  customerName: zod.string(),
+  customerEmail: zod.string().nullish(),
+  customerPhone: zod.string().nullish(),
+  orderType: zod.enum(["pickup", "delivery"]),
+  deliveryAddress: zod.string().nullish(),
+  status: zod.enum([
+    "pending",
+    "confirmed",
+    "preparing",
+    "ready",
+    "completed",
+    "cancelled",
+  ]),
+  paymentStatus: zod.enum(["pending", "paid", "failed", "refunded"]),
+  paymentMethod: zod.enum([
+    "card",
+    "athmovil",
+    "cash",
+    "split",
+    "complimentary",
+  ]),
+  source: zod.enum(["online", "pos", "phone"]).nullish(),
+  subtotal: zod.number(),
+  discountAmount: zod.number(),
+  tax: zod.number(),
+  deliveryFee: zod.number(),
+  total: zod.number(),
+  amountTendered: zod.number().nullish(),
+  notes: zod.string().nullish(),
+  cancellationReason: zod.string().nullish(),
+  kdsCleared: zod.boolean().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      orderId: zod.number(),
+      menuItemId: zod.number(),
+      menuItemName: zod.string(),
+      menuItemPrice: zod.number(),
+      quantity: zod.number(),
+      notes: zod.string().nullish(),
+      subtotal: zod.number(),
+      modifierSelections: zod
+        .array(
+          zod.object({
+            modifierId: zod.string(),
+            optionId: zod.string(),
+            name: zod.string(),
+            price: zod.number(),
+          }),
+        )
+        .nullish(),
+      alreadyMade: zod.boolean().nullish(),
+    }),
+  ),
+  estimatedReadyAt: zod.coerce.date().nullish(),
+  scheduledPickupAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
  * @summary Track an order by confirmation code
  */
 export const TrackOrderParams = zod.object({

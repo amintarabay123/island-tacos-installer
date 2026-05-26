@@ -131,6 +131,11 @@ export default function Kitchen() {
     typeof Notification !== "undefined" ? Notification.permission : "denied"
   );
   const prevIdsRef = useRef<Set<number>>(new Set());
+  // Tracks which order_item IDs were "not yet made KDS items" on the previous
+  // fetch. Used to detect ADD-ONS — items appearing on an order we already
+  // knew about. New items on a brand-new order are detected by prevIdsRef
+  // instead and chime via the normal new-order path.
+  const prevNewItemIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const chimeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -372,10 +377,19 @@ export default function Kitchen() {
         }
       });
 
+      // Build the set of "currently un-made KDS item IDs" for next-fetch diffing.
+      const currentNewItemIds = new Set<number>();
+      for (const o of active) {
+        for (const item of o.items) {
+          if (!item.alreadyMade && isKdsItem(item)) currentNewItemIds.add(item.id);
+        }
+      }
+
       if (isFirstFetchRef.current) {
         // Snapshot existing IDs on load — don't chime for already-present orders
         isFirstFetchRef.current = false;
         prevIdsRef.current = new Set(active.map((o) => o.id));
+        prevNewItemIdsRef.current = currentNewItemIds;
         // For already-ready orders on load, assume they've been ready since now
         // so we don't immediately false-alert on restart
         active.filter((o) => o.status === "ready").forEach((o) => {
@@ -389,8 +403,22 @@ export default function Kitchen() {
           !prevIdsRef.current.has(o.id) &&
           o.items.some(item => !item.alreadyMade && isKdsItem(item))
         );
-        if (newConfirmed.length > 0) {
-          // Restart the 3-chime burst for this new batch
+
+        // Detect ADD-ON items: un-made KDS items appearing on orders we
+        // already knew about. These are the items POS sent through the
+        // cancel+create-resumed-ticket path with alreadyMade=false.
+        let addonOrderCount = 0;
+        for (const o of active) {
+          if (!prevIdsRef.current.has(o.id)) continue; // brand-new order — counted above
+          const hasNewAddon = o.items.some(item =>
+            !item.alreadyMade && isKdsItem(item) && !prevNewItemIdsRef.current.has(item.id)
+          );
+          if (hasNewAddon) addonOrderCount += 1;
+        }
+
+        if (newConfirmed.length > 0 || addonOrderCount > 0) {
+          // Restart the 3-chime burst for this new batch (covers both new orders
+          // and add-ons — cooks need the same level of attention either way).
           if (chimeIntervalRef.current) { clearInterval(chimeIntervalRef.current); chimeIntervalRef.current = null; }
           chimeCountRef.current = 1;
           playChime(); // chime #1
@@ -402,12 +430,20 @@ export default function Kitchen() {
               chimeIntervalRef.current = null;
             }
           }, 4_000);
+          const parts: string[] = [];
+          if (newConfirmed.length > 0) parts.push(`${newConfirmed.length} new order${newConfirmed.length > 1 ? "s" : ""}`);
+          if (addonOrderCount > 0) parts.push(`${addonOrderCount} add-on${addonOrderCount > 1 ? "s" : ""}`);
           sendNotification(
-            `👨‍🍳 New Order${newConfirmed.length > 1 ? "s" : ""} to Cook!`,
-            `${newConfirmed.length} order${newConfirmed.length > 1 ? "s" : ""} need${newConfirmed.length === 1 ? "s" : ""} to be started`
+            `👨‍🍳 ${parts.join(" + ")} to cook!`,
+            newConfirmed.length > 0 && addonOrderCount > 0
+              ? `New tickets and add-on items both need attention`
+              : newConfirmed.length > 0
+                ? `${newConfirmed.length} order${newConfirmed.length > 1 ? "s" : ""} need${newConfirmed.length === 1 ? "s" : ""} to be started`
+                : `Add-on items added to ${addonOrderCount} existing order${addonOrderCount > 1 ? "s" : ""}`
           );
         }
         prevIdsRef.current = new Set(active.map((o) => o.id));
+        prevNewItemIdsRef.current = currentNewItemIds;
       }
 
       setOrders(active);
@@ -437,7 +473,9 @@ export default function Kitchen() {
 
   // Stop the 3-chime burst early if all pending orders are cleared before it finishes.
   useEffect(() => {
-    const hasPending = orders.some((o) => o.status === "confirmed" && o.items.some(item => !item.alreadyMade && isKdsItem(item)));
+    // Includes both brand-new confirmed orders AND add-on items on existing
+    // orders — both demand the same level of cook attention until handled.
+    const hasPending = orders.some((o) => o.items.some(item => !item.alreadyMade && isKdsItem(item)));
     if (!hasPending && chimeIntervalRef.current) {
       clearInterval(chimeIntervalRef.current);
       chimeIntervalRef.current = null;
@@ -479,6 +517,36 @@ export default function Kitchen() {
       await fetchOrders();
     } finally {
       setAdvancing((s) => { const ns = new Set(s); ns.delete(order.id); return ns; });
+    }
+  };
+
+  // Mark a specific subset of an order's items as alreadyMade=true.
+  // Used by the ADD-ON card's "Made ✓" button. The parent order's status is
+  // unchanged — only the listed order_items rows flip alreadyMade.
+  const markItemsMade = async (orderId: number, itemIds: number[]) => {
+    setAdvancing((s) => new Set(s).add(orderId));
+    try {
+      const res = await fetch(`/api/orders/${orderId}/items/mark-made`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ itemIds }),
+      });
+      if (!res.ok) {
+        // Surface the failure to the cook — silently swallowing it (the original
+        // pattern in advance/clearFromKds) caused "Made ✓" to look like it did
+        // nothing, leading to repeated taps and confusion.
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setError(`Could not mark items made: ${body.error ?? `HTTP ${res.status}`}`);
+        return;
+      }
+      broadcastUpdate();
+      await fetchOrders();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Could not mark items made: ${msg}`);
+    } finally {
+      setAdvancing((s) => { const ns = new Set(s); ns.delete(orderId); return ns; });
     }
   };
 
@@ -538,26 +606,57 @@ export default function Kitchen() {
     o.items.some(item => !item.alreadyMade && isKdsItem(item))
   );
 
-  const byCol: Record<string, Order[]> = { new: [], preparing: [], ready: [] };
+  // KdsCard: one card on the board. A "full" card renders the whole order
+  // (optionally hiding items that have been split out into a separate add-on
+  // card). An "addon" card renders ONLY the listed items with a "Made ✓"
+  // button — it lives in the "new" column so cooks can't miss it.
+  type KdsCard =
+    | { kind: "full"; order: Order; hiddenItemIds?: Set<number> }
+    | { kind: "addon"; order: Order; items: OrderItem[] };
+
+  const byCol: Record<string, KdsCard[]> = { new: [], preparing: [], ready: [] };
   for (const o of kdsOrders) {
     if (o.status === "pending") continue; // not yet accepted — don't show on KDS
-    else if (o.status === "confirmed") byCol.new.push(o);
-    else if (o.status === "preparing") byCol.preparing.push(o);
-    else {
+
+    const targetCol = o.status === "confirmed" ? "new"
+      : o.status === "preparing" ? "preparing"
       // "ready" and "completed" (paid from POS but kitchen hasn't cleared yet)
       // both belong in the Ready column — kitchen staff still needs to hand it off.
-      byCol.ready.push(o);
+      : "ready";
+
+    const kdsItems = o.items.filter(isKdsItem);
+    const newKdsItems = kdsItems.filter(i => !i.alreadyMade);
+    const madeKdsItems = kdsItems.filter(i => i.alreadyMade);
+
+    // Add-on split: any order with BOTH already-made and new KDS items.
+    // The primary trigger is POS resume-and-add: the POS cancel+create path
+    // produces a brand-new CONFIRMED order containing both the original lines
+    // (alreadyMade=true) and the newly added lines (alreadyMade=false). Status
+    // does NOT matter — what matters is the mix, because that mix is what was
+    // causing cooks to re-make the original items.
+    const isMixed = madeKdsItems.length > 0 && newKdsItems.length > 0;
+
+    if (isMixed) {
+      const hiddenItemIds = new Set(newKdsItems.map(i => i.id));
+      byCol.new.push({ kind: "addon", order: o, items: newKdsItems });
+      byCol[targetCol].push({ kind: "full", order: o, hiddenItemIds });
+    } else {
+      byCol[targetCol].push({ kind: "full", order: o });
     }
   }
-  // Sort each column: soonest scheduled first, then ASAP by creation time
-  const sortOrders = (list: Order[]) => list.sort((a, b) => {
-    const ta = a.scheduledPickupAt ? new Date(a.scheduledPickupAt).getTime() : new Date(a.createdAt).getTime();
-    const tb = b.scheduledPickupAt ? new Date(b.scheduledPickupAt).getTime() : new Date(b.createdAt).getTime();
-    return ta - tb;
+  // Sort each column: addon cards first (most urgent), then soonest scheduled,
+  // then ASAP by creation time. Within addon cards, oldest order first.
+  const cardSortTime = (c: KdsCard): number => {
+    const o = c.order;
+    return o.scheduledPickupAt ? new Date(o.scheduledPickupAt).getTime() : new Date(o.createdAt).getTime();
+  };
+  const sortCards = (list: KdsCard[]) => list.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === "addon" ? -1 : 1;
+    return cardSortTime(a) - cardSortTime(b);
   });
-  sortOrders(byCol.new);
-  sortOrders(byCol.preparing);
-  sortOrders(byCol.ready);
+  sortCards(byCol.new);
+  sortCards(byCol.preparing);
+  sortCards(byCol.ready);
 
   const hasOrders = orders.length > 0;
 
@@ -664,7 +763,89 @@ export default function Kitchen() {
                     <span className="text-gray-600 text-sm">No orders</span>
                   </div>
                 )}
-                {byCol[key].map((order) => {
+                {byCol[key].map((card) => {
+                  const order = card.order;
+
+                  // ── ADD-ON pseudo-card ──────────────────────────────
+                  // Lives in the "new" column. Renders ONLY the items that
+                  // were added to an in-progress order. Cooks tap "Made ✓"
+                  // when they're done — that flips alreadyMade=true on those
+                  // rows and the card disappears.
+                  if (card.kind === "addon") {
+                    const addonAge = elapsed(order.createdAt, now);
+                    const isMarking = advancing.has(order.id);
+                    return (
+                      <div
+                        key={`addon-${order.id}`}
+                        className="rounded-lg border-2 border-amber-500 bg-amber-50 p-4 flex flex-col gap-3 transition-colors ring-2 ring-amber-300"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500 text-amber-950">
+                              <span className="text-xs font-black uppercase tracking-wider">➕ Add-on</span>
+                            </div>
+                            <div className="text-2xl font-black tracking-tight leading-none mt-2">
+                              {order.customerName}
+                            </div>
+                            <div className="text-gray-500 font-mono text-sm mt-1">#{order.confirmationCode}</div>
+                            <div className="text-amber-700 text-xs font-semibold mt-0.5 uppercase tracking-wide">
+                              Added to in-progress order
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="text-sm font-bold tabular-nums text-gray-500">{addonAge}</div>
+                            <div className="text-xs text-gray-400 mt-0.5 capitalize">{order.orderType}</div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          {card.items.map((item) => {
+                            const struck = struckItems.get(order.id)?.has(item.id) ?? false;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => toggleStruck(order.id, item.id)}
+                                className={`w-full text-left rounded px-3 py-3 border transition-all active:scale-[0.98] ${
+                                  struck
+                                    ? "bg-gray-100 border-gray-200 opacity-60"
+                                    : "bg-white border-amber-300 hover:border-amber-400"
+                                }`}
+                              >
+                                <div className={`flex items-baseline gap-2 ${struck ? "line-through decoration-gray-500 decoration-2" : ""}`}>
+                                  <span className={`text-3xl font-black leading-none ${struck ? "text-gray-400" : "text-gray-900"}`}>{item.quantity}×</span>
+                                  <span className={`text-xl font-bold leading-snug ${struck ? "text-gray-400" : "text-gray-900"}`}>{item.menuItemName}</span>
+                                  {struck && <span className="text-xs text-gray-400 font-normal ml-1 no-underline">done</span>}
+                                </div>
+                                {!struck && (item.modifierSelections ?? []).length > 0 && (
+                                  <div className="text-amber-700 text-xl mt-2 leading-snug font-semibold space-y-1">
+                                    {(item.modifierSelections ?? []).map((m, i) => (
+                                      <div key={i}>+ {m.name}</div>
+                                    ))}
+                                  </div>
+                                )}
+                                {!struck && item.notes && (
+                                  <div className="text-amber-700 text-xl mt-2 leading-snug whitespace-pre-line font-semibold">
+                                    {item.notes}
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <button
+                          onClick={() => markItemsMade(order.id, card.items.map(i => i.id))}
+                          disabled={isMarking}
+                          className="w-full rounded py-3 text-base font-bold bg-amber-500 hover:bg-amber-400 text-amber-950 active:bg-amber-300 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          {isMarking ? "Saving…" : "Made ✓"}
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  // ── FULL order card (original render) ───────────────
+                  const hiddenItemIds = card.hiddenItemIds;
                   const overdue = isOverdue(order.createdAt, now);
                   const age = elapsed(order.createdAt, now);
                   const isAdvancing = advancing.has(order.id);
@@ -698,6 +879,11 @@ export default function Kitchen() {
                             {order.customerName}
                           </div>
                           <div className="text-gray-500 font-mono text-sm mt-1">#{order.confirmationCode}</div>
+                          {hiddenItemIds && hiddenItemIds.size > 0 && (
+                            <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-amber-100 border border-amber-400">
+                              <span className="text-amber-800 text-xs font-bold">➕ Add-on in New column</span>
+                            </div>
+                          )}
                           {order.scheduledPickupAt && (() => {
                             const d = new Date(order.scheduledPickupAt);
                             const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" });
@@ -723,7 +909,9 @@ export default function Kitchen() {
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        {order.items.filter(isKdsItem).map((item) => (
+                        {order.items
+                          .filter(item => isKdsItem(item) && !(hiddenItemIds && hiddenItemIds.has(item.id)))
+                          .map((item) => (
                           item.alreadyMade ? (
                             <div key={item.id} className="bg-blue-50 border border-blue-200 rounded px-3 py-2">
                               <div className="flex items-baseline gap-2">

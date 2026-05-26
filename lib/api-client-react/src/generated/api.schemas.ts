@@ -324,6 +324,11 @@ export interface UpdateOrderStatusBody {
   notes?: string | null;
 }
 
+export interface MarkOrderItemsMadeBody {
+  /** IDs of order_items rows on this order to mark as alreadyMade=true. */
+  itemIds: number[];
+}
+
 export type InitiatePaymentBodyPaymentMethod =
   (typeof InitiatePaymentBodyPaymentMethod)[keyof typeof InitiatePaymentBodyPaymentMethod];
 

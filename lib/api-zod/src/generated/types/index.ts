@@ -29,6 +29,7 @@ export * from "./listMenuItemsParams";
 export * from "./listOrdersKdsCleared";
 export * from "./listOrdersParams";
 export * from "./listOrdersStatus";
+export * from "./markOrderItemsMadeBody";
 export * from "./menuCategory";
 export * from "./menuItem";
 export * from "./order";

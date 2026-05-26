@@ -1,3 +1,4 @@
-- [Pending-order popup backlog gaps](pending-order-popup-gaps.md) — POS new-order popup has no auto-expiry, no triage UI, no batched accept/reject; tackle together next time we touch it.
-- [POS stale-closure trap](pos-stale-closure-trap.md) — memoized ItemCard caches its onClick; any cart mutator reachable from it must use functional setCart(prev=>…) or it wipes state.
-- [Resumed-ticket PATCH-vs-recreate rule](resumed-ticket-patch-rule.md) — PATCH /api/orders/:id doesn't accept items, so any structural change to a resumed ticket MUST go through cancel+recreate, not PATCH.
+- [KDS card split rules](kds-card-split-rules.md) — split on any mix of alreadyMade lines; never gate on order.status (POS resume creates a new `confirmed` order).
+- [POS stale closure trap](pos-stale-closure-trap.md)
+- [Pending order popup gaps](pending-order-popup-gaps.md)
+- [Resumed ticket patch rule](resumed-ticket-patch-rule.md)

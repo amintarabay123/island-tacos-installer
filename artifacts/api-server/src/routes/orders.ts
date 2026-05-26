@@ -779,6 +779,59 @@ router.patch("/orders/:id", requireStaffAuth, async (req, res): Promise<void> =>
   res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
 });
 
+/**
+ * Mark a subset of an order's items as already made.
+ *
+ * Used by the KDS ADD-ON card flow: when staff add items to an order that the
+ * kitchen has already started preparing, the new items render as a SEPARATE
+ * "ADD-ON" card on the KDS. Tapping "Made ✓" on that card calls this endpoint
+ * with the IDs of the new items, marking them alreadyMade=true. This does NOT
+ * advance the order's overall status — the original items may still be in
+ * "preparing".
+ */
+router.post("/orders/:id/items/mark-made", requireStaffAuth, async (req, res): Promise<void> => {
+  const params = GetOrderParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const body = req.body as { itemIds?: unknown };
+  const itemIds = Array.isArray(body.itemIds)
+    ? body.itemIds.filter((n): n is number => typeof n === "number" && Number.isFinite(n))
+    : null;
+  if (!itemIds || itemIds.length === 0) {
+    res.status(400).json({ error: "itemIds must be a non-empty array of integers" });
+    return;
+  }
+
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, params.data.id));
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
+  // Scope the update to this order's items only — defense against a client
+  // accidentally (or maliciously) marking items on a different order.
+  await db
+    .update(orderItemsTable)
+    .set({ alreadyMade: true })
+    .where(and(
+      eq(orderItemsTable.orderId, order.id),
+      inArray(orderItemsTable.id, itemIds),
+    ));
+
+  const items = await db
+    .select()
+    .from(orderItemsTable)
+    .where(eq(orderItemsTable.orderId, order.id));
+
+  broadcastOrderEvent("order_updated", order.id);
+  res.json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
+});
+
 router.post("/orders/:id/refund", requireStaffAuth, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const { amount, reason, refundMethod = "cash" } = req.body as { amount: number; reason?: string; refundMethod?: string };

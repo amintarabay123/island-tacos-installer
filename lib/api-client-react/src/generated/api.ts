@@ -29,6 +29,7 @@ import type {
   InitiatePaymentBody,
   ListMenuItemsParams,
   ListOrdersParams,
+  MarkOrderItemsMadeBody,
   MenuCategory,
   MenuItem,
   Order,
@@ -1245,6 +1246,98 @@ export const useUpdateOrderStatus = <
   TContext
 > => {
   return useMutation(getUpdateOrderStatusMutationOptions(options));
+};
+
+/**
+ * Used by the Kitchen Display when staff finish making the items on an
+ADD-ON card. Sets `alreadyMade = true` on the listed `order_items`
+rows that belong to the given order. Does NOT change the order's
+overall status — the parent order may still be in `preparing`.
+
+ * @summary Mark a subset of an order's items as already made (staff/KDS)
+ */
+export const getMarkOrderItemsMadeUrl = (id: number) => {
+  return `/api/orders/${id}/items/mark-made`;
+};
+
+export const markOrderItemsMade = async (
+  id: number,
+  markOrderItemsMadeBody: MarkOrderItemsMadeBody,
+  options?: RequestInit,
+): Promise<Order> => {
+  return customFetch<Order>(getMarkOrderItemsMadeUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(markOrderItemsMadeBody),
+  });
+};
+
+export const getMarkOrderItemsMadeMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markOrderItemsMade>>,
+    TError,
+    { id: number; data: BodyType<MarkOrderItemsMadeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markOrderItemsMade>>,
+  TError,
+  { id: number; data: BodyType<MarkOrderItemsMadeBody> },
+  TContext
+> => {
+  const mutationKey = ["markOrderItemsMade"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markOrderItemsMade>>,
+    { id: number; data: BodyType<MarkOrderItemsMadeBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return markOrderItemsMade(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkOrderItemsMadeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markOrderItemsMade>>
+>;
+export type MarkOrderItemsMadeMutationBody = BodyType<MarkOrderItemsMadeBody>;
+export type MarkOrderItemsMadeMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Mark a subset of an order's items as already made (staff/KDS)
+ */
+export const useMarkOrderItemsMade = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markOrderItemsMade>>,
+    TError,
+    { id: number; data: BodyType<MarkOrderItemsMadeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof markOrderItemsMade>>,
+  TError,
+  { id: number; data: BodyType<MarkOrderItemsMadeBody> },
+  TContext
+> => {
+  return useMutation(getMarkOrderItemsMadeMutationOptions(options));
 };
 
 /**
