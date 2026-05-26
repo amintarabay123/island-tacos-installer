@@ -2933,6 +2933,10 @@ export default function POS() {
   // endpoint does not accept an items array, so without this check a removed
   // item silently stays on the saved order (bug seen 2026-05-20).
   const resumedSnapshotRef = useRef<Map<string, number>>(new Map());
+  // Cache modifier lists by menu item ID so re-tapping a cart item is instant
+  // and rapid double-taps don't fire concurrent fetches.
+  const modifierCacheRef = useRef<Map<number, Modifier[]>>(new Map());
+  const editingCartKeyRef = useRef<string | null>(null);
   const resumedItemsUnchanged = useCallback((): boolean => {
     const snap = resumedSnapshotRef.current;
     if (snap.size === 0) return true; // not a resumed ticket
@@ -3236,10 +3240,14 @@ export default function POS() {
       setOpenPriceModal({ item });
       return;
     }
-    // Check for modifiers
+    // Check for modifiers (seed cache so cart re-edits are instant)
     try {
-      const r = await fetch(`/api/menu/items/${item.id}/modifiers`, { credentials: "include" });
-      const mods: Modifier[] = await r.json();
+      let mods = modifierCacheRef.current.get(item.id);
+      if (!mods) {
+        const r = await fetch(`/api/menu/items/${item.id}/modifiers`, { credentials: "include" });
+        mods = await r.json() as Modifier[];
+        modifierCacheRef.current.set(item.id, mods);
+      }
       if (mods.length > 0) {
         setModifierModal({ item, mods });
         return;
@@ -3295,22 +3303,31 @@ export default function POS() {
 
   // Re-open the modifier modal pre-filled with a cart item's current selections
   const editCartItem = async (cartItem: CartItem) => {
-    const menuItem = allItems.find(i => i.id === cartItem.menuItemId);
-    if (!menuItem) return;
-    // Open-price lines: reopen the OpenPriceModal pre-filled so the cashier can adjust
-    // the price and description in place. Cancelling preserves the original line.
-    if (menuItem.openPrice || cartItem.priceOverride !== undefined) {
-      setOpenPriceModal({
-        item: menuItem,
-        editKey: cartItem.key,
-        initialPrice: cartItem.price,
-        initialNote: cartItem.notes,
-      });
-      return;
-    }
+    // Guard: ignore rapid double-taps while a fetch is already in flight for this key.
+    if (editingCartKeyRef.current === cartItem.key) return;
+    editingCartKeyRef.current = cartItem.key;
     try {
-      const r = await fetch(`/api/menu/items/${menuItem.id}/modifiers`, { credentials: "include" });
-      const mods: Modifier[] = await r.json();
+      const menuItem = allItems.find(i => i.id === cartItem.menuItemId);
+      if (!menuItem) return;
+      // Open-price lines: reopen the OpenPriceModal pre-filled so the cashier can adjust
+      // the price and description in place. Cancelling preserves the original line.
+      if (menuItem.openPrice || cartItem.priceOverride !== undefined) {
+        setOpenPriceModal({
+          item: menuItem,
+          editKey: cartItem.key,
+          initialPrice: cartItem.price,
+          initialNote: cartItem.notes,
+        });
+        return;
+      }
+      // Use cached modifiers — already fetched when the item was first added.
+      // Only hits the network if the cache is cold (e.g. page reload mid-order).
+      let mods = modifierCacheRef.current.get(menuItem.id);
+      if (!mods) {
+        const r = await fetch(`/api/menu/items/${menuItem.id}/modifiers`, { credentials: "include" });
+        mods = await r.json() as Modifier[];
+        modifierCacheRef.current.set(menuItem.id, mods);
+      }
       if (mods.length > 0 || cartItem.notes) {
         setModifierModal({
           item: menuItem,
@@ -3320,7 +3337,11 @@ export default function POS() {
           initialNote: cartItem.notes,
         });
       }
-    } catch {}
+    } catch {
+      // network error — silently ignore, cashier can try again
+    } finally {
+      editingCartKeyRef.current = null;
+    }
   };
 
   const clearCart = () => {
