@@ -329,15 +329,24 @@ router.post("/orders", async (req, res): Promise<void> => {
     }
   }
 
-  const menuItemIds = parsed.data.items.map((i) => i.menuItemId);
-  const menuItems = await db
-    .select()
-    .from(menuItemsTable)
-    .where(
-      menuItemIds.length === 1
-        ? eq(menuItemsTable.id, menuItemIds[0])
-        : inArray(menuItemsTable.id, menuItemIds)
-    );
+  // Only look up menu items that are still present in the DB (non-null IDs).
+  // Items with a null menuItemId were on a held POS ticket when their menu entry was
+  // deleted; those items carry snapshotted name/price from the client and are allowed
+  // for staff (POS) orders only.
+  const nonNullMenuItemIds = parsed.data.items
+    .map((i) => i.menuItemId)
+    .filter((id): id is number => id != null);
+
+  const menuItems = nonNullMenuItemIds.length > 0
+    ? await db
+        .select()
+        .from(menuItemsTable)
+        .where(
+          nonNullMenuItemIds.length === 1
+            ? eq(menuItemsTable.id, nonNullMenuItemIds[0])
+            : inArray(menuItemsTable.id, nonNullMenuItemIds)
+        )
+    : [];
 
   const menuItemMap = new Map(menuItems.map((m) => [m.id, m]));
 
@@ -345,41 +354,59 @@ router.post("/orders", async (req, res): Promise<void> => {
   const orderItemsData = [];
 
   for (const item of parsed.data.items) {
-    const menuItem = menuItemMap.get(item.menuItemId);
-    if (!menuItem) {
-      res.status(400).json({ error: `Menu item ${item.menuItemId} not found` });
-      return;
-    }
-    if (!menuItem.available) {
-      res.status(400).json({ error: `Menu item "${menuItem.name}" is not available` });
-      return;
-    }
-    // Open-price items (e.g. "Misc") let the cashier set a one-off price at the POS.
-    // We only honor priceOverride when the menu item is flagged openPrice — never trust
-    // a client-supplied price for normal items. Open-price is also a staff-only feature:
-    // unauthenticated callers (the public storefront) must NOT be able to order them,
-    // otherwise anyone could POST a $0.01 order for a "Misc" item.
+    let itemName: string;
     let price: number;
-    if (menuItem.openPrice) {
+
+    if (item.menuItemId == null) {
+      // Deleted menu item — only POS staff may submit these.
       if (!isStaffAuthenticated(req)) {
-        res.status(403).json({ error: `"${menuItem.name}" can only be added from the POS` });
+        res.status(403).json({ error: "Cannot order a deleted menu item from the online storefront" });
         return;
       }
-      const override = item.priceOverride;
-      if (typeof override !== "number" || !Number.isFinite(override) || override <= 0) {
-        res.status(400).json({ error: `"${menuItem.name}" requires a price greater than 0` });
+      if (!item.menuItemName || typeof item.menuItemPrice !== "number") {
+        res.status(400).json({ error: "Deleted menu item must supply menuItemName and menuItemPrice" });
         return;
       }
-      price = override;
+      itemName = item.menuItemName;
+      price = item.menuItemPrice;
     } else {
-      price = parseFloat(menuItem.price as unknown as string);
+      const menuItem = menuItemMap.get(item.menuItemId);
+      if (!menuItem) {
+        res.status(400).json({ error: `Menu item ${item.menuItemId} not found` });
+        return;
+      }
+      if (!menuItem.available) {
+        res.status(400).json({ error: `Menu item "${menuItem.name}" is not available` });
+        return;
+      }
+      // Open-price items (e.g. "Misc") let the cashier set a one-off price at the POS.
+      // We only honor priceOverride when the menu item is flagged openPrice — never trust
+      // a client-supplied price for normal items. Open-price is also a staff-only feature:
+      // unauthenticated callers (the public storefront) must NOT be able to order them,
+      // otherwise anyone could POST a $0.01 order for a "Misc" item.
+      if (menuItem.openPrice) {
+        if (!isStaffAuthenticated(req)) {
+          res.status(403).json({ error: `"${menuItem.name}" can only be added from the POS` });
+          return;
+        }
+        const override = item.priceOverride;
+        if (typeof override !== "number" || !Number.isFinite(override) || override <= 0) {
+          res.status(400).json({ error: `"${menuItem.name}" requires a price greater than 0` });
+          return;
+        }
+        price = override;
+      } else {
+        price = parseFloat(menuItem.price as unknown as string);
+      }
+      itemName = menuItem.name;
     }
+
     const modifierTotal = (item.modifierSelections ?? []).reduce((s: number, m: { price?: number }) => s + (m.price ?? 0), 0);
     const itemSubtotal = (price + modifierTotal) * item.quantity;
     subtotal += itemSubtotal;
     orderItemsData.push({
-      menuItemId: item.menuItemId,
-      menuItemName: menuItem.name,
+      menuItemId: item.menuItemId ?? null,
+      menuItemName: itemName,
       menuItemPrice: price,
       quantity: item.quantity,
       notes: item.notes ?? null,

@@ -205,7 +205,21 @@ export interface Order {
 }
 
 export interface CreateOrderItemInput {
-  menuItemId: number;
+  /**
+   * Null is allowed for POS-only items whose menu entry was deleted after the ticket was created. In that case menuItemName and menuItemPrice must be supplied.
+   * @nullable
+   */
+  menuItemId: number | null;
+  /**
+   * Required when menuItemId is null; used as the snapshotted name for the deleted item.
+   * @nullable
+   */
+  menuItemName?: string | null;
+  /**
+   * Required when menuItemId is null; used as the snapshotted unit price for the deleted item.
+   * @nullable
+   */
+  menuItemPrice?: number | null;
   quantity: number;
   /** @nullable */
   notes?: string | null;

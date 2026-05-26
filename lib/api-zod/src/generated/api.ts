@@ -288,7 +288,24 @@ export const CreateOrderBody = zod.object({
   scheduledPickupAt: zod.coerce.date().nullish(),
   items: zod.array(
     zod.object({
-      menuItemId: zod.number(),
+      menuItemId: zod
+        .number()
+        .nullable()
+        .describe(
+          "Null is allowed for POS-only items whose menu entry was deleted after the ticket was created. In that case menuItemName and menuItemPrice must be supplied.",
+        ),
+      menuItemName: zod
+        .string()
+        .nullish()
+        .describe(
+          "Required when menuItemId is null; used as the snapshotted name for the deleted item.",
+        ),
+      menuItemPrice: zod
+        .number()
+        .nullish()
+        .describe(
+          "Required when menuItemId is null; used as the snapshotted unit price for the deleted item.",
+        ),
       quantity: zod.number(),
       notes: zod.string().nullish(),
       modifierSelections: zod

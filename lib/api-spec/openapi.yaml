@@ -863,7 +863,14 @@ components:
       type: object
       properties:
         menuItemId:
-          type: integer
+          type: ["integer", "null"]
+          description: "Null is allowed for POS-only items whose menu entry was deleted after the ticket was created. In that case menuItemName and menuItemPrice must be supplied."
+        menuItemName:
+          type: ["string", "null"]
+          description: "Required when menuItemId is null; used as the snapshotted name for the deleted item."
+        menuItemPrice:
+          type: ["number", "null"]
+          description: "Required when menuItemId is null; used as the snapshotted unit price for the deleted item."
         quantity:
           type: integer
         notes:

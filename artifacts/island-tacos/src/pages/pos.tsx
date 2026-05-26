@@ -3392,7 +3392,11 @@ export default function POS() {
               const mi = allItems.find(i => i.id === c.menuItemId);
               const override = c.priceOverride ?? (mi?.openPrice ? c.price : undefined);
               return {
-                menuItemId: c.menuItemId,
+                menuItemId: c.menuItemId ?? null,
+                // Always send the snapshotted name+price. The server uses these as a
+                // fallback when menuItemId is null (menu item deleted after ticket was held).
+                menuItemName: c.name,
+                menuItemPrice: c.price,
                 quantity: c.quantity,
                 notes: c.notes || null,
                 modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
@@ -3523,7 +3527,9 @@ export default function POS() {
               const mi = allItems.find(i => i.id === c.menuItemId);
               const override = c.priceOverride ?? (mi?.openPrice ? c.price : undefined);
               return {
-                menuItemId: c.menuItemId,
+                menuItemId: c.menuItemId ?? null,
+                menuItemName: c.name,
+                menuItemPrice: c.price,
                 quantity: c.quantity,
                 notes: c.notes || null,
                 modifierSelections: c.modifierSelections.length > 0 ? c.modifierSelections : undefined,
