@@ -10,6 +10,7 @@ import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp } from "../lib/wh
 import { sendSms } from "../lib/sms-gateway";
 import nodemailer from "nodemailer";
 import { requireStaffAuth, isStaffAuthenticated } from "./auth";
+import { logger } from "../lib/logger";
 
 const mailer = nodemailer.createTransport({
   host: process.env.SMTP_HOST ?? "smtp.gmail.com",
@@ -495,13 +496,13 @@ router.post("/orders", async (req, res): Promise<void> => {
   // Send confirmation email for online orders with an email address
   if (order.source !== "pos" && order.customerEmail) {
     sendConfirmationEmail(order, items).catch((err) =>
-      console.error("[email] confirmation failed:", err?.message)
+      logger.error({ err: err?.message }, "[email] confirmation failed")
     );
   }
   // Send WhatsApp confirmation for online orders with a phone number
   if (order.source !== "pos" && order.customerPhone) {
     sendOrderConfirmationWhatsApp(order).catch((err) =>
-      console.error("[whatsapp] confirmation failed:", err?.message)
+      logger.error({ err: err?.message }, "[whatsapp] confirmation failed")
     );
   }
 
@@ -779,15 +780,15 @@ router.patch("/orders/:id", requireStaffAuth, async (req, res): Promise<void> =>
     if (parsed.data.status === "ready") {
       if (order.customerEmail) {
         sendReadyEmail(order).catch((err) =>
-          console.error("[email] ready notification failed:", err?.message)
+          logger.error({ err: err?.message }, "[email] ready notification failed")
         );
       }
       if (order.customerPhone) {
         sendReadySMS(order).catch((err) =>
-          console.error("[sms] ready notification failed:", err?.message)
+          logger.error({ err: err?.message }, "[sms] ready notification failed")
         );
         sendOrderReadyWhatsApp(order).catch((err) =>
-          console.error("[whatsapp] ready notification failed:", err?.message)
+          logger.error({ err: err?.message }, "[whatsapp] ready notification failed")
         );
       }
     }
@@ -797,7 +798,7 @@ router.patch("/orders/:id", requireStaffAuth, async (req, res): Promise<void> =>
       order.customerPhone
     ) {
       sendCancellationSMS(order, parsed.data.cancellationReason ?? null).catch((err) =>
-        console.error("[sms] cancellation notification failed:", err?.message)
+        logger.error({ err: err?.message }, "[sms] cancellation notification failed")
       );
     }
   }

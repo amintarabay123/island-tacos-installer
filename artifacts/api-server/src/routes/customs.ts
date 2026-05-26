@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import OpenAI from "openai";
 
+
 const router: IRouter = Router();
 
 function makeOpenAIClient(): OpenAI {
@@ -14,7 +15,6 @@ function makeOpenAIClient(): OpenAI {
   }
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0, timeout: 45000 });
 }
-
 // TODO(store-settings): replace hardcoded "Island Tacos" and "Road Town, British Virgin Islands"
 // with `(await getStoreSettings()).storeName` / .address. Prompt is rebuilt per request so the
 // extra DB hit is acceptable.
@@ -95,7 +95,7 @@ router.post("/customs/extract-invoice", async (req: Request, res: Response): Pro
     res.json(result);
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string };
-    console.error("Invoice extraction error:", e?.status, e?.message);
+    req.log.error({ status: e?.status, message: e?.message }, "Invoice extraction error");
 
     if (e?.status === 429) {
       res.status(503).json({ error: "AI service quota exceeded. Please try again later or use manual entry." });

@@ -172,7 +172,7 @@ router.post("/payments/athmovil/create-session", async (req, res): Promise<void>
   const total = parseFloat(order.total as unknown as string);
   const phoneNumber = cleanPhone(order.customerPhone || "");
 
-  console.log(`[ATH] Creating payment session — order #${orderId}, total $${total}, phone ...${phoneNumber.slice(-4)}`);
+  req.log.info(`[ATH] Creating payment session — order #${orderId}, total $${total}, phone ...${phoneNumber.slice(-4)}`);
 
   try {
     const athRes = await fetch(`${ATH_BASE}/payment`, {
@@ -192,7 +192,7 @@ router.post("/payments/athmovil/create-session", async (req, res): Promise<void>
     });
 
     const rawText = await athRes.text();
-    console.log(`[ATH] /payment response ${athRes.status}:`, rawText.slice(0, 400));
+    req.log.info(`[ATH] /payment response ${athRes.status}: ${rawText.slice(0, 400)}`);
 
     if (!athRes.ok) {
       res.status(502).json({ error: "ATH Móvil declined payment request", detail: rawText });
@@ -217,7 +217,7 @@ router.post("/payments/athmovil/create-session", async (req, res): Promise<void>
 
     res.json({ ecommerceId });
   } catch (err) {
-    console.error("[ATH] create-session failed:", err);
+    req.log.error({ err }, "[ATH] create-session failed");
     res.status(502).json({ error: "Could not reach ATH Móvil" });
   }
 });
@@ -262,7 +262,7 @@ router.post("/payments/athmovil/check-status", async (req, res): Promise<void> =
     });
 
     const findText = await findRes.text();
-    console.log(`[ATH] findPayment response ${findRes.status}:`, findText.slice(0, 400));
+    req.log.info(`[ATH] findPayment response ${findRes.status}: ${findText.slice(0, 400)}`);
 
     const findData = JSON.parse(findText) as { data?: { ecommerceStatus?: string; referenceNumber?: string } };
     const ecommerceStatus = findData?.data?.ecommerceStatus ?? "OPEN";
@@ -278,7 +278,7 @@ router.post("/payments/athmovil/check-status", async (req, res): Promise<void> =
           },
         });
         const authText = await authRes.text();
-        console.log(`[ATH] authorization response ${authRes.status}:`, authText.slice(0, 400));
+        req.log.info(`[ATH] authorization response ${authRes.status}: ${authText.slice(0, 400)}`);
 
         // CRITICAL: do NOT mark the order paid unless ATH actually authorized.
         // Previously this branch fell through and marked paid even on a 4xx/5xx.
@@ -305,7 +305,7 @@ router.post("/payments/athmovil/check-status", async (req, res): Promise<void> =
 
     res.json({ status: ecommerceStatus });
   } catch (err) {
-    console.error("[ATH] check-status failed:", err);
+    req.log.error({ err }, "[ATH] check-status failed");
     res.status(502).json({ error: "Could not reach ATH Móvil" });
   }
 });

@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 const SUBSCRIBE_URL =
   "https://payments.athmovil.com/api/business-transaction/ecommerce/business/webhook/subscribe";
 
@@ -6,7 +8,7 @@ export async function registerAthMovilWebhook(listenerURL: string): Promise<void
   const privateToken = process.env["ATHMOVIL_PRIVATE_TOKEN"];
 
   if (!publicToken || !privateToken) {
-    console.log("[ATH webhook] Skipping registration — tokens not configured");
+    logger.info("[ATH webhook] Skipping registration — tokens not configured");
     return;
   }
 
@@ -39,19 +41,19 @@ export async function registerAthMovilWebhook(listenerURL: string): Promise<void
       });
 
       if (res.ok) {
-        console.log(`[ATH webhook] Registered webhook URL: ${listenerURL}`);
+        logger.info(`[ATH webhook] Registered webhook URL: ${listenerURL}`);
         return;
       }
 
       const resBody = await res.text();
-      console.log(`[ATH webhook] Registration attempt returned ${res.status}: ${resBody.slice(0, 200)}`);
+      logger.warn(`[ATH webhook] Registration attempt returned ${res.status}: ${resBody.slice(0, 200)}`);
     } catch (err) {
-      console.log(`[ATH webhook] Registration attempt failed: ${err}`);
+      logger.warn(`[ATH webhook] Registration attempt failed: ${err}`);
     }
   }
 
   // Registration failed through all variants — manual setup required.
   // The webhook URL to enter in the ATH Móvil Business app is:
   // https://orders.islandtacosbvi.com/api/webhooks/athmovil
-  console.log("[ATH webhook] Auto-registration unsuccessful — webhook must be set manually in the ATH Móvil Business app.");
+  logger.warn("[ATH webhook] Auto-registration unsuccessful — webhook must be set manually in the ATH Móvil Business app.");
 }

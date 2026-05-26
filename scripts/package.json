@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "hello": "tsx ./src/hello.ts",
     "check:auth": "bash ./src/anon-auth-matrix.sh",
     "test": "vitest run --reporter=verbose",
     "typecheck": "tsc -p tsconfig.json --noEmit"

@@ -8,6 +8,7 @@ import { spawn } from "child_process";
 import { objectStorageClient, signObjectGetURL } from "../lib/objectStorage";
 import { pool } from "@workspace/db";
 import { requireAdminAuth } from "./auth";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -62,7 +63,7 @@ async function generateAndUpload(): Promise<void> {
   generating = true;
   gcsPublicUrl = null;
 
-  console.log("[installer] generating archive...");
+  logger.info("[installer] generating archive...");
 
   try {
     // Step 1: write archive to disk
@@ -96,7 +97,7 @@ async function generateAndUpload(): Promise<void> {
       });
     });
 
-    console.log("[installer] archive ready, uploading to GCS...");
+    logger.info("[installer] archive ready, uploading to GCS...");
 
     // Step 2: upload to GCS — stream from disk to avoid loading the full
     // archive (~50+ MB) into memory, which OOM-kills the deployment.
@@ -116,10 +117,10 @@ async function generateAndUpload(): Promise<void> {
     // Step 3: generate a signed GET URL (7 days) — bypasses Replit proxy, no public ACL needed
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
     gcsPublicUrl = await signObjectGetURL(bucketId, GCS_OBJECT_NAME, 7 * 24 * 3600);
-    console.log("[installer] available at:", gcsPublicUrl);
+    logger.info({ url: gcsPublicUrl }, "[installer] available");
 
   } catch (err) {
-    console.error("[installer] error:", err instanceof Error ? err.message : err);
+    logger.error({ err: err instanceof Error ? err.message : err }, "[installer] error");
   } finally {
     generating = false;
   }
@@ -136,7 +137,7 @@ async function initInstallerCache(): Promise<void> {
     if (exists) {
       const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
       gcsPublicUrl = await signObjectGetURL(bucketId, GCS_OBJECT_NAME, 7 * 24 * 3600);
-      console.log("[installer] existing GCS object signed — regenerating fresh archive in background...");
+      logger.info("[installer] existing GCS object signed — regenerating fresh archive in background...");
     }
   } catch {
     // No existing object or GCS unavailable — will generate fresh
@@ -144,12 +145,12 @@ async function initInstallerCache(): Promise<void> {
 
   // Always regenerate on startup so the archive matches the current deployment
   generateAndUpload().catch((err) => {
-    console.error("[installer] background generation failed:", err);
+    logger.error({ err }, "[installer] background generation failed");
   });
 }
 
 // Kick off on startup (don't await — non-blocking)
-initInstallerCache().catch(console.error);
+initInstallerCache().catch((err) => logger.error({ err }, "[installer] initInstallerCache failed"));
 
 // On startup: sign the existing GCS frontend object (if any) so /api/download/frontend
 // can serve it immediately. The api-server NEVER regenerates this archive itself —
@@ -166,16 +167,16 @@ async function initFrontendCache(): Promise<void> {
     if (exists) {
       const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
       frontendGcsUrl = await signObjectGetURL(bucketId, FRONTEND_GCS_OBJECT, 7 * 24 * 3600);
-      console.log("[frontend] existing GCS object signed — fresh tarball is uploaded by the island-tacos build's postbuild step.");
+      logger.info("[frontend] existing GCS object signed — fresh tarball is uploaded by the island-tacos build's postbuild step.");
     } else {
-      console.warn("[frontend] no GCS object found — UPDATE.bat will fail until the next island-tacos deploy regenerates it.");
+      logger.warn("[frontend] no GCS object found — UPDATE.bat will fail until the next island-tacos deploy regenerates it.");
     }
   } catch (err) {
-    console.error("[frontend] init failed:", err instanceof Error ? err.message : err);
+    logger.error({ err: err instanceof Error ? err.message : err }, "[frontend] init failed");
   }
 }
 
-initFrontendCache().catch(console.error);
+initFrontendCache().catch((err) => logger.error({ err }, "[frontend] initFrontendCache failed"));
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function serveFile(filePath: string, filename: string, contentType: string) {
@@ -225,7 +226,7 @@ router.get("/download/frontend", async (_req: Request, res: Response): Promise<v
     frontendGcsUrl = await signObjectGetURL(bucketId, FRONTEND_GCS_OBJECT, 7 * 24 * 3600);
     res.json({ url: frontendGcsUrl });
   } catch (err) {
-    console.error("[frontend] on-demand sign failed:", err instanceof Error ? err.message : err);
+    logger.error({ err: err instanceof Error ? err.message : err }, "[frontend] on-demand sign failed");
     res.status(503).json({ error: "Frontend tarball signing failed. Please retry shortly." });
   }
 });

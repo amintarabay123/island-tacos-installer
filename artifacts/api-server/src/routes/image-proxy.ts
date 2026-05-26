@@ -4,6 +4,7 @@ import http from "http";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -252,7 +253,7 @@ export async function warmAllMenuImages() {
             deleteDiskFiles(url);
             imageCache.delete(url);
             placeholderUrls.push(url);
-            console.log(`[image-warm] placeholder detected, clearing: ${url}`);
+            logger.info(`[image-warm] placeholder detected, clearing: ${url}`);
             continue;
           }
         }
@@ -273,7 +274,7 @@ export async function warmAllMenuImages() {
 
     // Clear placeholder image URLs from the DB so the menu API returns null for them
     if (placeholderUrls.length > 0) {
-      console.log(`[image-warm] Nulling ${placeholderUrls.length} placeholder image_url(s) in DB`);
+      logger.info(`[image-warm] Nulling ${placeholderUrls.length} placeholder image_url(s) in DB`);
       // Clear imageUrl where it's a placeholder
       const placeholderImageUrls = placeholderUrls.filter(u =>
         items.some(i => i.imageUrl === u)
@@ -293,7 +294,7 @@ export async function warmAllMenuImages() {
       }
     }
   } catch (e) {
-    console.error("[image-warm] failed:", e);
+    logger.error({ err: e }, "[image-warm] failed");
   }
 }
 

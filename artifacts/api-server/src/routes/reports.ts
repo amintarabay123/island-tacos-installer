@@ -110,7 +110,7 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
       dailyMap[row.date].sales += gross;
     }
   } catch (err) {
-    console.error("[reports] Error fetching daily summaries:", err);
+    req.log.error({ err }, "[reports] Error fetching daily summaries");
     // Non-fatal — continue with individual orders only
   }
 

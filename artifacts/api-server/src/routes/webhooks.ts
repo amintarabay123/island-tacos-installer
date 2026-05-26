@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, eq, gte, like, ne, or, sql } from "drizzle-orm";
 import { db, ordersTable } from "@workspace/db";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -42,7 +43,7 @@ function normalizePhone(raw: string | number | undefined): string {
 router.post("/webhooks/athmovil", async (req: Request, res: Response): Promise<void> => {
   const payload = req.body as AthMovilWebhookPayload;
 
-  console.log("[ATH webhook] Received event:", JSON.stringify(payload, null, 2));
+  req.log.info({ payload }, "[ATH webhook] Received event");
 
   res.status(200).json({ received: true });
 
@@ -52,11 +53,11 @@ router.post("/webhooks/athmovil", async (req: Request, res: Response): Promise<v
     payload.status.toLowerCase().includes("simul");
 
   if (!isCompleted && !isTest) {
-    console.log(`[ATH webhook] Skipping non-COMPLETED status: ${payload.status}`);
+    req.log.info(`[ATH webhook] Skipping non-COMPLETED status: ${payload.status}`);
     return;
   }
   if (isTest) {
-    console.log("[ATH webhook] Test/simulated event — webhook connected correctly!");
+    req.log.info("[ATH webhook] Test/simulated event — webhook connected correctly!");
     return;
   }
 
@@ -70,7 +71,7 @@ router.post("/webhooks/athmovil", async (req: Request, res: Response): Promise<v
         const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
         if (order && order.paymentStatus !== "paid") {
           await markOrderPaid(orderId, refNum);
-          console.log(`[ATH webhook] ✓ Order #${orderId} paid via metadata1`);
+          req.log.info(`[ATH webhook] ✓ Order #${orderId} paid via metadata1`);
           return;
         }
       }
@@ -87,7 +88,7 @@ router.post("/webhooks/athmovil", async (req: Request, res: Response): Promise<v
           .where(eq(ordersTable.confirmationCode, code));
         if (order && order.paymentStatus !== "paid") {
           await markOrderPaid(order.id, refNum);
-          console.log(`[ATH webhook] ✓ Order ${code} paid via message code`);
+          req.log.info(`[ATH webhook] ✓ Order ${code} paid via message code`);
           return;
         }
       }
@@ -101,7 +102,7 @@ router.post("/webhooks/athmovil", async (req: Request, res: Response): Promise<v
         .where(like(ordersTable.notes, `%${payload.ecommerceId}%`));
       if (order && order.paymentStatus !== "paid") {
         await markOrderPaid(order.id, refNum);
-        console.log(`[ATH webhook] ✓ Order #${order.id} paid via ecommerceId`);
+        req.log.info(`[ATH webhook] ✓ Order #${order.id} paid via ecommerceId`);
         return;
       }
     }
@@ -134,22 +135,22 @@ router.post("/webhooks/athmovil", async (req: Request, res: Response): Promise<v
 
       if (phoneMatches.length === 1) {
         await markOrderPaid(phoneMatches[0].id, refNum);
-        console.log(`[ATH webhook] ✓ Order #${phoneMatches[0].id} paid via phone+amount match`);
+        req.log.info(`[ATH webhook] ✓ Order #${phoneMatches[0].id} paid via phone+amount match`);
         return;
       }
       if (phoneMatches.length > 1) {
-        console.warn(`[ATH webhook] Ambiguous phone+amount match (${phoneMatches.length} orders) — not auto-marking`);
+        req.log.warn(`[ATH webhook] Ambiguous phone+amount match (${phoneMatches.length} orders) — not auto-marking`);
       }
     }
 
     // ── 5. No match — log it clearly ─────────────────────────────────────────
-    console.warn(
+    req.log.warn(
       `[ATH webhook] UNMATCHED payment — $${rawTotal} from ${payload.name ?? "unknown"} ` +
       `(${payload.phoneNumber ?? "no phone"}) ref:${refNum ?? "none"}. ` +
       `This appears to be a general ATH Móvil payment not linked to an online order.`
     );
   } catch (err) {
-    console.error("[ATH webhook] Error processing payment:", err);
+    req.log.error({ err }, "[ATH webhook] Error processing payment");
   }
 });
 

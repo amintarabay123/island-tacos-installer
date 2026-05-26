@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { eq, asc } from "drizzle-orm";
 import { db, employeesTable } from "@workspace/db";
 import { requireAdminAuth } from "./auth";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -30,7 +31,7 @@ async function seedFromEnvIfEmpty() {
 }
 
 // Seed on module load
-seedFromEnvIfEmpty().catch(console.error);
+seedFromEnvIfEmpty().catch((err) => logger.error({ err }, "[employees] seedFromEnvIfEmpty failed"));
 
 // GET /api/employees — list all (admin only)
 router.get("/employees", requireAdminAuth, async (_req, res): Promise<void> => {

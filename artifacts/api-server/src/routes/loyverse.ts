@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable, loyverseDailySummaryTable } from "@workspace/db";
 import { syncFromLoyverse, pushOrderToLoyverse, importLoyverseHistory } from "../lib/loyverse";
 import multer from "multer";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -20,7 +21,7 @@ router.post("/loyverse/sync", async (_req, res): Promise<void> => {
       errors: result.errors,
     });
   } catch (err) {
-    console.error("Loyverse sync error:", err);
+    logger.error({ err }, "Loyverse sync error");
     res.status(500).json({ error: String(err) });
   }
 });
@@ -77,20 +78,20 @@ router.post("/loyverse/push/:orderId", async (req, res): Promise<void> => {
 
     res.json({ success: true, receiptNumber });
   } catch (err) {
-    console.error("Loyverse push error:", err);
+    req.log.error({ err }, "Loyverse push error");
     res.status(500).json({ error: String(err) });
   }
 });
 
 // POST /loyverse/import-history — one-time import of all Loyverse customers + receipts
 router.post("/loyverse/import-history", async (_req, res): Promise<void> => {
-  console.log("[loyverse/import-history] Starting one-time history import…");
+  logger.info("[loyverse/import-history] Starting one-time history import…");
   try {
     const result = await importLoyverseHistory();
-    console.log(`[loyverse/import-history] Done — customers: +${result.customersImported} skipped:${result.customersSkipped} | orders: +${result.ordersImported} skipped:${result.ordersSkipped} | errors:${result.errors.length}`);
+    logger.info({ result }, "[loyverse/import-history] Done");
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error("[loyverse/import-history] Error:", err);
+    logger.error({ err }, "[loyverse/import-history] Error");
     res.status(500).json({ error: String(err) });
   }
 });
@@ -188,7 +189,7 @@ router.post("/loyverse/import-csv", upload.single("file"), async (req, res): Pro
   }
 
   const headers = rows[0];
-  console.log("[import-csv] Headers detected:", headers);
+  req.log.info({ headers }, "[import-csv] Headers detected");
 
   // ── Detect format ──────────────────────────────────────────────────────────
   const colDate     = findCol(headers, "date", "receiptdate", "created");
@@ -254,12 +255,12 @@ router.post("/loyverse/import-csv", upload.single("file"), async (req, res): Pro
         });
         imported++;
       } catch (err) {
-        console.error(`[import-csv] Row ${i} error:`, err);
+        req.log.error({ err, row: i }, "[import-csv] Row error");
         errors++;
       }
     }
 
-    console.log(`[import-csv] Daily summary — imported:${imported} skipped:${skipped} errors:${errors}`);
+    req.log.info({ imported, skipped, errors }, "[import-csv] Daily summary complete");
     res.json({ success: true, format: "daily_summary", imported, skipped, errors });
     return;
   }
@@ -309,12 +310,12 @@ router.post("/loyverse/import-csv", upload.single("file"), async (req, res): Pro
         existingCodes.add(confirmationCode);
         imported++;
       } catch (err) {
-        console.error(`[import-csv] Row ${i} error:`, err);
+        req.log.error({ err, row: i }, "[import-csv] Row error");
         errors++;
       }
     }
 
-    console.log(`[import-csv] Per-receipt — imported:${imported} skipped:${skipped} errors:${errors}`);
+    req.log.info({ imported, skipped, errors }, "[import-csv] Per-receipt complete");
     res.json({ success: true, format: "per_receipt", imported, skipped, errors });
   }
 });

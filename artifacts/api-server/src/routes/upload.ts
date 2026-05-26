@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 import { objectStorageClient } from "../lib/objectStorage";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -34,7 +35,7 @@ router.post("/upload", upload.single("file"), async (req: Request, res: Response
 
     if (!putResponse.ok) {
       const text = await putResponse.text().catch(() => "");
-      console.error("GCS PUT failed:", putResponse.status, text);
+      req.log.error({ status: putResponse.status, body: text }, "GCS PUT failed");
       res.status(500).json({ error: "Upload to storage failed" });
       return;
     }
@@ -45,7 +46,7 @@ router.post("/upload", upload.single("file"), async (req: Request, res: Response
     // Return the serving URL that goes through our /storage/objects route
     res.json({ url: `/api/storage${objectPath}` });
   } catch (err) {
-    console.error("Upload failed:", err);
+    req.log.error({ err }, "Upload failed");
     res.status(500).json({ error: "Upload failed" });
   }
 });
@@ -103,7 +104,7 @@ router.get("/admin/uploaded-images", async (_req: Request, res: Response): Promi
 
     res.json({ urls });
   } catch (err) {
-    console.error("List uploads error:", err);
+    logger.error({ err }, "List uploads error");
     res.status(500).json({ error: "Failed to list uploads" });
   }
 });
