@@ -600,21 +600,31 @@ export default function Kitchen() {
 
   const [mobileTab, setMobileTab] = useState<"new" | "preparing" | "ready">("new");
 
-  // Show on KDS if:
-  //   (a) there is at least one not-yet-made KDS item (normal case / new addons), OR
-  //   (b) the order is actively being prepared and has at least one KDS item at all.
+  // Show on KDS if EITHER condition holds:
   //
-  // Condition (b) handles the case where the addon card's "Made ✓" has been pressed,
-  // flipping all KDS items to alreadyMade=true, but a non-KDS drink is still
-  // alreadyMade=false. Without (b), the drink's !alreadyMade state would make (a)
-  // false for every KDS item, and the entire card would vanish from the Preparing
-  // column — leaving no way for the cook to press "Ready".
+  //   (a) At least one not-yet-made KDS item exists.
+  //       This is the normal path: confirmed/new orders and addon cards whose
+  //       new items haven't been cooked yet. Also drives the chime.
   //
-  // Drinks (sendToKds=false) still never appear on any card and never trigger the
-  // chime — that logic is in isKdsItem() and the chime detection below.
+  //   (b) The order is past the "accepted" stage (preparing / ready / completed)
+  //       AND has at least one KDS item.
+  //       This handles the addon-flow edge case: after the addon card's "Made ✓"
+  //       is pressed, ALL KDS items flip to alreadyMade=true. If the order also
+  //       has a non-KDS drink (alreadyMade=false, isKdsItem=false), condition (a)
+  //       would be false for every KDS item and the card would vanish — leaving
+  //       the cook with no way to press "Ready" or "Complete".
+  //       Status-based visibility ensures the card stays in the correct column
+  //       (Preparing or Ready) until the cook explicitly advances or clears it.
+  //
+  // Notes:
+  //   - kdsCleared orders are already excluded by the API before reaching here.
+  //   - Drinks still never appear on any card; that's enforced by isKdsItem() in
+  //     the card renderer and in the isMixed/addon-split logic below.
+  //   - The chime and "hasPending" indicator use the raw `orders` array with the
+  //     original !alreadyMade && isKdsItem guard — those are unchanged.
   const kdsOrders = orders.filter(o =>
     o.items.some(item => !item.alreadyMade && isKdsItem(item)) ||
-    (o.status === "preparing" && o.items.some(isKdsItem))
+    (o.status !== "pending" && o.status !== "confirmed" && o.items.some(isKdsItem))
   );
 
   // KdsCard: one card on the board. A "full" card renders the whole order
