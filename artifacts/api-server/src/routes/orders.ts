@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, desc, and, inArray, count, or, gte } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable, menuItemsTable, refundsTable, storeSettingsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, menuItemsTable, menuCategoriesTable, refundsTable, storeSettingsTable } from "@workspace/db";
 import { upsertCustomer } from "./customers";
 import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
@@ -941,12 +941,36 @@ router.post("/orders/:id/add-items", requireStaffAuth, async (req, res): Promise
     });
   }
 
-  // If the kitchen has already started this order, mark existing items as alreadyMade
-  // so the KDS addon-card split fires: new items get their own "Accept" card while
-  // the original items stay in their current column (Preparing / Ready).
-  // For "confirmed" orders (kitchen hasn't touched it yet), skip — all items
-  // should appear together in the same Accept card.
-  if (order.status === "preparing" || order.status === "ready") {
+  // If the kitchen has already started this order AND the new batch includes at least
+  // one KDS item, mark existing items as alreadyMade so the KDS addon-card split fires:
+  // new KDS items get their own "Accept" card while the original items stay put.
+  //
+  // Critically: skip the marking when only non-KDS items (drinks) are being added.
+  // sendToKds lives on the CATEGORY (not the item). Fetch category flags for the new
+  // items' categories to determine if any of them are KDS items.
+  // Marking existing food as alreadyMade=true then adding only a drink (whose category
+  // has sendToKds=false) would leave zero items passing the KDS filter → order disappears.
+  const newItemCategoryIds = [...new Set(
+    parsed.data
+      .map(item => item.menuItemId != null ? menuItemMap.get(item.menuItemId)?.categoryId : null)
+      .filter((id): id is number => id != null)
+  )];
+  const newItemCategories = newItemCategoryIds.length > 0
+    ? await db.select({ id: menuCategoriesTable.id, sendToKds: menuCategoriesTable.sendToKds })
+        .from(menuCategoriesTable)
+        .where(newItemCategoryIds.length === 1
+          ? eq(menuCategoriesTable.id, newItemCategoryIds[0])
+          : inArray(menuCategoriesTable.id, newItemCategoryIds))
+    : [];
+  const categoryKdsMap = new Map(newItemCategories.map(c => [c.id, c.sendToKds]));
+  const hasNewKdsItem = parsed.data.some(item => {
+    if (item.menuItemId == null) return true; // deleted-item fallback: assume KDS
+    const categoryId = menuItemMap.get(item.menuItemId)?.categoryId;
+    if (categoryId == null) return true;
+    return categoryKdsMap.get(categoryId) !== false;
+  });
+
+  if (hasNewKdsItem && (order.status === "preparing" || order.status === "ready")) {
     await db
       .update(orderItemsTable)
       .set({ alreadyMade: true })
