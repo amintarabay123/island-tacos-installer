@@ -600,12 +600,21 @@ export default function Kitchen() {
 
   const [mobileTab, setMobileTab] = useState<"new" | "preparing" | "ready">("new");
 
-  // Show on KDS only if the order has at least one food item (sendToKds=true) that
-  // has NOT been made yet. Drinks (sendToKds=false) never trigger KDS visibility
-  // regardless of their alreadyMade flag — adding a drink to a held ticket must
-  // never cause the order to re-appear on the kitchen screen.
+  // Show on KDS if:
+  //   (a) there is at least one not-yet-made KDS item (normal case / new addons), OR
+  //   (b) the order is actively being prepared and has at least one KDS item at all.
+  //
+  // Condition (b) handles the case where the addon card's "Made ✓" has been pressed,
+  // flipping all KDS items to alreadyMade=true, but a non-KDS drink is still
+  // alreadyMade=false. Without (b), the drink's !alreadyMade state would make (a)
+  // false for every KDS item, and the entire card would vanish from the Preparing
+  // column — leaving no way for the cook to press "Ready".
+  //
+  // Drinks (sendToKds=false) still never appear on any card and never trigger the
+  // chime — that logic is in isKdsItem() and the chime detection below.
   const kdsOrders = orders.filter(o =>
-    o.items.some(item => !item.alreadyMade && isKdsItem(item))
+    o.items.some(item => !item.alreadyMade && isKdsItem(item)) ||
+    (o.status === "preparing" && o.items.some(isKdsItem))
   );
 
   // KdsCard: one card on the board. A "full" card renders the whole order
