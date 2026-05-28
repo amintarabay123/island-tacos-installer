@@ -1798,24 +1798,23 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── 86 List / Sold-Out Drawer ────────────────────────────────────────────────
+// ─── 86 Panel ────────────────────────────────────────────────────────────────
 
-const SOLD_OUT_SHORTCUTS = [
-  { label: "Steak",      keywords: ["steak"],                      group: "protein" as const },
-  { label: "Salmon",     keywords: ["salmon"],                     group: "protein" as const },
-  { label: "Shrimp",     keywords: ["shrimp"],                     group: "protein" as const },
-  { label: "Veggie",     keywords: ["veggie"],                     group: "protein" as const },
-  { label: "Chicken",    keywords: ["chicken"],                    group: "protein" as const },
-  { label: "Cheese",     keywords: ["cheese"],                     group: "topping" as const },
-  { label: "Guacamole",  keywords: ["guac"],                       group: "topping" as const },
-  { label: "Pico/Salsa", keywords: ["pico", "salsa"],              group: "topping" as const },
-  { label: "Corn",       keywords: ["corn"],                       group: "topping" as const },
-  { label: "Black Beans",keywords: ["black bean", "black beans"],  group: "topping" as const },
-  { label: "Rice",       keywords: ["rice"],                       group: "topping" as const },
-  { label: "Sour Cream", keywords: ["sour cream"],                 group: "topping" as const },
-  { label: "Jalapeños",  keywords: ["jalap"],                      group: "topping" as const },
-] as const;
-type Shortcut = typeof SOLD_OUT_SHORTCUTS[number];
+const EIGHTY_SIX = [
+  { label: "Steak",       emoji: "🥩", type: "item"     as const, keywords: ["steak"]                   },
+  { label: "Salmon",      emoji: "🐟", type: "item"     as const, keywords: ["salmon"]                  },
+  { label: "Shrimp",      emoji: "🍤", type: "item"     as const, keywords: ["shrimp"]                  },
+  { label: "Chicken",     emoji: "🍗", type: "item"     as const, keywords: ["chicken"]                 },
+  { label: "Veggie",      emoji: "🥗", type: "item"     as const, keywords: ["veggie"]                  },
+  { label: "Burger",      emoji: "🍔", type: "item"     as const, keywords: ["burger"]                  },
+  { label: "Rice",        emoji: "🍚", type: "modifier" as const, keywords: ["rice"]                    },
+  { label: "Beans",       emoji: "🫘", type: "modifier" as const, keywords: ["bean"]                    },
+  { label: "Guac",        emoji: "🥑", type: "modifier" as const, keywords: ["guac"]                    },
+  { label: "Corn",        emoji: "🌽", type: "modifier" as const, keywords: ["corn"]                    },
+  { label: "Cabbage",     emoji: "🥬", type: "modifier" as const, keywords: ["cabbage"]                 },
+  { label: "Cheese",      emoji: "🧀", type: "modifier" as const, keywords: ["cheese"]                  },
+  { label: "Pico/Tomato", emoji: "🍅", type: "modifier" as const, keywords: ["pico", "tomato", "salsa"] },
+];
 
 type SoldOutItem = { id: number; name: string; categoryId: number; available: boolean };
 type SoldOutModifier = {
@@ -1829,10 +1828,7 @@ type SoldOutData = { items: SoldOutItem[]; modifiers: SoldOutModifier[]; categor
 function SoldOutDrawer({ onClose }: { onClose: () => void }) {
   const [data, setData] = useState<SoldOutData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toggling, setToggling] = useState<string | null>(null);
-  const [quickSearch, setQuickSearch] = useState("");
-  const [activeShortcut, setActiveShortcut] = useState<Shortcut | null>(null);
-  const [bulkBusy, setBulkBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1844,322 +1840,147 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const toggleItem = async (item: SoldOutItem) => {
-    const key = `item-${item.id}`;
-    setToggling(key);
-    const newVal = !item.available;
-    try {
-      const r = await fetch(`/api/menu/soldout/item/${item.id}`, {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ available: newVal }),
-      });
-      if (r.ok) {
-        setData(prev => prev ? {
-          ...prev,
-          items: prev.items.map(i => i.id === item.id ? { ...i, available: newVal } : i),
-        } : prev);
-      }
-    } finally { setToggling(null); }
+  const matches = (name: string, keywords: readonly string[]) =>
+    keywords.some(k => name.toLowerCase().includes(k.toLowerCase()));
+
+  const isOff = (preset: typeof EIGHTY_SIX[number]) => {
+    if (!data) return false;
+    if (preset.type === "item") {
+      return data.items.some(i => matches(i.name, preset.keywords) && !i.available);
+    }
+    return data.modifiers.some(m =>
+      m.options.some(o => matches(o.name, preset.keywords) && m.unavailableOptionIds.includes(o.id))
+    );
   };
 
-  const toggleOption = async (mod: SoldOutModifier, optionId: string) => {
-    const key = `opt-${mod.id}-${optionId}`;
-    setToggling(key);
-    const isCurrentlyUnavailable = mod.unavailableOptionIds.includes(optionId);
-    const newAvailable = isCurrentlyUnavailable; // toggling: if unavailable → make available
+  const toggle = async (preset: typeof EIGHTY_SIX[number]) => {
+    if (!data || busy) return;
+    setBusy(preset.label);
+    const turnOff = !isOff(preset);
     try {
-      const r = await fetch("/api/menu/soldout/modifier-option", {
-        method: "POST", credentials: "include",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ modifierId: mod.id, optionId, available: newAvailable }),
-      });
-      if (r.ok) {
-        setData(prev => prev ? {
-          ...prev,
-          modifiers: prev.modifiers.map(m => m.id !== mod.id ? m : {
-            ...m,
-            unavailableOptionIds: newAvailable
-              ? m.unavailableOptionIds.filter(id => id !== optionId)
-              : [...m.unavailableOptionIds, optionId],
-          }),
-        } : prev);
-      }
-    } finally { setToggling(null); }
-  };
-
-  const itemsByCategory = data
-    ? data.categories.map(cat => ({
-        cat,
-        items: data.items.filter(i => i.categoryId === cat.id),
-      })).filter(g => g.items.length > 0)
-    : [];
-
-  const soldOutItemCount = data ? data.items.filter(i => !i.available).length : 0;
-  const soldOutOptCount = data ? data.modifiers.reduce((s, m) => s + m.unavailableOptionIds.length, 0) : 0;
-  const totalSoldOut = soldOutItemCount + soldOutOptCount;
-
-  // ── Bulk / Quick-mark helpers ──────────────────────────────────────────────
-  // activeKeywords: from a preset shortcut OR from the free-text search box
-  const activeKeywords: string[] = activeShortcut
-    ? [...activeShortcut.keywords]
-    : quickSearch.trim() ? [quickSearch.trim().toLowerCase()] : [];
-
-  const matchesKeywords = (name: string) =>
-    activeKeywords.some(k => name.toLowerCase().includes(k.toLowerCase()));
-
-  const bulkMatchItems = activeKeywords.length && data
-    ? data.items.filter(i => matchesKeywords(i.name))
-    : [];
-  const bulkMatchOptions: { mod: SoldOutModifier; optionId: string }[] = activeKeywords.length && data
-    ? data.modifiers.flatMap(m =>
-        (m.options as { id: string; name: string; price: number }[])
-          .filter(o => matchesKeywords(o.name))
-          .map(o => ({ mod: m, optionId: o.id }))
-      )
-    : [];
-  const bulkTotal = bulkMatchItems.length + bulkMatchOptions.length;
-
-  const bulkMark = async (available: boolean) => {
-    if (!bulkTotal || bulkBusy) return;
-    setBulkBusy(true);
-    try {
-      await Promise.all([
-        ...bulkMatchItems.map(item =>
+      if (preset.type === "item") {
+        const targets = data.items.filter(i => matches(i.name, preset.keywords));
+        await Promise.all(targets.map(item =>
           fetch(`/api/menu/soldout/item/${item.id}`, {
             method: "POST", credentials: "include",
             headers: { "Content-Type": "application/json", ...authHeaders() },
-            body: JSON.stringify({ available }),
+            body: JSON.stringify({ available: !turnOff }),
           })
-        ),
-        ...bulkMatchOptions.map(({ mod, optionId }) =>
-          fetch("/api/menu/soldout/modifier-option", {
-            method: "POST", credentials: "include",
-            headers: { "Content-Type": "application/json", ...authHeaders() },
-            body: JSON.stringify({ modifierId: mod.id, optionId, available }),
-          })
-        ),
-      ]);
-      await load();
-      setQuickSearch("");
-      setActiveShortcut(null);
-    } finally { setBulkBusy(false); }
+        ));
+        setData(prev => prev ? {
+          ...prev,
+          items: prev.items.map(i => matches(i.name, preset.keywords) ? { ...i, available: !turnOff } : i),
+        } : prev);
+      } else {
+        await Promise.all(
+          data.modifiers.flatMap(mod =>
+            mod.options
+              .filter(o => matches(o.name, preset.keywords))
+              .map(o =>
+                fetch("/api/menu/soldout/modifier-option", {
+                  method: "POST", credentials: "include",
+                  headers: { "Content-Type": "application/json", ...authHeaders() },
+                  body: JSON.stringify({ modifierId: mod.id, optionId: o.id, available: !turnOff }),
+                })
+              )
+          )
+        );
+        setData(prev => prev ? {
+          ...prev,
+          modifiers: prev.modifiers.map(m => ({
+            ...m,
+            unavailableOptionIds: turnOff
+              ? [...new Set([...m.unavailableOptionIds, ...m.options.filter(o => matches(o.name, preset.keywords)).map(o => o.id)])]
+              : m.unavailableOptionIds.filter(id => !m.options.some(o => o.id === id && matches(o.name, preset.keywords))),
+          })),
+        } : prev);
+      }
+    } finally { setBusy(null); }
   };
+
+  const anyOff = data ? EIGHTY_SIX.some(p => isOff(p)) : false;
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-stretch justify-end" onClick={onClose}>
-      <div
-        className="bg-white w-full max-w-md h-full flex flex-col shadow-2xl overflow-hidden"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-red-50">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">🚫 Sold Out List</h2>
-            {totalSoldOut > 0 ? (
-              <p className="text-xs text-red-600 font-medium mt-0.5">{totalSoldOut} item{totalSoldOut !== 1 ? "s" : ""} currently sold out</p>
-            ) : (
-              <p className="text-xs text-gray-400 mt-0.5">Everything is available</p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl leading-none px-1"
-          >×</button>
-        </div>
+      <div className="bg-white w-full max-w-sm h-full flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
 
-        {/* Quick Mark shortcuts */}
-        {!loading && data && (
-          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 space-y-2.5">
-            {/* Protein row */}
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Proteins</p>
-              <div className="flex flex-wrap gap-1.5">
-                {SOLD_OUT_SHORTCUTS.filter(s => s.group === "protein").map(s => {
-                  const isActive = activeShortcut?.label === s.label;
-                  return (
-                    <button
-                      key={s.label}
-                      onClick={() => { setQuickSearch(""); setActiveShortcut(isActive ? null : s); }}
-                      className={`px-3 py-1.5 rounded-full text-sm font-bold border transition-colors ${
-                        isActive
-                          ? "bg-red-500 text-white border-red-500"
-                          : "bg-white text-gray-700 border-gray-300 hover:border-red-400 hover:text-red-600"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {/* Toppings / Modifiers row */}
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Toppings / Modifiers</p>
-              <div className="flex flex-wrap gap-1.5">
-                {SOLD_OUT_SHORTCUTS.filter(s => s.group === "topping").map(s => {
-                  const isActive = activeShortcut?.label === s.label;
-                  return (
-                    <button
-                      key={s.label}
-                      onClick={() => { setQuickSearch(""); setActiveShortcut(isActive ? null : s); }}
-                      className={`px-3 py-1.5 rounded-full text-sm font-bold border transition-colors ${
-                        isActive
-                          ? "bg-red-500 text-white border-red-500"
-                          : "bg-white text-gray-700 border-gray-300 hover:border-red-400 hover:text-red-600"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {/* Free-text fallback */}
-            <div className="flex gap-2 items-center">
-              <input
-                type="text"
-                value={activeShortcut ? "" : quickSearch}
-                onChange={e => { setActiveShortcut(null); setQuickSearch(e.target.value); }}
-                onFocus={() => setActiveShortcut(null)}
-                placeholder="Or type a custom keyword…"
-                className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-300"
-              />
-            </div>
-            {/* Match preview + action buttons */}
-            {activeKeywords.length > 0 && (
-              <div>
-                {bulkTotal > 0 ? (
-                  <>
-                    <p className="text-xs text-gray-500 mb-2">
-                      {activeShortcut ? <><span className="font-bold text-gray-800">{activeShortcut.label}</span>: </> : null}
-                      <span className="font-bold text-gray-800">{bulkTotal}</span> match{bulkTotal !== 1 ? "es" : ""}
-                      {bulkMatchItems.length > 0 && ` · ${bulkMatchItems.length} menu item${bulkMatchItems.length !== 1 ? "s" : ""}`}
-                      {bulkMatchOptions.length > 0 && ` · ${bulkMatchOptions.length} modifier option${bulkMatchOptions.length !== 1 ? "s" : ""}`}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        disabled={bulkBusy}
-                        onClick={() => bulkMark(false)}
-                        className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-bold py-2.5 rounded-xl transition-colors disabled:opacity-40"
-                      >
-                        {bulkBusy ? "Marking…" : "🚫 Mark All Sold Out"}
-                      </button>
-                      <button
-                        disabled={bulkBusy}
-                        onClick={() => bulkMark(true)}
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white text-sm font-bold py-2.5 rounded-xl transition-colors disabled:opacity-40"
-                      >
-                        {bulkBusy ? "…" : "✓ Restore All"}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-400 italic">Nothing on the menu matches this keyword.</p>
-                )}
-              </div>
-            )}
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">86 List</h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {anyOff ? "Some items blocked online" : "Everything available online"}
+            </p>
           </div>
-        )}
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none px-1">×</button>
+        </div>
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
         ) : !data ? (
           <div className="flex-1 flex items-center justify-center text-red-500 text-sm">Failed to load</div>
         ) : (
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
 
-            {/* ── Menu Items ── */}
-            <div className="px-4 pt-4 pb-2">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Menu Items</p>
-              {itemsByCategory.map(({ cat, items }) => (
-                <div key={cat.id} className="mb-4">
-                  <p className="text-xs font-semibold text-gray-500 mb-1.5">{cat.name}</p>
-                  <div className="space-y-1.5">
-                    {items.map(item => {
-                      const isSoldOut = !item.available;
-                      const busy = toggling === `item-${item.id}`;
-                      return (
-                        <div
-                          key={item.id}
-                          className={`flex items-center justify-between rounded-xl px-3 py-2.5 border transition-colors ${
-                            isSoldOut
-                              ? "bg-red-50 border-red-200"
-                              : "bg-gray-50 border-gray-200"
-                          }`}
-                        >
-                          <span className={`text-sm font-medium flex-1 mr-2 ${isSoldOut ? "line-through text-red-400" : "text-gray-800"}`}>
-                            {item.name}
-                            {isSoldOut && <span className="ml-2 text-xs font-bold text-red-500 no-underline" style={{ textDecoration: "none" }}>OUT</span>}
-                          </span>
-                          <button
-                            disabled={busy}
-                            onClick={() => toggleItem(item)}
-                            className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors min-w-[80px] text-center ${
-                              isSoldOut
-                                ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                : "bg-red-100 text-red-700 hover:bg-red-200"
-                            } disabled:opacity-40`}
-                          >
-                            {busy ? "…" : isSoldOut ? "Restore" : "Sold Out"}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            {/* Proteins */}
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Proteins</p>
+              <div className="space-y-2">
+                {EIGHTY_SIX.filter(p => p.type === "item").map(preset => {
+                  const off = isOff(preset);
+                  return (
+                    <button
+                      key={preset.label}
+                      onClick={() => toggle(preset)}
+                      disabled={!!busy}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all disabled:opacity-50 ${
+                        off ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span className="text-xl">{preset.emoji}</span>
+                        <span className={`text-sm font-semibold ${off ? "text-red-700" : "text-gray-800"}`}>
+                          {preset.label}
+                        </span>
+                      </span>
+                      <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${off ? "bg-red-500" : "bg-green-500"}`}>
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${off ? "translate-x-1" : "translate-x-6"}`} />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Divider */}
-            {data.modifiers.length > 0 && (
-              <div className="h-px bg-gray-200 mx-4 my-2" />
-            )}
-
-            {/* ── Modifier Options ── */}
-            {data.modifiers.length > 0 && (
-              <div className="px-4 pt-2 pb-4">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Modifier Options</p>
-                {data.modifiers.map(mod => (
-                  <div key={mod.id} className="mb-4">
-                    <p className="text-xs font-semibold text-gray-500 mb-1.5">{mod.name}</p>
-                    <div className="space-y-1.5">
-                      {(mod.options as { id: string; name: string; price: number }[]).map(opt => {
-                        const isSoldOut = mod.unavailableOptionIds.includes(opt.id);
-                        const busy = toggling === `opt-${mod.id}-${opt.id}`;
-                        return (
-                          <div
-                            key={opt.id}
-                            className={`flex items-center justify-between rounded-xl px-3 py-2.5 border transition-colors ${
-                              isSoldOut
-                                ? "bg-red-50 border-red-200"
-                                : "bg-gray-50 border-gray-200"
-                            }`}
-                          >
-                            <span className={`text-sm flex-1 mr-2 ${isSoldOut ? "line-through text-red-400" : "text-gray-700"}`}>
-                              {opt.name}
-                              {opt.price > 0 && <span className="text-gray-400 text-xs ml-1">+${opt.price.toFixed(2)}</span>}
-                              {isSoldOut && <span className="ml-2 text-xs font-bold text-red-500" style={{ textDecoration: "none" }}>OUT</span>}
-                            </span>
-                            <button
-                              disabled={busy}
-                              onClick={() => toggleOption(mod, opt.id)}
-                              className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors min-w-[80px] text-center ${
-                                isSoldOut
-                                  ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                  : "bg-red-100 text-red-700 hover:bg-red-200"
-                              } disabled:opacity-40`}
-                            >
-                              {busy ? "…" : isSoldOut ? "Restore" : "Sold Out"}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+            {/* Ingredients */}
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Ingredients</p>
+              <div className="space-y-2">
+                {EIGHTY_SIX.filter(p => p.type === "modifier").map(preset => {
+                  const off = isOff(preset);
+                  return (
+                    <button
+                      key={preset.label}
+                      onClick={() => toggle(preset)}
+                      disabled={!!busy}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all disabled:opacity-50 ${
+                        off ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200 hover:border-gray-300"
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span className="text-xl">{preset.emoji}</span>
+                        <span className={`text-sm font-semibold ${off ? "text-red-700" : "text-gray-800"}`}>
+                          {preset.label}
+                        </span>
+                      </span>
+                      <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${off ? "bg-red-500" : "bg-green-500"}`}>
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${off ? "translate-x-1" : "translate-x-6"}`} />
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-            )}
+            </div>
 
           </div>
         )}
