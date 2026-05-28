@@ -3277,14 +3277,9 @@ export default function POS() {
     // (bug seen 2026-05-25, caused by the ItemCard memo added 2026-05-25).
     const unitPrice = priceOverride ?? item.price;
     setCart(prev => {
-      // Open-price lines are always unique (one-off custom item) — never merge.
-      const existingKey = (!note && priceOverride === undefined) ? prev.find(c =>
-        c.menuItemId === item.id && c.notes === "" && c.priceOverride === undefined &&
-        JSON.stringify(c.modifierSelections) === JSON.stringify(sels)
-      )?.key : undefined;
-      if (existingKey) {
-        return prev.map(c => c.key === existingKey ? { ...c, quantity: c.quantity + 1 } : c);
-      }
+      // Every tap always creates a new line — no auto-merging.
+      // Use the + / − buttons on an existing line to adjust quantity.
+      // This keeps split payments possible (each person's item is its own line).
       return [...prev, {
         key: uid(),
         menuItemId: item.id,
@@ -3863,6 +3858,15 @@ export default function POS() {
                 </button>
               )}
             </div>
+            {resumedOrderId && (customerName || customerPhone) && (
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <span className="text-amber-600 text-base">👤</span>
+                <div className="min-w-0">
+                  {customerName && <p className="text-gray-900 text-sm font-semibold leading-tight truncate">{customerName}</p>}
+                  {customerPhone && <p className="text-amber-700 text-xs leading-tight">{customerPhone}</p>}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Cart items */}
