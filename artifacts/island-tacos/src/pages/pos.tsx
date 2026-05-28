@@ -1392,6 +1392,11 @@ const ItemCard = memo(function ItemCard({ item, onClick }: { item: MenuItem; onC
           <span className="text-3xl opacity-25">🌮</span>
         </div>
       )}
+      {!item.available && (
+        <span className="absolute top-2 left-2 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md leading-none">
+          🌐 ONLINE OFF
+        </span>
+      )}
       <div className="flex items-start justify-between gap-1">
         <span className="text-gray-900 text-sm font-semibold leading-tight line-clamp-2">{item.name}</span>
         <div className="flex gap-0.5 flex-shrink-0">
@@ -2906,17 +2911,18 @@ export default function POS() {
   const [loadingMenu, setLoadingMenu] = useState(true);
 
   const _API = import.meta.env.BASE_URL.replace(/\/$/, "");
-  useEffect(() => {
+  const reloadMenu = useCallback(() => {
     Promise.all([
       fetch(`${_API}/api/menu/categories`, { credentials: "include", headers: authHeaders() }).then(r => r.json()),
-      fetch(`${_API}/api/menu/items?available=true`, { credentials: "include", headers: authHeaders() }).then(r => r.json()),
+      fetch(`${_API}/api/menu/items`, { credentials: "include", headers: authHeaders() }).then(r => r.json()),
     ]).then(([cats, items]) => {
       setCategories(Array.isArray(cats) ? cats : []);
       setAllItems(Array.isArray(items) ? items : []);
     }).catch(err => {
       console.error("POS menu load failed:", err);
     }).finally(() => setLoadingMenu(false));
-  }, []);
+  }, [_API]);
+  useEffect(() => { reloadMenu(); }, [reloadMenu]);
 
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -3181,9 +3187,8 @@ export default function POS() {
   }, []);
 
 
-  // Filtered items
+  // Filtered items — sold-out items still show in POS (available=false only hides from online store)
   const filteredItems = allItems.filter(item => {
-    if (!item.available) return false;
     const matchCat = selectedCat === null || item.categoryId === selectedCat;
     const matchSearch = !search || item.name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
@@ -4227,7 +4232,7 @@ export default function POS() {
       )}
 
       {soldOutOpen && (
-        <SoldOutDrawer onClose={() => setSoldOutOpen(false)} />
+        <SoldOutDrawer onClose={() => { setSoldOutOpen(false); reloadMenu(); }} />
       )}
 
       {/* Item note inline modal */}
