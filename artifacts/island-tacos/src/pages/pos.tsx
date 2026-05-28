@@ -2935,7 +2935,10 @@ export default function POS() {
   const resumedSnapshotRef = useRef<Map<string, number>>(new Map());
   // Cache modifier lists by menu item ID so re-tapping a cart item is instant
   // and rapid double-taps don't fire concurrent fetches.
-  const modifierCacheRef = useRef<Map<number, Modifier[]>>(new Map());
+  // TTL: 5 minutes — ensures modifier updates (new options, price changes)
+  // are picked up without requiring a full page refresh.
+  const MODIFIER_CACHE_TTL_MS = 5 * 60 * 1000;
+  const modifierCacheRef = useRef<Map<number, { mods: Modifier[]; ts: number }>>(new Map());
   const editingCartKeyRef = useRef<string | null>(null);
   const resumedItemsUnchanged = useCallback((): boolean => {
     const snap = resumedSnapshotRef.current;
@@ -3242,11 +3245,13 @@ export default function POS() {
     }
     // Check for modifiers (seed cache so cart re-edits are instant)
     try {
-      let mods = modifierCacheRef.current.get(item.id);
+      const cached = modifierCacheRef.current.get(item.id);
+      const now = Date.now();
+      let mods = (cached && now - cached.ts < MODIFIER_CACHE_TTL_MS) ? cached.mods : null;
       if (!mods) {
         const r = await fetch(`/api/menu/items/${item.id}/modifiers`, { credentials: "include" });
         mods = await r.json() as Modifier[];
-        modifierCacheRef.current.set(item.id, mods);
+        modifierCacheRef.current.set(item.id, { mods, ts: now });
       }
       if (mods.length > 0) {
         setModifierModal({ item, mods });
@@ -3321,12 +3326,14 @@ export default function POS() {
         return;
       }
       // Use cached modifiers — already fetched when the item was first added.
-      // Only hits the network if the cache is cold (e.g. page reload mid-order).
-      let mods = modifierCacheRef.current.get(menuItem.id);
+      // Only hits the network if the cache is cold or expired (5-min TTL).
+      const cachedEdit = modifierCacheRef.current.get(menuItem.id);
+      const nowEdit = Date.now();
+      let mods = (cachedEdit && nowEdit - cachedEdit.ts < MODIFIER_CACHE_TTL_MS) ? cachedEdit.mods : null;
       if (!mods) {
         const r = await fetch(`/api/menu/items/${menuItem.id}/modifiers`, { credentials: "include" });
         mods = await r.json() as Modifier[];
-        modifierCacheRef.current.set(menuItem.id, mods);
+        modifierCacheRef.current.set(menuItem.id, { mods, ts: nowEdit });
       }
       if (mods.length > 0 || cartItem.notes) {
         setModifierModal({
