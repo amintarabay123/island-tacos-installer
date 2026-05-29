@@ -894,16 +894,66 @@ export default function Kitchen() {
                     && now > dismissedTs;
                   const uncollectedMins = readySince ? Math.floor((now - readySince) / 60000) : 0;
 
+                  const cardBorderBg = isUncollected
+                    ? "border-red-500 bg-red-950/60 animate-pulse"
+                    : overdue
+                      ? "border-red-500 bg-red-950/50 animate-pulse"
+                      : `${border} ${bg}`;
+
+                  // ── Collapsed view ───────────────────────────────────
+                  const isCollapsed = collapsedOrders.has(order.id);
+                  if (isCollapsed) {
+                    const visibleItems = order.items.filter(
+                      item => isKdsItem(item) && !(hiddenItemIds && hiddenItemIds.has(item.id))
+                    );
+                    const totalQty = visibleItems.reduce((s, i) => s + i.quantity, 0);
+                    const scheduledStr = order.scheduledPickupAt ? (() => {
+                      const msUntil = new Date(order.scheduledPickupAt).getTime() - now;
+                      if (msUntil <= 0) return null;
+                      const mins = Math.floor(msUntil / 60000);
+                      return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+                    })() : null;
+                    return (
+                      <div key={order.id} className={`rounded-lg border-2 ${cardBorderBg} transition-colors`}>
+                        <div
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
+                          onClick={() => toggleCollapsed(order.id)}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap min-w-0">
+                              <span className="text-lg font-black leading-none truncate">{order.customerName}</span>
+                              <span className="text-gray-400 font-mono text-xs shrink-0">#{order.confirmationCode}</span>
+                              <span className="text-xs font-semibold bg-black/20 text-gray-300 px-2 py-0.5 rounded-full shrink-0">
+                                {totalQty} item{totalQty !== 1 ? "s" : ""}
+                              </span>
+                              {scheduledStr && (
+                                <span className="text-xs font-bold bg-purple-900/60 text-purple-200 border border-purple-500/50 px-2 py-0.5 rounded-full shrink-0">
+                                  ⏰ {scheduledStr}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {next && (
+                              <button
+                                onClick={e => { e.stopPropagation(); void advance(order); }}
+                                disabled={isAdvancing}
+                                className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all active:scale-95 ${btnClass} disabled:opacity-40`}
+                              >
+                                {isAdvancing ? "…" : NEXT_LABEL[order.status]}
+                              </button>
+                            )}
+                            <span className="text-gray-400 text-lg leading-none">▸</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div
                       key={order.id}
-                      className={`rounded-lg border-2 ${
-                        isUncollected
-                          ? "border-red-500 bg-red-950/60 animate-pulse"
-                          : overdue
-                            ? "border-red-500 bg-red-950/50 animate-pulse"
-                            : `${border} ${bg}`
-                      } p-4 flex flex-col gap-3 transition-colors`}
+                      className={`rounded-lg border-2 ${cardBorderBg} p-4 flex flex-col gap-3 transition-colors`}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -932,11 +982,20 @@ export default function Kitchen() {
                             <div className="text-green-300 text-xs font-semibold mt-0.5 uppercase tracking-wide">Ready for pickup</div>
                           )}
                         </div>
-                        <div className="text-right shrink-0">
-                          <div className={`text-sm font-bold tabular-nums ${overdue ? "text-red-400" : "text-gray-500"}`}>
-                            {age}
+                        <div className="flex items-start gap-2 shrink-0">
+                          <div className="text-right">
+                            <div className={`text-sm font-bold tabular-nums ${overdue ? "text-red-400" : "text-gray-500"}`}>
+                              {age}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-0.5 capitalize">{order.orderType}</div>
                           </div>
-                          <div className="text-xs text-gray-400 mt-0.5 capitalize">{order.orderType}</div>
+                          <button
+                            onClick={() => toggleCollapsed(order.id)}
+                            className="text-gray-400 hover:text-gray-200 text-lg leading-none px-1 pt-0.5 transition-colors"
+                            title="Collapse order"
+                          >
+                            ▾
+                          </button>
                         </div>
                       </div>
 
