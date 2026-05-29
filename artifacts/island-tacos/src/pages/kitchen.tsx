@@ -931,6 +931,11 @@ export default function Kitchen() {
                                   ⏰ {scheduledStr}
                                 </span>
                               )}
+                              {order.notes && (
+                                <span className="text-xs text-yellow-300 italic truncate max-w-[140px] shrink-0">
+                                  "{order.notes.length > 40 ? order.notes.slice(0, 40) + "…" : order.notes}"
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
