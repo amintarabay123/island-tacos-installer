@@ -127,6 +127,37 @@ export default function Kitchen() {
       return next;
     });
   };
+
+  // Collapse state: orders whose item list is hidden to save space.
+  // Scheduled orders with pickup > 45 min away auto-collapse on first appearance.
+  const [collapsedOrders, setCollapsedOrders] = useState<Set<number>>(new Set());
+  const toggleCollapsed = (orderId: number) => {
+    setCollapsedOrders(prev => {
+      const next = new Set(prev);
+      next.has(orderId) ? next.delete(orderId) : next.add(orderId);
+      return next;
+    });
+  };
+  const autoCollapsedRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    const THRESHOLD_MS = 45 * 60 * 1000;
+    const toCollapse: number[] = [];
+    for (const o of orders) {
+      if (autoCollapsedRef.current.has(o.id)) continue;
+      autoCollapsedRef.current.add(o.id);
+      if (o.scheduledPickupAt) {
+        const msUntil = new Date(o.scheduledPickupAt).getTime() - Date.now();
+        if (msUntil > THRESHOLD_MS) toCollapse.push(o.id);
+      }
+    }
+    if (toCollapse.length > 0) {
+      setCollapsedOrders(prev => {
+        const next = new Set(prev);
+        toCollapse.forEach(id => next.add(id));
+        return next;
+      });
+    }
+  }, [orders]);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
     typeof Notification !== "undefined" ? Notification.permission : "denied"
   );
