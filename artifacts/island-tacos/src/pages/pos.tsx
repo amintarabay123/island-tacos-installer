@@ -3278,6 +3278,14 @@ export default function POS() {
           }
         }
 
+        // If paying immediately and the cart has no KDS items (e.g. drinks only),
+        // create the order as "completed" directly — no kitchen workflow needed.
+        const cartHasKdsItems = cart.some(c => {
+          const mi = allItems.find(i => i.id === c.menuItemId);
+          if (!mi) return true; // unknown item — err on the side of caution, let KDS handle it
+          const cat = categories.find(cat => cat.id === mi.categoryId);
+          return cat?.sendToKds === true;
+        });
         const r = await fetch("/api/orders", {
           method: "POST", credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -3290,6 +3298,7 @@ export default function POS() {
             paymentStatus,
             source: "pos",
             discountAmount: discount,
+            ...(paymentStatus === "paid" && !cartHasKdsItems ? { status: "completed" } : {}),
             ...(tendered != null && paymentStatus === "paid" ? { amountTendered: tendered } : {}),
             notes: (overrideNote ?? orderNotes) || null,
             items: cart.map(c => {
