@@ -48,7 +48,7 @@ const now = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minu
 const uid = () => Math.random().toString(36).slice(2, 9);
 const PAY_LABEL: Record<string, string> = { cash: "Cash", card: "Card", athmovil: "ATH Móvil", complimentary: "Comp", split: "Split" };
 
-type PrinterConfig = { type: "browser" | "network" | "bridge"; ip?: string; port?: number; bridgeUrl?: string };
+type PrinterConfig = { type: "browser" | "network" | "bridge"; ip?: string; port?: number; bridgeUrl?: string; localApiUrl?: string };
 function getPrinterConfig(): PrinterConfig {
   try {
     const saved = JSON.parse(localStorage.getItem("printerConfig") ?? "{}");
@@ -78,7 +78,10 @@ async function printReceiptLines(
 
   if (cfg.type === "network" && cfg.ip) {
     try {
-      const r = await fetch("/api/print/network", {
+      // localApiUrl lets the request reach the shop's local API even when the
+      // browser is open on the cloud URL (e.g. a kitchen tablet on orders.islandtacosbvi.com).
+      const apiBase = cfg.localApiUrl ? cfg.localApiUrl.replace(/\/$/, "") : "";
+      const r = await fetch(`${apiBase}/api/print/network`, {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ ip: cfg.ip, port: cfg.port ?? 9100, lines }),

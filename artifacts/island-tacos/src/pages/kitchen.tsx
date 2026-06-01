@@ -59,7 +59,7 @@ const STATUS_CARD: Record<string, { border: string; bg: string }> = {
 };
 
 // ─── Printer helpers (shared localStorage key with POS) ──────────────────────
-type PrinterConfig = { type: string; ip?: string; port?: number; bridgeUrl?: string };
+type PrinterConfig = { type: string; ip?: string; port?: number; bridgeUrl?: string; localApiUrl?: string };
 type PrintLine = { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean };
 
 function getKdsPrinterConfig(): PrinterConfig {
@@ -80,7 +80,10 @@ async function printLines(lines: PrintLine[]): Promise<{ ok: boolean; error?: st
   }
   if (cfg.type === "network" && cfg.ip) {
     try {
-      const r = await fetch("/api/print/network", {
+      // localApiUrl routes the request to the shop's local API server even when the
+      // KDS browser tab is open on the cloud URL (e.g. orders.islandtacosbvi.com).
+      const apiBase = cfg.localApiUrl ? cfg.localApiUrl.replace(/\/$/, "") : "";
+      const r = await fetch(`${apiBase}/api/print/network`, {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ ip: cfg.ip, port: cfg.port ?? 9100, lines }),

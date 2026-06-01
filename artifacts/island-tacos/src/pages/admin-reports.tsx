@@ -25,6 +25,7 @@ interface PrinterConfig {
   ip: string;
   port: number;
   bridgeUrl: string;
+  localApiUrl: string;
 }
 
 function fmt(n: number) { return `$${n.toFixed(2)}`; }
@@ -49,8 +50,8 @@ export default function AdminReports() {
   const [printerConfig, setPrinterConfig] = useState<PrinterConfig>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("printerConfig") ?? "{}");
-      return { type: "network", ip: "192.168.8.195", port: 9100, bridgeUrl: "http://localhost:8765", ...saved };
-    } catch { return { type: "network", ip: "192.168.8.195", port: 9100, bridgeUrl: "http://localhost:8765" }; }
+      return { type: "network", ip: "192.168.8.195", port: 9100, bridgeUrl: "http://localhost:8765", localApiUrl: "", ...saved };
+    } catch { return { type: "network", ip: "192.168.8.195", port: 9100, bridgeUrl: "http://localhost:8765", localApiUrl: "" }; }
   });
   const [showPrinterSettings, setShowPrinterSettings] = useState(false);
   const [printerSaved, setPrinterSaved] = useState(false);
@@ -649,6 +650,15 @@ export default function AdminReports() {
                     <input type="number" value={printerConfig.port ?? 9100}
                       onChange={e => setPrinterConfig(p => ({ ...p, port: parseInt(e.target.value) }))}
                       className="px-3 py-2 border border-amber-300 rounded-lg text-sm w-24" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-amber-800 mb-1">
+                      Local Server URL <span className="font-normal text-amber-600">(for KDS on cloud URL)</span>
+                    </label>
+                    <input type="text" placeholder="http://192.168.8.x:8080"
+                      value={printerConfig.localApiUrl ?? ""}
+                      onChange={e => setPrinterConfig(p => ({ ...p, localApiUrl: e.target.value }))}
+                      className="px-3 py-2 border border-amber-300 rounded-lg text-sm w-52" />
                   </div>
                 </>
               )}
