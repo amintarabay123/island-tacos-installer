@@ -58,6 +58,64 @@ const STATUS_CARD: Record<string, { border: string; bg: string }> = {
   ready: { border: "border-green-500", bg: "bg-green-50" },
 };
 
+// ─── Printer helpers (shared localStorage key with POS) ──────────────────────
+type PrinterConfig = { type: string; ip?: string; port?: number; bridgeUrl?: string };
+type PrintLine = { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean };
+
+function getKdsPrinterConfig(): PrinterConfig {
+  try {
+    const saved = JSON.parse(localStorage.getItem("printerConfig") ?? "{}");
+    return { type: "network", ip: "192.168.8.195", port: 9100, ...saved };
+  } catch { return { type: "network", ip: "192.168.8.195", port: 9100 }; }
+}
+
+async function printLines(lines: PrintLine[]): Promise<{ ok: boolean; error?: string }> {
+  const cfg = getKdsPrinterConfig();
+  if (cfg.type === "bridge") {
+    const url = (cfg.bridgeUrl ?? "http://localhost:8765").replace(/\/$/, "");
+    try {
+      const r = await fetch(`${url}/print`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lines }) });
+      return await r.json();
+    } catch (e) { return { ok: false, error: `Bridge unreachable: ${String(e)}` }; }
+  }
+  if (cfg.type === "network" && cfg.ip) {
+    try {
+      const r = await fetch("/api/print/network", {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ ip: cfg.ip, port: cfg.port ?? 9100, lines }),
+      });
+      return await r.json();
+    } catch (e) { return { ok: false, error: String(e) }; }
+  }
+  return { ok: false, error: "No printer configured. Set up network printer in POS settings." };
+}
+
+function buildKitchenTicket(order: { confirmationCode: string; customerName: string; customerPhone?: string | null; createdAt: string; notes?: string | null; items: Array<{ menuItemName: string; quantity: number; notes?: string | null; modifierSelections?: { name: string }[] | null }> }): PrintLine[] {
+  const lines: PrintLine[] = [];
+  lines.push({ text: "================================", center: true });
+  lines.push({ text: `ORDER #${order.confirmationCode}`, bold: true, center: true, size: "large" });
+  lines.push({ text: "================================", center: true });
+  lines.push({ text: order.customerName || "Walk-in", bold: true, center: true, size: "large" });
+  if (order.customerPhone) lines.push({ text: order.customerPhone, center: true });
+  const t = new Date(order.createdAt);
+  lines.push({ text: t.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" }), center: true });
+  lines.push({ divider: true, text: "" });
+  for (const item of order.items) {
+    lines.push({ text: `${item.quantity}x ${item.menuItemName}`, bold: true });
+    for (const m of item.modifierSelections ?? []) lines.push({ text: `  + ${m.name}` });
+    if (item.notes) lines.push({ text: `  NOTE: ${item.notes}`, bold: true });
+  }
+  if (order.notes) {
+    lines.push({ divider: true, text: "" });
+    lines.push({ text: `ORDER NOTE:`, bold: true });
+    lines.push({ text: order.notes, bold: true });
+  }
+  lines.push({ text: "================================", center: true });
+  lines.push({ text: "", center: true });
+  return lines;
+}
+
 const STATUS_BTN: Record<string, string> = {
   pending: "bg-yellow-400 hover:bg-yellow-300 text-yellow-950 active:bg-yellow-200",
   confirmed: "bg-blue-400 hover:bg-blue-300 text-blue-950 active:bg-blue-200",
@@ -137,6 +195,18 @@ export default function Kitchen() {
       next.has(orderId) ? next.delete(orderId) : next.add(orderId);
       return next;
     });
+  };
+
+  // Print state: set of order IDs currently printing
+  const [printing, setPrinting] = useState<Set<number>>(new Set());
+  const printTicket = async (order: Order) => {
+    setPrinting(s => new Set(s).add(order.id));
+    try {
+      const result = await printLines(buildKitchenTicket(order));
+      if (!result.ok) alert(`Print failed: ${result.error ?? "Unknown error"}`);
+    } finally {
+      setPrinting(s => { const ns = new Set(s); ns.delete(order.id); return ns; });
+    }
   };
   const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
     typeof Notification !== "undefined" ? Notification.permission : "denied"
@@ -1109,13 +1179,22 @@ export default function Kitchen() {
                         </button>
                       )}
                       {!next && (
-                        <button
-                          onClick={() => clearFromKds(order)}
-                          disabled={isAdvancing}
-                          className="w-full rounded py-2 text-xs font-bold bg-gray-200 hover:bg-gray-300 text-gray-700 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {isAdvancing ? "Clearing…" : "Done ✓ — Clear"}
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => printTicket(order)}
+                            disabled={printing.has(order.id)}
+                            className="flex-1 rounded py-2 text-sm font-bold bg-blue-100 hover:bg-blue-200 text-blue-800 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            {printing.has(order.id) ? "Printing…" : "🖨 Print Ticket"}
+                          </button>
+                          <button
+                            onClick={() => clearFromKds(order)}
+                            disabled={isAdvancing}
+                            className="flex-1 rounded py-2 text-sm font-bold bg-gray-200 hover:bg-gray-300 text-gray-700 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            {isAdvancing ? "Clearing…" : "Done ✓ — Clear"}
+                          </button>
+                        </div>
                       )}
                     </div>
                   );

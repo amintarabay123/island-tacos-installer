@@ -97,8 +97,9 @@ export function startOnlineOrdersSync(): void {
 
   logger.info({ cloudUrl }, "Online orders sync enabled — polling every 5s");
 
-  // On startup pull the last 2 hours so we catch any orders placed while offline
-  let lastSyncTime = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  // On startup pull the last 24 hours so we catch orders missed during longer outages.
+  // The `existing` check below prevents duplicates — this is safe to be generous.
+  let lastSyncTime = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   async function sync() {
     try {
@@ -183,7 +184,13 @@ export function startOnlineOrdersSync(): void {
         logger.info({ imported }, "Synced online orders from cloud");
       }
 
-      lastSyncTime = new Date().toISOString();
+      // Subtract a 60-second buffer before advancing the cursor.
+      // lastSyncTime is the mini PC's clock; order.createdAt is the cloud's clock.
+      // If the mini PC clock is even slightly ahead, orders placed just before the
+      // sync can land in the "past" relative to the new cursor and be permanently
+      // missed. The 60-second overlap means we re-check the last minute every cycle;
+      // duplicates are safely skipped by the existing `existing.length > 0` guard.
+      lastSyncTime = new Date(Date.now() - 60_000).toISOString();
     } catch (err) {
       logger.error({ err }, "Online orders sync error");
     }
