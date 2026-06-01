@@ -50,8 +50,8 @@ export default function AdminReports() {
   const [printerConfig, setPrinterConfig] = useState<PrinterConfig>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("printerConfig") ?? "{}");
-      return { type: "network", ip: "192.168.8.195", port: 9100, bridgeUrl: "http://localhost:8765", localApiUrl: "", ...saved };
-    } catch { return { type: "network", ip: "192.168.8.195", port: 9100, bridgeUrl: "http://localhost:8765", localApiUrl: "" }; }
+      return { type: "network", ip: "", port: 9100, bridgeUrl: "http://localhost:8765", localApiUrl: "", ...saved };
+    } catch { return { type: "network", ip: "", port: 9100, bridgeUrl: "http://localhost:8765", localApiUrl: "" }; }
   });
   const [showPrinterSettings, setShowPrinterSettings] = useState(false);
   const [printerSaved, setPrinterSaved] = useState(false);
@@ -673,7 +673,7 @@ export default function AdminReports() {
               <div className="mt-3 p-3 bg-white border border-amber-200 rounded-lg text-xs text-amber-900 space-y-1.5">
                 <p className="font-semibold">Setup (one-time, ~2 minutes):</p>
                 <p>1. Install <strong>Node.js</strong> on any Windows/Mac computer on your restaurant WiFi (free at nodejs.org).</p>
-                <p>2. <a href="/api/print/bridge.js" download className="underline font-medium text-amber-700">Download the bridge script</a> — it's already pre-configured for your printer at <strong>192.168.8.195</strong>.</p>
+                <p>2. <a href="/api/print/bridge.js" download className="underline font-medium text-amber-700">Download the bridge script</a> — open it in a text editor and set PRINTER_IP to your printer's local IP address.</p>
                 <p>3. Open a terminal/command prompt, go to where you saved the file, and run: <code className="bg-amber-100 px-1 rounded">node island-tacos-bridge.js</code></p>
                 <p>4. Leave that window open. The bridge URL to enter above is <strong>http://localhost:8765</strong> (if running on the same computer as the POS browser).</p>
               </div>

@@ -52,8 +52,8 @@ type PrinterConfig = { type: "browser" | "network" | "bridge"; ip?: string; port
 function getPrinterConfig(): PrinterConfig {
   try {
     const saved = JSON.parse(localStorage.getItem("printerConfig") ?? "{}");
-    return { type: "network", ip: "192.168.8.195", port: 9100, ...saved };
-  } catch { return { type: "network", ip: "192.168.8.195", port: 9100 }; }
+    return { type: "network", ip: "", port: 9100, ...saved };
+  } catch { return { type: "network", ip: "", port: 9100 }; }
 }
 
 async function printReceiptLines(

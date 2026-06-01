@@ -65,8 +65,8 @@ type PrintLine = { text: string; bold?: boolean; center?: boolean; size?: string
 function getKdsPrinterConfig(): PrinterConfig {
   try {
     const saved = JSON.parse(localStorage.getItem("printerConfig") ?? "{}");
-    return { type: "network", ip: "192.168.8.195", port: 9100, ...saved };
-  } catch { return { type: "network", ip: "192.168.8.195", port: 9100 }; }
+    return { type: "network", ip: "", port: 9100, ...saved };
+  } catch { return { type: "network", ip: "", port: 9100 }; }
 }
 
 async function printLines(lines: PrintLine[]): Promise<{ ok: boolean; error?: string }> {

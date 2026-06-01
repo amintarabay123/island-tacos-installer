@@ -358,7 +358,7 @@ export function bridgeScriptContent(): string {
 const http = require('http');
 const net  = require('net');
 
-const PRINTER_IP   = process.env.PRINTER_IP   || '192.168.8.195';
+const PRINTER_IP   = process.env.PRINTER_IP   || '';
 const PRINTER_PORT = parseInt(process.env.PRINTER_PORT || '9100');
 const BRIDGE_PORT  = parseInt(process.env.PORT || '8765');
 
