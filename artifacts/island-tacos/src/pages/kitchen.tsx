@@ -172,6 +172,23 @@ export default function Kitchen() {
   // TODO(store-settings): use `Kitchen — ${useStoreSettings().storeName}` once page-meta accepts a getter
   useEffect(() => { setPageMeta("Kitchen — Island Tacos", "🍳", { iconUrl: "/icon-kds-192.png", manifestUrl: "/manifest-kds.json" }); }, []);
 
+  // Sync printer config from server on load — ensures all devices use the same settings
+  // configured once from Admin → Reports → Printer Settings.
+  useEffect(() => {
+    fetch("/api/settings", { credentials: "include", headers: authHeaders() })
+      .then(r => r.json())
+      .then((data: Record<string, string>) => {
+        if (data.printer_config) {
+          try {
+            const cfg = JSON.parse(data.printer_config) as Record<string, unknown>;
+            const current = JSON.parse(localStorage.getItem("printerConfig") ?? "{}") as Record<string, unknown>;
+            localStorage.setItem("printerConfig", JSON.stringify({ ...current, ...cfg }));
+          } catch { /* ignore */ }
+        }
+      })
+      .catch(() => { /* fallback to localStorage */ });
+  }, []);
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [advancing, setAdvancing] = useState<Set<number>>(new Set());
   const [lastFetch, setLastFetch] = useState<Date | null>(null);

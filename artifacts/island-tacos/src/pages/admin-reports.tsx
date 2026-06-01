@@ -63,6 +63,21 @@ export default function AdminReports() {
       .catch(() => navigate(adminRoutes.login));
   }, [navigate]);
 
+  // Load printer config from server so settings are shared across all devices
+  useEffect(() => {
+    fetch("/api/settings", { credentials: "include", headers: authHeaders() })
+      .then(r => r.json())
+      .then((data: Record<string, string>) => {
+        if (data.printer_config) {
+          try {
+            const cfg = JSON.parse(data.printer_config) as Partial<PrinterConfig>;
+            setPrinterConfig(p => ({ ...p, ...cfg }));
+          } catch { /* ignore malformed */ }
+        }
+      })
+      .catch(() => { /* fallback to localStorage already loaded in useState */ });
+  }, []);
+
   const loadReport = useCallback(async (f: string, t: string) => {
     setLoading(true); setError(null);
     try {
@@ -87,6 +102,13 @@ export default function AdminReports() {
 
   const savePrinterConfig = () => {
     localStorage.setItem("printerConfig", JSON.stringify(printerConfig));
+    // Also persist to server so all devices (KDS, POS, etc.) pick it up automatically
+    fetch("/api/settings", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ printer_config: JSON.stringify(printerConfig) }),
+    }).catch(() => { /* server save failed — localStorage still updated */ });
     setPrinterSaved(true);
     setTimeout(() => setPrinterSaved(false), 2000);
   };

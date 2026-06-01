@@ -2721,6 +2721,23 @@ export default function POS() {
   // TODO(store-settings): use `POS — ${useStoreSettings().storeName}` once page-meta accepts a getter
   useEffect(() => { setPageMeta("POS — Island Tacos", "🖥️", { iconUrl: "/icon-pos-192.png", manifestUrl: "/manifest-pos.json" }); }, []);
 
+  // Sync printer config from server on load — ensures all devices share one config
+  // set from Admin → Reports → Printer Settings.
+  useEffect(() => {
+    fetch("/api/settings", { credentials: "include", headers: authHeaders() })
+      .then(r => r.json())
+      .then((data: Record<string, string>) => {
+        if (data.printer_config) {
+          try {
+            const cfg = JSON.parse(data.printer_config) as Record<string, unknown>;
+            const current = JSON.parse(localStorage.getItem("printerConfig") ?? "{}") as Record<string, unknown>;
+            localStorage.setItem("printerConfig", JSON.stringify({ ...current, ...cfg }));
+          } catch { /* ignore */ }
+        }
+      })
+      .catch(() => { /* fallback to localStorage */ });
+  }, []);
+
   // Auth guard
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
