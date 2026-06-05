@@ -9,6 +9,8 @@
         android:targetSdkVersion="33" />
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required to keep the Presentation window alive when main screen returns to home -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:allowBackup="false"
@@ -30,6 +32,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            sunmi_double_screen: required by Sunmi OS to grant this app dual-screen
+            control. Without it, Sunmi firmware keeps mirror mode active and blocks
+            any Presentation window from being visible on the secondary display.
+            Reference: https://docs.sunmi.com/en/general-function-modules/second-screen-and-customer-display/
+        -->
+        <meta-data
+            android:name="sunmi_double_screen"
+            android:value="true" />
     </application>
 
 </manifest>

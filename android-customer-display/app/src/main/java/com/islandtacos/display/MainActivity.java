@@ -80,18 +80,15 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
                         + "\n\nAll displays:" + diag);
             }
         } else {
-            setStatus("Island Tacos Customer Display\n\nWaiting for secondary screen...\n\nAll displays seen:"
+            setStatus("Island Tacos Customer Display\n\nWaiting for secondary screen...\n\nAll displays:"
                     + diag + "\n\nMake sure the customer-facing display is powered on.");
         }
     }
 
     /**
-     * Returns the best available secondary display.
-     *
-     * Priority:
-     *   1. Any display with FLAG_PRESENTATION (standard Android secondary)
-     *   2. Any display whose ID != DEFAULT_DISPLAY (Sunmi customer screen
-     *      on some firmware versions does not set FLAG_PRESENTATION)
+     * Returns the secondary display.
+     * Priority: FLAG_PRESENTATION first, then any non-default display.
+     * D2s Plus HDMI screen sets FLAG_PRESENTATION (flags=0xb confirmed).
      */
     private Display getSecondaryDisplay(Display[] all) {
         Display fallback = null;

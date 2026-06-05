@@ -11,44 +11,61 @@
 11    <uses-permission android:name="android.permission.INTERNET" />
 11-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:4:5-67
 11-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:4:22-64
-12
-13    <application
-13-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:6:5-24:19
-14        android:allowBackup="false"
-14-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:8:9-36
-15        android:debuggable="true"
-16        android:extractNativeLibs="true"
-17        android:hardwareAccelerated="true"
-17-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:9:9-43
-18        android:label="IT Customer Display"
-18-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:7:9-44
-19        android:usesCleartextTraffic="true" >
-19-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:10:9-44
-20        <activity
-20-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:12:9-23:20
-21            android:name="com.islandtacos.display.MainActivity"
-21-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:13:13-41
-22            android:configChanges="orientation|screenSize|keyboardHidden"
-22-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:18:13-74
-23            android:exported="true"
-23-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:14:13-36
-24            android:launchMode="singleTop"
-24-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:17:13-43
-25            android:screenOrientation="sensorLandscape"
-25-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:16:13-56
-26            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" >
-26-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:15:13-77
-27            <intent-filter>
-27-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:19:13-22:29
-28                <action android:name="android.intent.action.MAIN" />
-28-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:20:17-69
-28-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:20:25-66
-29
-30                <category android:name="android.intent.category.LAUNCHER" />
-30-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:21:17-77
-30-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:21:27-74
-31            </intent-filter>
-32        </activity>
-33    </application>
-34
-35</manifest>
+12    <!-- Required to keep the Presentation window alive when main screen returns to home -->
+13    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+13-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:6:5-78
+13-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:6:22-75
+14
+15    <application
+15-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:8:5-37:19
+16        android:allowBackup="false"
+16-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:10:9-36
+17        android:debuggable="true"
+18        android:extractNativeLibs="true"
+19        android:hardwareAccelerated="true"
+19-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:11:9-43
+20        android:label="IT Customer Display"
+20-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:9:9-44
+21        android:usesCleartextTraffic="true" >
+21-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:12:9-44
+22        <activity
+22-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:14:9-25:20
+23            android:name="com.islandtacos.display.MainActivity"
+23-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:15:13-41
+24            android:configChanges="orientation|screenSize|keyboardHidden"
+24-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:20:13-74
+25            android:exported="true"
+25-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:16:13-36
+26            android:launchMode="singleTop"
+26-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:19:13-43
+27            android:screenOrientation="sensorLandscape"
+27-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:18:13-56
+28            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" >
+28-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:17:13-77
+29            <intent-filter>
+29-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:21:13-24:29
+30                <action android:name="android.intent.action.MAIN" />
+30-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:22:17-69
+30-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:22:25-66
+31
+32                <category android:name="android.intent.category.LAUNCHER" />
+32-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:23:17-77
+32-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:23:27-74
+33            </intent-filter>
+34        </activity>
+35
+36        <!--
+37            sunmi_double_screen: required by Sunmi OS to grant this app dual-screen
+38            control. Without it, Sunmi firmware keeps mirror mode active and blocks
+39            any Presentation window from being visible on the secondary display.
+40            Reference: https://docs.sunmi.com/en/general-function-modules/second-screen-and-customer-display/
+41        -->
+42        <meta-data
+42-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:33:9-35:36
+43            android:name="sunmi_double_screen"
+43-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:34:13-47
+44            android:value="true" />
+44-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:35:13-33
+45    </application>
+46
+47</manifest>
