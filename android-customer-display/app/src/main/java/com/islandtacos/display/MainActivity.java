@@ -60,6 +60,11 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
                 final int screenId = second.getDisplayId();
                 presentation = new CustomerDisplayPresentation(this, second, DISPLAY_URL,
                         new CustomerDisplayPresentation.LoadCallback() {
+                            @Override public void onTestScreenShown() {
+                                setStatus("DIAGNOSTIC: Bright red test screen sent to screen #" + screenId
+                                        + "\n\nLook at the customer display now.\nDoes it show RED with white text?"
+                                        + "\n\nLoading real page in 5 seconds...");
+                            }
                             @Override public void onPageStarted(String url) {
                                 setStatus("Screen #" + screenId + ": Loading...\n" + url);
                             }
@@ -76,8 +81,7 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
 
                 presentation.show();
                 setStatus("Presentation shown on screen #" + screenId
-                        + "\nWaiting for page to load...\n" + DISPLAY_URL
-                        + "\n\nAll displays:" + diag);
+                        + "\nWaiting for test screen...\n\nAll displays:" + diag);
             }
         } else {
             setStatus("Island Tacos Customer Display\n\nWaiting for secondary screen...\n\nAll displays:"
@@ -85,11 +89,6 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
         }
     }
 
-    /**
-     * Returns the secondary display.
-     * Priority: FLAG_PRESENTATION first, then any non-default display.
-     * D2s Plus HDMI screen sets FLAG_PRESENTATION (flags=0xb confirmed).
-     */
     private Display getSecondaryDisplay(Display[] all) {
         Display fallback = null;
         for (Display d : all) {
