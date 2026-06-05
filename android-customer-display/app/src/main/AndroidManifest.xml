@@ -2,8 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Required for foreground service (keeps Presentation alive in background) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!--
+        FOREGROUND_SERVICE only exists on API 28+. Do NOT declare it for
+        Android 7.x (API 25) — some Sunmi OS builds will reject the install
+        if they encounter an unrecognised permission at install time.
+        The permission is only needed when startForeground() is called on
+        API 28+; on API 25 we run as a plain background service.
+    -->
 
     <application
         android:label="IT Customer Display"

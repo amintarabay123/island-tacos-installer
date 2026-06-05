@@ -68,7 +68,13 @@ public class DisplayService extends Service implements DisplayManager.DisplayLis
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForeground(NOTIF_ID, buildNotification("Starting customer display…"));
+        // startForeground() requires API 26+ (and FOREGROUND_SERVICE permission on API 28+).
+        // On Android 7.x (API 25) background services work fine — no restrictions were
+        // introduced until API 26. Calling startForeground() on API 25 is not harmful per se,
+        // but some Sunmi OS builds crash with the foreground-service machinery. Skip it.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForeground(NOTIF_ID, buildNotification("Starting customer display…"));
+        }
         // Use anonymous Runnable — avoids method-reference desugaring on API 25
         mainHandler.post(new Runnable() {
             @Override public void run() { tryShowPresentation(); }
@@ -117,22 +123,27 @@ public class DisplayService extends Service implements DisplayManager.DisplayLis
             // this on Android 7.x and causes a crash. Application context can.
             Context appCtx = getApplicationContext();
 
-            presentation = new CustomerDisplayPresentation(
-                    appCtx, secondary, DISPLAY_URL,
-                    new CustomerDisplayPresentation.LoadCallback() {
-                        @Override public void onPageStarted(String url) {
-                            setStatus("Screen #" + screenId + ": loading…");
-                        }
-                        @Override public void onPageFinished(String url) {
-                            setStatus("Customer display active \u2713  (screen #" + screenId + ")");
-                        }
-                        @Override public void onError(String description, String url) {
-                            setStatus("Screen #" + screenId + " error: " + description);
-                        }
-                    });
+            try {
+                presentation = new CustomerDisplayPresentation(
+                        appCtx, secondary, DISPLAY_URL,
+                        new CustomerDisplayPresentation.LoadCallback() {
+                            @Override public void onPageStarted(String url) {
+                                setStatus("Screen #" + screenId + ": loading…");
+                            }
+                            @Override public void onPageFinished(String url) {
+                                setStatus("Customer display active \u2713  (screen #" + screenId + ")");
+                            }
+                            @Override public void onError(String description, String url) {
+                                setStatus("Screen #" + screenId + " error: " + description);
+                            }
+                        });
 
-            presentation.show();
-            setStatus("Presentation shown on screen #" + screenId);
+                presentation.show();
+                setStatus("Presentation shown on screen #" + screenId);
+            } catch (Exception e) {
+                presentation = null;
+                setStatus("Presentation error: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            }
 
         } else {
             dismissPresentation();

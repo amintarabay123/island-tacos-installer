@@ -11,72 +11,75 @@
 11    <uses-permission android:name="android.permission.INTERNET" />
 11-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:4:5-67
 11-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:4:22-64
-12    <!-- Required for foreground service (keeps Presentation alive in background) -->
-13    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-13-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:6:5-77
-13-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:6:22-74
-14
-15    <application
-15-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:8:5-45:19
-16        android:allowBackup="false"
-16-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:10:9-36
-17        android:debuggable="true"
-18        android:extractNativeLibs="true"
-19        android:hardwareAccelerated="true"
-19-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:11:9-43
-20        android:label="IT Customer Display"
-20-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:9:9-44
-21        android:usesCleartextTraffic="true" >
-21-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:12:9-44
-22        <activity
-22-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:14:9-25:20
-23            android:name="com.islandtacos.display.MainActivity"
-23-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:15:13-41
-24            android:configChanges="orientation|screenSize|keyboardHidden"
-24-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:20:13-74
-25            android:exported="true"
-25-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:16:13-36
-26            android:launchMode="singleTop"
-26-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:19:13-43
-27            android:screenOrientation="sensorLandscape"
-27-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:18:13-56
-28            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" >
-28-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:17:13-77
-29            <intent-filter>
-29-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:21:13-24:29
-30                <action android:name="android.intent.action.MAIN" />
-30-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:22:17-69
-30-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:22:25-66
-31
-32                <category android:name="android.intent.category.LAUNCHER" />
-32-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:23:17-77
-32-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:23:27-74
-33            </intent-filter>
-34        </activity>
-35
-36        <!--
-37            Foreground Service that owns the Presentation on the secondary display.
-38            START_STICKY keeps it alive. Running as a Service means the customer
-39            display stays visible even when the operator switches to Chrome/POS.
-40        -->
-41        <service
-41-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:32:9-34:40
-42            android:name="com.islandtacos.display.DisplayService"
-42-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:33:13-43
-43            android:exported="false" />
-43-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:34:13-37
-44
-45        <!--
-46            sunmi_double_screen: grants this app dual-screen control on Sunmi OS.
-47            Without it, Sunmi firmware may keep mirror mode active.
-48            Reference: https://docs.sunmi.com/en/general-function-modules/second-screen-and-customer-display/
-49        -->
-50        <meta-data
-50-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:41:9-43:36
-51            android:name="sunmi_double_screen"
-51-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:42:13-47
-52            android:value="true" />
-52-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:43:13-33
-53    </application>
-54
-55</manifest>
+12
+13    <!--
+14        FOREGROUND_SERVICE only exists on API 28+. Do NOT declare it for
+15        Android 7.x (API 25) — some Sunmi OS builds will reject the install
+16        if they encounter an unrecognised permission at install time.
+17        The permission is only needed when startForeground() is called on
+18        API 28+; on API 25 we run as a plain background service.
+19    -->
+20    <application
+20-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:13:5-50:19
+21        android:allowBackup="false"
+21-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:15:9-36
+22        android:debuggable="true"
+23        android:extractNativeLibs="true"
+24        android:hardwareAccelerated="true"
+24-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:16:9-43
+25        android:label="IT Customer Display"
+25-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:14:9-44
+26        android:usesCleartextTraffic="true" >
+26-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:17:9-44
+27        <activity
+27-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:19:9-30:20
+28            android:name="com.islandtacos.display.MainActivity"
+28-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:20:13-41
+29            android:configChanges="orientation|screenSize|keyboardHidden"
+29-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:25:13-74
+30            android:exported="true"
+30-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:21:13-36
+31            android:launchMode="singleTop"
+31-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:24:13-43
+32            android:screenOrientation="sensorLandscape"
+32-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:23:13-56
+33            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" >
+33-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:22:13-77
+34            <intent-filter>
+34-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:26:13-29:29
+35                <action android:name="android.intent.action.MAIN" />
+35-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:27:17-69
+35-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:27:25-66
+36
+37                <category android:name="android.intent.category.LAUNCHER" />
+37-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:28:17-77
+37-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:28:27-74
+38            </intent-filter>
+39        </activity>
+40
+41        <!--
+42            Foreground Service that owns the Presentation on the secondary display.
+43            START_STICKY keeps it alive. Running as a Service means the customer
+44            display stays visible even when the operator switches to Chrome/POS.
+45        -->
+46        <service
+46-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:37:9-39:40
+47            android:name="com.islandtacos.display.DisplayService"
+47-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:38:13-43
+48            android:exported="false" />
+48-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:39:13-37
+49
+50        <!--
+51            sunmi_double_screen: grants this app dual-screen control on Sunmi OS.
+52            Without it, Sunmi firmware may keep mirror mode active.
+53            Reference: https://docs.sunmi.com/en/general-function-modules/second-screen-and-customer-display/
+54        -->
+55        <meta-data
+55-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:46:9-48:36
+56            android:name="sunmi_double_screen"
+56-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:47:13-47
+57            android:value="true" />
+57-->/home/runner/workspace/android-customer-display/app/src/main/AndroidManifest.xml:48:13-33
+58    </application>
+59
+60</manifest>
