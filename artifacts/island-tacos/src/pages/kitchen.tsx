@@ -58,13 +58,15 @@ const STATUS_CARD: Record<string, { border: string; bg: string }> = {
   ready: { border: "border-green-500", bg: "bg-green-50" },
 };
 
-// ─── Printer helpers (shared localStorage key with POS) ──────────────────────
+// ─── Printer helpers ──────────────────────────────────────────────────────────
 type PrinterConfig = { type: string; ip?: string; port?: number; bridgeUrl?: string; localApiUrl?: string };
 type PrintLine = { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean };
 
 function getKdsPrinterConfig(): PrinterConfig {
   try {
-    const saved = JSON.parse(localStorage.getItem("kdsConfig") ?? "{}");
+    // Use kdsConfig if present; fall back to printerConfig for devices not yet reconfigured
+    const raw = localStorage.getItem("kdsConfig") ?? localStorage.getItem("printerConfig") ?? "{}";
+    const saved = JSON.parse(raw);
     return { type: "network", ip: "", port: 9100, ...saved };
   } catch { return { type: "network", ip: "", port: 9100 }; }
 }
