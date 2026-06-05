@@ -1,0 +1,47 @@
+name: Build Android Customer Display APK
+
+on:
+  push:
+    paths:
+      - 'android-customer-display/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
+
+      - name: Generate Gradle wrapper
+        working-directory: android-customer-display
+        run: gradle wrapper --gradle-version 8.5
+
+      - name: Make gradlew executable
+        working-directory: android-customer-display
+        run: chmod +x gradlew
+
+      - name: Build debug APK
+        working-directory: android-customer-display
+        run: ./gradlew assembleDebug --no-daemon
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: island-tacos-customer-display-apk
+          path: android-customer-display/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 90
