@@ -6,8 +6,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-muted/20">
-      <aside className="w-full md:w-64 border-r bg-background flex flex-col sticky top-0 md:h-screen">
+    <div className="min-h-[100dvh] flex flex-col md:flex-row bg-muted/20">
+      <aside className="w-full md:w-64 border-r bg-background flex flex-col sticky top-0 md:h-[100dvh]">
         <div className="p-6 border-b">
           <Link href="/admin" className="flex flex-col gap-1">
             <span className="text-xl font-black tracking-tight text-primary">ISLAND TACOS</span>

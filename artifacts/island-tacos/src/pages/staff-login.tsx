@@ -55,7 +55,7 @@ export default function StaffLogin() {
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-6 px-4 py-8 overflow-y-auto">
+    <div className="min-h-[100dvh] bg-zinc-950 flex flex-col items-center justify-center gap-6 px-4 py-8 overflow-y-auto">
       <div className="text-center space-y-1">
         {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
         <div className="text-2xl font-black text-white tracking-tight">Island Tacos</div>

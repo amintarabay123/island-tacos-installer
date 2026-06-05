@@ -444,7 +444,7 @@ export default function Admin() {
   ];
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-[100dvh] overflow-hidden bg-slate-50">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col shrink-0 border-r border-slate-800">
         <Sidebar sections={navSections} onLogout={logout} />

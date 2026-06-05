@@ -785,7 +785,7 @@ export default function Kitchen() {
   const hasOrders = orders.length > 0;
 
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900 flex flex-col select-none overflow-hidden">
+    <div className="min-h-[100dvh] bg-gray-100 text-gray-900 flex flex-col select-none overflow-hidden">
       <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-white border-b border-gray-200 shrink-0 gap-2 shadow-sm">
         <div className="flex items-center gap-2 min-w-0">
           {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
