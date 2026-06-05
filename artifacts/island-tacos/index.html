@@ -3,6 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <!-- Disable browser forced-dark-mode. Our app manages its own light/dark
+         theming explicitly; letting Chrome auto-invert on Android inverts the
+         already-dark staff-login/KDS pages making buttons invisible, and
+         corrupts the light POS theme. -->
+    <meta name="color-scheme" content="light" />
     <title>Island Tacos - Online Ordering</title>
     <!-- PWA / Home Screen -->
     <link rel="manifest" href="/api/manifest.webmanifest" />

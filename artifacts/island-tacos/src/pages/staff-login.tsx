@@ -55,7 +55,7 @@ export default function StaffLogin() {
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
 
   return (
-    <div className="min-h-[100dvh] bg-zinc-950 flex flex-col items-center justify-center gap-6 px-4 py-8 overflow-y-auto">
+    <div className="min-h-[100dvh] bg-zinc-950 flex flex-col items-center justify-center gap-6 px-4 py-8 overflow-y-auto" style={{ backgroundColor: '#09090b', minHeight: '100dvh' }}>
       <div className="text-center space-y-1">
         {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
         <div className="text-2xl font-black text-white tracking-tight">Island Tacos</div>
@@ -88,6 +88,7 @@ export default function StaffLogin() {
                 key={i}
                 onPointerDown={handleDelete}
                 className="h-16 rounded-2xl bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white text-xl font-medium transition-colors flex items-center justify-center"
+                style={{ backgroundColor: '#27272a', color: '#ffffff', height: '4rem', borderRadius: '1rem' }}
               >
                 {key}
               </button>
@@ -98,6 +99,7 @@ export default function StaffLogin() {
               key={i}
               onPointerDown={() => handleKey(key)}
               className="h-16 rounded-2xl bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white text-2xl font-semibold transition-colors"
+              style={{ backgroundColor: '#27272a', color: '#ffffff', height: '4rem', borderRadius: '1rem' }}
             >
               {key}
             </button>
