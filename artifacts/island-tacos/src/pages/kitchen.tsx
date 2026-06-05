@@ -64,7 +64,7 @@ type PrintLine = { text: string; bold?: boolean; center?: boolean; size?: string
 
 function getKdsPrinterConfig(): PrinterConfig {
   try {
-    const saved = JSON.parse(localStorage.getItem("printerConfig") ?? "{}");
+    const saved = JSON.parse(localStorage.getItem("kdsConfig") ?? "{}");
     return { type: "network", ip: "", port: 9100, ...saved };
   } catch { return { type: "network", ip: "", port: 9100 }; }
 }
