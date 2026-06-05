@@ -1,28 +1,54 @@
 package com.islandtacos.display;
 
 import android.app.Activity;
-import android.hardware.display.DisplayManager;
+import android.content.ComponentName;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.view.Display;
+import android.os.IBinder;
 import android.view.Gravity;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-public class MainActivity extends Activity implements DisplayManager.DisplayListener {
+/**
+ * Operator-facing status screen.
+ *
+ * All display management lives in DisplayService (a foreground Service) so
+ * the Presentation on the secondary screen stays alive even when the operator
+ * switches to Chrome/POS. This Activity just starts the Service, binds to it
+ * for live status strings, and shows them on the primary screen.
+ */
+public class MainActivity extends Activity {
 
-    // ── Change this URL to match your mini PC's local IP ──────────────────────
-    private static final String DISPLAY_URL = "http://192.168.132.100:3001/display";
+    private TextView      statusText;
+    private DisplayService displayService;
+    private boolean        bound = false;
 
-    private DisplayManager displayManager;
-    private CustomerDisplayPresentation presentation;
-    private TextView statusText;
+    private final ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder binder) {
+            displayService = ((DisplayService.LocalBinder) binder).getService();
+            bound = true;
+            // Receive live status updates from the service
+            displayService.setStatusListener(msg -> runOnUiThread(() -> {
+                if (statusText != null) statusText.setText(msg);
+            }));
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            bound = false;
+            displayService = null;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        // ── Operator UI ───────────────────────────────────────────────────────
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setGravity(Gravity.CENTER);
@@ -33,85 +59,26 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
         statusText.setTextSize(16);
         statusText.setGravity(Gravity.CENTER);
         statusText.setPadding(60, 60, 60, 60);
+        statusText.setText("Starting customer display service…");
         layout.addView(statusText);
         setContentView(layout);
 
-        displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
-        displayManager.registerDisplayListener(this, null);
-
-        tryShowPresentation();
+        // ── Start + bind the foreground service ───────────────────────────────
+        Intent serviceIntent = new Intent(this, DisplayService.class);
+        startService(serviceIntent);
+        bindService(serviceIntent, serviceConnection, BIND_AUTO_CREATE);
     }
 
-    private void tryShowPresentation() {
-        Display[] all = displayManager.getDisplays();
-
-        StringBuilder diag = new StringBuilder();
-        for (Display d : all) {
-            diag.append("\n  #").append(d.getDisplayId())
-                .append(" flags=0x").append(Integer.toHexString(d.getFlags()))
-                .append(" \"").append(d.getName()).append("\"");
-        }
-
-        Display second = getSecondaryDisplay(all);
-        if (second != null) {
-            if (presentation == null || presentation.getDisplay().getDisplayId() != second.getDisplayId()) {
-                if (presentation != null) presentation.dismiss();
-
-                final int screenId = second.getDisplayId();
-                presentation = new CustomerDisplayPresentation(this, second, DISPLAY_URL,
-                        new CustomerDisplayPresentation.LoadCallback() {
-                            @Override public void onPageStarted(String url) {
-                                setStatus("Screen #" + screenId + ": Loading bundled display...");
-                            }
-                            @Override public void onPageFinished(String url) {
-                                setStatus("Customer display active \u2713\n\nScreen #" + screenId + " ready");
-                            }
-                            @Override public void onError(String description, String url) {
-                                setStatus("Screen #" + screenId + " LOAD ERROR\n\n"
-                                        + description
-                                        + "\n\nCheck: Is the mini PC on and the IP correct?\n" + url);
-                            }
-                        });
-
-                presentation.show();
-                setStatus("Presentation shown on screen #" + screenId + "\n\nAll displays:" + diag);
-            }
-        } else {
-            setStatus("Island Tacos Customer Display\n\nWaiting for secondary screen...\n\nAll displays:"
-                    + diag + "\n\nMake sure the customer-facing display is powered on.");
-        }
-    }
-
-    private Display getSecondaryDisplay(Display[] all) {
-        Display fallback = null;
-        for (Display d : all) {
-            if (d.getDisplayId() == Display.DEFAULT_DISPLAY) continue;
-            if ((d.getFlags() & Display.FLAG_PRESENTATION) != 0) return d;
-            if (fallback == null) fallback = d;
-        }
-        return fallback;
-    }
-
-    private void setStatus(final String msg) {
-        runOnUiThread(() -> statusText.setText(msg));
-    }
-
-    @Override public void onDisplayAdded(int id)   { runOnUiThread(this::tryShowPresentation); }
-    @Override public void onDisplayRemoved(int id) {
-        runOnUiThread(() -> {
-            if (presentation != null && presentation.getDisplay().getDisplayId() == id) {
-                presentation.dismiss();
-                presentation = null;
-                setStatus("Secondary screen disconnected.\nWaiting to reconnect...");
-            }
-        });
-    }
-    @Override public void onDisplayChanged(int id) {}
-
-    @Override protected void onResume()  { super.onResume();  tryShowPresentation(); }
-    @Override protected void onDestroy() {
+    @Override
+    protected void onDestroy() {
         super.onDestroy();
-        displayManager.unregisterDisplayListener(this);
-        if (presentation != null) presentation.dismiss();
+        if (bound) {
+            // Remove listener so the service doesn't hold a reference to this Activity
+            if (displayService != null) displayService.setStatusListener(null);
+            unbindService(serviceConnection);
+            bound = false;
+        }
+        // Note: we do NOT stop the service here — it must keep running so the
+        // Presentation stays on the secondary screen when the operator uses Chrome.
     }
 }
