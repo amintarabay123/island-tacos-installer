@@ -2,3 +2,4 @@
 - [POS stale closure trap](pos-stale-closure-trap.md)
 - [Pending order popup gaps](pending-order-popup-gaps.md)
 - [Resumed ticket patch rule](resumed-ticket-patch-rule.md)
+- [Android Chrome viewport height](android-chrome-viewport.md) — use `100dvh` not `100vh`/`h-screen` on any page that must work in Android Chrome (Sunmi POS device).
