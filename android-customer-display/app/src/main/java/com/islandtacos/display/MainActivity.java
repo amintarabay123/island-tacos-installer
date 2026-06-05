@@ -30,7 +30,7 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
 
         statusText = new TextView(this);
         statusText.setTextColor(0xFFffffff);
-        statusText.setTextSize(18);
+        statusText.setTextSize(16);
         statusText.setGravity(Gravity.CENTER);
         statusText.setPadding(60, 60, 60, 60);
         layout.addView(statusText);
@@ -43,41 +43,65 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
     }
 
     private void tryShowPresentation() {
-        Display second = getSecondaryDisplay();
+        Display[] all = displayManager.getDisplays();
+
+        // Build a diagnostic line so we can see exactly what displays Android sees
+        StringBuilder diag = new StringBuilder();
+        for (Display d : all) {
+            diag.append("\n  #").append(d.getDisplayId())
+                .append(" flags=0x").append(Integer.toHexString(d.getFlags()))
+                .append(" \"").append(d.getName()).append("\"");
+        }
+
+        Display second = getSecondaryDisplay(all);
         if (second != null) {
             if (presentation == null || presentation.getDisplay().getDisplayId() != second.getDisplayId()) {
                 if (presentation != null) presentation.dismiss();
                 presentation = new CustomerDisplayPresentation(this, second, DISPLAY_URL);
                 presentation.show();
-                setStatus("Customer display active ✓\n\nSecondary screen is showing:\n" + DISPLAY_URL);
+                setStatus("Customer display active \u2713\n\nShowing on screen #"
+                        + second.getDisplayId() + ":\n" + DISPLAY_URL
+                        + "\n\nAll displays:" + diag);
             }
         } else {
-            setStatus("Island Tacos Customer Display\n\nWaiting for secondary screen…\n\nMake sure the customer-facing display is powered on and connected.");
+            setStatus("Island Tacos Customer Display\n\nWaiting for secondary screen...\n\nAll displays seen:" + diag
+                    + "\n\nMake sure the customer-facing display is powered on.");
         }
     }
 
-    private Display getSecondaryDisplay() {
-        for (Display d : displayManager.getDisplays()) {
-            if ((d.getFlags() & Display.FLAG_PRESENTATION) != 0) return d;
+    /**
+     * Returns the best available secondary display.
+     *
+     * Priority:
+     *   1. Any display with FLAG_PRESENTATION (standard Android secondary)
+     *   2. Any display whose ID != DEFAULT_DISPLAY (Sunmi's customer screen
+     *      does NOT set FLAG_PRESENTATION but is still a valid secondary display)
+     */
+    private Display getSecondaryDisplay(Display[] all) {
+        Display fallback = null;
+        for (Display d : all) {
+            if (d.getDisplayId() == Display.DEFAULT_DISPLAY) continue;
+            if ((d.getFlags() & Display.FLAG_PRESENTATION) != 0) return d; // best match
+            if (fallback == null) fallback = d;                             // plain secondary
         }
-        return null;
+        return fallback;
     }
 
     private void setStatus(final String msg) {
         runOnUiThread(() -> statusText.setText(msg));
     }
 
-    @Override public void onDisplayAdded(int id)     { runOnUiThread(this::tryShowPresentation); }
-    @Override public void onDisplayRemoved(int id)   {
+    @Override public void onDisplayAdded(int id)   { runOnUiThread(this::tryShowPresentation); }
+    @Override public void onDisplayRemoved(int id) {
         runOnUiThread(() -> {
             if (presentation != null && presentation.getDisplay().getDisplayId() == id) {
                 presentation.dismiss();
                 presentation = null;
-                setStatus("Secondary screen disconnected.\nWaiting to reconnect…");
+                setStatus("Secondary screen disconnected.\nWaiting to reconnect...");
             }
         });
     }
-    @Override public void onDisplayChanged(int id)   {}
+    @Override public void onDisplayChanged(int id) {}
 
     @Override protected void onResume()  { super.onResume();  tryShowPresentation(); }
     @Override protected void onDestroy() {
