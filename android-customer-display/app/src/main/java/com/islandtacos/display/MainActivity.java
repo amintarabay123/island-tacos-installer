@@ -45,7 +45,6 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
     private void tryShowPresentation() {
         Display[] all = displayManager.getDisplays();
 
-        // Build a diagnostic line so we can see exactly what displays Android sees
         StringBuilder diag = new StringBuilder();
         for (Display d : all) {
             diag.append("\n  #").append(d.getDisplayId())
@@ -57,15 +56,32 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
         if (second != null) {
             if (presentation == null || presentation.getDisplay().getDisplayId() != second.getDisplayId()) {
                 if (presentation != null) presentation.dismiss();
-                presentation = new CustomerDisplayPresentation(this, second, DISPLAY_URL);
+
+                final int screenId = second.getDisplayId();
+                presentation = new CustomerDisplayPresentation(this, second, DISPLAY_URL,
+                        new CustomerDisplayPresentation.LoadCallback() {
+                            @Override public void onPageStarted(String url) {
+                                setStatus("Screen #" + screenId + ": Loading...\n" + url);
+                            }
+                            @Override public void onPageFinished(String url) {
+                                setStatus("Customer display active \u2713\n\nScreen #" + screenId
+                                        + " loaded OK:\n" + url);
+                            }
+                            @Override public void onError(String description, String url) {
+                                setStatus("Screen #" + screenId + " LOAD ERROR\n\n"
+                                        + description + "\n\n" + url
+                                        + "\n\nCheck: Is the mini PC on and the IP correct?");
+                            }
+                        });
+
                 presentation.show();
-                setStatus("Customer display active \u2713\n\nShowing on screen #"
-                        + second.getDisplayId() + ":\n" + DISPLAY_URL
+                setStatus("Presentation shown on screen #" + screenId
+                        + "\nWaiting for page to load...\n" + DISPLAY_URL
                         + "\n\nAll displays:" + diag);
             }
         } else {
-            setStatus("Island Tacos Customer Display\n\nWaiting for secondary screen...\n\nAll displays seen:" + diag
-                    + "\n\nMake sure the customer-facing display is powered on.");
+            setStatus("Island Tacos Customer Display\n\nWaiting for secondary screen...\n\nAll displays seen:"
+                    + diag + "\n\nMake sure the customer-facing display is powered on.");
         }
     }
 
@@ -74,15 +90,15 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
      *
      * Priority:
      *   1. Any display with FLAG_PRESENTATION (standard Android secondary)
-     *   2. Any display whose ID != DEFAULT_DISPLAY (Sunmi's customer screen
-     *      does NOT set FLAG_PRESENTATION but is still a valid secondary display)
+     *   2. Any display whose ID != DEFAULT_DISPLAY (Sunmi customer screen
+     *      on some firmware versions does not set FLAG_PRESENTATION)
      */
     private Display getSecondaryDisplay(Display[] all) {
         Display fallback = null;
         for (Display d : all) {
             if (d.getDisplayId() == Display.DEFAULT_DISPLAY) continue;
-            if ((d.getFlags() & Display.FLAG_PRESENTATION) != 0) return d; // best match
-            if (fallback == null) fallback = d;                             // plain secondary
+            if ((d.getFlags() & Display.FLAG_PRESENTATION) != 0) return d;
+            if (fallback == null) fallback = d;
         }
         return fallback;
     }
