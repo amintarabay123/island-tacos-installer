@@ -53,6 +53,13 @@ export default function AdminReports() {
       return { type: "network", ip: "", port: 9100, bridgeUrl: "http://localhost:8765", localApiUrl: "", ...saved };
     } catch { return { type: "network", ip: "", port: 9100, bridgeUrl: "http://localhost:8765", localApiUrl: "" }; }
   });
+  const [kdsPrinterConfig, setKdsPrinterConfig] = useState<PrinterConfig>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("kdsConfig") ?? "{}");
+      return { type: "browser", ip: "", port: 9100, bridgeUrl: "http://localhost:8765", localApiUrl: "", ...saved };
+    } catch { return { type: "browser", ip: "", port: 9100, bridgeUrl: "http://localhost:8765", localApiUrl: "" }; }
+  });
+  const [kdsConfigSaved, setKdsConfigSaved] = useState(false);
   const [showPrinterSettings, setShowPrinterSettings] = useState(false);
   const [printerSaved, setPrinterSaved] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
@@ -63,7 +70,7 @@ export default function AdminReports() {
       .catch(() => navigate(adminRoutes.login));
   }, [navigate]);
 
-  // Load printer config from server so settings are shared across all devices
+  // Load printer configs from server so settings are shared across all devices
   useEffect(() => {
     fetch("/api/settings", { credentials: "include", headers: authHeaders() })
       .then(r => r.json())
@@ -74,8 +81,14 @@ export default function AdminReports() {
             setPrinterConfig(p => ({ ...p, ...cfg }));
           } catch { /* ignore malformed */ }
         }
+        if (data.kds_printer_config) {
+          try {
+            const cfg = JSON.parse(data.kds_printer_config) as Partial<PrinterConfig>;
+            setKdsPrinterConfig(p => ({ ...p, ...cfg }));
+          } catch { /* ignore malformed */ }
+        }
       })
-      .catch(() => { /* fallback to localStorage already loaded in useState */ });
+      .catch(() => {});
   }, []);
 
   const loadReport = useCallback(async (f: string, t: string) => {
@@ -100,17 +113,32 @@ export default function AdminReports() {
     localStorage.setItem("printerConfig", JSON.stringify(printerConfig));
   }, [printerConfig]);
 
+  useEffect(() => {
+    localStorage.setItem("kdsConfig", JSON.stringify(kdsPrinterConfig));
+  }, [kdsPrinterConfig]);
+
   const savePrinterConfig = () => {
     localStorage.setItem("printerConfig", JSON.stringify(printerConfig));
-    // Also persist to server so all devices (KDS, POS, etc.) pick it up automatically
     fetch("/api/settings", {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ printer_config: JSON.stringify(printerConfig) }),
-    }).catch(() => { /* server save failed — localStorage still updated */ });
+    }).catch(() => {});
     setPrinterSaved(true);
     setTimeout(() => setPrinterSaved(false), 2000);
+  };
+
+  const saveKdsPrinterConfig = () => {
+    localStorage.setItem("kdsConfig", JSON.stringify(kdsPrinterConfig));
+    fetch("/api/settings", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ kds_printer_config: JSON.stringify(kdsPrinterConfig) }),
+    }).catch(() => {});
+    setKdsConfigSaved(true);
+    setTimeout(() => setKdsConfigSaved(false), 2000);
   };
 
   const [pdfGenerating, setPdfGenerating] = useState(false);
