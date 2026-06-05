@@ -14,6 +14,10 @@
     "prettier": "^3.8.1"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@clerk/shared", "core-js", "esbuild", "sharp", "better-sqlite3", "bcrypt", "bcryptjs"]
+    "onlyBuiltDependencies": ["@clerk/shared", "core-js", "esbuild", "sharp", "better-sqlite3", "bcrypt", "bcryptjs"],
+    "supportedArchitectures": {
+      "os": ["darwin", "linux"],
+      "cpu": ["x64", "arm64"]
+    }
   }
 }

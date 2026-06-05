@@ -70,6 +70,7 @@ check GET  /api/menu/modifiers                           200
 check GET  /api/store-settings                           200
 check GET  /api/settings                                 200
 check GET  /api/display                                  200
+check GET  /api/download/customer-display.apk            200
 # /customers/lookup is intentionally public (online "My Orders" page).
 # If we add OTP, change this to 401|403.
 check GET  /api/customers/lookup?phone=12845551234       200\|400\|404

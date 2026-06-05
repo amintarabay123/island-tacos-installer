@@ -308,6 +308,25 @@ router.post("/download/env", (req: Request, res: Response): void => {
   res.send(env);
 });
 
+// ── Android Customer Display APK ──────────────────────────────────────────────
+// Built from android-customer-display/ source, served directly (small file ~3 MB).
+// No auth required — it's a debug APK for internal use only.
+router.get("/download/customer-display.apk", (_req: Request, res: Response): void => {
+  const candidates = [
+    path.join(PROJECT_ROOT, "android-customer-display", "app", "build", "outputs", "apk", "debug", "app-debug.apk"),
+    path.join(PROJECT_ROOT, "artifacts", "api-server", "public", "customer-display.apk"),
+  ];
+  const apkPath = candidates.find(p => fs.existsSync(p));
+  if (!apkPath) {
+    res.status(404).json({ error: "APK not yet built. Ask the system admin to rebuild it." });
+    return;
+  }
+  res.setHeader("Content-Type", "application/vnd.android.package-archive");
+  res.setHeader("Content-Disposition", 'attachment; filename="island-tacos-customer-display.apk"');
+  res.setHeader("Cache-Control", "no-cache");
+  res.sendFile(apkPath);
+});
+
 router.get("/download/FIXDB.ps1",            serveFile("local-install/FIXDB.ps1",               "FIXDB.ps1",            "text/plain; charset=utf-8"));
 router.get("/download/FIXDB.bat",            serveFile("local-install/FIXDB.bat",               "FIXDB.bat",            "text/plain; charset=utf-8"));
 router.get("/download/modifier-links.sql",   serveFile("local-install/modifier-links.sql",      "modifier-links.sql",   "text/plain; charset=utf-8"));
