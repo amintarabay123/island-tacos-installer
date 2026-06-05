@@ -8,6 +8,7 @@ import { spawn } from "child_process";
 import { objectStorageClient, signObjectGetURL } from "../lib/objectStorage";
 import { pool } from "@workspace/db";
 import { requireAdminAuth } from "./auth";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -62,7 +63,7 @@ async function generateAndUpload(): Promise<void> {
   generating = true;
   gcsPublicUrl = null;
 
-  console.log("[installer] generating archive...");
+  logger.info("[installer] generating archive...");
 
   try {
     // Step 1: write archive to disk
@@ -96,7 +97,7 @@ async function generateAndUpload(): Promise<void> {
       });
     });
 
-    console.log("[installer] archive ready, uploading to GCS...");
+    logger.info("[installer] archive ready, uploading to GCS...");
 
     // Step 2: upload to GCS — stream from disk to avoid loading the full
     // archive (~50+ MB) into memory, which OOM-kills the deployment.
@@ -116,10 +117,10 @@ async function generateAndUpload(): Promise<void> {
     // Step 3: generate a signed GET URL (7 days) — bypasses Replit proxy, no public ACL needed
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
     gcsPublicUrl = await signObjectGetURL(bucketId, GCS_OBJECT_NAME, 7 * 24 * 3600);
-    console.log("[installer] available at:", gcsPublicUrl);
+    logger.info({ url: gcsPublicUrl }, "[installer] available");
 
   } catch (err) {
-    console.error("[installer] error:", err instanceof Error ? err.message : err);
+    logger.error({ err: err instanceof Error ? err.message : err }, "[installer] error");
   } finally {
     generating = false;
   }
@@ -136,7 +137,7 @@ async function initInstallerCache(): Promise<void> {
     if (exists) {
       const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
       gcsPublicUrl = await signObjectGetURL(bucketId, GCS_OBJECT_NAME, 7 * 24 * 3600);
-      console.log("[installer] existing GCS object signed — regenerating fresh archive in background...");
+      logger.info("[installer] existing GCS object signed — regenerating fresh archive in background...");
     }
   } catch {
     // No existing object or GCS unavailable — will generate fresh
@@ -144,12 +145,12 @@ async function initInstallerCache(): Promise<void> {
 
   // Always regenerate on startup so the archive matches the current deployment
   generateAndUpload().catch((err) => {
-    console.error("[installer] background generation failed:", err);
+    logger.error({ err }, "[installer] background generation failed");
   });
 }
 
 // Kick off on startup (don't await — non-blocking)
-initInstallerCache().catch(console.error);
+initInstallerCache().catch((err) => logger.error({ err }, "[installer] initInstallerCache failed"));
 
 // On startup: sign the existing GCS frontend object (if any) so /api/download/frontend
 // can serve it immediately. The api-server NEVER regenerates this archive itself —
@@ -166,16 +167,16 @@ async function initFrontendCache(): Promise<void> {
     if (exists) {
       const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
       frontendGcsUrl = await signObjectGetURL(bucketId, FRONTEND_GCS_OBJECT, 7 * 24 * 3600);
-      console.log("[frontend] existing GCS object signed — fresh tarball is uploaded by the island-tacos build's postbuild step.");
+      logger.info("[frontend] existing GCS object signed — fresh tarball is uploaded by the island-tacos build's postbuild step.");
     } else {
-      console.warn("[frontend] no GCS object found — UPDATE.bat will fail until the next island-tacos deploy regenerates it.");
+      logger.warn("[frontend] no GCS object found — UPDATE.bat will fail until the next island-tacos deploy regenerates it.");
     }
   } catch (err) {
-    console.error("[frontend] init failed:", err instanceof Error ? err.message : err);
+    logger.error({ err: err instanceof Error ? err.message : err }, "[frontend] init failed");
   }
 }
 
-initFrontendCache().catch(console.error);
+initFrontendCache().catch((err) => logger.error({ err }, "[frontend] initFrontendCache failed"));
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function serveFile(filePath: string, filename: string, contentType: string) {
@@ -225,7 +226,7 @@ router.get("/download/frontend", async (_req: Request, res: Response): Promise<v
     frontendGcsUrl = await signObjectGetURL(bucketId, FRONTEND_GCS_OBJECT, 7 * 24 * 3600);
     res.json({ url: frontendGcsUrl });
   } catch (err) {
-    console.error("[frontend] on-demand sign failed:", err instanceof Error ? err.message : err);
+    logger.error({ err: err instanceof Error ? err.message : err }, "[frontend] on-demand sign failed");
     res.status(503).json({ error: "Frontend tarball signing failed. Please retry shortly." });
   }
 });
@@ -305,6 +306,25 @@ router.post("/download/env", (req: Request, res: Response): void => {
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Content-Disposition", 'attachment; filename=".env"');
   res.send(env);
+});
+
+// ── Android Customer Display APK ──────────────────────────────────────────────
+// Built from android-customer-display/ source, served directly (small file ~3 MB).
+// No auth required — it's a debug APK for internal use only.
+router.get("/download/customer-display.apk", (_req: Request, res: Response): void => {
+  const candidates = [
+    path.join(PROJECT_ROOT, "android-customer-display", "app", "build", "outputs", "apk", "debug", "app-debug.apk"),
+    path.join(PROJECT_ROOT, "artifacts", "api-server", "public", "customer-display.apk"),
+  ];
+  const apkPath = candidates.find(p => fs.existsSync(p));
+  if (!apkPath) {
+    res.status(404).json({ error: "APK not yet built. Ask the system admin to rebuild it." });
+    return;
+  }
+  res.setHeader("Content-Type", "application/vnd.android.package-archive");
+  res.setHeader("Content-Disposition", 'attachment; filename="island-tacos-customer-display.apk"');
+  res.setHeader("Cache-Control", "no-cache");
+  res.sendFile(apkPath);
 });
 
 router.get("/download/FIXDB.ps1",            serveFile("local-install/FIXDB.ps1",               "FIXDB.ps1",            "text/plain; charset=utf-8"));
