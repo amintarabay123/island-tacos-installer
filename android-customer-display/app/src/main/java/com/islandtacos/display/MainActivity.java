@@ -60,28 +60,21 @@ public class MainActivity extends Activity implements DisplayManager.DisplayList
                 final int screenId = second.getDisplayId();
                 presentation = new CustomerDisplayPresentation(this, second, DISPLAY_URL,
                         new CustomerDisplayPresentation.LoadCallback() {
-                            @Override public void onTestScreenShown() {
-                                setStatus("DIAGNOSTIC: Bright red test screen sent to screen #" + screenId
-                                        + "\n\nLook at the customer display now.\nDoes it show RED with white text?"
-                                        + "\n\nLoading real page in 5 seconds...");
-                            }
                             @Override public void onPageStarted(String url) {
-                                setStatus("Screen #" + screenId + ": Loading...\n" + url);
+                                setStatus("Screen #" + screenId + ": Loading bundled display...");
                             }
                             @Override public void onPageFinished(String url) {
-                                setStatus("Customer display active \u2713\n\nScreen #" + screenId
-                                        + " loaded OK:\n" + url);
+                                setStatus("Customer display active \u2713\n\nScreen #" + screenId + " ready");
                             }
                             @Override public void onError(String description, String url) {
                                 setStatus("Screen #" + screenId + " LOAD ERROR\n\n"
-                                        + description + "\n\n" + url
-                                        + "\n\nCheck: Is the mini PC on and the IP correct?");
+                                        + description
+                                        + "\n\nCheck: Is the mini PC on and the IP correct?\n" + url);
                             }
                         });
 
                 presentation.show();
-                setStatus("Presentation shown on screen #" + screenId
-                        + "\nWaiting for test screen...\n\nAll displays:" + diag);
+                setStatus("Presentation shown on screen #" + screenId + "\n\nAll displays:" + diag);
             }
         } else {
             setStatus("Island Tacos Customer Display\n\nWaiting for secondary screen...\n\nAll displays:"

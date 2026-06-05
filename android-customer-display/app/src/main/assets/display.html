@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Display</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; font-family: system-ui, -apple-system, Arial, sans-serif; }
+#app { height: 100vh; }
+
+.screen { height: 100vh; display: flex; overflow: hidden; user-select: none; }
+
+/* Left panel (white) */
+.panel-left {
+  flex: 1; background: #fff; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 24px;
+  padding: 0 64px; min-width: 0;
+}
+.panel-left-receipt {
+  flex: 1; background: #fff; display: flex; flex-direction: column; min-width: 0;
+}
+
+/* Right promo panel */
+.panel-right {
+  width: 42%; flex-shrink: 0; position: relative; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.panel-right.orange { background: linear-gradient(135deg, #ea580c, #9a3412); }
+.panel-right.green  { background: linear-gradient(135deg, #16a34a, #065f46); }
+.circle { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.08); }
+.promo-content { position: relative; text-align: center; padding: 0 40px; color: #fff; }
+.promo-icon { font-size: 72px; line-height: 1; margin-bottom: 20px; }
+.promo-tag { font-size: 15px; font-weight: 500; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px; }
+.promo-title { font-family: Georgia, serif; font-style: italic; font-weight: 900; font-size: 54px; line-height: 1.1; color: #fff; margin-bottom: 16px; white-space: pre-line; }
+.promo-divider { width: 60px; height: 3px; background: rgba(255,255,255,0.4); margin: 0 auto 16px; }
+.promo-sub { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.5; }
+
+/* Idle */
+.idle-emoji { font-size: 80px; line-height: 1; margin-bottom: 20px; text-align: center; }
+.idle-title { font-size: 52px; font-weight: 900; color: #111827; margin: 0; line-height: 1.1; letter-spacing: -0.02em; text-align: center; }
+.idle-city { font-size: 18px; color: #9ca3af; font-weight: 500; margin: 10px 0 0; text-align: center; }
+.idle-clock { font-size: 64px; font-weight: 100; color: rgba(0,0,0,0.25); letter-spacing: 0.08em; }
+.idle-step { font-size: 12px; color: #d1d5db; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 600; }
+
+/* Receipt header */
+.receipt-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 40px; border-bottom: 1px solid #e5e7eb; flex-shrink: 0;
+}
+.receipt-store { display: flex; align-items: center; gap: 10px; }
+.receipt-store-emoji { font-size: 22px; }
+.receipt-store-name { font-weight: 900; font-size: 20px; color: #111827; }
+.receipt-label { font-size: 18px; font-weight: 700; color: #374151; }
+
+/* Items */
+.items-scroll { flex: 1; overflow-y: auto; padding: 4px 40px; }
+.item-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6; gap: 12px; }
+.item-qty { width: 36px; color: #6b7280; font-weight: 700; font-size: 16px; flex-shrink: 0; padding-top: 2px; }
+.item-info { flex: 1; min-width: 0; }
+.item-name { margin: 0; font-size: 17px; font-weight: 600; color: #111827; line-height: 1.3; }
+.item-mods { margin: 3px 0 0; font-size: 13px; color: #9ca3af; }
+.item-price { font-size: 17px; font-weight: 600; color: #111827; flex-shrink: 0; }
+.items-empty { display: flex; align-items: center; justify-content: center; height: 100%; }
+.items-empty p { color: #9ca3af; font-size: 18px; }
+
+/* Totals */
+.totals { border-top: 2px solid #e5e7eb; padding: 16px 40px 20px; flex-shrink: 0; background: #fafafa; }
+.total-row { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 8px; }
+.total-row.gray { color: #6b7280; }
+.total-row.green { color: #16a34a; }
+.total-final-row { border-top: 2px solid #e5e7eb; margin-top: 8px; padding-top: 12px; display: flex; justify-content: space-between; align-items: baseline; }
+.total-label { font-size: 22px; font-weight: 900; color: #111827; }
+.total-amount { font-size: 32px; font-weight: 900; color: #111827; }
+.total-thanks { text-align: center; font-size: 12px; color: #d1d5db; margin-top: 12px; text-transform: uppercase; letter-spacing: 0.12em; }
+
+/* Completed */
+.complete-left { flex: 1; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 0 64px; text-align: center; }
+.check-circle { width: 100px; height: 100px; border-radius: 50%; background: #f0fdf4; border: 2px solid #86efac; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+.complete-title { font-size: 56px; font-weight: 900; color: #111827; margin: 0 0 8px; letter-spacing: -0.02em; }
+.complete-sub { font-size: 20px; color: #6b7280; margin: 0; }
+.order-code-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 20px; padding: 16px 48px; }
+.order-code-label { font-size: 11px; color: #92400e; text-transform: uppercase; letter-spacing: 0.15em; margin: 0 0 6px; font-weight: 600; }
+.order-code-value { font-family: monospace; font-weight: 900; font-size: 42px; color: #d97706; margin: 0; letter-spacing: 0.12em; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ─── Configuration ────────────────────────────────────────────────────────────
+// API_URL is injected by Android before load; fallback to same origin.
+var API_URL = window.DISPLAY_API_URL || '/api/display';
+var RESET_MS = 12000;
+
+// ─── State ────────────────────────────────────────────────────────────────────
+var currentStatus = 'idle';
+var lastSeen = 0;
+var resetTimer = null;
+var clockTimer = null;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmt(n) {
+  return '$' + (parseFloat(n) || 0).toFixed(2);
+}
+
+function promoHTML(shade) {
+  var tag   = shade === 'green' ? 'Come back soon!'          : 'Fresh &amp; Authentic';
+  var title = shade === 'green' ? 'See you\nnext time!'      : "Today's\nMenu";
+  var sub   = shade === 'green' ? 'Road Town, Tortola · BVI' : 'Made fresh daily in Road Town';
+  return '<div class="panel-right ' + shade + '">'
+    + '<div class="circle" style="top:-80px;right:-80px;width:280px;height:280px"></div>'
+    + '<div class="circle" style="bottom:-80px;left:-80px;width:220px;height:220px"></div>'
+    + '<div class="promo-content">'
+    + '<div class="promo-icon">🌮</div>'
+    + '<div class="promo-tag">' + tag + '</div>'
+    + '<div class="promo-title">' + esc(title) + '</div>'
+    + '<div class="promo-divider"></div>'
+    + '<div class="promo-sub">' + esc(sub) + '</div>'
+    + '</div></div>';
+}
+
+// ─── Screens ──────────────────────────────────────────────────────────────────
+function renderIdle() {
+  if (clockTimer) clearInterval(clockTimer);
+
+  document.getElementById('app').innerHTML =
+    '<div class="screen">'
+    + '<div class="panel-left">'
+    + '<div><div class="idle-emoji">🌮</div>'
+    + '<div class="idle-title">Island Tacos</div>'
+    + '<div class="idle-city">Road Town, Tortola · BVI</div></div>'
+    + '<div class="idle-clock" id="clock"></div>'
+    + '<div class="idle-step">Step up to order</div>'
+    + '</div>'
+    + promoHTML('orange')
+    + '</div>';
+
+  function tick() {
+    var el = document.getElementById('clock');
+    if (!el) return;
+    var d = new Date();
+    var h = d.getHours(), m = d.getMinutes();
+    var ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    el.textContent = h + ':' + (m < 10 ? '0' : '') + m + '\u202f' + ap;
+  }
+  tick();
+  clockTimer = setInterval(tick, 1000);
+}
+
+function renderActive(state) {
+  if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+  var items = state.items || [];
+  var subtotal = parseFloat(state.subtotal) || 0;
+  var discount = parseFloat(state.discountAmount) || 0;
+  var tax      = parseFloat(state.tax) || 0;
+  var total    = parseFloat(state.total) || 0;
+
+  var itemsHTML = '';
+  if (items.length === 0) {
+    itemsHTML = '<div class="items-empty"><p>Adding items\u2026</p></div>';
+  } else {
+    items.forEach(function(it) {
+      var price = (parseFloat(it.unitPrice) || 0) * (it.quantity || 1);
+      var mods  = (it.modifiers && it.modifiers.length) ? '<p class="item-mods">' + esc(it.modifiers.join(', ')) + '</p>' : '';
+      itemsHTML += '<div class="item-row">'
+        + '<span class="item-qty">' + esc(it.quantity) + '</span>'
+        + '<div class="item-info"><p class="item-name">' + esc(it.name) + '</p>' + mods + '</div>'
+        + '<span class="item-price">$' + price.toFixed(2) + '</span>'
+        + '</div>';
+    });
+  }
+
+  var totalsHTML =
+    '<div class="total-row gray"><span>Subtotal</span><span>' + fmt(subtotal) + '</span></div>';
+  if (discount > 0)
+    totalsHTML += '<div class="total-row green"><span>Discount</span><span>\u2212' + fmt(discount) + '</span></div>';
+  if (tax > 0)
+    totalsHTML += '<div class="total-row gray"><span>Tax</span><span>' + fmt(tax) + '</span></div>';
+  totalsHTML +=
+    '<div class="total-final-row"><span class="total-label">Total</span><span class="total-amount">' + fmt(total) + '</span></div>'
+    + '<div class="total-thanks">Thank you for your order</div>';
+
+  document.getElementById('app').innerHTML =
+    '<div class="screen">'
+    + '<div class="panel-left-receipt">'
+    + '<div class="receipt-header">'
+    + '<div class="receipt-store"><span class="receipt-store-emoji">🌮</span><span class="receipt-store-name">Island Tacos</span></div>'
+    + '<span class="receipt-label">Your Order</span>'
+    + '</div>'
+    + '<div class="items-scroll">' + itemsHTML + '</div>'
+    + '<div class="totals">' + totalsHTML + '</div>'
+    + '</div>'
+    + promoHTML('orange')
+    + '</div>';
+}
+
+function renderCompleted(state) {
+  if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+
+  var codeHTML = state.orderCode
+    ? '<div class="order-code-box"><p class="order-code-label">Order Code</p><p class="order-code-value">' + esc(state.orderCode) + '</p></div>'
+    : '';
+
+  document.getElementById('app').innerHTML =
+    '<div class="screen">'
+    + '<div class="complete-left">'
+    + '<div class="check-circle"><svg width="50" height="50" fill="none" viewBox="0 0 24 24" stroke="#16a34a" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>'
+    + '<div><h1 class="complete-title">Thank you!</h1><p class="complete-sub">Your order has been placed.</p></div>'
+    + codeHTML
+    + '</div>'
+    + promoHTML('green')
+    + '</div>';
+
+  if (resetTimer) clearTimeout(resetTimer);
+  resetTimer = setTimeout(function() {
+    currentStatus = 'idle';
+    renderIdle();
+  }, RESET_MS);
+}
+
+function applyState(state) {
+  if (state.status === currentStatus && state.updatedAt === lastSeen) return;
+  currentStatus = state.status;
+  lastSeen = state.updatedAt;
+  if (state.status === 'active')    renderActive(state);
+  else if (state.status === 'completed') renderCompleted(state);
+  else renderIdle();
+}
+
+// ─── Polling ──────────────────────────────────────────────────────────────────
+function poll() {
+  fetch(API_URL, { cache: 'no-store' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) { applyState(data); })
+    .catch(function() {}); // silently ignore network errors
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+renderIdle();
+poll();
+setInterval(poll, 1000);
+</script>
+</body>
+</html>
