@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.hardware.display.DisplayManager;
 import android.os.Binder;
@@ -23,15 +24,20 @@ import android.view.Display;
  * customer display stays on screen regardless of which app is in the foreground.
  *
  * START_STICKY ensures the Service is restarted by the OS if it is killed.
+ *
+ * IMPORTANT: Presentation must be created with getApplicationContext(), NOT
+ * 'this' (Service). Dialog/Presentation requires a context that can provide
+ * application-level theming. A bare Service context causes a crash on
+ * Android 7.x when the Dialog tries to resolve its window theme.
  */
 public class DisplayService extends Service implements DisplayManager.DisplayListener {
 
     // ── Change this to match your mini PC's local IP ──────────────────────────
     static final String DISPLAY_URL = "http://192.168.132.100:3001/display";
 
-    private static final String CHANNEL_ID  = "customer_display_ch";
+    private static final String CHANNEL_ID   = "customer_display_ch";
     private static final String CHANNEL_NAME = "Customer Display";
-    private static final int    NOTIF_ID    = 1;
+    private static final int    NOTIF_ID     = 1;
 
     // ── Status callback (optional, used by bound MainActivity) ────────────────
     public interface StatusListener {
@@ -63,8 +69,11 @@ public class DisplayService extends Service implements DisplayManager.DisplayLis
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(NOTIF_ID, buildNotification("Starting customer display…"));
-        mainHandler.post(this::tryShowPresentation);
-        return START_STICKY; // restart automatically if killed
+        // Use anonymous Runnable — avoids method-reference desugaring on API 25
+        mainHandler.post(new Runnable() {
+            @Override public void run() { tryShowPresentation(); }
+        });
+        return START_STICKY;
     }
 
     @Override
@@ -92,7 +101,7 @@ public class DisplayService extends Service implements DisplayManager.DisplayLis
         Display secondary = findSecondaryDisplay(all);
 
         if (secondary != null) {
-            int screenId = secondary.getDisplayId();
+            final int screenId = secondary.getDisplayId();
 
             // Already showing on this display → nothing to do
             if (presentation != null
@@ -103,8 +112,13 @@ public class DisplayService extends Service implements DisplayManager.DisplayLis
 
             dismissPresentation();
 
+            // Use getApplicationContext() — Presentation extends Dialog and needs
+            // a Context that can resolve themes. A bare Service context cannot do
+            // this on Android 7.x and causes a crash. Application context can.
+            Context appCtx = getApplicationContext();
+
             presentation = new CustomerDisplayPresentation(
-                    this, secondary, DISPLAY_URL,
+                    appCtx, secondary, DISPLAY_URL,
                     new CustomerDisplayPresentation.LoadCallback() {
                         @Override public void onPageStarted(String url) {
                             setStatus("Screen #" + screenId + ": loading…");
@@ -151,7 +165,7 @@ public class DisplayService extends Service implements DisplayManager.DisplayLis
 
     // ── Status / Notification ─────────────────────────────────────────────────
 
-    private void setStatus(String msg) {
+    private void setStatus(final String msg) {
         lastStatus = msg;
         NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (nm != null) nm.notify(NOTIF_ID, buildNotification(msg));
@@ -185,15 +199,26 @@ public class DisplayService extends Service implements DisplayManager.DisplayLis
 
     // ── DisplayManager.DisplayListener ────────────────────────────────────────
 
-    @Override public void onDisplayAdded(int displayId)   { mainHandler.post(this::tryShowPresentation); }
-    @Override public void onDisplayRemoved(int displayId) {
-        mainHandler.post(() -> {
-            if (presentation != null
-                    && presentation.getDisplay().getDisplayId() == displayId) {
-                dismissPresentation();
-            }
-            tryShowPresentation();
+    @Override
+    public void onDisplayAdded(int displayId) {
+        mainHandler.post(new Runnable() {
+            @Override public void run() { tryShowPresentation(); }
         });
     }
+
+    @Override
+    public void onDisplayRemoved(int displayId) {
+        final int removedId = displayId;
+        mainHandler.post(new Runnable() {
+            @Override public void run() {
+                if (presentation != null
+                        && presentation.getDisplay().getDisplayId() == removedId) {
+                    dismissPresentation();
+                }
+                tryShowPresentation();
+            }
+        });
+    }
+
     @Override public void onDisplayChanged(int displayId) {}
 }

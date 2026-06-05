@@ -21,7 +21,7 @@ import android.widget.TextView;
  */
 public class MainActivity extends Activity {
 
-    private TextView      statusText;
+    private TextView       statusText;
     private DisplayService displayService;
     private boolean        bound = false;
 
@@ -30,10 +30,17 @@ public class MainActivity extends Activity {
         public void onServiceConnected(ComponentName name, IBinder binder) {
             displayService = ((DisplayService.LocalBinder) binder).getService();
             bound = true;
-            // Receive live status updates from the service
-            displayService.setStatusListener(msg -> runOnUiThread(() -> {
-                if (statusText != null) statusText.setText(msg);
-            }));
+            // Use anonymous class — avoids lambda desugaring issues on API 25
+            displayService.setStatusListener(new DisplayService.StatusListener() {
+                @Override
+                public void onStatus(final String msg) {
+                    runOnUiThread(new Runnable() {
+                        @Override public void run() {
+                            if (statusText != null) statusText.setText(msg);
+                        }
+                    });
+                }
+            });
         }
 
         @Override
