@@ -223,139 +223,90 @@ export default function Home() {
     const hasImage = item.imageUrl && !brokenImages.has(item.id);
 
     return (
-      <div key={item.id} style={{ position: "relative", paddingTop: 44 }}>
-        {/* Floating emoji above card */}
-        {emoji && (
-          <div style={{
-            position: "absolute", top: 0, left: "50%",
-            transform: "translateX(-50%)", zIndex: 10, pointerEvents: "none",
-            filter: `drop-shadow(0 6px 16px ${colors.glow})`,
-          }}>
-            <span style={{ fontSize: 44, lineHeight: 1, display: "inline-block", transform: "rotate(8deg)" }}>{emoji}</span>
-          </div>
-        )}
+      <div key={item.id} style={{ position: "relative", paddingTop: 52 }}>
 
-        {/* Card */}
+        {/* ── Floating food photo (or emoji fallback) above the card ── */}
+        <div style={{
+          position: "absolute", top: -4, right: 14, zIndex: 10,
+          pointerEvents: "none",
+        }}>
+          {hasImage ? (
+            <img
+              src={item.imageUrl}
+              alt={item.name}
+              onError={() => handleImgError(item.id)}
+              style={{
+                width: 76, height: 76,
+                borderRadius: "50%",
+                objectFit: "cover",
+                border: "2.5px solid rgba(255,255,255,0.18)",
+                boxShadow: `0 8px 24px ${colors.glow}, 0 0 0 3px rgba(255,255,255,0.07)`,
+                display: "block",
+              }}
+            />
+          ) : emoji ? (
+            <span style={{
+              fontSize: 52, lineHeight: 1, display: "block",
+              filter: `drop-shadow(0 6px 18px ${colors.glow})`,
+              transform: "rotate(10deg)",
+            }}>{emoji}</span>
+          ) : null}
+        </div>
+
+        {/* ── Card — solid gradient body, no image inside ── */}
         <div
           style={{
-            background: "#1e1f38",
+            background: soldOut ? "rgba(30,31,56,0.8)" : colors.grad,
             borderRadius: 20,
-            overflow: "hidden",
             border: `1px solid ${soldOut ? "rgba(255,255,255,0.06)" : colors.border}`,
             boxShadow: soldOut ? "none" : `0 8px 28px ${colors.glow}`,
             cursor: soldOut ? "not-allowed" : "pointer",
-            display: "flex",
-            flexDirection: "column",
-            opacity: soldOut ? 0.6 : 1,
-            transition: "transform 0.2s, box-shadow 0.2s",
+            display: "flex", flexDirection: "column",
+            opacity: soldOut ? 0.65 : 1,
+            position: "relative",
+            overflow: "hidden",
           }}
           onClick={() => { if (!soldOut) openItemModal(item); }}
         >
-          {/* Image / gradient area */}
-          <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden", flexShrink: 0 }}>
-            {hasImage ? (
-              <>
-                <img
-                  src={item.imageUrl}
-                  alt={item.name}
-                  onError={() => handleImgError(item.id)}
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                />
-                {/* Gradient overlay so bottom info reads well */}
-                <div style={{
-                  position: "absolute", inset: 0,
-                  background: "linear-gradient(to top, rgba(30,31,56,0.9) 0%, transparent 55%)",
-                  pointerEvents: "none",
-                }} />
-              </>
-            ) : (
-              <div style={{
-                background: colors.grad,
-                width: "100%", height: "100%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                position: "relative",
-              }}>
-                {/* Shine overlay */}
-                <div style={{
-                  position: "absolute", inset: 0,
-                  background: "linear-gradient(155deg, rgba(255,255,255,0.12) 0%, transparent 50%)",
-                  pointerEvents: "none",
-                }} />
-                <span style={{ fontSize: 56, lineHeight: 1, filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.35))" }}>
-                  {emoji || item.name.charAt(0)}
+          {/* Shine overlay */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(150deg, rgba(255,255,255,0.14) 0%, transparent 55%)",
+            pointerEvents: "none",
+          }} />
+
+          {/* Card content */}
+          <div style={{ padding: "14px 14px 14px", display: "flex", flexDirection: "column", gap: 7, position: "relative" }}>
+
+            {/* Badges row */}
+            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5 }}>
+              {idx !== undefined && (
+                <span style={{ background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>
+                  {idx === 0 ? "🔥 #1" : `#${idx + 1}`}
                 </span>
-              </div>
-            )}
+              )}
+              {idx === undefined && item.popular && !soldOut && (
+                <span style={{ background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>POPULAR</span>
+              )}
+              {item.spicy && !soldOut && (
+                <span style={{ background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>SPICY 🌶</span>
+              )}
+              {item.vegetarian && !soldOut && (
+                <span style={{ background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#4ade80", letterSpacing: "0.05em" }}>VEG 🌿</span>
+              )}
+            </div>
 
-            {/* Sold-out overlay */}
-            {soldOut && (
-              <div style={{
-                position: "absolute", inset: 0,
-                background: "rgba(0,0,0,0.6)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <span style={{
-                  transform: "rotate(-12deg)",
-                  border: "2px solid #fff", color: "#fff",
-                  fontSize: 10, fontWeight: 800,
-                  textTransform: "uppercase" as const,
-                  letterSpacing: "0.1em",
-                  padding: "2px 8px", borderRadius: 4,
-                }}>Sold Out</span>
-              </div>
-            )}
-
-            {/* Best-seller rank badge */}
-            {idx !== undefined && (
-              <span style={{
-                position: "absolute", top: 10, left: 10,
-                background: "rgba(255,255,255,0.18)", borderRadius: 8,
-                padding: "2px 8px", fontSize: 10, fontWeight: 800,
-                color: "#fff", letterSpacing: "0.05em",
-              }}>
-                {idx === 0 ? "🔥 #1" : `#${idx + 1}`}
-              </span>
-            )}
-
-            {/* Item badges */}
-            {!soldOut && idx === undefined && item.popular && (
-              <span style={{
-                position: "absolute", top: 10, left: 10,
-                background: "rgba(255,255,255,0.18)", borderRadius: 8,
-                padding: "2px 8px", fontSize: 10, fontWeight: 800,
-                color: "#fff", letterSpacing: "0.05em",
-              }}>POPULAR</span>
-            )}
-            {!soldOut && item.spicy && (
-              <span style={{
-                position: "absolute", top: 10,
-                left: (!soldOut && (item.popular || idx !== undefined)) ? 80 : 10,
-                background: "rgba(239,68,68,0.45)", borderRadius: 8,
-                padding: "2px 8px", fontSize: 10, fontWeight: 800,
-                color: "#fff", letterSpacing: "0.05em",
-              }}>SPICY 🌶</span>
-            )}
-            {!soldOut && item.vegetarian && (
-              <span style={{
-                position: "absolute", bottom: 10, right: 10,
-                background: "rgba(52,211,153,0.3)", borderRadius: 8,
-                padding: "2px 8px", fontSize: 10, fontWeight: 800,
-                color: "#4ade80", letterSpacing: "0.05em",
-              }}>VEG 🌿</span>
-            )}
-          </div>
-
-          {/* Info */}
-          <div style={{ padding: "10px 14px 14px", display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+            {/* Name + description */}
             <div>
               <p style={{
-                fontWeight: 700, fontSize: 13, letterSpacing: "-0.015em",
-                color: "#e8eaf6", lineHeight: 1.3,
+                fontWeight: 800, fontSize: 14, letterSpacing: "-0.02em",
+                color: soldOut ? "rgba(255,255,255,0.45)" : "#fff",
+                lineHeight: 1.25, paddingRight: 52,
                 textDecoration: soldOut ? "line-through" : "none",
               }}>{item.name}</p>
               {item.description && (
                 <p style={{
-                  fontSize: 11, color: "#7077a1", marginTop: 3,
+                  fontSize: 11, color: "rgba(255,255,255,0.68)", marginTop: 4,
                   lineHeight: 1.5,
                   overflow: "hidden",
                   display: "-webkit-box",
@@ -364,23 +315,25 @@ export default function Home() {
                 }}>{item.description}</p>
               )}
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
               <span style={{
-                fontSize: 20, fontWeight: 900,
-                color: soldOut ? "#4a4c6a" : colors.accent,
-                letterSpacing: "-0.04em",
+                fontSize: 22, fontWeight: 900,
+                color: soldOut ? "rgba(255,255,255,0.35)" : "#fff",
+                letterSpacing: "-0.05em",
+                textDecoration: soldOut ? "line-through" : "none",
               }}>
                 ${item.price.toFixed(2)}
               </span>
               {!soldOut && (
                 <button
                   style={{
-                    background: colors.grad,
-                    border: "none", borderRadius: 10,
-                    width: 32, height: 32,
+                    background: "rgba(255,255,255,0.22)",
+                    backdropFilter: "blur(4px)",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: 10,
+                    width: 34, height: 34,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     cursor: "pointer",
-                    boxShadow: `0 4px 12px ${colors.glow}`,
                     color: "#fff",
                     flexShrink: 0,
                   }}
