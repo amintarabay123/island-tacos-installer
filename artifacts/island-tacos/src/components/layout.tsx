@@ -78,7 +78,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Brand */}
           <Link href="/" className="flex items-center select-none">
-            <img src="/logo-wordmark.png" alt={profile.storeName} className="h-10 w-auto dark:invert" />
+            <img src="/logo-wordmark.png" alt={profile.storeName} className="h-10 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
           </Link>
 
           {/* Desktop nav links */}
@@ -237,7 +237,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent side="left" className="w-72 p-0">
                 <div className="flex items-center justify-between px-6 py-5 border-b">
-                  <img src="/logo-wordmark.png" alt={profile.storeName} className="h-8 w-auto dark:invert" />
+                  <img src="/logo-wordmark.png" alt={profile.storeName} className="h-8 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
                   <button onClick={() => setMobileOpen(false)}>
                     <X className="w-4 h-4 text-muted-foreground" />
                   </button>

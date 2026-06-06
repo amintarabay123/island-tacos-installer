@@ -390,21 +390,38 @@ export default function Home() {
         />
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(22,23,43,0.92) 0%, rgba(22,23,43,0.6) 60%, rgba(22,23,43,0.2) 100%)" }} />
 
-        {/* Floating food emojis */}
-        <div
-          className="absolute top-6 left-0 right-0 flex justify-center gap-4 select-none pointer-events-none"
-          style={{ filter: "drop-shadow(0 8px 20px rgba(255,107,0,0.4))" }}
-        >
-          {["🌮","🥩","🍤","🐟","🥑","🌯","🧀"].map((e, i) => (
-            <span
-              key={i}
-              style={{
-                fontSize: i === 3 ? 44 : 34,
-                transform: `rotate(${(i % 2 === 0 ? -1 : 1) * 12}deg)`,
-                opacity: 0.9,
-              }}
-            >{e}</span>
-          ))}
+        {/* Floating mini card chips — echo the menu card palette */}
+        <div className="absolute top-6 left-0 right-0 flex justify-center gap-3 select-none pointer-events-none">
+          {([
+            { idx: 0, rot: -14, scale: 1.0,  w: 58, h: 36 },
+            { idx: 1, rot:   9, scale: 0.88, w: 72, h: 32 },
+            { idx: 2, rot:  -5, scale: 1.05, w: 52, h: 38 },
+            { idx: 3, rot:   0, scale: 0.95, w: 64, h: 40 },
+            { idx: 4, rot:  11, scale: 1.0,  w: 54, h: 34 },
+            { idx: 5, rot:  -9, scale: 0.9,  w: 68, h: 32 },
+            { idx: 6, rot:   6, scale: 1.02, w: 50, h: 38 },
+          ] as { idx: number; rot: number; scale: number; w: number; h: number }[]).map(({ idx, rot, scale, w, h }) => {
+            const c = CARD_COLORS[idx];
+            return (
+              <div key={idx} style={{
+                width: w, height: h,
+                borderRadius: 10,
+                background: c.grad,
+                border: `1px solid ${c.border}`,
+                boxShadow: `0 6px 20px ${c.glow}, inset 0 1px 0 rgba(255,255,255,0.18)`,
+                transform: `rotate(${rot}deg) scale(${scale})`,
+                flexShrink: 0,
+                position: "relative",
+                overflow: "hidden",
+              }}>
+                {/* Shine overlay — same as menu cards */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(150deg, rgba(255,255,255,0.22) 0%, transparent 60%)",
+                }} />
+              </div>
+            );
+          })}
         </div>
 
         <div className="relative flex flex-col max-w-6xl mx-auto px-6" style={{ paddingTop: 100, paddingBottom: 56 }}>
