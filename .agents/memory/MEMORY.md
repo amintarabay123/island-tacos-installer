@@ -4,3 +4,4 @@
 - [Resumed ticket patch rule](resumed-ticket-patch-rule.md)
 - [Android Chrome viewport height](android-chrome-viewport.md) — use `100dvh` not `100vh`/`h-screen` on any page that must work in Android Chrome (Sunmi POS device).
 - [Netaurant SaaS strategy](netaurant-saas-strategy.md) — Island Tacos stays separate; Netaurant is the merged SaaS product built from both codebases.
+- [Visual Revamp Design System](visual-revamp-design-system.md) — Approved "Indigo Luxe" design: palette, pop-out art pattern, gradient map, mockup file locations, canvas IDs, implementation order.
