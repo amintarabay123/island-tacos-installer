@@ -223,11 +223,11 @@ export default function Home() {
     const hasImage = item.imageUrl && !brokenImages.has(item.id);
 
     return (
-      <div key={item.id} style={{ position: "relative", paddingTop: 52 }}>
+      <div key={item.id} style={{ position: "relative", paddingTop: 52, display: "flex", flexDirection: "column", height: "100%" }}>
 
-        {/* ── Floating food photo (or emoji fallback) above the card ── */}
+        {/* ── Floating food photo (or emoji) — 3-D pop-out effect ── */}
         <div style={{
-          position: "absolute", top: -4, right: 14, zIndex: 10,
+          position: "absolute", top: -12, right: 10, zIndex: 10,
           pointerEvents: "none",
         }}>
           {hasImage ? (
@@ -236,24 +236,35 @@ export default function Home() {
               alt={item.name}
               onError={() => handleImgError(item.id)}
               style={{
-                width: 76, height: 76,
-                borderRadius: "50%",
+                width: 70, height: 70,
+                borderRadius: 14,
                 objectFit: "cover",
-                border: "2.5px solid rgba(255,255,255,0.18)",
-                boxShadow: `0 8px 24px ${colors.glow}, 0 0 0 3px rgba(255,255,255,0.07)`,
                 display: "block",
+                transform: "rotate(-12deg) scale(1.08) translateY(-2px)",
+                filter: [
+                  "drop-shadow(0 18px 14px rgba(0,0,0,0.5))",
+                  "drop-shadow(0 6px 8px rgba(0,0,0,0.3))",
+                  `drop-shadow(0 0 14px ${colors.glow})`,
+                ].join(" "),
+                /* Fade + soften edges so image bleeds into card naturally */
+                WebkitMaskImage: "radial-gradient(ellipse 84% 84% at 46% 46%, black 28%, rgba(0,0,0,0.75) 52%, transparent 78%)",
+                maskImage: "radial-gradient(ellipse 84% 84% at 46% 46%, black 28%, rgba(0,0,0,0.75) 52%, transparent 78%)",
               }}
             />
           ) : emoji ? (
             <span style={{
-              fontSize: 52, lineHeight: 1, display: "block",
-              filter: `drop-shadow(0 6px 18px ${colors.glow})`,
-              transform: "rotate(10deg)",
+              fontSize: 50, lineHeight: 1, display: "block",
+              transform: "rotate(-12deg) scale(1.05) translateY(-2px)",
+              filter: [
+                "drop-shadow(0 16px 12px rgba(0,0,0,0.45))",
+                "drop-shadow(0 5px 6px rgba(0,0,0,0.28))",
+                `drop-shadow(0 0 14px ${colors.glow})`,
+              ].join(" "),
             }}>{emoji}</span>
           ) : null}
         </div>
 
-        {/* ── Card — solid gradient body, no image inside ── */}
+        {/* ── Card — solid gradient body, flex-fills row height ── */}
         <div
           style={{
             background: soldOut ? "rgba(30,31,56,0.8)" : colors.grad,
@@ -262,6 +273,7 @@ export default function Home() {
             boxShadow: soldOut ? "none" : `0 8px 28px ${colors.glow}`,
             cursor: soldOut ? "not-allowed" : "pointer",
             display: "flex", flexDirection: "column",
+            flex: 1,
             opacity: soldOut ? 0.65 : 1,
             position: "relative",
             overflow: "hidden",
@@ -275,47 +287,62 @@ export default function Home() {
             pointerEvents: "none",
           }} />
 
-          {/* Card content */}
-          <div style={{ padding: "14px 14px 14px", display: "flex", flexDirection: "column", gap: 7, position: "relative" }}>
+          {/* Card content — fixed floor height so every card is the same size */}
+          <div style={{
+            padding: "14px 14px 14px",
+            display: "flex", flexDirection: "column",
+            justifyContent: "space-between",
+            minHeight: 148,
+            flex: 1,
+            position: "relative",
+          }}>
 
-            {/* Badges row */}
-            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5 }}>
-              {idx !== undefined && (
-                <span style={{ background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>
-                  {idx === 0 ? "🔥 #1" : `#${idx + 1}`}
-                </span>
-              )}
-              {idx === undefined && item.popular && !soldOut && (
-                <span style={{ background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>POPULAR</span>
-              )}
-              {item.spicy && !soldOut && (
-                <span style={{ background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>SPICY 🌶</span>
-              )}
-              {item.vegetarian && !soldOut && (
-                <span style={{ background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#4ade80", letterSpacing: "0.05em" }}>VEG 🌿</span>
-              )}
-            </div>
+            {/* Top section: badges + name + description */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
 
-            {/* Name + description */}
-            <div>
+              {/* Badges */}
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5 }}>
+                {idx !== undefined && (
+                  <span style={{ background: "rgba(0,0,0,0.25)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>
+                    {idx === 0 ? "🔥 #1" : `#${idx + 1}`}
+                  </span>
+                )}
+                {idx === undefined && item.popular && !soldOut && (
+                  <span style={{ background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>POPULAR</span>
+                )}
+                {item.spicy && !soldOut && (
+                  <span style={{ background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#fff", letterSpacing: "0.05em" }}>SPICY 🌶</span>
+                )}
+                {item.vegetarian && !soldOut && (
+                  <span style={{ background: "rgba(0,0,0,0.22)", borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, color: "#4ade80", letterSpacing: "0.05em" }}>VEG 🌿</span>
+                )}
+              </div>
+
+              {/* Name */}
               <p style={{
                 fontWeight: 800, fontSize: 14, letterSpacing: "-0.02em",
                 color: soldOut ? "rgba(255,255,255,0.45)" : "#fff",
-                lineHeight: 1.25, paddingRight: 52,
+                lineHeight: 1.25, paddingRight: 50,
                 textDecoration: soldOut ? "line-through" : "none",
               }}>{item.name}</p>
-              {item.description && (
-                <p style={{
-                  fontSize: 11, color: "rgba(255,255,255,0.68)", marginTop: 4,
-                  lineHeight: 1.5,
-                  overflow: "hidden",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical" as const,
-                }}>{item.description}</p>
-              )}
+
+              {/* Description — always reserves 2-line height so cards without desc stay aligned */}
+              <div style={{ minHeight: 36 }}>
+                {item.description && (
+                  <p style={{
+                    fontSize: 11, color: "rgba(255,255,255,0.68)",
+                    lineHeight: 1.5, margin: 0,
+                    overflow: "hidden",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical" as const,
+                  }}>{item.description}</p>
+                )}
+              </div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+
+            {/* Price + button — always pinned to bottom */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
               <span style={{
                 fontSize: 22, fontWeight: 900,
                 color: soldOut ? "rgba(255,255,255,0.35)" : "#fff",
@@ -467,6 +494,7 @@ export default function Home() {
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
+            gridAutoRows: "1fr",
             gap: 20,
           }}>
             {popularItems.map((item, idx) => renderCard(item, idx))}
@@ -521,7 +549,7 @@ export default function Home() {
         {/* Grid */}
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 64px" }}>
           {loadingItems ? (
-            <div style={{ paddingTop: 44, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 20 }}>
+            <div style={{ paddingTop: 44, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gridAutoRows: "1fr", gap: 20 }}>
               {[1,2,3,4,5,6,7,8].map(i => (
                 <div key={i} style={{ paddingTop: 44 }}>
                   <Skeleton className="w-full rounded-2xl" style={{ height: 240 }} />
@@ -536,6 +564,7 @@ export default function Home() {
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
+              gridAutoRows: "1fr",
               gap: 20,
             }}>
               {filteredItems.map(item => renderCard(item))}
