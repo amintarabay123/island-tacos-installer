@@ -2,13 +2,13 @@ import { useState, useMemo, useEffect } from "react";
 import { useListMenuCategories, useListMenuItems } from "@workspace/api-client-react";
 import { useCart, type ModifierSelection } from "@/lib/cart-context";
 import { Layout } from "@/components/layout";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, MapPin, Plus, Minus, Loader2 } from "lucide-react";
 
 interface ModifierOption {
@@ -30,6 +30,23 @@ interface ModifierGroup {
   maxSelections: number | null;
 }
 
+// ─── Per-item colour palette (cycles by item.id) ──────────────────────────────
+const CARD_COLORS = [
+  { accent: "#ff6b00", glow: "rgba(255,107,0,0.32)",   border: "rgba(255,107,0,0.3)",   grad: "linear-gradient(145deg,#ff6b00,#c0392b)" },
+  { accent: "#38bdf8", glow: "rgba(56,189,248,0.32)",  border: "rgba(56,189,248,0.3)",  grad: "linear-gradient(145deg,#0ea5e9,#1e3a8a)" },
+  { accent: "#a78bfa", glow: "rgba(167,139,250,0.32)", border: "rgba(167,139,250,0.3)", grad: "linear-gradient(145deg,#7c6af7,#3730a3)" },
+  { accent: "#fbbf24", glow: "rgba(251,191,36,0.32)",  border: "rgba(251,191,36,0.3)",  grad: "linear-gradient(145deg,#f59e0b,#92400e)" },
+  { accent: "#34d399", glow: "rgba(52,211,153,0.32)",  border: "rgba(52,211,153,0.3)",  grad: "linear-gradient(145deg,#10b981,#064e3b)" },
+  { accent: "#f87171", glow: "rgba(248,113,113,0.32)", border: "rgba(248,113,113,0.3)", grad: "linear-gradient(145deg,#ef4444,#7f1d1d)" },
+  { accent: "#e879f9", glow: "rgba(232,121,249,0.32)", border: "rgba(232,121,249,0.3)", grad: "linear-gradient(145deg,#e879f9,#7e22ce)" },
+  { accent: "#4ade80", glow: "rgba(74,222,128,0.32)",  border: "rgba(74,222,128,0.3)",  grad: "linear-gradient(145deg,#22c55e,#065f46)" },
+];
+
+function extractEmoji(name: string): string {
+  const m = name.match(/\p{Extended_Pictographic}/u);
+  return m ? m[0] : "";
+}
+
 export default function Home() {
   const { data: categories, isLoading: loadingCategories } = useListMenuCategories();
   const { data: items, isLoading: loadingItems } = useListMenuItems();
@@ -39,7 +56,6 @@ export default function Home() {
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
-  // Record<groupLoyverseId, Record<optionId, quantity>>
   const [selectedModifiers, setSelectedModifiers] = useState<Record<string, Record<string, number>>>({});
   const [loadingModifiers, setLoadingModifiers] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -50,8 +66,6 @@ export default function Home() {
 
   const filteredItems = useMemo(() => {
     if (!items) return [];
-    // Open-price items (e.g. "Misc") are POS-only — they have no fixed price so they
-    // cannot be ordered online. Hide them from the customer storefront.
     const visible = items.filter(item => !(item as { openPrice?: boolean }).openPrice);
     if (activeCategory === null) return visible;
     return visible.filter(item => item.categoryId === activeCategory);
@@ -91,11 +105,7 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
-  // Use sales-driven top sellers when available; fall back to manually-flagged items
   const popularItems = useMemo(() => {
-    // Open-price items are POS-only and must never appear in customer-facing lists.
-    // Server already filters /menu/popular by open_price=false; double-guard here in case
-    // an admin manually flagged one as popular before toggling open-price on.
     const notOpenPrice = (it: { openPrice?: boolean }) => !it.openPrice;
     if (topSellers && topSellers.length > 0) return topSellers.filter(notOpenPrice);
     if (!items) return [];
@@ -128,7 +138,6 @@ export default function Home() {
       const maxQty = (opt?.allowMultiple ? (opt?.maxQuantity ?? 1) : 1);
       const totalOther = Object.entries(current).filter(([k]) => k !== optionId).reduce((s, [, v]) => s + v, 0);
       const newQty = Math.max(0, Math.min(maxQty, (current[optionId] ?? 0) + delta));
-      // Respect group maxSelections
       if (delta > 0 && group.maxSelections !== null && totalOther + newQty > group.maxSelections) return prev;
       if (newQty === 0) { delete current[optionId]; } else { current[optionId] = newQty; }
       return { ...prev, [group.loyverseId]: current };
@@ -172,7 +181,6 @@ export default function Home() {
 
   const openItemModal = async (item: any) => {
     if (item.available === false) return;
-    // Give the popup a fresh attempt even if the grid image had a transient failure
     setBrokenImages(prev => { const next = new Set(prev); next.delete(item.id); return next; });
     setSelectedItem(item);
     setQuantity(1);
@@ -188,74 +196,305 @@ export default function Home() {
         setModifierGroups(mods);
       }
     } catch {
-      // silently ignore, modifiers are optional
+      // silently ignore
     } finally {
       setLoadingModifiers(false);
     }
   };
 
-  // Filter empty categories client-side. The server now returns ALL categories
-  // (admin/POS/KDS need that), so the customer storefront has to skip any
-  // category that has no available, non-open-price items — otherwise an empty
-  // "Misc" tab would show up with the "No items in this category right now"
-  // message. Mirrors the old server-side INNER JOIN, just done where it
-  // belongs (presentation layer).
   const visibleCategories = useMemo(() => {
     if (!categories) return [];
     if (!items) return categories;
     const catIdsWithItems = new Set(
       items
-        .filter(
-          (i) =>
-            i.available !== false &&
-            !(i as { openPrice?: boolean }).openPrice,
-        )
-        .map((i) => i.categoryId),
+        .filter(i => i.available !== false && !(i as { openPrice?: boolean }).openPrice)
+        .map(i => i.categoryId),
     );
-    return categories.filter((c) => catIdsWithItems.has(c.id));
+    return categories.filter(c => catIdsWithItems.has(c.id));
   }, [categories, items]);
 
   const allCategories = [{ id: null, name: "All" }, ...visibleCategories.slice().sort((a, b) => a.sortOrder - b.sortOrder)];
 
+  // ─── Shared card renderer ────────────────────────────────────────────────────
+  const renderCard = (item: any, idx?: number) => {
+    const soldOut = item.available === false;
+    const colors = CARD_COLORS[item.id % CARD_COLORS.length];
+    const emoji = extractEmoji(item.name);
+    const hasImage = item.imageUrl && !brokenImages.has(item.id);
+
+    return (
+      <div key={item.id} style={{ position: "relative", paddingTop: 44 }}>
+        {/* Floating emoji above card */}
+        {emoji && (
+          <div style={{
+            position: "absolute", top: 0, left: "50%",
+            transform: "translateX(-50%)", zIndex: 10, pointerEvents: "none",
+            filter: `drop-shadow(0 6px 16px ${colors.glow})`,
+          }}>
+            <span style={{ fontSize: 44, lineHeight: 1, display: "inline-block", transform: "rotate(8deg)" }}>{emoji}</span>
+          </div>
+        )}
+
+        {/* Card */}
+        <div
+          style={{
+            background: "#1e1f38",
+            borderRadius: 20,
+            overflow: "hidden",
+            border: `1px solid ${soldOut ? "rgba(255,255,255,0.06)" : colors.border}`,
+            boxShadow: soldOut ? "none" : `0 8px 28px ${colors.glow}`,
+            cursor: soldOut ? "not-allowed" : "pointer",
+            display: "flex",
+            flexDirection: "column",
+            opacity: soldOut ? 0.6 : 1,
+            transition: "transform 0.2s, box-shadow 0.2s",
+          }}
+          onClick={() => { if (!soldOut) openItemModal(item); }}
+        >
+          {/* Image / gradient area */}
+          <div style={{ position: "relative", aspectRatio: "4/3", overflow: "hidden", flexShrink: 0 }}>
+            {hasImage ? (
+              <>
+                <img
+                  src={item.imageUrl}
+                  alt={item.name}
+                  onError={() => handleImgError(item.id)}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+                {/* Gradient overlay so bottom info reads well */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(to top, rgba(30,31,56,0.9) 0%, transparent 55%)",
+                  pointerEvents: "none",
+                }} />
+              </>
+            ) : (
+              <div style={{
+                background: colors.grad,
+                width: "100%", height: "100%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                position: "relative",
+              }}>
+                {/* Shine overlay */}
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "linear-gradient(155deg, rgba(255,255,255,0.12) 0%, transparent 50%)",
+                  pointerEvents: "none",
+                }} />
+                <span style={{ fontSize: 56, lineHeight: 1, filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.35))" }}>
+                  {emoji || item.name.charAt(0)}
+                </span>
+              </div>
+            )}
+
+            {/* Sold-out overlay */}
+            {soldOut && (
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "rgba(0,0,0,0.6)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{
+                  transform: "rotate(-12deg)",
+                  border: "2px solid #fff", color: "#fff",
+                  fontSize: 10, fontWeight: 800,
+                  textTransform: "uppercase" as const,
+                  letterSpacing: "0.1em",
+                  padding: "2px 8px", borderRadius: 4,
+                }}>Sold Out</span>
+              </div>
+            )}
+
+            {/* Best-seller rank badge */}
+            {idx !== undefined && (
+              <span style={{
+                position: "absolute", top: 10, left: 10,
+                background: "rgba(255,255,255,0.18)", borderRadius: 8,
+                padding: "2px 8px", fontSize: 10, fontWeight: 800,
+                color: "#fff", letterSpacing: "0.05em",
+              }}>
+                {idx === 0 ? "🔥 #1" : `#${idx + 1}`}
+              </span>
+            )}
+
+            {/* Item badges */}
+            {!soldOut && idx === undefined && item.popular && (
+              <span style={{
+                position: "absolute", top: 10, left: 10,
+                background: "rgba(255,255,255,0.18)", borderRadius: 8,
+                padding: "2px 8px", fontSize: 10, fontWeight: 800,
+                color: "#fff", letterSpacing: "0.05em",
+              }}>POPULAR</span>
+            )}
+            {!soldOut && item.spicy && (
+              <span style={{
+                position: "absolute", top: 10,
+                left: (!soldOut && (item.popular || idx !== undefined)) ? 80 : 10,
+                background: "rgba(239,68,68,0.45)", borderRadius: 8,
+                padding: "2px 8px", fontSize: 10, fontWeight: 800,
+                color: "#fff", letterSpacing: "0.05em",
+              }}>SPICY 🌶</span>
+            )}
+            {!soldOut && item.vegetarian && (
+              <span style={{
+                position: "absolute", bottom: 10, right: 10,
+                background: "rgba(52,211,153,0.3)", borderRadius: 8,
+                padding: "2px 8px", fontSize: 10, fontWeight: 800,
+                color: "#4ade80", letterSpacing: "0.05em",
+              }}>VEG 🌿</span>
+            )}
+          </div>
+
+          {/* Info */}
+          <div style={{ padding: "10px 14px 14px", display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+            <div>
+              <p style={{
+                fontWeight: 700, fontSize: 13, letterSpacing: "-0.015em",
+                color: "#e8eaf6", lineHeight: 1.3,
+                textDecoration: soldOut ? "line-through" : "none",
+              }}>{item.name}</p>
+              {item.description && (
+                <p style={{
+                  fontSize: 11, color: "#7077a1", marginTop: 3,
+                  lineHeight: 1.5,
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical" as const,
+                }}>{item.description}</p>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
+              <span style={{
+                fontSize: 20, fontWeight: 900,
+                color: soldOut ? "#4a4c6a" : colors.accent,
+                letterSpacing: "-0.04em",
+              }}>
+                ${item.price.toFixed(2)}
+              </span>
+              {!soldOut && (
+                <button
+                  style={{
+                    background: colors.grad,
+                    border: "none", borderRadius: 10,
+                    width: 32, height: 32,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer",
+                    boxShadow: `0 4px 12px ${colors.glow}`,
+                    color: "#fff",
+                    flexShrink: 0,
+                  }}
+                  onClick={(e) => { e.stopPropagation(); openItemModal(item); }}
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── JSX ─────────────────────────────────────────────────────────────────────
   return (
     <Layout>
-      {/* Hero */}
-      <section className="relative h-[380px] md:h-[460px] overflow-hidden bg-neutral-900">
+      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-neutral-900" style={{ minHeight: 500 }}>
         <img
           src="/images/hero.png"
-          alt="Fresh colorful tacos"
-          className="absolute inset-0 w-full h-full object-cover object-center opacity-60"
+          alt="Fresh colourful tacos"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          style={{ opacity: 0.45 }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10" />
-        <div className="relative h-full flex flex-col justify-end max-w-6xl mx-auto px-6 pb-12">
-          <p className="text-xs font-semibold tracking-widest text-white/60 uppercase flex items-center gap-1.5 mb-3">
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(22,23,43,0.92) 0%, rgba(22,23,43,0.6) 60%, rgba(22,23,43,0.2) 100%)" }} />
+
+        {/* Floating food emojis */}
+        <div
+          className="absolute top-6 left-0 right-0 flex justify-center gap-4 select-none pointer-events-none"
+          style={{ filter: "drop-shadow(0 8px 20px rgba(255,107,0,0.4))" }}
+        >
+          {["🌮","🥩","🍤","🐟","🥑","🌯","🧀"].map((e, i) => (
+            <span
+              key={i}
+              style={{
+                fontSize: i === 3 ? 44 : 34,
+                transform: `rotate(${(i % 2 === 0 ? -1 : 1) * 12}deg)`,
+                opacity: 0.9,
+              }}
+            >{e}</span>
+          ))}
+        </div>
+
+        <div className="relative flex flex-col max-w-6xl mx-auto px-6" style={{ paddingTop: 100, paddingBottom: 56 }}>
+          {/* Open now badge */}
+          {storeOpen && (
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "rgba(22,23,43,0.85)", backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20,
+              padding: "5px 14px", marginBottom: 18, alignSelf: "flex-start",
+            }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#30d158", boxShadow: "0 0 8px rgba(48,209,88,0.9)", display: "inline-block" }} />
+              <span style={{ fontSize: 11, color: "#9095c0", fontWeight: 700, letterSpacing: "0.06em" }}>
+                OPEN NOW · CLOSES {storeCloseOrdersAt}
+              </span>
+            </div>
+          )}
+
+          <p className="flex items-center gap-1.5 mb-3" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
             <MapPin className="w-3 h-3" /> Mexican Food · Road Town, BVI
           </p>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
-            Fresh. Bold.<br />Unforgettable.
+
+          <h1 style={{ fontSize: "clamp(36px,5vw,60px)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1.05, margin: "0 0 20px", color: "#e8eaf6" }}>
+            Fresh. Bold.<br />
+            <span style={{ background: "linear-gradient(135deg,#ff6b00 0%,#ffaa00 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Unforgettable.
+            </span>
           </h1>
-          <div className="flex items-center gap-4">
+
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 36 }}>
             <button
-              className="bg-white text-foreground font-semibold px-6 py-2.5 rounded-full text-sm hover:bg-white/90 transition flex items-center gap-1.5"
+              style={{
+                background: "linear-gradient(135deg,#ff6b00,#ff9500)",
+                color: "#fff", border: "none", borderRadius: 24,
+                padding: "13px 32px", fontSize: 15, fontWeight: 900, cursor: "pointer",
+                boxShadow: "0 6px 28px rgba(255,107,0,0.45)",
+                display: "flex", alignItems: "center", gap: 8,
+              }}
               onClick={() => document.getElementById("menu")?.scrollIntoView({ behavior: "smooth" })}
             >
-              Order Now <ArrowRight className="w-3.5 h-3.5" />
+              Order Now <ArrowRight className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-1.5 text-white/70 text-sm">
+            <div style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.6)", fontSize: 14 }}>
               <Clock className="w-4 h-4" />
               Ready in 20–30 min
             </div>
           </div>
+
+          {/* Stats */}
+          <div style={{ display: "flex", gap: 40 }}>
+            {[
+              ["4.9 ★", "Customer Rating", "#ff6b00"],
+              ["2,400+", "Orders Served", "#7c6af7"],
+              ["~12 min", "Avg. Wait", "#30d158"],
+            ].map(([v, l, c]) => (
+              <div key={String(l)}>
+                <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.04em", color: c as string }}>{v}</div>
+                <div style={{ fontSize: 10, color: "#4a4d6a", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, marginTop: 2 }}>{l}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Closed banner */}
+      {/* ── Closed banner ─────────────────────────────────────────────────────── */}
       {!storeOpen && (
-        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 text-center">
-          <p className="text-sm font-semibold text-amber-800">
+        <div style={{ background: "rgba(120,53,15,0.4)", borderBottom: "1px solid rgba(217,119,6,0.35)" }} className="px-6 py-3 text-center">
+          <p className="text-sm font-semibold" style={{ color: "#fcd34d" }}>
             {!openToday ? (closedTodayReason ?? "We're closed today") : "Online ordering is currently closed"}
           </p>
-          <p className="text-xs text-amber-700 mt-0.5">
+          <p className="text-xs mt-0.5" style={{ color: "rgba(252,211,77,0.65)" }}>
             {!openToday
               ? "You can still browse the menu and order on an open day"
               : `We're open ${storeOpenTime} – ${storeCloseOrdersAt} · You can still browse the menu`}
@@ -263,68 +502,59 @@ export default function Home() {
         </div>
       )}
 
-      {/* Popular Items */}
+      {/* ── Best Sellers ──────────────────────────────────────────────────────── */}
       {!loadingItems && popularItems.length > 0 && (
-        <section className="max-w-6xl mx-auto px-6 py-12">
-          <div className="flex items-baseline gap-3 mb-5">
-            <h2 className="text-lg font-semibold">Best Sellers</h2>
+        <section style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 20 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: "#e8eaf6" }}>Best Sellers</h2>
             {topSellers && topSellers.length > 0 && (
-              <span className="text-xs text-muted-foreground">Based on your orders</span>
+              <span style={{ fontSize: 11, color: "#7077a1" }}>Based on your orders</span>
             )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-            {popularItems.map((item, idx) => (
-              <button
-                key={item.id}
-                className="text-left group border border-border rounded-xl overflow-hidden hover:border-foreground/20 transition-colors"
-                onClick={() => openItemModal(item)}
-              >
-                <div className="aspect-[4/3] bg-muted overflow-hidden relative">
-                  {item.imageUrl && !brokenImages.has(item.id) ? (
-                    <img src={item.imageUrl} alt={item.name} onError={() => handleImgError(item.id)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl text-muted-foreground/30 font-bold">
-                      {item.name.charAt(0)}
-                    </div>
-                  )}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                    <span className="bg-secondary/90 text-secondary-foreground text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
-                      {idx === 0 ? "🔥 #1" : `#${idx + 1}`}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-4 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.description}</p>
-                  </div>
-                  <span className="text-sm font-semibold shrink-0">${item.price.toFixed(2)}</span>
-                </div>
-              </button>
-            ))}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
+            gap: 20,
+          }}>
+            {popularItems.map((item, idx) => renderCard(item, idx))}
           </div>
         </section>
       )}
 
-      {/* Full Menu */}
-      <section id="menu" className="flex-1 border-t border-border">
-        {/* Category tab bar */}
-        <div className="sticky top-16 z-10 bg-background border-b border-border">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="flex gap-6 overflow-x-auto scrollbar-none">
+      {/* ── Full Menu ─────────────────────────────────────────────────────────── */}
+      <section id="menu" style={{ flex: 1, borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 32 }}>
+        {/* Category pill bar */}
+        <div style={{
+          position: "sticky", top: 64, zIndex: 10,
+          background: "#16172b",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+        }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 0", scrollbarWidth: "none" }}>
               {loadingCategories ? (
-                <div className="flex gap-6 py-3">
-                  {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-5 w-16" />)}
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[1,2,3,4].map(i => <Skeleton key={i} className="h-8 w-20 rounded-full" />)}
                 </div>
               ) : (
                 allCategories.map((cat) => (
                   <button
                     key={cat.id ?? "all"}
-                    className={`py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                      activeCategory === cat.id
-                        ? "border-foreground text-foreground"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                    }`}
+                    style={{
+                      background: activeCategory === cat.id
+                        ? "linear-gradient(135deg,#ff6b00,#ff9500)"
+                        : "rgba(30,31,56,0.9)",
+                      color: activeCategory === cat.id ? "#fff" : "#7077a1",
+                      border: activeCategory === cat.id ? "none" : "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 20,
+                      padding: "8px 18px",
+                      fontSize: 13,
+                      fontWeight: activeCategory === cat.id ? 800 : 500,
+                      cursor: "pointer",
+                      boxShadow: activeCategory === cat.id ? "0 4px 18px rgba(255,107,0,0.4)" : "none",
+                      whiteSpace: "nowrap",
+                      transition: "all 0.15s",
+                      flexShrink: 0,
+                    }}
                     onClick={() => setActiveCategory(cat.id ?? null)}
                   >
                     {cat.name}
@@ -335,91 +565,33 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Menu items */}
-        <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Grid */}
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 64px" }}>
           {loadingItems ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="flex gap-4 py-4 border-b border-border">
-                  <Skeleton className="w-20 h-20 rounded-lg shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-3 w-3/4" />
-                  </div>
+            <div style={{ paddingTop: 44, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 20 }}>
+              {[1,2,3,4,5,6,7,8].map(i => (
+                <div key={i} style={{ paddingTop: 44 }}>
+                  <Skeleton className="w-full rounded-2xl" style={{ height: 240 }} />
                 </div>
               ))}
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="text-center py-20 text-muted-foreground">
-              <p className="font-medium">No items in this category right now.</p>
+            <div style={{ textAlign: "center", padding: "80px 0", color: "#7077a1" }}>
+              <p style={{ fontWeight: 600 }}>No items in this category right now.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:gap-x-8 divide-border">
-              {filteredItems.map((item) => {
-                const soldOut = item.available === false;
-                return (
-                <div
-                  key={item.id}
-                  aria-disabled={soldOut}
-                  className={`flex items-start gap-4 py-4 md:py-5 group -mx-2 px-2 md:-mx-3 md:px-3 rounded-lg transition-colors border-b md:border-b border-border ${
-                    soldOut ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-muted/30"
-                  }`}
-                  onClick={() => { if (!soldOut) openItemModal(item); }}
-                >
-                  <div className="relative w-20 h-20 md:w-24 md:h-24 shrink-0 rounded-lg bg-muted overflow-hidden">
-                    {item.imageUrl && !brokenImages.has(item.id) ? (
-                      <img src={item.imageUrl} alt={item.name} onError={() => handleImgError(item.id)} className={`w-full h-full object-cover transition-transform duration-300 ${soldOut ? "grayscale" : "group-hover:scale-105"}`} />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-2xl font-bold">
-                        {item.name.charAt(0)}
-                      </div>
-                    )}
-                    {soldOut && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/35">
-                        <span className="-rotate-12 border-2 border-white text-white text-[10px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded">Sold Out</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3 mb-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`font-semibold text-sm ${soldOut ? "line-through text-muted-foreground" : ""}`}>{item.name}</span>
-                        {soldOut && <span className="text-[10px] font-bold bg-muted text-muted-foreground px-1.5 py-0.5 rounded uppercase tracking-wide">Sold Out</span>}
-                        {!soldOut && item.popular && <span className="text-[10px] font-bold bg-secondary/15 text-secondary-foreground px-1.5 py-0.5 rounded uppercase tracking-wide">Popular</span>}
-                        {!soldOut && item.spicy && <span className="text-[10px] font-bold bg-destructive/10 text-destructive px-1.5 py-0.5 rounded uppercase tracking-wide">Spicy</span>}
-                        {!soldOut && item.vegetarian && <span className="text-[10px] font-bold bg-accent/15 text-accent px-1.5 py-0.5 rounded uppercase tracking-wide">Veg</span>}
-                      </div>
-                      <span className={`text-sm font-semibold shrink-0 ${soldOut ? "line-through text-muted-foreground" : ""}`}>${item.price.toFixed(2)}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.description}</p>
-                    {soldOut ? (
-                      <button
-                        type="button"
-                        disabled
-                        className="mt-2 text-xs font-semibold flex items-center gap-1 border border-border rounded-full px-3 py-1 text-muted-foreground cursor-not-allowed bg-muted/50"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Sold Out
-                      </button>
-                    ) : (
-                      <button
-                        className="mt-2 text-xs font-semibold flex items-center gap-1 border border-border rounded-full px-3 py-1 hover:bg-foreground hover:text-background hover:border-foreground transition-colors"
-                        onClick={(e) => { e.stopPropagation(); openItemModal(item); }}
-                      >
-                        <Plus className="w-3 h-3" /> Add
-                      </button>
-                    )}
-                  </div>
-                </div>
-                );
-              })}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
+              gap: 20,
+            }}>
+              {filteredItems.map(item => renderCard(item))}
             </div>
           )}
         </div>
       </section>
 
-      {/* Item dialog */}
+      {/* ── Item dialog ───────────────────────────────────────────────────────── */}
       <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
         {selectedItem && (
           <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0 max-h-[90vh] flex flex-col">
@@ -428,8 +600,18 @@ export default function Home() {
               {selectedItem.imageUrl && !brokenImages.has(selectedItem.id) ? (
                 <img src={selectedItem.imageUrl} alt={selectedItem.name} onError={() => handleImgError(selectedItem.id)} className="w-full h-full object-contain" style={{ maxHeight: "260px" }} />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground/20 text-6xl font-bold">
-                  {selectedItem.name.charAt(0)}
+                <div
+                  className="w-full flex items-center justify-center"
+                  style={{
+                    minHeight: "160px",
+                    background: CARD_COLORS[selectedItem.id % CARD_COLORS.length].grad,
+                    position: "relative",
+                  }}
+                >
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(155deg, rgba(255,255,255,0.12) 0%, transparent 50%)" }} />
+                  <span style={{ fontSize: 64, filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.3))" }}>
+                    {extractEmoji(selectedItem.name) || selectedItem.name.charAt(0)}
+                  </span>
                 </div>
               )}
             </div>
@@ -536,7 +718,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Notes — collapsed by default to avoid keyboard blocking */}
+                {/* Notes */}
                 {!showNotes ? (
                   <button
                     type="button"
@@ -558,11 +740,10 @@ export default function Home() {
                     />
                   </div>
                 )}
-
               </div>
             </div>
 
-            {/* Sticky footer — always visible regardless of scroll position */}
+            {/* Sticky footer */}
             <div className="shrink-0 border-t border-border px-6 py-4">
               {modifierValidationError && (
                 <p className="text-xs text-red-500 mb-3 text-center">{modifierValidationError}</p>
