@@ -6,6 +6,23 @@ import { logger } from "./logger";
 const STORE_URL = (process.env.STORE_URL ?? "https://orders.islandtacosbvi.com").replace(/\/$/, "");
 const META_API_VERSION = "v21.0";
 
+/**
+ * Template names — override via env vars when you have approved custom templates.
+ *
+ * Test mode defaults use Meta's built-in sample templates which work without approval:
+ *   - jaspers_market_order_confirmation_v1: body params = [name, order_id, date]
+ *   - hello_world: no params (just "Hello World!" — placeholder until custom ready template approved)
+ *
+ * Production: create templates in Meta Business → WhatsApp → Manage → Message Templates,
+ * get them approved (utility category, ~minutes with verified account), then set:
+ *   WA_TEMPLATE_CONFIRMATION=your_confirmation_template_name
+ *   WA_TEMPLATE_READY=your_ready_template_name
+ *   WA_TEMPLATE_CANCELLED=your_cancelled_template_name
+ */
+const TEMPLATE_CONFIRMATION = process.env.WA_TEMPLATE_CONFIRMATION ?? "jaspers_market_order_confirmation_v1";
+const TEMPLATE_READY        = process.env.WA_TEMPLATE_READY        ?? "hello_world";
+const TEMPLATE_CANCELLED    = process.env.WA_TEMPLATE_CANCELLED    ?? "hello_world";
+
 // ── Conversation memory ───────────────────────────────────────────────────────
 
 interface ConvEntry {
@@ -44,9 +61,7 @@ async function buildSystemPrompt(): Promise<string> {
 
   const hours   = settings.hours   ?? "11am – 7pm daily";
   const days    = formatOpenDays(settings.open_days);
-  // TODO(store-settings): replace the phone/address fallbacks with `(await getStoreSettings()).phone`
-  // and `(await getStoreSettings()).address` — the K/V `phone`/`address` keys are already shadowed by
-  // the store_profile overlay in /api/settings, so we can drop the dual-lookup in a follow-up.
+  // TODO(store-settings): replace fallbacks with getStoreSettings()
   const phone   = settings.phone   ?? "284-544-8088";
   const address = settings.address ?? "Wickhams Cay 1, Road Town, BVI";
   const payment = settings.payment_methods ?? "ATH Móvil · Card · Apple Pay";
@@ -68,7 +83,7 @@ async function buildSystemPrompt(): Promise<string> {
     return `*${cat.name}*\n${lines.join("\n")}`;
   }).filter(Boolean).join("\n\n");
 
-  // TODO(store-settings): interpolate `${(await getStoreSettings()).storeName}` instead of the literal.
+  // TODO(store-settings): interpolate storeName from getStoreSettings()
   return `You are the friendly WhatsApp assistant for Island Tacos, a Mexican taqueria in Road Town, British Virgin Islands.
 
 STORE INFO:
@@ -101,7 +116,7 @@ GUIDELINES:
 export async function handleInboundMessage(fromPhone: string, text: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    // TODO(store-settings): replace (284) 544-8088 with `${(await getStoreSettings()).phone}`
+    // TODO(store-settings): replace phone literal with getStoreSettings().phone
     return `Sorry, I can't respond right now. Please call us at (284) 544-8088 or order at ${STORE_URL} 🌮`;
   }
 
@@ -123,7 +138,6 @@ export async function handleInboundMessage(fromPhone: string, text: string): Pro
       ],
     });
 
-    // TODO(store-settings): replace (284) 544-8088 with `${(await getStoreSettings()).phone}`
     const reply = completion.choices[0]?.message?.content?.trim()
       ?? "Sorry, I didn't catch that — try again or call us at (284) 544-8088 🌮";
 
@@ -131,12 +145,11 @@ export async function handleInboundMessage(fromPhone: string, text: string): Pro
     return reply;
   } catch (err) {
     logger.error({ err }, "[whatsapp] OpenAI error");
-    // TODO(store-settings): replace (284) 544-8088 with `${(await getStoreSettings()).phone}`
     return `Sorry, something went wrong on my end. Please call us at (284) 544-8088 🌮`;
   }
 }
 
-// ── Outbound send via Meta Cloud API ─────────────────────────────────────────
+// ── Outbound: free-text (use only within a 24h customer-service window) ────────
 
 export async function sendWhatsAppMessage(to: string, body: string): Promise<void> {
   const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
@@ -147,7 +160,6 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<voi
     return;
   }
 
-  // Meta expects digits only, no +, no spaces
   const toNormalized = to.replace(/\D/g, "");
 
   try {
@@ -181,6 +193,71 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<voi
   }
 }
 
+// ── Outbound: template message (required for business-initiated sends) ─────────
+//
+// Business-initiated messages (order confirmations, ready alerts, cancellations)
+// MUST use pre-approved templates — Meta will reject plain text to numbers that
+// haven't messaged the business first within 24 hours.
+//
+// Template components format: https://developers.facebook.com/docs/whatsapp/api/messages/message-templates
+
+export async function sendWhatsAppTemplate(
+  to: string,
+  templateName: string,
+  languageCode: string,
+  bodyParams: string[],   // ordered list of {{1}}, {{2}}, … substitutions
+): Promise<void> {
+  const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
+  const accessToken   = process.env.META_ACCESS_TOKEN;
+
+  if (!phoneNumberId || !accessToken) {
+    logger.warn("[whatsapp] Missing META_PHONE_NUMBER_ID or META_ACCESS_TOKEN — skipping template");
+    return;
+  }
+
+  const toNormalized = to.replace(/\D/g, "");
+
+  const components = bodyParams.length > 0
+    ? [{ type: "body", parameters: bodyParams.map(text => ({ type: "text", text })) }]
+    : [];
+
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/${META_API_VERSION}/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: toNormalized,
+          type: "template",
+          template: {
+            name: templateName,
+            language: { code: languageCode },
+            ...(components.length > 0 && { components }),
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      logger.error({ to: toNormalized, template: templateName, status: response.status, errData },
+        "[whatsapp] Template send failed");
+      return;
+    }
+
+    const data = await response.json() as { messages?: { id: string }[] };
+    logger.info({ to: toNormalized, template: templateName, msgId: data.messages?.[0]?.id },
+      "[whatsapp] Template sent");
+  } catch (err) {
+    logger.error({ err, to: toNormalized, template: templateName }, "[whatsapp] Template send error");
+  }
+}
+
 // ── Order notification helpers ────────────────────────────────────────────────
 
 type OrderLike = {
@@ -191,20 +268,30 @@ type OrderLike = {
   paymentMethod?: string;
 };
 
+/**
+ * Sends order confirmation via WhatsApp template.
+ *
+ * Test template (jaspers_market_order_confirmation_v1) body params:
+ *   {{1}} = customer name
+ *   {{2}} = order ID / confirmation code
+ *   {{3}} = date
+ *
+ * Replace WA_TEMPLATE_CONFIRMATION with your own approved template when ready.
+ */
 export async function sendOrderConfirmationWhatsApp(order: OrderLike): Promise<void> {
   if (!order.customerPhone) return;
-  const name  = order.customerName ?? "there";
-  const total = `$${parseFloat(order.total as string).toFixed(2)}`;
-  const track = `${STORE_URL}/track?code=${order.confirmationCode}`;
 
-  // TODO(store-settings): interpolate `${(await getStoreSettings()).storeName}` instead of "Island Tacos"
-  const body =
-    `✅ Order confirmed, ${name}!\n\n` +
-    `Your Island Tacos order *#${order.confirmationCode}* (${total}) is being prepared.\n\n` +
-    `Track it here: ${track}\n` +
-    `We'll message you the moment it's ready for pickup 🌮`;
+  const name = order.customerName ?? "there";
+  const date = new Date().toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
 
-  await sendWhatsAppMessage(order.customerPhone, body);
+  await sendWhatsAppTemplate(
+    order.customerPhone,
+    TEMPLATE_CONFIRMATION,
+    "en_US",
+    [name, order.confirmationCode, date],
+  );
 }
 
 const PAY_LABEL: Record<string, string> = {
@@ -212,17 +299,44 @@ const PAY_LABEL: Record<string, string> = {
   split: "Split", complimentary: "Comp",
 };
 
+/**
+ * Sends "order ready" notification via WhatsApp template.
+ *
+ * Currently uses hello_world (test placeholder — no params).
+ * Set WA_TEMPLATE_READY to your own approved "order ready" template name.
+ * That template's body params should be: {{1}} = name, {{2}} = confirmation code.
+ */
 export async function sendOrderReadyWhatsApp(order: OrderLike): Promise<void> {
   if (!order.customerPhone) return;
+
   const name     = order.customerName ?? "there";
-  const total    = `$${parseFloat(order.total as string).toFixed(2)}`;
   const payLabel = order.paymentMethod ? (PAY_LABEL[order.paymentMethod] ?? order.paymentMethod) : "";
 
-  const body =
-    `🔔 Hey ${name}, your order is ready!\n\n` +
-    `*#${order.confirmationCode}* — ${total}${payLabel ? ` (${payLabel})` : ""}\n\n` +
-    `📍 Wickhams Cay 1, Road Town, BVI\n\n` +
-    `Come grab your food! Hasta luego 🌮`;
+  // hello_world has no body params; once you have an approved ready template,
+  // pass [name, order.confirmationCode, payLabel] here.
+  const isPlaceholder = TEMPLATE_READY === "hello_world";
+  await sendWhatsAppTemplate(
+    order.customerPhone,
+    TEMPLATE_READY,
+    "en_US",
+    isPlaceholder ? [] : [name, order.confirmationCode, payLabel],
+  );
+}
 
-  await sendWhatsAppMessage(order.customerPhone, body);
+/**
+ * Sends cancellation notification via WhatsApp template.
+ * Same placeholder pattern as sendOrderReadyWhatsApp.
+ */
+export async function sendOrderCancelledWhatsApp(order: OrderLike): Promise<void> {
+  if (!order.customerPhone) return;
+
+  const name = order.customerName ?? "there";
+  const isPlaceholder = TEMPLATE_CANCELLED === "hello_world";
+
+  await sendWhatsAppTemplate(
+    order.customerPhone,
+    TEMPLATE_CANCELLED,
+    "en_US",
+    isPlaceholder ? [] : [name, order.confirmationCode],
+  );
 }
