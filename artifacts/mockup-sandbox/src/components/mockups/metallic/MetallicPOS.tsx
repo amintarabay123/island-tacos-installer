@@ -1,134 +1,214 @@
 export function MetallicPOS() {
-  const categories = ["Tacos", "Burritos", "Bowls", "Drinks", "Sides", "Specials"];
-  const items = [
-    { name: "Carne Asada", price: 14, emoji: "🥩" }, { name: "Fish Tacos", price: 13, emoji: "🐟" },
-    { name: "Al Pastor", price: 12, emoji: "🍍" }, { name: "Veggie Bowl", price: 11, emoji: "🥑" },
-    { name: "Chicken Burrito", price: 13, emoji: "🌯" }, { name: "Beef Burrito", price: 14, emoji: "🌮" },
-    { name: "Horchata", price: 4, emoji: "🥛" }, { name: "Jamaica", price: 4, emoji: "🍹" },
-    { name: "Chips & Salsa", price: 5, emoji: "🫙" }, { name: "Guacamole", price: 4, emoji: "🥑" },
-    { name: "Quesadilla", price: 10, emoji: "🧀" }, { name: "Kids Plate", price: 8, emoji: "⭐" },
-  ];
+  const bg   = "#16172b";
+  const card = "#1e1f38";
+  const border = "rgba(255,255,255,0.06)";
+  const tp  = "#e8eaf6";
+  const tm  = "#7077a1";
+
+  const categories = ["Tacos", "Burritos", "Potato Bowls", "Rice Bowl", "Quesadilla", "Nachos", "Salads", "Sides", "Drinks"];
+
+  const itemsByCategory: Record<string, Array<{name:string;price:number;emoji:string;grad:string;glow:string}>> = {
+    "Tacos": [
+      { name: "Tacos Steak 🥩",    price: 16, emoji: "🥩", grad: "linear-gradient(145deg,#ff6b00,#c0392b)", glow: "rgba(255,107,0,0.5)" },
+      { name: "Taco Salmon 🐟",    price: 20, emoji: "🐟", grad: "linear-gradient(145deg,#0ea5e9,#1e3a8a)", glow: "rgba(14,165,233,0.5)" },
+      { name: "Taco Shrimp 🍤",    price: 18, emoji: "🍤", grad: "linear-gradient(145deg,#7c6af7,#3730a3)", glow: "rgba(124,106,247,0.5)" },
+      { name: "Tacos Chicken 🍗",  price: 14, emoji: "🍗", grad: "linear-gradient(145deg,#f59e0b,#92400e)", glow: "rgba(245,158,11,0.5)" },
+      { name: "Taco Veggie 🥗",    price: 12, emoji: "🥗", grad: "linear-gradient(145deg,#10b981,#064e3b)", glow: "rgba(16,185,129,0.5)" },
+      { name: "Salmon Tacos",      price: 20, emoji: "🐟", grad: "linear-gradient(145deg,#06b6d4,#164e63)", glow: "rgba(6,182,212,0.5)" },
+    ],
+    "Burritos": [
+      { name: "Burrito Steak 🥩",    price: 16, emoji: "🥩", grad: "linear-gradient(145deg,#ff6b00,#c0392b)", glow: "rgba(255,107,0,0.5)" },
+      { name: "Burrito Salmon 🐟",   price: 20, emoji: "🐟", grad: "linear-gradient(145deg,#0ea5e9,#1e3a8a)", glow: "rgba(14,165,233,0.5)" },
+      { name: "Burrito Shrimp 🍤",   price: 18, emoji: "🍤", grad: "linear-gradient(145deg,#7c6af7,#3730a3)", glow: "rgba(124,106,247,0.5)" },
+      { name: "Burrito Chicken 🍗",  price: 14, emoji: "🍗", grad: "linear-gradient(145deg,#f59e0b,#92400e)", glow: "rgba(245,158,11,0.5)" },
+      { name: "Burrito Veggie 🥗",   price: 12, emoji: "🥗", grad: "linear-gradient(145deg,#10b981,#064e3b)", glow: "rgba(16,185,129,0.5)" },
+    ],
+    "Potato Bowls": [
+      { name: "Potato Bowl Steak 🥩",   price: 18, emoji: "🥩", grad: "linear-gradient(145deg,#ff6b00,#c0392b)", glow: "rgba(255,107,0,0.5)" },
+      { name: "Potato Bowl Salmon 🐟",  price: 22, emoji: "🐟", grad: "linear-gradient(145deg,#0ea5e9,#1e3a8a)", glow: "rgba(14,165,233,0.5)" },
+      { name: "Potato Bowl Shrimp 🍤",  price: 20, emoji: "🍤", grad: "linear-gradient(145deg,#7c6af7,#3730a3)", glow: "rgba(124,106,247,0.5)" },
+      { name: "Potato Bowl Chicken 🍗", price: 16, emoji: "🍗", grad: "linear-gradient(145deg,#f59e0b,#92400e)", glow: "rgba(245,158,11,0.5)" },
+      { name: "Potato Bowl Veggies 🥗", price: 14, emoji: "🥗", grad: "linear-gradient(145deg,#10b981,#064e3b)", glow: "rgba(16,185,129,0.5)" },
+    ],
+    "Sides": [
+      { name: "Fries",        price: 5,  emoji: "🍟", grad: "linear-gradient(145deg,#fbbf24,#78350f)", glow: "rgba(251,191,36,0.5)" },
+    ],
+    "Drinks": [
+      { name: "Jarritos 🥤",  price: 3,  emoji: "🥤", grad: "linear-gradient(145deg,#f43f5e,#9f1239)", glow: "rgba(244,63,94,0.5)" },
+      { name: "Soda/Juice 🥤",price: 2,  emoji: "🧃", grad: "linear-gradient(145deg,#a78bfa,#5b21b6)", glow: "rgba(167,139,250,0.5)" },
+      { name: "Water 💧",     price: 1,  emoji: "💧", grad: "linear-gradient(145deg,#38bdf8,#0c4a6e)", glow: "rgba(56,189,248,0.5)" },
+    ],
+    "Rice Bowl": [
+      { name: "Rice Bowl Steak 🥩",   price: 18, emoji: "🥩", grad: "linear-gradient(145deg,#ff6b00,#c0392b)", glow: "rgba(255,107,0,0.5)" },
+      { name: "Rice Bowl Salmon 🐟",  price: 22, emoji: "🐟", grad: "linear-gradient(145deg,#0ea5e9,#1e3a8a)", glow: "rgba(14,165,233,0.5)" },
+      { name: "Rice Bowl Shrimp 🍤",  price: 20, emoji: "🍤", grad: "linear-gradient(145deg,#7c6af7,#3730a3)", glow: "rgba(124,106,247,0.5)" },
+      { name: "Rice Bowl Chicken 🍗", price: 16, emoji: "🍗", grad: "linear-gradient(145deg,#f59e0b,#92400e)", glow: "rgba(245,158,11,0.5)" },
+    ],
+    "Quesadilla": [
+      { name: "Quesadilla Steak 🥩",   price: 16, emoji: "🥩", grad: "linear-gradient(145deg,#ff6b00,#c0392b)", glow: "rgba(255,107,0,0.5)" },
+      { name: "Quesadilla Salmon",      price: 20, emoji: "🐟", grad: "linear-gradient(145deg,#0ea5e9,#1e3a8a)", glow: "rgba(14,165,233,0.5)" },
+      { name: "Quesadilla Shrimp 🍤",  price: 18, emoji: "🍤", grad: "linear-gradient(145deg,#7c6af7,#3730a3)", glow: "rgba(124,106,247,0.5)" },
+      { name: "Quesadilla Chicken 🍗", price: 14, emoji: "🍗", grad: "linear-gradient(145deg,#f59e0b,#92400e)", glow: "rgba(245,158,11,0.5)" },
+      { name: "Quesadilla Cheese",      price: 9.99, emoji: "🧀", grad: "linear-gradient(145deg,#fbbf24,#78350f)", glow: "rgba(251,191,36,0.5)" },
+    ],
+    "Nachos": [
+      { name: "Nachos Steak",   price: 14, emoji: "🥩", grad: "linear-gradient(145deg,#ff6b00,#c0392b)", glow: "rgba(255,107,0,0.5)" },
+      { name: "Nachos Chicken", price: 12, emoji: "🍗", grad: "linear-gradient(145deg,#f59e0b,#92400e)", glow: "rgba(245,158,11,0.5)" },
+    ],
+    "Salads": [
+      { name: "Salad Steak 🥩",   price: 18, emoji: "🥩", grad: "linear-gradient(145deg,#ff6b00,#c0392b)", glow: "rgba(255,107,0,0.5)" },
+      { name: "Salad Salmon 🐟",  price: 22, emoji: "🐟", grad: "linear-gradient(145deg,#0ea5e9,#1e3a8a)", glow: "rgba(14,165,233,0.5)" },
+      { name: "Salad Shrimp 🍤",  price: 20, emoji: "🍤", grad: "linear-gradient(145deg,#7c6af7,#3730a3)", glow: "rgba(124,106,247,0.5)" },
+      { name: "Salad Chicken 🍗", price: 16, emoji: "🍗", grad: "linear-gradient(145deg,#f59e0b,#92400e)", glow: "rgba(245,158,11,0.5)" },
+      { name: "Salad Veggie 🥗",  price: 14, emoji: "🥗", grad: "linear-gradient(145deg,#10b981,#064e3b)", glow: "rgba(16,185,129,0.5)" },
+    ],
+  };
+
+  const activeCat = "Tacos";
+  const items = itemsByCategory[activeCat] || [];
+
   const cart = [
-    { name: "Carne Asada Tacos", mods: "No onion", qty: 2, price: 28 },
-    { name: "Fish Tacos", mods: "", qty: 1, price: 13 },
-    { name: "Horchata", mods: "Extra ice", qty: 2, price: 8 },
-    { name: "Chips & Salsa", mods: "", qty: 1, price: 5 },
+    { name: "Tacos Steak 🥩",   mods: "No cilantro", qty: 2, price: 32, grad: "linear-gradient(135deg,#ff6b00,#c0392b)" },
+    { name: "Taco Salmon 🐟",   mods: "",             qty: 1, price: 20, grad: "linear-gradient(135deg,#0ea5e9,#1e3a8a)" },
+    { name: "Potato Bowl Chicken 🍗", mods: "Extra fries", qty: 1, price: 16, grad: "linear-gradient(135deg,#f59e0b,#92400e)" },
+    { name: "Water 💧",          mods: "",             qty: 2, price: 2,  grad: "linear-gradient(135deg,#38bdf8,#0c4a6e)" },
   ];
 
-  const bg = "#13142a";
-  const surface = "#1a1b35";
-  const surfaceHigh = "#20214080";
-  const border = "rgba(255,255,255,0.06)";
-  const textPrimary = "#e8eaf6";
-  const textMuted = "#6b7094";
-  const orange = "#ff6b00";
-  const orangeGlow = "rgba(255,107,0,0.35)";
-  const purpleAccent = "#7c6af7";
-  const purpleGlow = "rgba(124,106,247,0.3)";
+  const navItems = [
+    { icon: "⊞", label: "POS",      active: true  },
+    { icon: "🧾", label: "Orders",  active: false },
+    { icon: "🎫", label: "Tickets", active: false },
+    { icon: "📊", label: "Shift",   active: false },
+    { icon: "⚙️", label: "Settings",active: false },
+  ];
 
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif", background: bg, color: textPrimary, height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: bg, color: tp, height: "100vh", display: "flex", overflow: "hidden", fontSize: 13 }}>
 
-      {/* TOP BAR */}
-      <div style={{ height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", background: `rgba(19,20,42,0.95)`, borderBottom: `1px solid ${border}`, backdropFilter: "blur(20px)", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 10, background: `linear-gradient(135deg, ${orange}, #ff9500)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, boxShadow: `0 3px 12px ${orangeGlow}` }}>🌮</div>
-          <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.03em" }}>Island Tacos <span style={{ color: textMuted, fontWeight: 400 }}>· POS</span></span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ fontSize: 12, color: textMuted }}>Staff: <span style={{ color: textPrimary, fontWeight: 700 }}>María</span></div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: surfaceHigh, border: `1px solid ${border}`, borderRadius: 10, padding: "6px 12px" }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#30d158", boxShadow: "0 0 8px rgba(48,209,88,0.7)", display: "inline-block" }} />
-            <span style={{ fontSize: 12, color: textMuted, fontWeight: 600 }}>Shift open · $200 float</span>
+      {/* SIDEBAR — same bg, no separation */}
+      <div style={{ width: 68, display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 0 14px", gap: 6, flexShrink: 0, background: "transparent", zIndex: 2 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 13, background: "linear-gradient(135deg,#ff6b00,#ff9500)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 14, boxShadow: "0 0 0 1px rgba(255,107,0,0.3), 0 6px 20px rgba(255,107,0,0.45)" }}>🌮</div>
+        {navItems.map((n) => (
+          <div key={n.label} title={n.label} style={{ width: 46, height: 46, borderRadius: 14, background: n.active ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.03)", border: n.active ? "1px solid rgba(255,107,0,0.4)" : `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, cursor: "pointer", boxShadow: n.active ? "0 0 16px rgba(255,107,0,0.25)" : "none" }}>
+            <span style={{ filter: n.active ? "none" : "grayscale(1) opacity(0.4)" }}>{n.icon}</span>
           </div>
-          <button style={{ background: surfaceHigh, border: `1px solid ${border}`, borderRadius: 10, padding: "6px 14px", fontSize: 12, color: textMuted, cursor: "pointer", fontWeight: 600 }}>📋 Orders</button>
-          <button style={{ background: "rgba(255,69,58,0.1)", border: "1px solid rgba(255,69,58,0.2)", borderRadius: 10, padding: "6px 14px", fontSize: 12, color: "#ff453a", cursor: "pointer", fontWeight: 600 }}>⬛ End Shift</button>
-        </div>
+        ))}
+        <div style={{ flex: 1 }} />
+        <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#7c6af7,#a78bfa)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, boxShadow: "0 0 0 2px rgba(124,106,247,0.3), 0 4px 14px rgba(124,106,247,0.3)" }}>👤</div>
       </div>
 
       {/* MAIN */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-        {/* LEFT — GRID */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "14px 14px 14px 16px", gap: 12, overflow: "hidden" }}>
-          {/* Category pills */}
-          <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
-            {categories.map((cat, i) => (
-              <button key={cat} style={{ background: i === 0 ? `linear-gradient(135deg, ${orange}, #ff9500)` : surface, color: i === 0 ? "#fff" : textMuted, border: i === 0 ? "none" : `1px solid ${border}`, borderRadius: 20, padding: "8px 18px", fontSize: 13, fontWeight: i === 0 ? 700 : 500, cursor: "pointer", boxShadow: i === 0 ? `0 4px 14px ${orangeGlow}` : "none", whiteSpace: "nowrap" }}>{cat}</button>
-            ))}
+        {/* Top bar */}
+        <div style={{ height: 54, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 18px", background: "transparent", flexShrink: 0 }}>
+          <div>
+            <span style={{ fontSize: 16, fontWeight: 900, letterSpacing: "-0.03em" }}>Point of Sale</span>
+            <span style={{ fontSize: 12, color: tm, marginLeft: 10 }}>Order <span style={{ color: "#ff6b00", fontWeight: 700 }}>#318</span></span>
           </div>
-          {/* Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, overflowY: "auto", flex: 1 }}>
-            {items.map((item) => (
-              <button key={item.name} style={{ background: surface, border: `1px solid ${border}`, borderRadius: 18, padding: "16px 10px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", position: "relative", overflow: "hidden", transition: "border-color 0.15s" }}>
-                <div style={{ position: "absolute", top: 0, left: "15%", right: "15%", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }} />
-                <span style={{ fontSize: 26 }}>{item.emoji}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: textPrimary, letterSpacing: "-0.015em", textAlign: "center", lineHeight: 1.3 }}>{item.name}</span>
-                <span style={{ fontSize: 15, fontWeight: 900, color: orange, letterSpacing: "-0.03em" }}>${item.price}</span>
-              </button>
-            ))}
-          </div>
-          {/* Quick actions */}
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            {[["💰 Pay In", purpleAccent, purpleGlow], ["💸 Pay Out", "#ff453a", "rgba(255,69,58,0.25)"], ["🏷 Discount", orange, orangeGlow], ["🎫 Hold Ticket", "#6b7094", "transparent"], ["🖨 Reprint", "#6b7094", "transparent"]].map(([label, color, glow]) => (
-              <button key={String(label)} style={{ flex: 1, background: surface, border: `1px solid ${border}`, borderRadius: 12, padding: "10px 0", fontSize: 12, color: color as string, fontWeight: 700, cursor: "pointer", boxShadow: glow !== "transparent" ? `0 2px 10px ${glow}` : "none" }}>{String(label)}</button>
-            ))}
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(48,209,88,0.1)", border: "1px solid rgba(48,209,88,0.25)", borderRadius: 10, padding: "5px 12px" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#30d158", boxShadow: "0 0 8px rgba(48,209,88,0.7)", display: "inline-block" }} />
+              <span style={{ fontSize: 11, color: "#30d158", fontWeight: 700 }}>María · Shift Open · $200 float</span>
+            </div>
+            <button style={{ background: "rgba(255,69,58,0.1)", border: "1px solid rgba(255,69,58,0.2)", borderRadius: 10, padding: "6px 14px", fontSize: 11, color: "#ff453a", cursor: "pointer", fontWeight: 700 }}>End Shift</button>
           </div>
         </div>
 
-        {/* RIGHT — CART */}
-        <div style={{ width: 320, display: "flex", flexDirection: "column", borderLeft: `1px solid ${border}`, background: `rgba(19,20,42,0.8)` }}>
-          {/* Header */}
-          <div style={{ padding: "14px 18px 12px", borderBottom: `1px solid ${border}`, flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: textMuted, letterSpacing: "0.06em", textTransform: "uppercase" }}>Current Order</span>
-              <button style={{ fontSize: 11, color: "#ff453a", background: "rgba(255,69,58,0.1)", border: "1px solid rgba(255,69,58,0.2)", borderRadius: 8, padding: "3px 10px", cursor: "pointer", fontWeight: 700 }}>Clear</button>
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+
+          {/* ITEM GRID */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "0 14px 14px 10px", gap: 10, overflow: "hidden" }}>
+            {/* Category pills */}
+            <div style={{ display: "flex", gap: 7, flexWrap: "wrap", flexShrink: 0 }}>
+              {categories.map((cat, i) => (
+                <button key={cat} style={{ background: cat === activeCat ? "linear-gradient(135deg,#ff6b00,#ff9500)" : card, color: cat === activeCat ? "#fff" : tm, border: cat === activeCat ? "none" : `1px solid ${border}`, borderRadius: 20, padding: "7px 16px", fontSize: 12, fontWeight: cat === activeCat ? 800 : 500, cursor: "pointer", boxShadow: cat === activeCat ? "0 3px 14px rgba(255,107,0,0.35)" : "none", whiteSpace: "nowrap" }}>{cat}</button>
+              ))}
             </div>
-            <div style={{ fontSize: 12, color: textMuted, marginTop: 4 }}>
-              Order <span style={{ color: orange, fontWeight: 700 }}>#251</span>  ·  Walk-in
+
+            {/* Pop-out item grid */}
+            <div style={{ flex: 1, overflowY: "auto", paddingTop: 36 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}>
+                {items.map((item) => (
+                  <div key={item.name} style={{ position: "relative", cursor: "pointer" }}>
+                    {/* Pop-out emoji */}
+                    <div style={{ position: "absolute", top: -30, left: "50%", transform: "translateX(-50%)", zIndex: 5, pointerEvents: "none", filter: `drop-shadow(0 6px 14px ${item.glow})` }}>
+                      <span style={{ fontSize: 50, lineHeight: 1, display: "block" }}>{item.emoji}</span>
+                    </div>
+                    {/* Card */}
+                    <div style={{ background: item.grad, borderRadius: 18, padding: "36px 12px 14px", position: "relative", overflow: "hidden", boxShadow: `0 6px 22px ${item.glow}`, textAlign: "center" }}>
+                      <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "linear-gradient(155deg, rgba(255,255,255,0.1) 0%, transparent 50%)", pointerEvents: "none" }} />
+                      <div style={{ position: "absolute", top: -20, left: "50%", transform: "translateX(-50%)", width: 60, height: 60, background: "rgba(255,255,255,0.1)", borderRadius: "50%", filter: "blur(16px)", pointerEvents: "none" }} />
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", marginBottom: 6, lineHeight: 1.3 }}>{item.name}</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", letterSpacing: "-0.04em" }}>${item.price}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick action row */}
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              {[
+                ["💰 Pay In", "#7c6af7", "rgba(124,106,247,0.15)", "rgba(124,106,247,0.3)"],
+                ["💸 Pay Out", "#ff453a", "rgba(255,69,58,0.12)", "rgba(255,69,58,0.25)"],
+                ["🏷 Discount", "#ff6b00", "rgba(255,107,0,0.12)", "rgba(255,107,0,0.3)"],
+                ["🎫 Hold", tm, card, border],
+                ["🖨 Reprint", tm, card, border],
+              ].map(([label, color, bg2, bdr]) => (
+                <button key={String(label)} style={{ flex: 1, background: bg2 as string, border: `1px solid ${bdr}`, borderRadius: 12, padding: "9px 0", fontSize: 11, color: color as string, fontWeight: 800, cursor: "pointer" }}>{String(label)}</button>
+              ))}
             </div>
           </div>
-          {/* Items */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
-            {cart.map((item) => (
-              <div key={item.name} style={{ padding: "10px 18px", borderBottom: `1px solid rgba(255,255,255,0.03)` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: textPrimary, letterSpacing: "-0.02em" }}>{item.name}</div>
-                    {item.mods && <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>{item.mods}</div>}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: surface, border: `1px solid ${border}`, borderRadius: 8, padding: "3px 8px" }}>
-                      <button style={{ background: "none", border: "none", color: textMuted, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>−</button>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: textPrimary, minWidth: 12, textAlign: "center" }}>{item.qty}</span>
-                      <button style={{ background: "none", border: "none", color: textMuted, cursor: "pointer", fontSize: 14, lineHeight: 1, padding: 0 }}>+</button>
+
+          {/* CART */}
+          <div style={{ width: 300, display: "flex", flexDirection: "column", borderLeft: `1px solid ${border}`, background: "rgba(22,23,43,0.6)" }}>
+            <div style={{ padding: "12px 16px 10px", borderBottom: `1px solid ${border}`, flexShrink: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: tm, letterSpacing: "0.06em", textTransform: "uppercase" }}>Current Order</span>
+                <button style={{ fontSize: 10, color: "#ff453a", background: "rgba(255,69,58,0.1)", border: "1px solid rgba(255,69,58,0.2)", borderRadius: 7, padding: "2px 8px", cursor: "pointer", fontWeight: 700 }}>Clear</button>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", padding: "6px 0" }}>
+              {cart.map((item) => (
+                <div key={item.name} style={{ padding: "8px 16px", borderBottom: `1px solid rgba(255,255,255,0.03)` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: 8, background: item.grad, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>🍽</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: tp, letterSpacing: "-0.015em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
+                      {item.mods && <div style={{ fontSize: 10, color: tm }}>{item.mods}</div>}
                     </div>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: textPrimary, minWidth: 34, textAlign: "right" }}>${item.price}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingLeft: 34 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, background: card, border: `1px solid ${border}`, borderRadius: 8, padding: "2px 8px" }}>
+                      <button style={{ background: "none", border: "none", color: tm, cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}>−</button>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: tp, minWidth: 10, textAlign: "center" }}>{item.qty}</span>
+                      <button style={{ background: "none", border: "none", color: tm, cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}>+</button>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 900, color: tp }}>${item.price}</span>
                   </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Totals + payment */}
+            <div style={{ padding: "10px 16px", borderTop: `1px solid ${border}`, flexShrink: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                <span style={{ fontSize: 12, color: tm }}>Subtotal</span><span style={{ fontSize: 12, color: tm }}>$70.00</span>
               </div>
-            ))}
-          </div>
-          {/* Totals + payment */}
-          <div style={{ padding: "12px 18px", borderTop: `1px solid ${border}`, flexShrink: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-              <span style={{ fontSize: 13, color: textMuted }}>Subtotal</span>
-              <span style={{ fontSize: 13, color: textMuted }}>$54.00</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-              <span style={{ fontSize: 13, color: textMuted }}>Discount</span>
-              <span style={{ fontSize: 13, color: "#30d158", fontWeight: 600 }}>− $5.00</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: `1px solid ${border}`, marginBottom: 14 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: textMuted }}>Total</span>
-              <span style={{ fontSize: 30, fontWeight: 900, color: textPrimary, letterSpacing: "-0.05em" }}>$49.00</span>
-            </div>
-            <button style={{ width: "100%", background: `linear-gradient(135deg, ${orange}, #ff9500)`, color: "#fff", border: "none", borderRadius: 14, padding: "14px 0", fontSize: 15, fontWeight: 800, cursor: "pointer", marginBottom: 8, boxShadow: `0 6px 24px ${orangeGlow}`, letterSpacing: "-0.02em" }}>
-              💵  Cash Payment
-            </button>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={{ flex: 1, background: surface, color: purpleAccent, border: `1px solid rgba(124,106,247,0.3)`, borderRadius: 12, padding: "11px 0", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: `0 2px 10px ${purpleGlow}` }}>💳 Card</button>
-              <button style={{ flex: 1, background: surface, color: textMuted, border: `1px solid ${border}`, borderRadius: 12, padding: "11px 0", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>📱 ATH</button>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={{ fontSize: 12, color: tm }}>Discount</span><span style={{ fontSize: 12, color: "#30d158", fontWeight: 600 }}>— $0.00</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: `1px solid ${border}`, marginBottom: 12 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: tm }}>Total</span>
+                <span style={{ fontSize: 28, fontWeight: 900, color: tp, letterSpacing: "-0.05em" }}>$70.00</span>
+              </div>
+              <button style={{ width: "100%", background: "linear-gradient(135deg,#ff6b00,#ff9500)", color: "#fff", border: "none", borderRadius: 14, padding: "13px 0", fontSize: 14, fontWeight: 900, cursor: "pointer", marginBottom: 7, boxShadow: "0 5px 22px rgba(255,107,0,0.45)" }}>💵  Cash</button>
+              <div style={{ display: "flex", gap: 7 }}>
+                <button style={{ flex: 1, background: card, color: "#7c6af7", border: "1px solid rgba(124,106,247,0.3)", borderRadius: 11, padding: "10px 0", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>💳 Card</button>
+                <button style={{ flex: 1, background: card, color: tm, border: `1px solid ${border}`, borderRadius: 11, padding: "10px 0", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>📱 ATH</button>
+              </div>
             </div>
           </div>
         </div>
