@@ -223,48 +223,9 @@ export default function Home() {
     const hasImage = item.imageUrl && !brokenImages.has(item.id);
 
     return (
-      <div key={item.id} style={{ position: "relative", paddingTop: 52, display: "flex", flexDirection: "column", height: "100%" }}>
+      <div key={item.id} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 
-        {/* ── Floating food photo (or emoji) — 3-D pop-out effect ── */}
-        <div style={{
-          position: "absolute", top: -12, right: 10, zIndex: 10,
-          pointerEvents: "none",
-        }}>
-          {hasImage ? (
-            <img
-              src={item.imageUrl}
-              alt={item.name}
-              onError={() => handleImgError(item.id)}
-              style={{
-                width: 70, height: 70,
-                borderRadius: 14,
-                objectFit: "cover",
-                display: "block",
-                transform: "rotate(-12deg) scale(1.08) translateY(-2px)",
-                filter: [
-                  "drop-shadow(0 18px 14px rgba(0,0,0,0.5))",
-                  "drop-shadow(0 6px 8px rgba(0,0,0,0.3))",
-                  `drop-shadow(0 0 14px ${colors.glow})`,
-                ].join(" "),
-                /* Fade + soften edges so image bleeds into card naturally */
-                WebkitMaskImage: "radial-gradient(ellipse 84% 84% at 46% 46%, black 28%, rgba(0,0,0,0.75) 52%, transparent 78%)",
-                maskImage: "radial-gradient(ellipse 84% 84% at 46% 46%, black 28%, rgba(0,0,0,0.75) 52%, transparent 78%)",
-              }}
-            />
-          ) : emoji ? (
-            <span style={{
-              fontSize: 50, lineHeight: 1, display: "block",
-              transform: "rotate(-12deg) scale(1.05) translateY(-2px)",
-              filter: [
-                "drop-shadow(0 16px 12px rgba(0,0,0,0.45))",
-                "drop-shadow(0 5px 6px rgba(0,0,0,0.28))",
-                `drop-shadow(0 0 14px ${colors.glow})`,
-              ].join(" "),
-            }}>{emoji}</span>
-          ) : null}
-        </div>
-
-        {/* ── Card — solid gradient body, flex-fills row height ── */}
+        {/* ── Card — gradient body with image floating inside ── */}
         <div
           style={{
             background: soldOut ? "rgba(30,31,56,0.8)" : colors.grad,
@@ -285,16 +246,56 @@ export default function Home() {
             position: "absolute", inset: 0,
             background: "linear-gradient(150deg, rgba(255,255,255,0.14) 0%, transparent 55%)",
             pointerEvents: "none",
+            zIndex: 0,
           }} />
 
-          {/* Card content — fixed floor height so every card is the same size */}
+          {/* ── Image floats inside, top-right, with glow ── */}
+          {(hasImage || emoji) && (
+            <div style={{
+              position: "absolute", top: 14, right: 14, zIndex: 2,
+              pointerEvents: "none",
+            }}>
+              {hasImage ? (
+                <img
+                  src={item.imageUrl}
+                  alt={item.name}
+                  onError={() => handleImgError(item.id)}
+                  style={{
+                    width: 92, height: 92,
+                    borderRadius: 18,
+                    objectFit: "cover",
+                    display: "block",
+                    transform: "rotate(-10deg) scale(1.08)",
+                    filter: [
+                      "drop-shadow(0 20px 16px rgba(0,0,0,0.55))",
+                      "drop-shadow(0 8px 10px rgba(0,0,0,0.35))",
+                      `drop-shadow(0 0 20px ${colors.glow})`,
+                    ].join(" "),
+                  }}
+                />
+              ) : (
+                <span style={{
+                  fontSize: 64, lineHeight: 1, display: "block",
+                  transform: "rotate(-10deg) scale(1.05)",
+                  filter: [
+                    "drop-shadow(0 16px 12px rgba(0,0,0,0.45))",
+                    "drop-shadow(0 5px 6px rgba(0,0,0,0.28))",
+                    `drop-shadow(0 0 18px ${colors.glow})`,
+                  ].join(" "),
+                }}>{emoji}</span>
+              )}
+            </div>
+          )}
+
+          {/* Card content — top padding clears the image; min-height ensures uniform size */}
           <div style={{
-            padding: "14px 14px 14px",
+            padding: "116px 14px 14px",
             display: "flex", flexDirection: "column",
             justifyContent: "space-between",
-            minHeight: 148,
+            minHeight: 240,
             flex: 1,
             position: "relative",
+            zIndex: 1,
           }}>
 
             {/* Top section: badges + name + description */}
@@ -322,7 +323,7 @@ export default function Home() {
               <p style={{
                 fontWeight: 800, fontSize: 14, letterSpacing: "-0.02em",
                 color: soldOut ? "rgba(255,255,255,0.45)" : "#fff",
-                lineHeight: 1.25, paddingRight: 50,
+                lineHeight: 1.25,
                 textDecoration: soldOut ? "line-through" : "none",
               }}>{item.name}</p>
 
@@ -492,12 +493,17 @@ export default function Home() {
             )}
           </div>
           <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
-            gridAutoRows: "1fr",
+            display: "flex",
             gap: 20,
+            overflowX: "auto",
+            scrollbarWidth: "none",
+            paddingBottom: 4,
           }}>
-            {popularItems.map((item, idx) => renderCard(item, idx))}
+            {popularItems.map((item, idx) => (
+              <div key={item.id} style={{ flex: "0 0 210px" }}>
+                {renderCard(item, idx)}
+              </div>
+            ))}
           </div>
         </section>
       )}
