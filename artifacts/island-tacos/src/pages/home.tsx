@@ -557,7 +557,7 @@ export default function Home() {
           {loadingItems ? (
             <div style={{ paddingTop: 44, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gridAutoRows: "1fr", gap: 20 }}>
               {[1,2,3,4,5,6,7,8].map(i => (
-                <div key={i} style={{ paddingTop: 44 }}>
+                <div key={i}>
                   <Skeleton className="w-full rounded-2xl" style={{ height: 240 }} />
                 </div>
               ))}
@@ -566,11 +566,60 @@ export default function Home() {
             <div style={{ textAlign: "center", padding: "80px 0", color: "#7077a1" }}>
               <p style={{ fontWeight: 600 }}>No items in this category right now.</p>
             </div>
+          ) : activeCategory === null ? (
+            /* ── "All" view: grouped by category ─────────────────────────────── */
+            <div style={{ display: "flex", flexDirection: "column", gap: 52 }}>
+              {visibleCategories
+                .slice()
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+                .map(cat => {
+                  const catItems = filteredItems.filter(item => item.categoryId === cat.id);
+                  if (catItems.length === 0) return null;
+                  return (
+                    <div key={cat.id}>
+                      {/* Category section header */}
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 12,
+                        marginBottom: 24, paddingTop: 4,
+                      }}>
+                        {/* Orange accent bar */}
+                        <div style={{
+                          width: 4, height: 24, borderRadius: 3,
+                          background: "linear-gradient(180deg,#ff6b00,#ff9500)",
+                          flexShrink: 0,
+                        }} />
+                        <h3 style={{
+                          fontSize: 17, fontWeight: 800,
+                          color: "#e8eaf6", letterSpacing: "-0.025em",
+                          margin: 0,
+                        }}>{cat.name}</h3>
+                        <span style={{
+                          fontSize: 11, fontWeight: 500,
+                          color: "#7077a1", marginLeft: 2,
+                        }}>{catItems.length} item{catItems.length !== 1 ? "s" : ""}</span>
+                        {/* Fade-out divider */}
+                        <div style={{
+                          flex: 1, height: 1,
+                          background: "linear-gradient(90deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+                        }} />
+                      </div>
+                      {/* Cards */}
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
+                        gap: 20,
+                      }}>
+                        {catItems.map(item => renderCard(item))}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
           ) : (
+            /* ── Single-category view: flat grid ──────────────────────────────── */
             <div style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
-              gridAutoRows: "1fr",
               gap: 20,
             }}>
               {filteredItems.map(item => renderCard(item))}
