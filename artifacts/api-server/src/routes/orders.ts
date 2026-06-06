@@ -6,7 +6,7 @@ import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
 import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
 import { pushStatusToCloud } from "../lib/online-orders-sync";
-import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp } from "../lib/whatsapp";
+import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp, sendOrderCancelledWhatsApp } from "../lib/whatsapp";
 import { sendSms } from "../lib/sms-gateway";
 import nodemailer from "nodemailer";
 import { requireStaffAuth, isStaffAuthenticated } from "./auth";
@@ -590,6 +590,7 @@ router.patch("/orders/sync-status", async (req, res): Promise<void> => {
   }
   if (status === "cancelled" && order.customerPhone) {
     sendCancellationSMS(order, cancellationReason ?? null).catch(() => {});
+    sendOrderCancelledWhatsApp(order).catch(() => {});
   }
 
   broadcastOrderEvent("order_updated", order.id);
@@ -799,6 +800,9 @@ router.patch("/orders/:id", requireStaffAuth, async (req, res): Promise<void> =>
     ) {
       sendCancellationSMS(order, parsed.data.cancellationReason ?? null).catch((err) =>
         logger.error({ err: err?.message }, "[sms] cancellation notification failed")
+      );
+      sendOrderCancelledWhatsApp(order).catch((err) =>
+        logger.error({ err: err?.message }, "[whatsapp] cancellation notification failed")
       );
     }
   }
