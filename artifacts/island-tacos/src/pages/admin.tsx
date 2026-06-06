@@ -48,12 +48,12 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  preparing: "bg-orange-100 text-orange-800",
-  ready: "bg-green-100 text-green-800",
-  completed: "bg-gray-100 text-gray-800",
-  cancelled: "bg-red-100 text-red-800",
+  pending: "bg-yellow-900/40 text-yellow-300",
+  confirmed: "bg-blue-900/40 text-blue-300",
+  preparing: "bg-orange-900/40 text-orange-300",
+  ready: "bg-green-900/40 text-green-300",
+  completed: "bg-muted text-muted-foreground",
+  cancelled: "bg-red-900/40 text-red-300",
 };
 const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
   pending: "confirmed",
@@ -102,15 +102,15 @@ function Sidebar({
 }) {
   const [location] = useLocation();
   return (
-    <div className={`flex flex-col h-full bg-slate-900 text-slate-100 ${isMobile ? "w-72" : "w-64"}`}>
+    <div className={`flex flex-col h-full bg-background text-foreground ${isMobile ? "w-72" : "w-64"}`}>
       {/* Brand */}
-      <div className="flex items-center justify-between px-5 py-5 border-b border-slate-700">
+      <div className="flex items-center justify-between px-5 py-5 border-b border-border">
         <div>
           <div className="text-lg font-black tracking-tight text-white">ISLAND TACOS</div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-0.5">Admin Panel</div>
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mt-0.5">Admin Panel</div>
         </div>
         {isMobile && onClose && (
-          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-white">
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-white">
             <X className="h-5 w-5" />
           </button>
         )}
@@ -120,7 +120,7 @@ function Sidebar({
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
         {sections.map((section) => (
           <div key={section.title}>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 px-3 mb-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 mb-1.5">
               {section.title}
             </p>
             <div className="space-y-0.5">
@@ -128,11 +128,11 @@ function Sidebar({
                 const isActive = item.href ? location === item.href : false;
                 const base =
                   "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer";
-                const activeClass = "bg-slate-700 text-white";
-                const inactiveClass = "text-slate-300 hover:bg-slate-800 hover:text-white";
+                const activeClass = "bg-muted text-foreground";
+                const inactiveClass = "text-foreground/70 hover:bg-muted hover:text-foreground";
                 const content = (
                   <>
-                    <item.icon className={`h-4 w-4 shrink-0 ${item.iconColor ?? "text-slate-400"}`} />
+                    <item.icon className={`h-4 w-4 shrink-0 ${item.iconColor ?? "text-muted-foreground"}`} />
                     {item.label}
                   </>
                 );
@@ -164,10 +164,10 @@ function Sidebar({
       </nav>
 
       {/* Footer */}
-      <div className="px-3 pb-5 border-t border-slate-700 pt-4 space-y-0.5">
+      <div className="px-3 pb-5 border-t border-border pt-4 space-y-0.5">
         <Link href="/">
-          <div onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer">
-            <Store className="h-4 w-4 text-slate-400" /> Online Store
+          <div onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground/70 hover:bg-muted hover:text-white transition-colors cursor-pointer">
+            <Store className="h-4 w-4 text-muted-foreground" /> Online Store
           </div>
         </Link>
         <button
@@ -429,7 +429,7 @@ export default function Admin() {
       items: [
         { label: "Menu Editor", icon: UtensilsCrossed, href: adminRoutes.menu, iconColor: "text-green-400" },
         { label: "Modifiers", icon: Settings, href: adminRoutes.modifiers, iconColor: "text-green-500" },
-        { label: "Store Settings", icon: Settings, href: adminRoutes.settings, iconColor: "text-slate-400" },
+        { label: "Store Settings", icon: Settings, href: adminRoutes.settings, iconColor: "text-muted-foreground" },
       ],
     },
     {
@@ -444,9 +444,9 @@ export default function Admin() {
   ];
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-slate-50">
+    <div className="flex h-[100dvh] overflow-hidden bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col shrink-0 border-r border-slate-800">
+      <aside className="hidden lg:flex flex-col shrink-0">
         <Sidebar sections={navSections} onLogout={logout} />
       </aside>
 
@@ -463,19 +463,19 @@ export default function Admin() {
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <header className="shrink-0 flex items-center justify-between h-14 px-4 md:px-6 bg-white border-b shadow-sm">
+        <header className="shrink-0 flex items-center justify-between h-14 px-4 md:px-6 bg-card border-b border-border">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-md hover:bg-slate-100">
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-md hover:bg-muted">
               <Menu className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="font-black text-slate-800 text-base leading-tight">Dashboard</h1>
+              <h1 className="font-black text-foreground text-base leading-tight">Dashboard</h1>
               {/* TODO(store-settings): replace "Island Tacos" with useStoreSettings().storeName */}
-              <p className="text-xs text-slate-400 leading-tight hidden sm:block">Island Tacos — Admin</p>
+              <p className="text-xs text-muted-foreground leading-tight hidden sm:block">Island Tacos — Admin</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-xs text-slate-400 mr-1">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground mr-1">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Live
             </span>
             <Button
@@ -497,7 +497,7 @@ export default function Admin() {
               <button
                 key={p}
                 onClick={() => { setPreset(p); if (p !== "custom") setCalOpen(false); else setCalOpen(true); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${preset === p ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-600 border-slate-200 hover:border-slate-400"}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${preset === p ? "bg-muted text-white border-border" : "bg-card text-muted-foreground border-border hover:border-border"}`}
               >
                 {p === "today" ? "Today" : p === "yesterday" ? "Yesterday" : p === "last7" ? "Last 7 Days" : "Custom"}
               </button>
@@ -505,7 +505,7 @@ export default function Admin() {
             {preset === "custom" && (
               <Popover open={calOpen} onOpenChange={setCalOpen}>
                 <PopoverTrigger asChild>
-                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border bg-white text-slate-600 border-slate-300 hover:border-slate-500 transition-colors">
+                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border bg-card text-muted-foreground border-border hover:border-border transition-colors">
                     <CalendarIcon className="h-3.5 w-3.5" />
                     {customRange?.from
                       ? customRange.to && customRange.to.getTime() !== customRange.from.getTime()
@@ -528,7 +528,7 @@ export default function Admin() {
                 </PopoverContent>
               </Popover>
             )}
-            <span className="text-xs text-slate-400 ml-1">
+            <span className="text-xs text-muted-foreground ml-1">
               {preset === "today" ? bviNDaysAgo(0)
                 : preset === "yesterday" ? bviNDaysAgo(1)
                 : preset === "last7" ? `${bviNDaysAgo(6)} → ${bviNDaysAgo(0)}`
@@ -539,19 +539,19 @@ export default function Admin() {
           {/* Stat cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
             {[
-              { label: "Orders", value: stats?.todayOrders ?? 0, icon: ShoppingBag, bg: "bg-blue-50", iconColor: "text-blue-600", trend: null },
-              { label: "Revenue", value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, icon: DollarSign, bg: "bg-green-50", iconColor: "text-green-600", trend: null },
-              { label: "Active", value: stats?.pendingOrders ?? 0, icon: Clock, bg: "bg-amber-50", iconColor: "text-amber-600", trend: null },
-              { label: "Completed", value: stats?.completedOrders ?? 0, icon: CheckCircle2, bg: "bg-slate-50", iconColor: "text-slate-600", trend: null },
-              { label: "Cancelled", value: stats?.cancelledOrders ?? 0, icon: XCircle, bg: "bg-red-50", iconColor: "text-red-500", trend: null },
+              { label: "Orders", value: stats?.todayOrders ?? 0, icon: ShoppingBag, bg: "bg-blue-900/30", iconColor: "text-blue-400", trend: null },
+              { label: "Revenue", value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, icon: DollarSign, bg: "bg-green-900/30", iconColor: "text-green-400", trend: null },
+              { label: "Active", value: stats?.pendingOrders ?? 0, icon: Clock, bg: "bg-amber-900/30", iconColor: "text-amber-400", trend: null },
+              { label: "Completed", value: stats?.completedOrders ?? 0, icon: CheckCircle2, bg: "bg-muted", iconColor: "text-muted-foreground", trend: null },
+              { label: "Cancelled", value: stats?.cancelledOrders ?? 0, icon: XCircle, bg: "bg-red-900/30", iconColor: "text-red-400", trend: null },
             ].map(({ label, value, icon: Icon, bg, iconColor }) => (
-              <div key={label} className="bg-white rounded-xl border shadow-sm p-4 flex items-center gap-4">
+              <div key={label} className="bg-card rounded-xl border shadow-sm p-4 flex items-center gap-4">
                 <div className={`rounded-xl ${bg} p-3 ${iconColor}`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400 font-medium">{label}</p>
-                  <p className="text-2xl font-black text-slate-800">{value}</p>
+                  <p className="text-xs text-muted-foreground font-medium">{label}</p>
+                  <p className="text-2xl font-black text-foreground">{value}</p>
                 </div>
               </div>
             ))}
@@ -560,11 +560,11 @@ export default function Admin() {
           {/* Charts row */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
             {/* Hourly revenue — takes 2 cols */}
-            <div className="xl:col-span-2 bg-white rounded-xl border shadow-sm p-5">
+            <div className="xl:col-span-2 bg-card rounded-xl border shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-bold text-slate-800">Revenue</h2>
-                  <p className="text-xs text-slate-400">{isMultiDay ? "Daily breakdown" : "Hourly breakdown"}</p>
+                  <h2 className="font-bold text-foreground">Revenue</h2>
+                  <p className="text-xs text-muted-foreground">{isMultiDay ? "Daily breakdown" : "Hourly breakdown"}</p>
                 </div>
                 <TrendingUp className="h-5 w-5 text-emerald-500" />
               </div>
@@ -589,16 +589,16 @@ export default function Admin() {
             </div>
 
             {/* Order status donut */}
-            <div className="bg-white rounded-xl border shadow-sm p-5">
+            <div className="bg-card rounded-xl border shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-bold text-slate-800">Order Mix</h2>
-                  <p className="text-xs text-slate-400">By status (recent 50)</p>
+                  <h2 className="font-bold text-foreground">Order Mix</h2>
+                  <p className="text-xs text-muted-foreground">By status (recent 50)</p>
                 </div>
                 <ShoppingBag className="h-5 w-5 text-blue-400" />
               </div>
               {statusDonut.length === 0 ? (
-                <div className="flex items-center justify-center h-[200px] text-slate-400 text-sm">No orders yet</div>
+                <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">No orders yet</div>
               ) : (
                 <>
                   <ResponsiveContainer width="100%" height={160}>
@@ -613,7 +613,7 @@ export default function Admin() {
                   </ResponsiveContainer>
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
                     {statusDonut.map((d) => (
-                      <span key={d.key} className="flex items-center gap-1 text-xs text-slate-500">
+                      <span key={d.key} className="flex items-center gap-1 text-xs text-muted-foreground">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
                         {d.name} ({d.value})
                       </span>
@@ -626,11 +626,11 @@ export default function Admin() {
 
           {/* Top items bar chart */}
           {topItemsData.length > 0 && (
-            <div className="bg-white rounded-xl border shadow-sm p-5">
+            <div className="bg-card rounded-xl border shadow-sm p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-bold text-slate-800">Top Items</h2>
-                  <p className="text-xs text-slate-400">Units sold</p>
+                  <h2 className="font-bold text-foreground">Top Items</h2>
+                  <p className="text-xs text-muted-foreground">Units sold</p>
                 </div>
                 <TrendingUp className="h-5 w-5 text-purple-400" />
               </div>
@@ -647,16 +647,16 @@ export default function Admin() {
           )}
 
           {/* Data tools */}
-          <div className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
-            <h2 className="font-bold text-slate-800 text-sm">Data Tools</h2>
+          <div className="bg-card rounded-xl border shadow-sm p-5 space-y-4">
+            <h2 className="font-bold text-foreground text-sm">Data Tools</h2>
 
             {/* Menu sync */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-blue-50 p-2 text-blue-600"><CloudUpload className="h-4 w-4" /></div>
+                <div className="rounded-lg bg-blue-900/30 p-2 text-blue-400"><CloudUpload className="h-4 w-4" /></div>
                 <div>
-                  <p className="font-semibold text-sm text-slate-700">Sync Menu to Online Store</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="font-semibold text-sm text-foreground">Sync Menu to Online Store</p>
+                  <p className="text-xs text-muted-foreground">
                     {lastSync ? `Last synced: ${lastSync}` : "Pushes your menu to the ordering site"}
                   </p>
                   {syncMessage && <p className={`text-xs mt-0.5 ${syncState === "error" ? "text-red-600" : "text-green-600"}`}>{syncMessage}</p>}
@@ -672,15 +672,15 @@ export default function Admin() {
             {/* Pull menu from cloud */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-teal-50 p-2 text-teal-600"><CloudDownload className="h-4 w-4" /></div>
+                <div className="rounded-lg bg-teal-900/30 p-2 text-teal-400"><CloudDownload className="h-4 w-4" /></div>
                 <div>
-                  <p className="font-semibold text-sm text-slate-700">Pull Menu from Cloud</p>
-                  <p className="text-xs text-slate-400">Resyncs all items &amp; modifiers from the online store to this device</p>
+                  <p className="font-semibold text-sm text-foreground">Pull Menu from Cloud</p>
+                  <p className="text-xs text-muted-foreground">Resyncs all items &amp; modifiers from the online store to this device</p>
                   {pullMenuMessage && <p className={`text-xs mt-0.5 ${pullMenuState === "error" ? "text-red-600" : "text-green-600"}`}>{pullMenuMessage}</p>}
                 </div>
               </div>
               <Button size="sm" variant="outline" disabled={pullMenuState === "pulling"} onClick={handlePullMenuFromCloud}
-                className={pullMenuState === "success" ? "border-green-500 text-green-700" : pullMenuState === "error" ? "border-red-400 text-red-600" : "border-teal-300 text-teal-700 hover:bg-teal-50"}>
+                className={pullMenuState === "success" ? "border-green-500 text-green-700" : pullMenuState === "error" ? "border-red-400 text-red-600" : "border-teal-300 text-teal-400 hover:bg-teal-900/30"}>
                 <CloudDownload className={`h-4 w-4 mr-1.5 ${pullMenuState === "pulling" ? "animate-pulse" : ""}`} />
                 {pullMenuState === "pulling" ? "Pulling…" : pullMenuState === "success" ? "Done!" : pullMenuState === "error" ? "Retry" : "Pull Now"}
               </Button>
@@ -689,17 +689,17 @@ export default function Admin() {
             {/* Loyverse import */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-purple-50 p-2 text-purple-600"><History className="h-4 w-4" /></div>
+                <div className="rounded-lg bg-purple-900/30 p-2 text-purple-300"><History className="h-4 w-4" /></div>
                 <div>
-                  <p className="font-semibold text-sm text-slate-700">Import from Loyverse API</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="font-semibold text-sm text-foreground">Import from Loyverse API</p>
+                  <p className="text-xs text-muted-foreground">
                     {importState === "importing" ? "Fetching from Loyverse…" : "Imports customers + last 30 days of receipts"}
                   </p>
                   {importMessage && <p className={`text-xs mt-0.5 ${importState === "error" ? "text-red-600" : "text-green-600"}`}>{importMessage}</p>}
                 </div>
               </div>
               <Button size="sm" variant="outline" disabled={importState === "importing" || importState === "success"} onClick={handleLoyverseImport}
-                className={importState === "success" ? "border-green-500 text-green-700" : importState === "error" ? "border-red-400 text-red-600" : "border-purple-300 text-purple-700 hover:bg-purple-50"}>
+                className={importState === "success" ? "border-green-500 text-green-700" : importState === "error" ? "border-red-400 text-red-600" : "border-purple-300 text-purple-300 hover:bg-purple-900/30"}>
                 <History className={`h-4 w-4 mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
                 {importState === "importing" ? "Importing…" : importState === "success" ? "Imported!" : importState === "error" ? "Retry" : "Import Now"}
               </Button>
@@ -708,16 +708,16 @@ export default function Admin() {
             {/* CSV upload */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600"><CloudUpload className="h-4 w-4" /></div>
+                <div className="rounded-lg bg-indigo-900/30 p-2 text-indigo-300"><CloudUpload className="h-4 w-4" /></div>
                 <div>
-                  <p className="font-semibold text-sm text-slate-700">Upload Loyverse CSV</p>
-                  <p className="text-xs text-slate-400">Import full order history from exported CSV</p>
+                  <p className="font-semibold text-sm text-foreground">Upload Loyverse CSV</p>
+                  <p className="text-xs text-muted-foreground">Import full order history from exported CSV</p>
                   {csvMessage && <p className={`text-xs mt-0.5 ${csvState === "error" ? "text-red-600" : "text-green-600"}`}>{csvMessage}</p>}
                 </div>
               </div>
               <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCSVUpload} />
               <Button size="sm" variant="outline" disabled={csvState === "uploading"} onClick={() => csvInputRef.current?.click()}
-                className={csvState === "success" ? "border-green-500 text-green-700" : csvState === "error" ? "border-red-400 text-red-600" : "border-indigo-300 text-indigo-700 hover:bg-indigo-50"}>
+                className={csvState === "success" ? "border-green-500 text-green-700" : csvState === "error" ? "border-red-400 text-red-600" : "border-indigo-300 text-indigo-300 hover:bg-indigo-900/30"}>
                 <CloudUpload className={`h-4 w-4 mr-1.5 ${csvState === "uploading" ? "animate-pulse" : ""}`} />
                 {csvState === "uploading" ? "Uploading…" : csvState === "success" ? "Imported!" : csvState === "error" ? "Retry" : "Upload CSV"}
               </Button>
@@ -727,23 +727,23 @@ export default function Admin() {
           {/* Active orders */}
           <section>
             <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-xl font-black text-slate-800">Active Orders</h2>
+              <h2 className="text-xl font-black text-foreground">Active Orders</h2>
               {activeOrders.length > 0 && (
-                <span className="text-xs font-bold bg-amber-100 text-amber-700 rounded-full px-2.5 py-0.5">
+                <span className="text-xs font-bold bg-amber-900/40 text-amber-300 rounded-full px-2.5 py-0.5">
                   {activeOrders.length}
                 </span>
               )}
             </div>
             {isLoading ? (
-              <p className="text-slate-400">Loading orders…</p>
+              <p className="text-muted-foreground">Loading orders…</p>
             ) : activeOrders.length === 0 ? (
-              <div className="bg-white rounded-xl border p-8 text-center text-slate-400 shadow-sm">
+              <div className="bg-card rounded-xl border p-8 text-center text-muted-foreground shadow-sm">
                 No active orders right now.
               </div>
             ) : (
               <div className="space-y-4">
                 {activeOrders.map((order) => (
-                  <div key={order.id} className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
+                  <div key={order.id} className="bg-card rounded-xl border shadow-sm p-5 space-y-4">
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
@@ -751,12 +751,12 @@ export default function Admin() {
                           <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${STATUS_COLORS[order.status]}`}>
                             {STATUS_LABELS[order.status]}
                           </span>
-                          <span className="text-xs bg-slate-100 text-slate-600 rounded-full px-2 py-0.5 capitalize">{order.orderType}</span>
+                          <span className="text-xs bg-muted text-muted-foreground rounded-full px-2 py-0.5 capitalize">{order.orderType}</span>
                         </div>
-                        <p className="font-semibold text-slate-800">{order.customerName}</p>
+                        <p className="font-semibold text-foreground">{order.customerName}</p>
                         {order.customerPhone ? (
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-sm text-slate-400">{order.customerPhone}</span>
+                            <span className="text-sm text-muted-foreground">{order.customerPhone}</span>
                             <a href={`tel:${order.customerPhone}`} className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium transition-colors">📞 Call</a>
                             {/* TODO(store-settings): interpolate useStoreSettings().storeName instead of "Island Tacos" in the wa.me text below */}
                             <a
@@ -766,25 +766,25 @@ export default function Admin() {
                             >💬 WhatsApp</a>
                           </div>
                         ) : (
-                          <p className="text-sm text-slate-400">Walk-in</p>
+                          <p className="text-sm text-muted-foreground">Walk-in</p>
                         )}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-xl font-black text-slate-800">${order.total.toFixed(2)}</p>
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xl font-black text-foreground">${order.total.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">
                           {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       </div>
                     </div>
                     <div className="text-sm space-y-1">
                       {order.items?.map((item) => (
-                        <div key={item.id} className="flex gap-2 text-slate-400">
-                          <span className="font-medium text-slate-700">{item.quantity}x</span>
+                        <div key={item.id} className="flex gap-2 text-muted-foreground">
+                          <span className="font-medium text-foreground">{item.quantity}x</span>
                           <span>{item.menuItemName}</span>
                           {item.notes && <span className="italic">— {item.notes}</span>}
                         </div>
                       ))}
-                      {order.notes && <p className="text-slate-400 italic mt-1">Note: {order.notes}</p>}
+                      {order.notes && <p className="text-muted-foreground italic mt-1">Note: {order.notes}</p>}
                     </div>
                     <div className="space-y-2 pt-1">
                       <div className="flex items-center gap-3">
@@ -836,30 +836,30 @@ export default function Admin() {
           {/* Past orders */}
           {pastOrders.length > 0 && (
             <section className="pb-6">
-              <h2 className="text-xl font-black text-slate-800 mb-4">Recent History</h2>
-              <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              <h2 className="text-xl font-black text-foreground mb-4">Recent History</h2>
+              <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 border-b">
+                  <thead className="bg-muted/40 border-b">
                     <tr>
-                      <th className="text-left p-3 font-semibold text-slate-600">Code</th>
-                      <th className="text-left p-3 font-semibold text-slate-600">Customer</th>
-                      <th className="text-left p-3 font-semibold text-slate-600 hidden md:table-cell">Items</th>
-                      <th className="text-right p-3 font-semibold text-slate-600">Total</th>
-                      <th className="text-left p-3 font-semibold text-slate-600">Status</th>
+                      <th className="text-left p-3 font-semibold text-muted-foreground">Code</th>
+                      <th className="text-left p-3 font-semibold text-muted-foreground">Customer</th>
+                      <th className="text-left p-3 font-semibold text-muted-foreground hidden md:table-cell">Items</th>
+                      <th className="text-right p-3 font-semibold text-muted-foreground">Total</th>
+                      <th className="text-left p-3 font-semibold text-muted-foreground">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pastOrders.slice(0, 20).map((order, idx) => (
-                      <tr key={order.id} className={idx % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                      <tr key={order.id} className={idx % 2 === 0 ? "bg-card" : "bg-muted/40/50"}>
                         <td className="p-3 font-mono font-bold text-emerald-600">{order.confirmationCode}</td>
                         <td className="p-3">
-                          <div className="font-medium text-slate-700">{order.customerName}</div>
-                          <div className="text-slate-400 text-xs">{new Date(order.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                          <div className="font-medium text-foreground">{order.customerName}</div>
+                          <div className="text-muted-foreground text-xs">{new Date(order.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
                         </td>
-                        <td className="p-3 hidden md:table-cell text-slate-400">
+                        <td className="p-3 hidden md:table-cell text-muted-foreground">
                           {order.items?.map((i) => <div key={i.id}>{i.quantity}x {i.menuItemName}{i.notes && <span className="italic text-xs"> — {i.notes}</span>}</div>)}
                         </td>
-                        <td className="p-3 text-right font-bold text-slate-700">${order.total.toFixed(2)}</td>
+                        <td className="p-3 text-right font-bold text-foreground">${order.total.toFixed(2)}</td>
                         <td className="p-3">
                           <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${STATUS_COLORS[order.status]}`}>
                             {STATUS_LABELS[order.status]}

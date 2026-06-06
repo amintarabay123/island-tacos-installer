@@ -53,9 +53,9 @@ const NEXT_LABEL: Record<string, string> = {
 };
 
 const STATUS_CARD: Record<string, { border: string; bg: string }> = {
-  confirmed: { border: "border-blue-400", bg: "bg-blue-50" },
-  preparing: { border: "border-orange-400", bg: "bg-amber-50" },
-  ready: { border: "border-green-500", bg: "bg-green-50" },
+  confirmed: { border: "border-blue-400", bg: "bg-blue-950/40" },
+  preparing: { border: "border-orange-400", bg: "bg-amber-950/40" },
+  ready: { border: "border-green-500", bg: "bg-green-950/40" },
 };
 
 // ─── Printer helpers ──────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ const STATUS_BTN: Record<string, string> = {
   pending: "bg-yellow-400 hover:bg-yellow-300 text-yellow-950 active:bg-yellow-200",
   confirmed: "bg-blue-400 hover:bg-blue-300 text-blue-950 active:bg-blue-200",
   preparing: "bg-green-400 hover:bg-green-300 text-green-950 active:bg-green-200",
-  ready: "bg-white hover:bg-gray-100 text-gray-900 active:bg-gray-200",
+  ready: "bg-card hover:bg-muted text-foreground active:bg-muted",
 };
 
 const COL_CONFIG = [
@@ -785,18 +785,18 @@ export default function Kitchen() {
   const hasOrders = orders.length > 0;
 
   return (
-    <div className="min-h-[100dvh] bg-gray-100 text-gray-900 flex flex-col select-none overflow-hidden">
-      <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-white border-b border-gray-200 shrink-0 gap-2 shadow-sm">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col select-none overflow-hidden">
+      <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-card border-b border-border shrink-0 gap-2 shadow-sm">
         <div className="flex items-center gap-2 min-w-0">
           {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
           <span className="text-base sm:text-lg font-bold truncate">Island Tacos</span>
-          <span className="text-gray-400 text-sm hidden sm:inline">· Kitchen Display</span>
+          <span className="text-muted-foreground text-sm hidden sm:inline">· Kitchen Display</span>
         </div>
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {error ? (
             <span className="text-red-500 text-xs font-medium hidden sm:block">{error}</span>
           ) : lastFetch ? (
-            <span className="text-gray-400 text-xs hidden lg:block">Refreshes every 3s · {lastFetch.toLocaleTimeString()}</span>
+            <span className="text-muted-foreground text-xs hidden lg:block">Refreshes every 3s · {lastFetch.toLocaleTimeString()}</span>
           ) : null}
           <div className="flex items-center gap-1.5">
             <span className={`w-2 h-2 rounded-full ${error ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
@@ -807,7 +807,7 @@ export default function Kitchen() {
           {(!audioUnlocked || notifPerm === "default") ? (
             <button
               onClick={() => { unlockAudio(); requestNotifPermission(); }}
-              className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-gray-900 text-xs font-bold transition-colors animate-pulse"
+              className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-foreground text-xs font-bold transition-colors animate-pulse"
               title="Tap once to enable order chimes and alerts"
             >
               🔔 <span className="hidden sm:inline">Enable Notifications</span>
@@ -819,20 +819,20 @@ export default function Kitchen() {
           )}
           <button
             onClick={openHistory}
-            className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold transition-colors"
+            className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground/70 text-xs font-semibold transition-colors"
           >
             🕐 <span className="hidden sm:inline">History</span>
           </button>
           <button
             onClick={() => window.location.reload()}
             title="Reload Kitchen Display"
-            className="text-gray-400 hover:text-gray-700 transition-colors px-2 py-1 rounded"
+            className="text-muted-foreground hover:text-foreground/70 transition-colors px-2 py-1 rounded"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
             onClick={logout}
-            className="text-gray-400 hover:text-gray-700 text-xs transition-colors px-2 py-1 rounded"
+            className="text-muted-foreground hover:text-foreground/70 text-xs transition-colors px-2 py-1 rounded"
           >
             <span className="hidden sm:inline">Sign out</span>
             <span className="sm:hidden">✕</span>
@@ -849,7 +849,7 @@ export default function Kitchen() {
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${badge}`}>
                   {label}
                 </span>
-                <span className="text-gray-400 text-sm">
+                <span className="text-muted-foreground text-sm">
                   {byCol[key].length} {byCol[key].length === 1 ? "order" : "orders"}
                 </span>
               </div>
@@ -857,21 +857,21 @@ export default function Kitchen() {
           </div>
 
           {/* Mobile tabs */}
-          <div className="sm:hidden flex border-b border-gray-200 shrink-0 bg-white">
+          <div className="sm:hidden flex border-b border-border shrink-0 bg-card">
             {COL_CONFIG.map(({ key, label, badge }) => (
               <button
                 key={key}
                 onClick={() => setMobileTab(key as "new" | "preparing" | "ready")}
                 className={`flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border-b-2 ${
                   mobileTab === key
-                    ? "border-current text-gray-900"
-                    : "border-transparent text-gray-400"
+                    ? "border-current text-foreground"
+                    : "border-transparent text-muted-foreground"
                 }`}
               >
                 <span className={`w-2 h-2 rounded-full ${badge.includes("blue") ? "bg-blue-400" : badge.includes("orange") ? "bg-orange-400" : "bg-green-500"}`} />
                 {label.split(" ")[0]}
                 {byCol[key].length > 0 && (
-                  <span className="bg-gray-200 text-gray-600 rounded-full text-[10px] w-4 h-4 flex items-center justify-center">
+                  <span className="bg-muted text-muted-foreground rounded-full text-[10px] w-4 h-4 flex items-center justify-center">
                     {byCol[key].length}
                   </span>
                 )}
@@ -883,8 +883,8 @@ export default function Kitchen() {
             {COL_CONFIG.map(({ key }) => (
               <div key={key} className={`flex flex-col gap-3 ${key === mobileTab ? "flex" : "hidden sm:flex"}`}>
                 {byCol[key].length === 0 && (
-                  <div className="border border-dashed border-gray-200 rounded-xl flex items-center justify-center h-28">
-                    <span className="text-gray-600 text-sm">No orders</span>
+                  <div className="border border-dashed border-border rounded-xl flex items-center justify-center h-28">
+                    <span className="text-muted-foreground text-sm">No orders</span>
                   </div>
                 )}
                 {byCol[key].map((card) => {
@@ -901,7 +901,7 @@ export default function Kitchen() {
                     return (
                       <div
                         key={`addon-${order.id}`}
-                        className="rounded-lg border-2 border-amber-500 bg-amber-50 p-4 flex flex-col gap-3 transition-colors ring-2 ring-amber-300"
+                        className="rounded-lg border-2 border-amber-500 bg-amber-950/40 p-4 flex flex-col gap-3 transition-colors ring-2 ring-amber-700/40"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div>
@@ -911,14 +911,14 @@ export default function Kitchen() {
                             <div className="text-2xl font-black tracking-tight leading-none mt-2">
                               {order.customerName}
                             </div>
-                            <div className="text-gray-500 font-mono text-sm mt-1">#{order.confirmationCode}</div>
-                            <div className="text-amber-700 text-xs font-semibold mt-0.5 uppercase tracking-wide">
+                            <div className="text-muted-foreground font-mono text-sm mt-1">#{order.confirmationCode}</div>
+                            <div className="text-amber-300 text-xs font-semibold mt-0.5 uppercase tracking-wide">
                               Added to in-progress order
                             </div>
                           </div>
                           <div className="text-right shrink-0">
-                            <div className="text-sm font-bold tabular-nums text-gray-500">{addonAge}</div>
-                            <div className="text-xs text-gray-400 mt-0.5 capitalize">{order.orderType}</div>
+                            <div className="text-sm font-bold tabular-nums text-muted-foreground">{addonAge}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5 capitalize">{order.orderType}</div>
                           </div>
                         </div>
 
@@ -931,24 +931,24 @@ export default function Kitchen() {
                                 onClick={() => toggleStruck(order.id, item.id)}
                                 className={`w-full text-left rounded px-3 py-3 border transition-all active:scale-[0.98] ${
                                   struck
-                                    ? "bg-gray-100 border-gray-200 opacity-60"
-                                    : "bg-white border-amber-300 hover:border-amber-400"
+                                    ? "bg-muted border-border opacity-60"
+                                    : "bg-card border-amber-300 hover:border-amber-400"
                                 }`}
                               >
                                 <div className={`flex items-baseline gap-2 ${struck ? "line-through decoration-gray-500 decoration-2" : ""}`}>
-                                  <span className={`text-3xl font-black leading-none ${struck ? "text-gray-400" : "text-gray-900"}`}>{item.quantity}×</span>
-                                  <span className={`text-xl font-bold leading-snug ${struck ? "text-gray-400" : "text-gray-900"}`}>{item.menuItemName}</span>
-                                  {struck && <span className="text-xs text-gray-400 font-normal ml-1 no-underline">done</span>}
+                                  <span className={`text-3xl font-black leading-none ${struck ? "text-muted-foreground" : "text-foreground"}`}>{item.quantity}×</span>
+                                  <span className={`text-xl font-bold leading-snug ${struck ? "text-muted-foreground" : "text-foreground"}`}>{item.menuItemName}</span>
+                                  {struck && <span className="text-xs text-muted-foreground font-normal ml-1 no-underline">done</span>}
                                 </div>
                                 {!struck && (item.modifierSelections ?? []).length > 0 && (
-                                  <div className="text-amber-700 text-xl mt-2 leading-snug font-semibold space-y-1">
+                                  <div className="text-amber-300 text-xl mt-2 leading-snug font-semibold space-y-1">
                                     {(item.modifierSelections ?? []).map((m, i) => (
                                       <div key={i}>+ {m.name}</div>
                                     ))}
                                   </div>
                                 )}
                                 {!struck && item.notes && (
-                                  <div className="text-amber-700 text-xl mt-2 leading-snug whitespace-pre-line font-semibold">
+                                  <div className="text-amber-300 text-xl mt-2 leading-snug whitespace-pre-line font-semibold">
                                     {item.notes}
                                   </div>
                                 )}
@@ -1014,8 +1014,8 @@ export default function Kitchen() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap min-w-0">
                               <span className="text-lg font-black leading-none truncate">{order.customerName}</span>
-                              <span className="text-gray-400 font-mono text-xs shrink-0">#{order.confirmationCode}</span>
-                              <span className="text-xs font-semibold bg-black/20 text-gray-300 px-2 py-0.5 rounded-full shrink-0">
+                              <span className="text-muted-foreground font-mono text-xs shrink-0">#{order.confirmationCode}</span>
+                              <span className="text-xs font-semibold bg-black/20 text-foreground/50 px-2 py-0.5 rounded-full shrink-0">
                                 {totalQty} item{totalQty !== 1 ? "s" : ""}
                               </span>
                               {scheduledStr && (
@@ -1040,7 +1040,7 @@ export default function Kitchen() {
                                 {isAdvancing ? "…" : NEXT_LABEL[order.status]}
                               </button>
                             )}
-                            <span className="text-gray-400 text-lg leading-none">▸</span>
+                            <span className="text-muted-foreground text-lg leading-none">▸</span>
                           </div>
                         </div>
                       </div>
@@ -1057,7 +1057,7 @@ export default function Kitchen() {
                           <div className="text-2xl font-black tracking-tight leading-none">
                             {order.customerName}
                           </div>
-                          <div className="text-gray-500 font-mono text-sm mt-1">#{order.confirmationCode}</div>
+                          <div className="text-muted-foreground font-mono text-sm mt-1">#{order.confirmationCode}</div>
                           {hiddenItemIds && hiddenItemIds.size > 0 && (
                             <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-amber-100 border border-amber-400">
                               <span className="text-amber-800 text-xs font-bold">➕ Add-on in New column</span>
@@ -1081,14 +1081,14 @@ export default function Kitchen() {
                         </div>
                         <div className="flex items-start gap-2 shrink-0">
                           <div className="text-right">
-                            <div className={`text-sm font-bold tabular-nums ${overdue ? "text-red-400" : "text-gray-500"}`}>
+                            <div className={`text-sm font-bold tabular-nums ${overdue ? "text-red-400" : "text-muted-foreground"}`}>
                               {age}
                             </div>
-                            <div className="text-xs text-gray-400 mt-0.5 capitalize">{order.orderType}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5 capitalize">{order.orderType}</div>
                           </div>
                           <button
                             onClick={() => toggleCollapsed(order.id)}
-                            className="text-gray-400 hover:text-gray-200 text-lg leading-none px-1 pt-0.5 transition-colors"
+                            className="text-muted-foreground hover:text-foreground text-lg leading-none px-1 pt-0.5 transition-colors"
                             title="Collapse order"
                           >
                             ▾
@@ -1101,24 +1101,24 @@ export default function Kitchen() {
                           .filter(item => isKdsItem(item) && !(hiddenItemIds && hiddenItemIds.has(item.id)))
                           .map((item) => (
                           item.alreadyMade ? (
-                            <div key={item.id} className="bg-blue-50 border border-blue-200 rounded px-3 py-2">
+                            <div key={item.id} className="bg-blue-950/40 border border-blue-700/40 rounded px-3 py-2">
                               <div className="flex items-baseline gap-2">
-                                <span className="text-blue-500 text-base font-bold shrink-0">↻</span>
+                                <span className="text-blue-400 text-base font-bold shrink-0">↻</span>
                                 <div className="flex items-baseline gap-2 flex-1">
-                                  <span className="text-lg font-semibold text-blue-700 leading-none">{item.quantity}×</span>
-                                  <span className="text-base font-medium text-blue-700 leading-snug">{item.menuItemName}</span>
+                                  <span className="text-lg font-semibold text-blue-300 leading-none">{item.quantity}×</span>
+                                  <span className="text-base font-medium text-blue-300 leading-snug">{item.menuItemName}</span>
                                 </div>
-                                <span className="text-[10px] uppercase tracking-wide text-blue-600 font-bold ml-auto shrink-0">already firing</span>
+                                <span className="text-[10px] uppercase tracking-wide text-blue-400 font-bold ml-auto shrink-0">already firing</span>
                               </div>
                               {(item.modifierSelections ?? []).length > 0 && (
                                 <div className="ml-6 mt-1 space-y-0.5">
                                   {(item.modifierSelections ?? []).map((m, i) => (
-                                    <div key={i} className="text-sm text-blue-600 font-medium">+ {m.name}</div>
+                                    <div key={i} className="text-sm text-blue-400 font-medium">+ {m.name}</div>
                                   ))}
                                 </div>
                               )}
                               {item.notes && (
-                                <div className="ml-6 mt-1 text-sm text-blue-600 font-medium">{item.notes}</div>
+                                <div className="ml-6 mt-1 text-sm text-blue-400 font-medium">{item.notes}</div>
                               )}
                             </div>
                           ) : (() => {
@@ -1129,14 +1129,14 @@ export default function Kitchen() {
                                 onClick={() => toggleStruck(order.id, item.id)}
                                 className={`w-full text-left rounded px-3 py-3 border transition-all active:scale-[0.98] ${
                                   struck
-                                    ? "bg-gray-100 border-gray-200 opacity-60"
-                                    : "bg-white border-gray-200 hover:border-gray-300"
+                                    ? "bg-muted border-border opacity-60"
+                                    : "bg-card border-border hover:border-border"
                                 }`}
                               >
                                 <div className={`flex items-baseline gap-2 ${struck ? "line-through decoration-gray-500 decoration-2" : ""}`}>
-                                  <span className={`text-3xl font-black leading-none ${struck ? "text-gray-400" : "text-gray-900"}`}>{item.quantity}×</span>
-                                  <span className={`text-xl font-bold leading-snug ${struck ? "text-gray-400" : "text-gray-900"}`}>{item.menuItemName}</span>
-                                  {struck && <span className="text-xs text-gray-400 font-normal ml-1 no-underline">done</span>}
+                                  <span className={`text-3xl font-black leading-none ${struck ? "text-muted-foreground" : "text-foreground"}`}>{item.quantity}×</span>
+                                  <span className={`text-xl font-bold leading-snug ${struck ? "text-muted-foreground" : "text-foreground"}`}>{item.menuItemName}</span>
+                                  {struck && <span className="text-xs text-muted-foreground font-normal ml-1 no-underline">done</span>}
                                 </div>
                                 {!struck && (item.modifierSelections ?? []).length > 0 && (
                                   <div className="text-amber-600 text-xl mt-2 leading-snug font-semibold space-y-1">
@@ -1205,14 +1205,14 @@ export default function Kitchen() {
                           <button
                             onClick={() => printTicket(order)}
                             disabled={printing.has(order.id)}
-                            className="flex-1 rounded py-2 text-sm font-bold bg-blue-100 hover:bg-blue-200 text-blue-800 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="flex-1 rounded py-2 text-sm font-bold bg-blue-900/50 hover:bg-blue-800/60 text-blue-300 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             {printing.has(order.id) ? "Printing…" : "🖨 Print Ticket"}
                           </button>
                           <button
                             onClick={() => clearFromKds(order)}
                             disabled={isAdvancing}
-                            className="flex-1 rounded py-2 text-sm font-bold bg-gray-200 hover:bg-gray-300 text-gray-700 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="flex-1 rounded py-2 text-sm font-bold bg-muted hover:bg-muted/80 text-foreground/70 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             {isAdvancing ? "Clearing…" : "Done ✓ — Clear"}
                           </button>
@@ -1227,40 +1227,40 @@ export default function Kitchen() {
         </>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
-          <div className="text-6xl font-black text-gray-800 tracking-tight">All Clear</div>
-          <div className="text-gray-500 text-base">No active orders · refreshing every 10s</div>
+          <div className="text-6xl font-black text-foreground tracking-tight">All Clear</div>
+          <div className="text-muted-foreground text-base">No active orders · refreshing every 10s</div>
         </div>
       )}
 
       {/* ── History Drawer ── */}
       {historyOpen && (
         <div className="fixed inset-0 bg-black/70 z-50 flex justify-end" onClick={() => setHistoryOpen(false)}>
-          <div className="bg-white w-full max-w-sm h-full flex flex-col shadow-2xl border-l border-gray-200" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-              <h2 className="text-gray-900 text-lg font-bold">🕐 Order History</h2>
-              <button onClick={() => setHistoryOpen(false)} className="text-gray-400 hover:text-gray-900 text-2xl font-bold w-8 h-8 flex items-center justify-center transition-colors">×</button>
+          <div className="bg-card w-full max-w-sm h-full flex flex-col shadow-2xl border-l border-border" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <h2 className="text-foreground text-lg font-bold">🕐 Order History</h2>
+              <button onClick={() => setHistoryOpen(false)} className="text-muted-foreground hover:text-foreground text-2xl font-bold w-8 h-8 flex items-center justify-center transition-colors">×</button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {historyLoading && <p className="text-gray-400 text-center py-8">Loading…</p>}
+              {historyLoading && <p className="text-muted-foreground text-center py-8">Loading…</p>}
               {!historyLoading && historyOrders.length === 0 && (
-                <p className="text-gray-400 text-center py-8">No completed orders</p>
+                <p className="text-muted-foreground text-center py-8">No completed orders</p>
               )}
               {!historyLoading && historyOrders.map(o => (
-                <div key={o.id} className="bg-gray-100 rounded-xl p-4 flex flex-col gap-2">
+                <div key={o.id} className="bg-muted rounded-xl p-4 flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-gray-900 font-bold text-base leading-tight">{o.customerName}</p>
-                      <p className="text-gray-400 font-mono text-xs">#{o.confirmationCode}</p>
+                      <p className="text-foreground font-bold text-base leading-tight">{o.customerName}</p>
+                      <p className="text-muted-foreground font-mono text-xs">#{o.confirmationCode}</p>
                     </div>
-                    <span className="text-gray-500 text-xs">{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                    <span className="text-muted-foreground text-xs">{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
                   </div>
-                  <div className="text-gray-500 text-xs">
+                  <div className="text-muted-foreground text-xs">
                     {o.items.map(i => `${i.quantity}× ${i.menuItemName}`).join(" · ")}
                   </div>
                   <button
                     disabled={recalling.has(o.id)}
                     onClick={() => recallOrder(o)}
-                    className="w-full h-9 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-40 text-gray-900 text-xs font-bold transition-colors"
+                    className="w-full h-9 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-40 text-foreground text-xs font-bold transition-colors"
                   >
                     {recalling.has(o.id) ? "Recalling…" : "↩ Recall to Ready"}
                   </button>

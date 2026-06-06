@@ -67,61 +67,62 @@
 }
 
 :root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
+  --button-outline: rgba(255,255,255, .10);
+  --badge-outline: rgba(255,255,255, .05);
 
-  --opaque-button-border-intensity: -8;
+  --opaque-button-border-intensity: 9;
 
-  --elevate-1: rgba(0,0,0, .02);
-  --elevate-2: rgba(0,0,0, .06);
+  --elevate-1: rgba(255,255,255, .03);
+  --elevate-2: rgba(255,255,255, .07);
 
-  /* Clean & Modern palette — white base, near-black primary */
-  --background: 0 0% 100%;
-  --foreground: 220 9% 11%;
+  /* Indigo Luxe — deep navy dark palette */
+  --background: 237 33% 13%;
+  --foreground: 232 45% 94%;
 
-  --border: 220 13% 91%;
+  --border: 237 22% 24%;
 
-  --card: 0 0% 100%;
-  --card-foreground: 220 9% 11%;
-  --card-border: 220 13% 91%;
+  --card: 237 28% 17%;
+  --card-foreground: 232 45% 94%;
+  --card-border: 237 22% 24%;
 
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 220 9% 11%;
-  --sidebar-border: 220 13% 91%;
-  --sidebar-primary: 220 9% 11%;
+  /* sidebar = same hue as background so it bleeds seamlessly into main */
+  --sidebar: 237 33% 13%;
+  --sidebar-foreground: 232 45% 94%;
+  --sidebar-border: 237 22% 24%;
+  --sidebar-primary: 25 100% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 13% 96%;
-  --sidebar-accent-foreground: 220 9% 11%;
-  --sidebar-ring: 220 9% 11%;
+  --sidebar-accent: 237 28% 20%;
+  --sidebar-accent-foreground: 232 45% 94%;
+  --sidebar-ring: 25 100% 50%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 220 9% 11%;
-  --popover-border: 220 13% 91%;
+  --popover: 237 28% 17%;
+  --popover-foreground: 232 45% 94%;
+  --popover-border: 237 22% 24%;
 
-  /* Primary = near-black for buttons/active states */
-  --primary: 220 9% 11%;
+  /* Primary = orange brand */
+  --primary: 25 100% 50%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary = warm amber for "Best Seller" badges and highlights */
-  --secondary: 38 92% 50%;
-  --secondary-foreground: 220 9% 11%;
+  /* Secondary = indigo purple */
+  --secondary: 248 90% 69%;
+  --secondary-foreground: 0 0% 100%;
 
-  --muted: 220 13% 96%;
-  --muted-foreground: 220 9% 46%;
+  --muted: 237 28% 19%;
+  --muted-foreground: 231 21% 54%;
 
-  /* Accent = emerald green for "New" badges */
-  --accent: 152 60% 35%;
+  /* Accent = island green */
+  --accent: 135 64% 50%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --input: 220 13% 88%;
-  --ring: 220 9% 11%;
-  --chart-1: 220 9% 11%;
-  --chart-2: 38 92% 50%;
-  --chart-3: 152 60% 35%;
-  --chart-4: 210 40% 60%;
+  --input: 237 22% 24%;
+  --ring: 25 100% 50%;
+  --chart-1: 25 100% 50%;
+  --chart-2: 248 90% 69%;
+  --chart-3: 135 64% 50%;
+  --chart-4: 200 89% 48%;
   --chart-5: 0 80% 60%;
 
   --app-font-sans: 'Inter', 'system-ui', sans-serif;
@@ -129,10 +130,10 @@
   --app-font-mono: 'monospace';
   --radius: 0.5rem;
 
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
 
   --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
