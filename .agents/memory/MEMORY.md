@@ -3,3 +3,4 @@
 - [Pending order popup gaps](pending-order-popup-gaps.md)
 - [Resumed ticket patch rule](resumed-ticket-patch-rule.md)
 - [Android Chrome viewport height](android-chrome-viewport.md) — use `100dvh` not `100vh`/`h-screen` on any page that must work in Android Chrome (Sunmi POS device).
+- [Netaurant SaaS strategy](netaurant-saas-strategy.md) — Island Tacos stays separate; Netaurant is the merged SaaS product built from both codebases.
