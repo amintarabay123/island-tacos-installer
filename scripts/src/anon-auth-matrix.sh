@@ -112,6 +112,8 @@ echo
 echo "── ADMIN-GATED (anonymous must be rejected) ────────────────────────"
 check PATCH  /api/settings                               401\|403
 check PATCH  /api/store-settings                         401\|403
+check GET    /api/system/health                          401\|403
+check POST   /api/system/repair/api-process              401\|403
 check POST   /api/sync/push                              401\|403
 check POST   /api/sync/pull                              401\|403
 check POST   /api/loyverse/sync                          401\|403

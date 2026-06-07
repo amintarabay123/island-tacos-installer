@@ -23,6 +23,7 @@ import syncRouter from "./sync";
 import downloadsRouter from "./downloads";
 import financialsRouter from "./financials";
 import whatsappRouter from "./whatsapp";
+import systemRouter from "./system";
 
 const router: IRouter = Router();
 
@@ -115,6 +116,10 @@ router.use((req: Request, res: Response, next: NextFunction) => {
   if (path === "/sync/push" && isMutation) return requireAdminAuth(req, res, next);
   if (path === "/sync/pull" && isMutation) return requireAdminAuth(req, res, next);
 
+  // /system/health: staff only (POS operators need it). /system/repair/*: admin only.
+  if (path === "/system/health") return requireStaffAuth(req, res, next);
+  if (path.startsWith("/system/repair/")) return requireAdminAuth(req, res, next);
+
   return next();
 });
 
@@ -133,6 +138,7 @@ router.use(imageProxyRouter);
 router.use(settingsRouter); // GET is public; PATCH is guarded below
 router.use(storeSettingsRouter); // GET is public; PATCH is guarded below
 router.use(syncRouter);    // /sync/receive uses own X-Sync-Secret auth; /sync/push is admin-guarded below
+router.use(systemRouter);  // GET /system/health: staff-gated; POST /system/repair/*: admin-gated (both above)
 
 // Customer lookup: /customers/lookup is public (for online account page)
 // /customers search is staff-accessible (POS autocomplete), /customers/:id notes patch is admin-checked in handler

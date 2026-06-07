@@ -51,5 +51,33 @@ module.exports = {
       max_memory_restart: "512M",
       log_date_format: "YYYY-MM-DD HH:mm:ss",
     },
+    {
+      // Watchdog: polls services every 30 s, auto-repairs, escalates via SMS + OpenAI.
+      // Outputs: local-install/monitor-status.json + local-install/monitor-events.json
+      // consumed by GET /api/system/health.
+      //
+      // Required env vars (in .env) for full functionality:
+      //   OPENAI_API_KEY          — OpenAI GPT-4o-mini diagnosis on escalation
+      //   MONITOR_ALERT_PHONE     — E.164 phone to receive SMS alerts (e.g. +12845551234)
+      //   SMS_GATEWAY_URL/USERNAME/PASSWORD — local Android SMS gateway
+      //   PRINTER_IP              — thermal printer IP for TCP check (optional)
+      //   PRINTER_PORT            — printer port (default 9100)
+      name: "island-tacos-monitor",
+      script: "node",
+      args: path.join(root, "local-install/monitor.mjs"),
+      cwd: root,
+      env: {
+        ...loadEnv(envPath),
+        NODE_ENV: "production",
+      },
+      watch: false,
+      autorestart: true,
+      max_restarts: 20,
+      min_uptime: "10s",
+      restart_delay: 5000,
+      exp_backoff_restart_delay: 200,
+      max_memory_restart: "64M",
+      log_date_format: "YYYY-MM-DD HH:mm:ss",
+    },
   ],
 };

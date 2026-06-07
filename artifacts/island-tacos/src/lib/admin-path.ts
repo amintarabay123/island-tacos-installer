@@ -14,4 +14,5 @@ export const adminRoutes = {
   customers: `${ADMIN_PATH}/customers`,
   display: `${base}/display`,
   settings: `${ADMIN_PATH}/settings`,
+  system: `${ADMIN_PATH}/system`,
 };

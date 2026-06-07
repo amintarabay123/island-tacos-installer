@@ -24,7 +24,7 @@ import {
   ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp,
   Settings, Monitor, LogOut, XCircle, BarChart3, Users,
   CloudUpload, CloudDownload, Menu, X, ChefHat, UtensilsCrossed, Store,
-  History, LayoutDashboard, CalendarIcon,
+  History, LayoutDashboard, CalendarIcon, Activity,
 } from "lucide-react";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -542,6 +542,7 @@ export default function Admin() {
         { label: "Menu Editor",   icon: UtensilsCrossed, href: adminRoutes.menu,      iconColor: "text-green-400" },
         { label: "Modifiers",     icon: Settings,        href: adminRoutes.modifiers,  iconColor: "text-green-500" },
         { label: "Store Settings",icon: Settings,        href: adminRoutes.settings,   iconColor: "text-muted-foreground" },
+        { label: "System Monitor",icon: Activity,        href: adminRoutes.system,      iconColor: "text-cyan-400" },
       ],
     },
     {
