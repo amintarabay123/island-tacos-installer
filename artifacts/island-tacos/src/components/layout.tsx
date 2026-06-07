@@ -1,14 +1,35 @@
 import { Link, useLocation } from "wouter";
 import { useCart } from "@/lib/cart-context";
-import { Button } from "@/components/ui/button";
-import { ShoppingBag, Menu, X, Plus, Minus, Trash2, RefreshCw } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ShoppingBag, Menu, X, Plus, Minus, Trash2, RefreshCw } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
 import { useStoreSettings } from "@/lib/use-store-settings";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+// ── IL Palette ────────────────────────────────────────────────────────────────
+const BG   = "#16172b";
+const CARD = "#1e1f38";
+const HDR  = "#0e1020";
+const BORD = "rgba(255,255,255,0.06)";
+const TP   = "#e8eaf6";
+const TM   = "#b0b8d8";
+const MU   = "#7077a1";
+const OR   = "#ff6b00";
+
+// Overrides dark shadcn sheet + scroll-area + separator to match IL palette
+const DARK_CSS = `
+  [data-slot="sheet-content"] {
+    background: ${CARD} !important;
+    border-left: 1px solid ${BORD} !important;
+    color: ${TP} !important;
+  }
+  [data-slot="sheet-content"] [data-slot="sheet-header"] { border-bottom: 1px solid ${BORD} !important; }
+  [data-slot="sheet-content"] [data-slot="sheet-title"] { color: ${TP} !important; }
+  [data-slot="scroll-area"] { background: transparent !important; }
+  [data-slot="separator"] { background: ${BORD} !important; }
+`;
 
 // Operational settings live in the K/V `store_settings` table behind /api/settings:
 //   hours, open_time, close_time, cutoff_minutes, open_days, payment_methods, address.
@@ -71,116 +92,146 @@ export function Layout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Nav */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background">
-        <div className="max-w-6xl mx-auto flex h-16 items-center justify-between px-6">
+    <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", background: BG, color: TP, fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <style>{DARK_CSS}</style>
+
+      {/* ── Nav ─────────────────────────────────────────────────────────────── */}
+      <header style={{
+        position: "sticky", top: 0, zIndex: 50, width: "100%",
+        background: HDR, borderBottom: `1px solid ${BORD}`,
+      }}>
+        <div style={{ maxWidth: 1152, margin: "0 auto", display: "flex", height: 64, alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
 
           {/* Brand */}
-          <Link href="/" className="flex items-center select-none">
-            <img src="/logo-wordmark.png" alt={profile.storeName} className="h-10 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
+          <Link href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none", userSelect: "none" }}>
+            <img src="/logo-wordmark.png" alt={profile.storeName} style={{ height: 40, width: "auto", filter: "brightness(0) invert(1)" }} />
           </Link>
 
           {/* Desktop nav links */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav style={{ display: "flex", alignItems: "center", gap: 32 }} className="hidden md:flex">
             {navLinks.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
-                className={`text-sm font-medium transition-colors ${
-                  location === href
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                style={{
+                  fontSize: 14, fontWeight: 500, textDecoration: "none",
+                  color: location === href ? TP : MU,
+                  transition: "color 0.15s",
+                }}
+                onMouseEnter={e => { if (location !== href) (e.currentTarget as HTMLElement).style.color = TM; }}
+                onMouseLeave={e => { if (location !== href) (e.currentTarget as HTMLElement).style.color = MU; }}
               >
                 {label}
               </Link>
             ))}
           </nav>
 
-          {/* Cart + mobile menu */}
-          <div className="flex items-center gap-2">
+          {/* Cart + reload + mobile menu */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+
+            {/* Reload */}
             <button
               onClick={() => window.location.reload()}
               title="Reload page"
-              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              style={{ padding: 8, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", color: MU, display: "flex", alignItems: "center", transition: "color 0.15s, background 0.15s" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = TP; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MU; }}
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw style={{ width: 16, height: 16 }} />
             </button>
+
             {/* Cart drawer */}
             <Sheet>
               <SheetTrigger asChild>
-                <button className="relative flex items-center gap-2 border border-border rounded-full px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">
-                  <ShoppingBag className="w-4 h-4" />
+                <button style={{
+                  position: "relative", display: "flex", alignItems: "center", gap: 8,
+                  border: `1px solid rgba(255,255,255,0.12)`, borderRadius: 999,
+                  padding: "8px 16px", fontSize: 14, fontWeight: 500,
+                  background: "rgba(255,255,255,0.04)", color: TM, cursor: "pointer",
+                  transition: "background 0.15s, border-color 0.15s",
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
+                >
+                  <ShoppingBag style={{ width: 16, height: 16 }} />
                   <span className="hidden sm:inline">Cart</span>
                   {totalItems > 0 && (
-                    <span className="bg-foreground text-background text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    <span style={{
+                      background: OR, color: "#fff", fontSize: 11, fontWeight: 700,
+                      borderRadius: 999, width: 20, height: 20,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
                       {totalItems}
                     </span>
                   )}
                 </button>
               </SheetTrigger>
-              <SheetContent className="w-full sm:max-w-md flex flex-col p-0">
-                <SheetHeader className="px-6 py-5 border-b">
-                  <SheetTitle className="text-base font-semibold">Your Order</SheetTitle>
+
+              <SheetContent style={{ width: "100%", maxWidth: 448, display: "flex", flexDirection: "column", padding: 0, background: CARD, borderLeft: `1px solid ${BORD}` }}>
+                <SheetHeader style={{ padding: "20px 24px", borderBottom: `1px solid ${BORD}` }}>
+                  <SheetTitle style={{ fontSize: 15, fontWeight: 600, color: TP }}>Your Order</SheetTitle>
                 </SheetHeader>
 
-                <ScrollArea className="flex-1 px-6 py-4">
+                <ScrollArea style={{ flex: 1, padding: "16px 24px" }}>
                   {items.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-48 text-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                        <ShoppingBag className="w-5 h-5 text-muted-foreground" />
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 192, textAlign: "center", gap: 12 }}>
+                      <div style={{ width: 48, height: 48, borderRadius: 999, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <ShoppingBag style={{ width: 20, height: 20, color: MU }} />
                       </div>
                       <div>
-                        <p className="font-medium text-sm">Your cart is empty</p>
-                        <p className="text-muted-foreground text-xs mt-1">Add something from the menu to get started</p>
+                        <p style={{ fontWeight: 500, fontSize: 14, color: TP }}>Your cart is empty</p>
+                        <p style={{ color: MU, fontSize: 12, marginTop: 4 }}>Add something from the menu to get started</p>
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-5">
+                    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                       {items.map((item) => (
-                        <div key={item.menuItem.id} className="flex gap-3">
-                          <div className="w-14 h-14 shrink-0 rounded-lg bg-muted overflow-hidden">
+                        <div key={item.menuItem.id} style={{ display: "flex", gap: 12 }}>
+                          <div style={{ width: 56, height: 56, flexShrink: 0, borderRadius: 10, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
                             {item.menuItem.imageUrl ? (
-                              <img src={item.menuItem.imageUrl} alt={item.menuItem.name} className="w-full h-full object-cover" />
+                              <img src={item.menuItem.imageUrl} alt={item.menuItem.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-lg font-bold">
+                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: MU, fontSize: 18, fontWeight: 700 }}>
                                 {item.menuItem.name.charAt(0)}
                               </div>
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold truncate">{item.menuItem.name}</p>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+                              <div style={{ minWidth: 0 }}>
+                                <p style={{ fontSize: 14, fontWeight: 600, color: TP, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.menuItem.name}</p>
                                 {(item.modifierSelections ?? []).length > 0 && (
-                                  <p className="text-xs text-muted-foreground mt-0.5">{item.modifierSelections!.map(m => m.name).join(", ")}</p>
+                                  <p style={{ fontSize: 12, color: MU, marginTop: 2 }}>{item.modifierSelections!.map(m => m.name).join(", ")}</p>
                                 )}
-                                {item.notes && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 italic">{item.notes}</p>}
+                                {item.notes && <p style={{ fontSize: 12, color: MU, marginTop: 2, fontStyle: "italic" }}>{item.notes}</p>}
                               </div>
-                              <p className="text-sm font-semibold shrink-0">${((item.menuItem.price + (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * item.quantity).toFixed(2)}</p>
+                              <p style={{ fontSize: 14, fontWeight: 600, flexShrink: 0, color: TP }}>
+                                ${((item.menuItem.price + (item.modifierSelections ?? []).reduce((s, m) => s + m.price, 0)) * item.quantity).toFixed(2)}
+                              </p>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1 border border-border rounded-md">
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 0, border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 8 }}>
                                 <button
-                                  className="w-7 h-7 flex items-center justify-center hover:bg-muted rounded-l transition-colors"
+                                  style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: TM, borderRadius: "8px 0 0 8px" }}
                                   onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
                                 >
-                                  <Minus className="w-3 h-3" />
+                                  <Minus style={{ width: 12, height: 12 }} />
                                 </button>
-                                <span className="w-6 text-center text-xs font-semibold">{item.quantity}</span>
+                                <span style={{ width: 24, textAlign: "center", fontSize: 12, fontWeight: 600, color: TP }}>{item.quantity}</span>
                                 <button
-                                  className="w-7 h-7 flex items-center justify-center hover:bg-muted rounded-r transition-colors"
+                                  style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: TM, borderRadius: "0 8px 8px 0" }}
                                   onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
                                 >
-                                  <Plus className="w-3 h-3" />
+                                  <Plus style={{ width: 12, height: 12 }} />
                                 </button>
                               </div>
                               <button
-                                className="text-muted-foreground hover:text-destructive transition-colors"
+                                style={{ background: "none", border: "none", cursor: "pointer", color: MU, display: "flex", padding: 4, borderRadius: 6, transition: "color 0.15s" }}
+                                onMouseEnter={e => { e.currentTarget.style.color = "#ff453a"; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = MU; }}
                                 onClick={() => removeItem(item.menuItem.id)}
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 style={{ width: 14, height: 14 }} />
                               </button>
                             </div>
                           </div>
@@ -191,37 +242,45 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </ScrollArea>
 
                 {items.length > 0 && (
-                  <div className="border-t px-6 py-5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Total</span>
-                      <span className="font-semibold">${total.toFixed(2)}</span>
+                  <div style={{ borderTop: `1px solid ${BORD}`, padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 14, color: MU }}>Total</span>
+                      <span style={{ fontWeight: 600, fontSize: 15, color: TP }}>${total.toFixed(2)}</span>
                     </div>
                     {settings.is_open === "false" ? (
-                      <div className="space-y-2">
-                        <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-center">
-                          <p className="text-xs font-semibold text-amber-800">
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <div style={{ borderRadius: 10, background: "rgba(255,200,0,0.08)", border: "1px solid rgba(255,200,0,0.2)", padding: "10px 14px", textAlign: "center" }}>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: "#ffd60a" }}>
                             {settings.open_today === "false" ? (settings.closed_today_reason ?? "Closed today") : "Online ordering closed"}
                           </p>
-                          <p className="text-xs text-amber-700 mt-0.5">
+                          <p style={{ fontSize: 11, color: "#b0a060", marginTop: 4 }}>
                             {settings.open_today === "false"
                               ? "We only take orders on open days"
                               : `Opens at ${formatTime(settings.open_time)} · Last orders at ${formatTime(settings.closes_orders_at)}`}
                           </p>
                         </div>
-                        <Button
-                          className="w-full h-11 font-semibold rounded-full"
+                        <button
+                          style={{ width: "100%", height: 44, fontWeight: 600, borderRadius: 999, fontSize: 14, background: "rgba(255,255,255,0.05)", color: MU, border: `1px solid ${BORD}`, cursor: "not-allowed" }}
                           disabled
                         >
                           Checkout
-                        </Button>
+                        </button>
                       </div>
                     ) : (
-                      <Button
-                        className="w-full h-11 font-semibold rounded-full"
+                      <button
+                        style={{
+                          width: "100%", height: 44, fontWeight: 700, borderRadius: 999, fontSize: 14, cursor: "pointer",
+                          background: "linear-gradient(135deg,#ff6b00,#ff3d00)",
+                          boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
+                          color: "#fff", border: "none",
+                          transition: "opacity 0.15s",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
                         onClick={() => setLocation("/checkout")}
                       >
                         Checkout
-                      </Button>
+                      </button>
                     )}
                   </div>
                 )}
@@ -231,26 +290,37 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* Mobile nav */}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <button className="md:hidden p-2 rounded-md hover:bg-muted transition-colors">
-                  <Menu className="w-5 h-5" />
+                <button
+                  className="md:hidden"
+                  style={{ padding: 8, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", color: MU, display: "flex" }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  <Menu style={{ width: 20, height: 20 }} />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0">
-                <div className="flex items-center justify-between px-6 py-5 border-b">
-                  <img src="/logo-wordmark.png" alt={profile.storeName} className="h-8 w-auto" style={{ filter: "brightness(0) invert(1)" }} />
-                  <button onClick={() => setMobileOpen(false)}>
-                    <X className="w-4 h-4 text-muted-foreground" />
+              <SheetContent side="left" style={{ width: 288, padding: 0, background: HDR, borderRight: `1px solid ${BORD}` }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: `1px solid ${BORD}` }}>
+                  <img src="/logo-wordmark.png" alt={profile.storeName} style={{ height: 32, width: "auto", filter: "brightness(0) invert(1)" }} />
+                  <button
+                    onClick={() => setMobileOpen(false)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: MU, display: "flex", padding: 4 }}
+                  >
+                    <X style={{ width: 16, height: 16 }} />
                   </button>
                 </div>
-                <nav className="flex flex-col px-4 py-4 gap-1">
+                <nav style={{ display: "flex", flexDirection: "column", padding: "16px 12px", gap: 2 }}>
                   {navLinks.map(({ href, label }) => (
                     <Link
                       key={href}
                       href={href}
                       onClick={() => setMobileOpen(false)}
-                      className={`px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                        location === href ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                      }`}
+                      style={{
+                        padding: "10px 12px", borderRadius: 8, fontSize: 14, fontWeight: 500, textDecoration: "none",
+                        color: location === href ? TP : MU,
+                        background: location === href ? "rgba(255,107,0,0.1)" : "transparent",
+                        transition: "all 0.15s",
+                      }}
                     >
                       {label}
                     </Link>
@@ -258,31 +328,37 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </nav>
               </SheetContent>
             </Sheet>
+
           </div>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col">
+      <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {children}
       </main>
 
-      <footer className="border-t py-10 mt-8">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      {/* ── Footer ──────────────────────────────────────────────────────────── */}
+      <footer style={{ borderTop: `1px solid ${BORD}`, paddingTop: 40, paddingBottom: 32, marginTop: 32 }}>
+        <div style={{ maxWidth: 1152, margin: "0 auto", padding: "0 24px", display: "flex", flexDirection: "column", gap: 24 }} className="md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="font-bold text-sm">{profile.storeName}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Mexican food. Made fresh, every day.
-            </p>
-            <p className="text-xs text-muted-foreground">{profile.phone}</p>
+            <p style={{ fontWeight: 700, fontSize: 14, color: TP }}>{profile.storeName}</p>
+            <p style={{ fontSize: 12, color: MU, marginTop: 4 }}>Mexican food. Made fresh, every day.</p>
+            <p style={{ fontSize: 12, color: MU }}>{profile.phone}</p>
           </div>
-          <div className="flex flex-wrap gap-6 text-xs text-muted-foreground">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 24, fontSize: 12, color: MU }}>
             <span>{settings.address}</span>
             <span>Open {settings.hours}</span>
             <span>{settings.payment_methods}</span>
           </div>
-          <div className="flex gap-4 text-xs text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">Menu</Link>
-            <Link href="/track" className="hover:text-foreground transition-colors">Track Order</Link>
+          <div style={{ display: "flex", gap: 16, fontSize: 12 }}>
+            <Link href="/" style={{ color: MU, textDecoration: "none", transition: "color 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = TP; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = MU; }}
+            >Menu</Link>
+            <Link href="/track" style={{ color: MU, textDecoration: "none", transition: "color 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = TP; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = MU; }}
+            >Track Order</Link>
           </div>
         </div>
       </footer>

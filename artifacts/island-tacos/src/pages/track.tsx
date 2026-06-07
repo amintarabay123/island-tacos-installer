@@ -5,6 +5,23 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, ChefHat, Package, XCircle, ArrowRight, Loader2, UserCircle, History, LogOut, Pencil, Check } from "lucide-react";
 import { getCustomer, saveCustomer, clearCustomer, getLastOrder, type CustomerProfile } from "@/lib/customer-account";
 
+// ── IL Palette ────────────────────────────────────────────────────────────────
+const BG   = "#16172b";
+const CARD = "#1e1f38";
+const BORD = "rgba(255,255,255,0.06)";
+const TP   = "#e8eaf6";
+const TM   = "#b0b8d8";
+const MU   = "#7077a1";
+const OR   = "#ff6b00";
+const PUR  = "#7c6af7";
+const GRN  = "#30d158";
+
+const INP: React.CSSProperties = {
+  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: 8, padding: "10px 14px", fontSize: 14, color: TP, outline: "none",
+  width: "100%", boxSizing: "border-box", fontFamily: "inherit",
+};
+
 function getCode(): string {
   return new URLSearchParams(window.location.search).get("code") ?? "";
 }
@@ -35,13 +52,13 @@ export default function TrackOrder() {
   }
 
   if (isLoading) {
-    return <FullScreenState icon={<Loader2 className="h-14 w-14 text-primary animate-spin" />} title="Looking up your order…" />;
+    return <FullScreenState icon={<Loader2 style={{ width: 56, height: 56, color: PUR, animation: "spin 1s linear infinite" }} />} title="Looking up your order…" />;
   }
 
   if (error || !order) {
     return (
       <FullScreenState
-        icon={<XCircle className="h-14 w-14 text-red-500" />}
+        icon={<XCircle style={{ width: 56, height: 56, color: "#ff453a" }} />}
         title="Order not found"
         subtitle="Double-check your confirmation code."
         action={<TrackLink label="Try again" />}
@@ -68,47 +85,48 @@ export default function TrackOrder() {
 
   if (status === "cancelled") {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12 text-center">
-        <div className="w-full max-w-sm flex flex-col items-center gap-6">
-          {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
-          <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Island Tacos</div>
+      <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: -8 }}>Island Tacos</div>
 
-          {/* Icon */}
-          <div className="flex items-center justify-center w-24 h-24 rounded-full bg-red-50">
-            <XCircle className="h-14 w-14 text-red-500" />
+          <div style={{ width: 96, height: 96, borderRadius: 999, background: "rgba(255,69,58,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <XCircle style={{ width: 56, height: 56, color: "#ff453a" }} />
           </div>
 
-          {/* Heading */}
-          <div className="space-y-2">
-            <h1 className="text-2xl font-black leading-tight text-gray-900">Order Not Accepted</h1>
-            <p className="text-muted-foreground text-sm leading-relaxed">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 900, color: TP, margin: 0 }}>Order Not Accepted</h1>
+            <p style={{ color: MU, fontSize: 14, margin: 0, lineHeight: 1.6 }}>
               Sorry {customerName ? customerName.split(" ")[0] + "," : ","} we couldn't accept your order at this time.
             </p>
           </div>
 
-          {/* Reason box — shown prominently if a reason was given */}
           {cancellationReason && (
-            <div className="w-full rounded-2xl border-2 border-red-200 bg-red-50 px-5 py-4 text-left">
-              <p className="text-xs font-bold uppercase tracking-widest text-red-400 mb-1">Reason</p>
-              <p className="text-base font-semibold text-red-800">{cancellationReason}</p>
+            <div style={{ width: "100%", borderRadius: 14, border: "2px solid rgba(255,69,58,0.3)", background: "rgba(255,69,58,0.08)", padding: "16px 20px", textAlign: "left" }}>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#ff453a", marginBottom: 6 }}>Reason</p>
+              <p style={{ fontSize: 15, fontWeight: 600, color: TP }}>{cancellationReason}</p>
             </div>
           )}
 
-          {/* Confirmation code */}
-          <div className="bg-muted rounded-xl px-5 py-3 w-full">
-            <p className="text-xs text-muted-foreground mb-0.5">Order reference</p>
-            <p className="text-2xl font-mono font-black text-primary tracking-widest">{confirmationCode}</p>
+          <div style={{ background: CARD, borderRadius: 12, padding: "12px 20px", width: "100%", border: `1px solid ${BORD}` }}>
+            <p style={{ fontSize: 12, color: MU, marginBottom: 4 }}>Order reference</p>
+            <p style={{ fontSize: 24, fontFamily: "monospace", fontWeight: 900, color: OR, letterSpacing: "0.12em" }}>{confirmationCode}</p>
           </div>
 
-          {/* CTAs */}
-          <div className="flex flex-col items-center gap-3 w-full">
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%" }}>
             <Link
               href="/"
-              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity"
+              style={{
+                width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "12px 24px", borderRadius: 999,
+                background: `linear-gradient(135deg,${OR},#ff3d00)`, color: "#fff",
+                fontSize: 14, fontWeight: 700, textDecoration: "none",
+                boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
+              }}
             >
-              Order Again <ArrowRight className="h-4 w-4" />
+              Order Again <ArrowRight style={{ width: 16, height: 16 }} />
             </Link>
-            <p className="text-xs text-muted-foreground">We apologize for the inconvenience.</p>
+            <p style={{ fontSize: 12, color: MU }}>We apologize for the inconvenience.</p>
           </div>
         </div>
       </div>
@@ -122,8 +140,8 @@ export default function TrackOrder() {
       <FullScreenState
         icon={
           isReady || isDone
-            ? <Package className={`h-14 w-14 ${isDone ? "text-gray-500" : "text-green-500"}`} />
-            : <CheckCircle2 className="h-14 w-14 text-green-500" />
+            ? <Package style={{ width: 56, height: 56, color: isDone ? MU : GRN }} />
+            : <CheckCircle2 style={{ width: 56, height: 56, color: GRN }} />
         }
         title={
           isDone ? "Order complete — enjoy!" :
@@ -143,9 +161,13 @@ export default function TrackOrder() {
         progress={status}
         action={
           (isReady || isDone) ? (
-            <div className="flex flex-col items-center gap-3 w-full">
-              <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
-                Order Again <ArrowRight className="h-4 w-4" />
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%" }}>
+              <Link href="/" style={{
+                display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 999,
+                background: `linear-gradient(135deg,${OR},#ff3d00)`, color: "#fff", fontSize: 14, fontWeight: 700,
+                textDecoration: "none", boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
+              }}>
+                Order Again <ArrowRight style={{ width: 16, height: 16 }} />
               </Link>
               <TrackLink label="Track order" code={code} />
             </div>
@@ -160,7 +182,7 @@ export default function TrackOrder() {
   // Pending — waiting for staff to accept
   return (
     <FullScreenState
-      icon={<Clock className="h-14 w-14 text-amber-500 animate-pulse" />}
+      icon={<Clock style={{ width: 56, height: 56, color: "#ffd60a", animation: "pulse 2s ease-in-out infinite" }} />}
       title="Waiting for confirmation…"
       subtitle="Your order is being reviewed. This usually takes just a minute."
       pickupTime={pickupTimeLabel}
@@ -177,81 +199,71 @@ type ModSel = { name: string; price: number };
 type Item = { id: number; menuItemName: string; quantity: number; subtotal: number; notes?: string | null; modifierSelections?: ModSel[] | null };
 
 function FullScreenState({
-  icon,
-  title,
-  subtitle,
-  code,
-  orderSummary,
-  progress,
-  action,
-  pickupTime,
+  icon, title, subtitle, code, orderSummary, progress, action, pickupTime,
 }: {
-  icon: React.ReactNode;
-  title: string;
-  subtitle?: string;
-  code?: string;
-  orderSummary?: { items: Item[]; total: number };
-  progress?: string;
-  action?: React.ReactNode;
-  pickupTime?: string | null;
+  icon: React.ReactNode; title: string; subtitle?: string; code?: string;
+  orderSummary?: { items: Item[]; total: number }; progress?: string;
+  action?: React.ReactNode; pickupTime?: string | null;
 }) {
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12 text-center">
-      <div className="w-full max-w-sm flex flex-col items-center gap-6">
-        {/* Logo */}
-        {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
-        <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Island Tacos</div>
+    <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+      `}</style>
+      <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+
+        {/* Brand */}
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: -8 }}>Island Tacos</div>
 
         {/* Icon */}
-        <div className="flex items-center justify-center w-24 h-24 rounded-full bg-muted">
+        <div style={{ width: 96, height: 96, borderRadius: 999, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           {icon}
         </div>
 
         {/* Text */}
-        <div className="space-y-2">
-          <h1 className="text-2xl font-black leading-tight">{title}</h1>
-          {subtitle && <p className="text-muted-foreground text-sm leading-relaxed">{subtitle}</p>}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 900, color: TP, margin: 0, lineHeight: 1.2 }}>{title}</h1>
+          {subtitle && <p style={{ color: MU, fontSize: 14, margin: 0, lineHeight: 1.6 }}>{subtitle}</p>}
         </div>
 
-        {/* Estimated pickup time badge */}
+        {/* Pickup time badge */}
         {pickupTime && (
-          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-full px-4 py-2">
-            <Clock className="h-4 w-4 text-amber-500 shrink-0" />
-            <span className="text-sm font-semibold text-amber-800">{pickupTime}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,214,0,0.08)", border: "1px solid rgba(255,214,0,0.2)", borderRadius: 999, padding: "8px 16px" }}>
+            <Clock style={{ width: 16, height: 16, color: "#ffd60a", flexShrink: 0 }} />
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#ffd60a" }}>{pickupTime}</span>
           </div>
         )}
 
         {/* Confirmation code */}
         {code && (
-          <div className="bg-muted rounded-xl px-5 py-3 w-full">
-            <p className="text-xs text-muted-foreground mb-0.5">Confirmation code</p>
-            <p className="text-2xl font-mono font-black text-primary tracking-widest">{code}</p>
+          <div style={{ background: CARD, borderRadius: 12, padding: "12px 20px", width: "100%", border: `1px solid ${BORD}` }}>
+            <p style={{ fontSize: 12, color: MU, marginBottom: 4 }}>Confirmation code</p>
+            <p style={{ fontSize: 24, fontFamily: "monospace", fontWeight: 900, color: OR, letterSpacing: "0.12em" }}>{code}</p>
           </div>
         )}
 
-        {/* Progress bar */}
+        {/* Progress steps */}
         {progress && <ProgressSteps status={progress} />}
 
         {/* Order summary */}
         {orderSummary && orderSummary.items.length > 0 && (
-          <div className="w-full rounded-xl border bg-card text-left p-4 space-y-2 text-sm">
+          <div style={{ width: "100%", borderRadius: 14, border: `1px solid ${BORD}`, background: CARD, textAlign: "left", padding: 16, display: "flex", flexDirection: "column", gap: 8 }}>
             {orderSummary.items.map((item) => (
-              <div key={item.id} className="space-y-0.5">
-                <div className="flex justify-between text-muted-foreground">
-                  <span><span className="font-semibold text-foreground">{item.quantity}×</span> {item.menuItemName}</span>
-                  <span>${item.subtotal.toFixed(2)}</span>
+              <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: TM, fontSize: 14 }}>
+                  <span><span style={{ fontWeight: 600, color: TP }}>{item.quantity}×</span> {item.menuItemName}</span>
+                  <span style={{ color: TP }}>${item.subtotal.toFixed(2)}</span>
                 </div>
                 {(item.modifierSelections ?? []).map((m, i) => (
-                  <p key={i} className="text-xs text-muted-foreground/70 italic pl-5">+ {m.name}</p>
+                  <p key={i} style={{ fontSize: 12, color: MU, margin: 0, paddingLeft: 20, fontStyle: "italic" }}>+ {m.name}</p>
                 ))}
-                {/* Only show free-text notes when there are no structured modifiers to avoid
-                    duplicating info for older orders that stored modifier labels in notes */}
                 {item.notes && (item.modifierSelections ?? []).length === 0 && (
-                  <p className="text-xs text-muted-foreground/70 italic pl-5">{item.notes}</p>
+                  <p style={{ fontSize: 12, color: MU, margin: 0, paddingLeft: 20, fontStyle: "italic" }}>{item.notes}</p>
                 )}
               </div>
             ))}
-            <div className="border-t pt-2 flex justify-between font-bold text-base">
+            <div style={{ borderTop: `1px solid ${BORD}`, paddingTop: 8, display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 16, color: TP }}>
               <span>Total</span>
               <span>${orderSummary.total.toFixed(2)}</span>
             </div>
@@ -259,7 +271,7 @@ function FullScreenState({
         )}
 
         {/* Action */}
-        {action && <div className="w-full">{action}</div>}
+        {action && <div style={{ width: "100%" }}>{action}</div>}
       </div>
     </div>
   );
@@ -275,20 +287,25 @@ const STEP_ORDER = ["confirmed", "preparing", "ready", "completed"];
 function ProgressSteps({ status }: { status: string }) {
   const currentIdx = STEP_ORDER.indexOf(status);
   return (
-    <div className="w-full flex items-center justify-between relative px-1">
-      {/* track line */}
-      <div className="absolute top-4 left-6 right-6 h-0.5 bg-muted z-0" />
+    <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", padding: "0 4px" }}>
+      {/* Track line */}
+      <div style={{ position: "absolute", top: 16, left: 24, right: 24, height: 2, background: "rgba(255,255,255,0.08)", zIndex: 0 }} />
       {STEPS.map((step, i) => {
         const done = currentIdx >= STEP_ORDER.indexOf(step.key);
         const Icon = step.icon;
         return (
-          <div key={step.key} className="flex flex-col items-center gap-1.5 z-10">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
-              done ? "bg-primary border-primary text-primary-foreground" : "bg-white border-muted text-muted-foreground"
-            }`}>
-              <Icon className="h-3.5 w-3.5" />
+          <div key={step.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, zIndex: 1 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center",
+              border: `2px solid ${done ? OR : "rgba(255,255,255,0.12)"}`,
+              background: done ? `linear-gradient(135deg,${OR},#ff3d00)` : CARD,
+              color: done ? "#fff" : MU,
+              boxShadow: done ? `0 0 12px rgba(255,107,0,0.5)` : "none",
+              transition: "all 0.3s",
+            }}>
+              <Icon style={{ width: 14, height: 14 }} />
             </div>
-            <span className={`text-[10px] font-semibold ${done ? "text-primary" : "text-muted-foreground"}`}>{step.label}</span>
+            <span style={{ fontSize: 10, fontWeight: 600, color: done ? OR : MU }}>{step.label}</span>
           </div>
         );
       })}
@@ -301,40 +318,38 @@ function TrackLink({ label, code }: { label: string; code?: string }) {
   return (
     <a
       href={href}
-      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-border text-sm font-semibold hover:bg-muted transition-colors"
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 20px", borderRadius: 999,
+        border: `1px solid rgba(255,255,255,0.12)`, fontSize: 14, fontWeight: 600,
+        color: TM, textDecoration: "none", background: "rgba(255,255,255,0.04)",
+        transition: "all 0.15s",
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = TP; }}
+      onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = TM; }}
     >
-      {label} <ArrowRight className="h-4 w-4" />
+      {label} <ArrowRight style={{ width: 16, height: 16 }} />
     </a>
   );
 }
 
-// ─── Customer history (fetched by phone) ───────────────────────────────────
+// ─── Customer history ─────────────────────────────────────────────────────────
 
 type HistoryOrder = {
-  id: number;
-  confirmationCode: string;
-  status: string;
-  total: number;
-  createdAt: string;
+  id: number; confirmationCode: string; status: string;
+  total: number; createdAt: string;
   items: { menuItemName: string; quantity: number }[];
 };
 
-function statusLabel(s: string) {
-  const map: Record<string, string> = {
-    pending: "Pending",
-    confirmed: "Confirmed",
-    preparing: "Preparing",
-    ready: "Ready",
-    completed: "Completed",
-    cancelled: "Cancelled",
-  };
-  return map[s] ?? s;
+function statusBadgeStyle(s: string): React.CSSProperties {
+  if (s === "completed") return { background: "rgba(48,209,88,0.12)", color: GRN, border: "1px solid rgba(48,209,88,0.25)" };
+  if (s === "cancelled") return { background: "rgba(255,69,58,0.12)", color: "#ff453a", border: "1px solid rgba(255,69,58,0.25)" };
+  if (s === "ready")     return { background: "rgba(14,165,233,0.12)", color: "#0ea5e9", border: "1px solid rgba(14,165,233,0.25)" };
+  return { background: "rgba(255,214,0,0.1)", color: "#ffd60a", border: "1px solid rgba(255,214,0,0.25)" };
 }
-function statusColor(s: string) {
-  if (s === "completed") return "text-green-700 bg-green-50 border-green-200";
-  if (s === "cancelled") return "text-red-600 bg-red-50 border-red-200";
-  if (s === "ready") return "text-blue-700 bg-blue-50 border-blue-200";
-  return "text-amber-700 bg-amber-50 border-amber-200";
+
+function statusLabel(s: string) {
+  const map: Record<string, string> = { pending: "Pending", confirmed: "Confirmed", preparing: "Preparing", ready: "Ready", completed: "Completed", cancelled: "Cancelled" };
+  return map[s] ?? s;
 }
 
 function CustomerHistorySection({ phone }: { phone: string }) {
@@ -345,65 +360,59 @@ function CustomerHistorySection({ phone }: { phone: string }) {
     if (!phone) return;
     setLoading(true);
     fetch(`/api/orders?customerPhone=${encodeURIComponent(phone)}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setOrders(
-          (data as HistoryOrder[]).map((o) => ({
-            id: o.id,
-            confirmationCode: o.confirmationCode,
-            status: o.status,
-            total: o.total,
-            createdAt: o.createdAt,
-            items: o.items,
-          }))
-        );
-      })
+      .then(r => r.json())
+      .then(data => setOrders((data as HistoryOrder[]).map(o => ({ id: o.id, confirmationCode: o.confirmationCode, status: o.status, total: o.total, createdAt: o.createdAt, items: o.items }))))
       .catch(() => setOrders([]))
       .finally(() => setLoading(false));
   }, [phone]);
 
   if (loading) return (
-    <div className="flex items-center justify-center py-8 gap-2 text-muted-foreground text-sm">
-      <Loader2 className="h-4 w-4 animate-spin" /> Loading history…
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 0", gap: 8, color: MU, fontSize: 14 }}>
+      <Loader2 style={{ width: 16, height: 16, animation: "spin 1s linear infinite" }} /> Loading history…
     </div>
   );
 
   if (!orders || orders.length === 0) return (
-    <div className="py-8 text-center text-muted-foreground text-sm">No orders found.</div>
+    <div style={{ padding: "32px 0", textAlign: "center", color: MU, fontSize: 14 }}>No orders found.</div>
   );
 
   return (
-    <div className="space-y-3">
-      {orders.map((o) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {orders.map(o => (
         <a
-          key={o.id}
-          href={`/track?code=${o.confirmationCode}`}
-          className="flex items-center gap-3 p-4 rounded-xl border hover:bg-muted/40 transition-colors group"
+          key={o.id} href={`/track?code=${o.confirmationCode}`}
+          style={{
+            display: "flex", alignItems: "center", gap: 12, padding: 16,
+            borderRadius: 12, border: `1px solid ${BORD}`, background: "rgba(255,255,255,0.02)",
+            textDecoration: "none", transition: "background 0.15s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; }}
         >
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono font-bold text-sm">{o.confirmationCode}</span>
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${statusColor(o.status)}`}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 14, color: TP }}>{o.confirmationCode}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999, ...statusBadgeStyle(o.status) }}>
                 {statusLabel(o.status)}
               </span>
             </div>
-            <div className="text-xs text-muted-foreground mt-0.5 truncate">
-              {o.items?.map((i) => `${i.quantity}x ${i.menuItemName}`).join(", ")}
+            <div style={{ fontSize: 12, color: MU, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {o.items?.map(i => `${i.quantity}x ${i.menuItemName}`).join(", ")}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div style={{ fontSize: 12, color: MU }}>
               {new Date(o.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
               {" · "}
-              <span className="font-semibold text-foreground">${Number(o.total).toFixed(2)}</span>
+              <span style={{ fontWeight: 600, color: TM }}>${Number(o.total).toFixed(2)}</span>
             </div>
           </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+          <ArrowRight style={{ width: 16, height: 16, color: MU, flexShrink: 0 }} />
         </a>
       ))}
     </div>
   );
 }
 
-// ─── Create-account form ────────────────────────────────────────────────────
+// ─── Create account form ──────────────────────────────────────────────────────
 
 function CreateAccountForm({ onSave }: { onSave: () => void }) {
   const [name, setName] = useState("");
@@ -415,51 +424,40 @@ function CreateAccountForm({ onSave }: { onSave: () => void }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full text-sm text-muted-foreground hover:text-foreground border border-dashed rounded-xl px-4 py-3 transition-colors flex items-center justify-center gap-2"
+        style={{
+          width: "100%", fontSize: 14, color: MU, border: `1px dashed rgba(255,255,255,0.12)`,
+          borderRadius: 12, padding: "12px 16px", background: "transparent", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.15s",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.color = TM; e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; }}
+        onMouseLeave={e => { e.currentTarget.style.color = MU; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
       >
-        <UserCircle className="h-4 w-4" /> Save your info for faster checkout
+        <UserCircle style={{ width: 16, height: 16 }} /> Save your info for faster checkout
       </button>
     );
   }
 
   return (
-    <div className="border rounded-xl p-4 space-y-3 bg-muted/20">
-      <p className="text-sm font-semibold">Save your info</p>
-      <p className="text-xs text-muted-foreground">Your info is saved on this device only. No account or password needed.</p>
-      <input
-        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        placeholder="Full Name *"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <input
-        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        placeholder="Phone (e.g. 787-000-0000) *"
-        type="tel"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-      />
-      <input
-        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        placeholder="Email (optional)"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <div className="flex gap-2">
+    <div style={{ border: `1px solid ${BORD}`, borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", gap: 10, background: "rgba(255,255,255,0.02)" }}>
+      <p style={{ fontWeight: 600, fontSize: 14, color: TP, margin: 0 }}>Save your info</p>
+      <p style={{ fontSize: 12, color: MU, margin: 0 }}>Your info is saved on this device only. No account or password needed.</p>
+      <input style={INP} placeholder="Full Name *" value={name} onChange={e => setName(e.target.value)} />
+      <input style={INP} placeholder="Phone (e.g. 787-000-0000) *" type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+      <input style={INP} placeholder="Email (optional)" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+      <div style={{ display: "flex", gap: 8 }}>
         <button
           onClick={() => {
             if (!name.trim() || !phone.trim()) return;
             saveCustomer({ name: name.trim(), phone: phone.trim(), email: email.trim() });
             onSave();
           }}
-          className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90"
+          style={{ flex: 1, padding: "10px 0", borderRadius: 8, background: `linear-gradient(135deg,${OR},#ff3d00)`, color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer" }}
         >
           Save
         </button>
         <button
           onClick={() => setOpen(false)}
-          className="px-4 py-2 rounded-lg border text-sm hover:bg-muted"
+          style={{ padding: "10px 16px", borderRadius: 8, border: `1px solid ${BORD}`, background: "transparent", color: TM, fontSize: 14, cursor: "pointer" }}
         >
           Cancel
         </button>
@@ -468,7 +466,7 @@ function CreateAccountForm({ onSave }: { onSave: () => void }) {
   );
 }
 
-// ─── Edit account inline ────────────────────────────────────────────────────
+// ─── Edit account form ────────────────────────────────────────────────────────
 
 function EditAccountForm({ profile, onSave, onCancel }: { profile: CustomerProfile; onSave: (p: CustomerProfile) => void; onCancel: () => void }) {
   const [name, setName] = useState(profile.name);
@@ -476,28 +474,11 @@ function EditAccountForm({ profile, onSave, onCancel }: { profile: CustomerProfi
   const [email, setEmail] = useState(profile.email);
 
   return (
-    <div className="space-y-2 pt-1">
-      <input
-        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Full Name"
-      />
-      <input
-        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        placeholder="Phone"
-        type="tel"
-      />
-      <input
-        className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Email"
-        type="email"
-      />
-      <div className="flex gap-2">
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <input style={INP} value={name} onChange={e => setName(e.target.value)} placeholder="Full Name" />
+      <input style={INP} value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone" type="tel" />
+      <input style={INP} value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" />
+      <div style={{ display: "flex", gap: 8 }}>
         <button
           onClick={() => {
             if (!name.trim() || !phone.trim()) return;
@@ -505,17 +486,19 @@ function EditAccountForm({ profile, onSave, onCancel }: { profile: CustomerProfi
             saveCustomer(updated);
             onSave(updated);
           }}
-          className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-1 hover:opacity-90"
+          style={{ flex: 1, padding: "10px 0", borderRadius: 8, background: `linear-gradient(135deg,${PUR},#5b4cf5)`, color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
         >
-          <Check className="h-3.5 w-3.5" /> Save
+          <Check style={{ width: 14, height: 14 }} /> Save
         </button>
-        <button onClick={onCancel} className="px-4 py-2 rounded-lg border text-sm hover:bg-muted">Cancel</button>
+        <button onClick={onCancel} style={{ padding: "10px 16px", borderRadius: 8, border: `1px solid ${BORD}`, background: "transparent", color: TM, fontSize: 14, cursor: "pointer" }}>
+          Cancel
+        </button>
       </div>
     </div>
   );
 }
 
-// ─── Main no-code view ──────────────────────────────────────────────────────
+// ─── No-code view (track page without a code in URL) ─────────────────────────
 
 function NoCodeView() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -526,7 +509,7 @@ function NoCodeView() {
 
   const refresh = useCallback(() => {
     setCustomer(getCustomer());
-    setHistoryKey((k) => k + 1);
+    setHistoryKey(k => k + 1);
   }, []);
 
   const handleTrack = () => {
@@ -535,32 +518,37 @@ function NoCodeView() {
   };
 
   return (
-    <div className="min-h-screen bg-white px-4 py-10 flex flex-col items-center gap-8">
-      <div className="w-full max-w-sm sm:max-w-md">
+    <div style={{ minHeight: "100dvh", background: BG, color: TP, padding: "40px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 32, fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <div style={{ width: "100%", maxWidth: 448 }}>
+
         {/* Header */}
-        <div className="text-center mb-6">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-3">
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: MU, textDecoration: "none", marginBottom: 12 }}>
             ← Back to Menu
           </Link>
-          {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
-          <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase mb-2">Island Tacos</div>
-          <h1 className="text-2xl font-black">Track Your Order</h1>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: 8 }}>Island Tacos</div>
+          <h1 style={{ fontSize: 26, fontWeight: 900, color: TP, margin: 0 }}>Track Your Order</h1>
         </div>
 
         {/* Track by code */}
-        <div className="space-y-2 mb-6">
-          <p className="text-sm text-muted-foreground text-center">Enter your confirmation code:</p>
-          <div className="flex gap-2">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+          <p style={{ fontSize: 14, color: MU, textAlign: "center", margin: 0 }}>Enter your confirmation code:</p>
+          <div style={{ display: "flex", gap: 8 }}>
             <input
               ref={inputRef}
               placeholder="e.g. ITAB1234"
               defaultValue={lastOrder?.code ?? ""}
-              className="flex-1 border rounded-xl px-4 py-2.5 font-mono text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary"
-              onKeyDown={(e) => e.key === "Enter" && handleTrack()}
+              style={{ ...INP, flex: 1, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.05em" }}
+              onKeyDown={e => e.key === "Enter" && handleTrack()}
             />
             <button
               onClick={handleTrack}
-              className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90"
+              style={{
+                padding: "10px 18px", borderRadius: 10, background: `linear-gradient(135deg,${OR},#ff3d00)`,
+                color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(255,107,0,0.4)", flexShrink: 0,
+              }}
             >
               Track
             </button>
@@ -568,59 +556,61 @@ function NoCodeView() {
           {lastOrder && (
             <a
               href={`/track?code=${lastOrder.code}`}
-              className="block text-center text-xs text-primary font-semibold hover:underline"
+              style={{ display: "block", textAlign: "center", fontSize: 13, color: OR, fontWeight: 600, textDecoration: "none" }}
             >
               View last order: {lastOrder.code} →
             </a>
           )}
         </div>
 
-        <hr className="border-muted mb-6" />
+        <div style={{ height: 1, background: BORD, marginBottom: 24 }} />
 
         {/* Account section */}
         {customer ? (
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <UserCircle className="h-5 w-5 text-primary" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 999, background: `rgba(124,106,247,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <UserCircle style={{ width: 20, height: 20, color: PUR }} />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-bold truncate">{customer.name}</p>
-                  <div className="flex gap-1 shrink-0">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <p style={{ fontWeight: 700, color: TP, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{customer.name}</p>
+                  <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
                     <button
-                      onClick={() => setEditing((e) => !e)}
-                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      title="Edit"
+                      onClick={() => setEditing(e => !e)} title="Edit"
+                      style={{ padding: 6, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", color: MU, display: "flex", transition: "all 0.15s" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = TM; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MU; }}
                     >
-                      <Pencil className="h-3.5 w-3.5" />
+                      <Pencil style={{ width: 14, height: 14 }} />
                     </button>
                     <button
-                      onClick={() => { clearCustomer(); setCustomer(null); }}
-                      className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      title="Sign out"
+                      onClick={() => { clearCustomer(); setCustomer(null); }} title="Sign out"
+                      style={{ padding: 6, borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", color: MU, display: "flex", transition: "all 0.15s" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,69,58,0.1)"; e.currentTarget.style.color = "#ff453a"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = MU; }}
                     >
-                      <LogOut className="h-3.5 w-3.5" />
+                      <LogOut style={{ width: 14, height: 14 }} />
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground truncate">{customer.phone}</p>
-                {customer.email && <p className="text-xs text-muted-foreground truncate">{customer.email}</p>}
+                <p style={{ fontSize: 12, color: MU, margin: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{customer.phone}</p>
+                {customer.email && <p style={{ fontSize: 12, color: MU, margin: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{customer.email}</p>}
               </div>
             </div>
 
             {editing && (
               <EditAccountForm
                 profile={customer}
-                onSave={(p) => { setCustomer(p); setEditing(false); setHistoryKey((k) => k + 1); }}
+                onSave={p => { setCustomer(p); setEditing(false); setHistoryKey(k => k + 1); }}
                 onCancel={() => setEditing(false)}
               />
             )}
 
             {!editing && (
               <>
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <History className="h-4 w-4 text-muted-foreground" />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 600, color: TM }}>
+                  <History style={{ width: 16, height: 16, color: MU }} />
                   <span>Order History</span>
                 </div>
                 <CustomerHistorySection key={historyKey} phone={customer.phone} />

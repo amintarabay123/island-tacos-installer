@@ -3,11 +3,20 @@ name: Visual Revamp Design System
 description: Approved design direction for Island Tacos full-system visual revamp — palette, component patterns, mockup locations, and canvas state.
 ---
 
-## Status
-- Store (customer ordering page): ✅ Done
-- Admin dashboard: ✅ Done
-- POS (`pos.tsx`): ✅ Done — full dark revamp applied to every surface in the POS workflow. IL tokens at module level. ITEM_GRADS gradient glowing cards on: ItemCard, cart items, ticket cards (TicketsDrawer), receipt cards (ReceiptsDrawer list), SplitPayment confirmed items. All modals/panels converted: PaymentModal (blue/purple gradient tabs), ModifierModal, ReceiptsDrawer (detail + list), TicketsDrawer, SoldOutDrawer, OpenShiftModal, CloseShiftModal, PayInOutModal, SplitPayment (confirmed + main + cash overlay). Toolbar notification bell also dark-themed. Typecheck passes clean.
-- KDS: 🔲 Not started
+## Status — ALL PAGES COMPLETE
+- Store layout (`layout.tsx`): ✅ Done — IL dark nav, cart drawer, footer
+- Home (`home.tsx`): ✅ Done — already had CARD_COLORS gradient system for menu item cards
+- Checkout (`checkout.tsx`): ✅ Done — IL dark form, pickup/payment selection cards, orange gradient submit
+- Track (`track.tsx`): ✅ Done — IL dark FullScreenState, ProgressSteps (orange gradient steps), NoCodeView
+- Admin dashboard (`admin.tsx`): ✅ Done — gradient stat cards, IL sidebar
+- Admin menu (`admin-menu.tsx`): ✅ Done
+- Admin reports (`admin-reports.tsx`): ✅ Done — already had full IL inline styles
+- Admin settings (`admin-settings.tsx`): ✅ Done — already had BG/CARD/GLOW/INP constants
+- Admin customers (`admin-customers.tsx`): ✅ Done — already had GREEN/RED_C/PUR constants
+- Admin modifiers (`admin-modifiers.tsx`): ✅ Done — already had full BG/CARD/GLOW/INP_STYLE
+- Admin financials (`admin-financials.tsx`): ✅ Done — already had FIN_INPUT + #16172b bg
+- POS (`pos.tsx`): ✅ Done — full dark revamp: ITEM_GRADS cards, all modals/panels/drawers
+- KDS (`kitchen.tsx`): ✅ Done — gradient order cards, status-coloured top bars
 
 ## Approved Design Direction: "Indigo Luxe"
 Inspired by premium SaaS gaming dashboards (deep navy/indigo, pop-out 3D art, vibrant gradient cards).
@@ -16,16 +25,16 @@ Inspired by premium SaaS gaming dashboards (deep navy/indigo, pop-out 3D art, vi
 ```
 bg:       #16172b   — unified surface (sidebar + main share this, no hard edge)
 card:     #1e1f38   — card/panel surface
+hdr:      #0e1020   — nav/header bg
 border:   rgba(255,255,255,0.06)
 tp:       #e8eaf6   — text primary (lavender-white, NOT pure white)
-tm:       #7077a1   — text muted
+tm:       #b0b8d8   — text medium
+mu:       #7077a1   — text muted
 
 orange:   #ff6b00   — brand primary accent
-og:       rgba(255,107,0,0.35)   — orange glow
 purple:   #7c6af7   — secondary accent
-pg:       rgba(124,106,247,0.35)
 green:    #30d158   — success / ready / open
-blue:     #0ea5e9   — info / stats
+red:      #ff453a   — danger / cancel
 ```
 
 ### Key Visual Patterns
@@ -35,6 +44,7 @@ blue:     #0ea5e9   — info / stats
 4. **Pill buttons** — `border-radius: 20px` for primary CTAs, `border-radius: 12-14px` for secondary.
 5. **Glow shadows** — primary buttons always have `box-shadow: 0 4-6px 18-28px <color-glow>`.
 6. **Status indicators** — coloured glowing dots (`box-shadow: 0 0 8-10px <color>`) inside small pill badges.
+7. **Dark CSS override pattern** — shadcn Sheet/Dialog/Select etc. need a `<style>` block with `[data-slot="..."]` selectors to force IL dark colours. Used in layout.tsx DARK_CSS, admin-menu.tsx DIALOG_CSS, etc.
 
 ### Per-Item Gradient Map (POS/KDS/Store)
 - Steak 🥩   → `linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)` / glow `rgba(255,107,0,0.5)`
@@ -71,12 +81,6 @@ All in `artifacts/mockup-sandbox/src/components/mockups/metallic/`:
 - Email: orders@islandtacosbvi.com
 - Tax: $0 (BVI)
 - Currency: USD
-
-## Implementation Order (agreed)
-1. Store (customer ordering page) — start here
-2. Admin dashboard
-3. POS
-4. KDS
 
 ## Notes
 - Old direction-a/b/c mockup files still exist in `mockups/direction-a|b|c/` — safe to delete when cleaning up
