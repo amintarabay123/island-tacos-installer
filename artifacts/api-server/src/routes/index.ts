@@ -22,7 +22,6 @@ import imageProxyRouter from "./image-proxy";
 import syncRouter from "./sync";
 import downloadsRouter from "./downloads";
 import financialsRouter from "./financials";
-import customsRouter from "./customs";
 import whatsappRouter from "./whatsapp";
 
 const router: IRouter = Router();
@@ -164,9 +163,5 @@ router.use(loyverseRouter);
 router.use(reportsRouter);
 router.use(employeesRouter);
 router.use(financialsRouter);
-
-// Customs invoice extraction (admin only — uses OpenAI API key)
-router.use("/customs", (req: Request, res: Response, next: NextFunction) => requireAdminAuth(req, res, next));
-router.use(customsRouter);
 
 export default router;

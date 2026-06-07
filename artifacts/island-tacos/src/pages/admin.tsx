@@ -24,7 +24,7 @@ import {
   ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp,
   Settings, Monitor, LogOut, XCircle, BarChart3, Users,
   CloudUpload, CloudDownload, Menu, X, ChefHat, UtensilsCrossed, Store,
-  History, ScrollText, LayoutDashboard, CalendarIcon,
+  History, LayoutDashboard, CalendarIcon,
 } from "lucide-react";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -550,7 +550,6 @@ export default function Admin() {
         { label: "Reports",         icon: BarChart3,  href: adminRoutes.reports,    iconColor: "text-purple-400" },
         { label: "Financials",      icon: History,    href: adminRoutes.financials,  iconColor: "text-emerald-400" },
         { label: "Customers",       icon: Users,      href: adminRoutes.customers,   iconColor: "text-blue-400" },
-        { label: "Customs (HMC-12)",icon: ScrollText, href: adminRoutes.customs,     iconColor: "text-amber-400" },
       ],
     },
   ];

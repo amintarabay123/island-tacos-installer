@@ -371,6 +371,19 @@ const STEPS = [
   "Review & Generate",
 ];
 
+const FIN_INPUT: React.CSSProperties = {
+  flex:1, padding:"8px 10px", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8,
+  fontSize:13, background:"#16172b", color:"#e8eaf6", outline:"none",
+};
+const FIN_PREFIX: React.CSSProperties = {
+  padding:"8px 10px", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)",
+  borderRight:"none", borderRadius:"8px 0 0 8px", fontSize:12, color:"#7077a1",
+};
+const FIN_LABEL: React.CSSProperties = {
+  display:"block", fontSize:12, fontWeight:600, color:"#7077a1", marginBottom:4,
+};
+const FIN_HINT: React.CSSProperties = { display:"block", fontSize:11, color:"#7077a1", marginBottom:4, opacity:0.7 };
+
 function numInput(
   label: string, value: number,
   onChange: (v: number) => void,
@@ -378,16 +391,16 @@ function numInput(
   prefix = "$",
 ) {
   return (
-    <label className="block">
-      <span className="block text-sm font-medium text-gray-700 mb-1">{label}</span>
-      {hint && <span className="block text-xs text-gray-400 mb-1">{hint}</span>}
-      <div className="flex items-center">
-        {prefix && <span className="px-3 py-2 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg text-sm text-gray-500">{prefix}</span>}
+    <label style={{ display:"block" }}>
+      <span style={FIN_LABEL}>{label}</span>
+      {hint && <span style={FIN_HINT}>{hint}</span>}
+      <div style={{ display:"flex", alignItems:"center" }}>
+        {prefix && <span style={FIN_PREFIX}>{prefix}</span>}
         <input
           type="number" step="0.01" min="0"
           value={value || ""}
           onChange={e => onChange(parseFloat(e.target.value) || 0)}
-          className={`flex-1 px-3 py-2 border border-gray-200 ${prefix ? "rounded-r-lg" : "rounded-lg"} text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500`}
+          style={{ ...FIN_INPUT, borderRadius: prefix ? "0 8px 8px 0" : 8 }}
           placeholder="0.00"
         />
       </div>
@@ -397,13 +410,13 @@ function numInput(
 
 function textInput(label: string, value: string, onChange: (v: string) => void, placeholder?: string, textarea?: boolean) {
   return (
-    <label className="block">
-      <span className="block text-sm font-medium text-gray-700 mb-1">{label}</span>
+    <label style={{ display:"block" }}>
+      <span style={FIN_LABEL}>{label}</span>
       {textarea
         ? <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[80px]" />
+            style={{ ...FIN_INPUT, width:"100%", minHeight:80, borderRadius:8, resize:"vertical" }} />
         : <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            style={{ ...FIN_INPUT, width:"100%", borderRadius:8 }} />
       }
     </label>
   );
@@ -558,26 +571,26 @@ export default function AdminFinancials() {
   // ── If no draft is open, show list ───────────────────────────────────────
   if (!inWizard) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b sticky top-0 z-10">
-          <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-            <button onClick={() => navigate(adminRoutes.dashboard)} className="p-2 hover:bg-gray-100 rounded-lg">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+      <div style={{ minHeight:"100dvh", background:"#16172b", color:"#e8eaf6" }}>
+        <div style={{ background:"#0e1020", borderBottom:"1px solid rgba(255,255,255,0.06)", position:"sticky", top:0, zIndex:10 }}>
+          <div style={{ maxWidth:896, margin:"0 auto", padding:"10px 16px", display:"flex", alignItems:"center", gap:12 }}>
+            <button onClick={() => navigate(adminRoutes.dashboard)}
+              style={{ padding:8, borderRadius:8, background:"transparent", border:"none", cursor:"pointer", color:"#7077a1", display:"flex" }}>
+              <ArrowLeft style={{ width:20, height:20 }} />
             </button>
-            <h1 className="text-lg font-bold text-gray-900 flex-1">Financial Statements</h1>
+            <h1 style={{ fontSize:17, fontWeight:700, color:"#e8eaf6", flex:1, margin:0 }}>Financial Statements</h1>
             <button onClick={newDraft}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors">
-              <FilePlus className="w-4 h-4" /> New Statement
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer" }}>
+              <FilePlus style={{ width:16, height:16 }} /> New Statement
             </button>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* Info banner */}
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 flex gap-3">
-            <FileText className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            <div className="text-sm text-emerald-800">
-              <strong>BVI-Compliant Financial Statements</strong> — This wizard generates a
+        <div style={{ maxWidth:896, margin:"0 auto", padding:"32px 16px" }}>
+          <div style={{ background:"rgba(48,209,88,0.08)", border:"1px solid rgba(48,209,88,0.2)", borderRadius:12, padding:16, marginBottom:24, display:"flex", gap:12 }}>
+            <FileText style={{ width:18, height:18, color:"#30d158", flexShrink:0, marginTop:2 }} />
+            <div style={{ fontSize:13, color:"#b0b8d8", lineHeight:1.6 }}>
+              <strong style={{ color:"#e8eaf6" }}>BVI-Compliant Financial Statements</strong> — This wizard generates a
               Statement of Comprehensive Income and Statement of Financial Position following
               IFRS standards, as required under the BVI Business Companies Act. Revenue is
               automatically pulled from your POS. You provide expenses, assets, and liabilities.
@@ -585,31 +598,33 @@ export default function AdminFinancials() {
             </div>
           </div>
 
-          {drafts.length === 0 ? (
-            <div className="text-center py-20 text-gray-400">
-              <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No financial statements yet</p>
-              <p className="text-sm mt-1">Click "New Statement" to start your first one</p>
+          {loadingDrafts ? (
+            <div style={{ textAlign:"center", paddingTop:64, color:"#7077a1" }}>Loading…</div>
+          ) : drafts.length === 0 ? (
+            <div style={{ textAlign:"center", paddingTop:80, paddingBottom:80, color:"#7077a1" }}>
+              <FileText style={{ width:48, height:48, margin:"0 auto 12px", opacity:0.3 }} />
+              <p style={{ fontWeight:600, color:"#b0b8d8", marginBottom:6 }}>No financial statements yet</p>
+              <p style={{ fontSize:13 }}>Click "New Statement" to start your first one</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              <h2 className="font-semibold text-gray-700 text-sm uppercase tracking-wide mb-2">Saved Drafts</h2>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <h2 style={{ fontWeight:600, color:"#7077a1", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 8px" }}>Saved Drafts</h2>
               {drafts.map(d => (
-                <div key={d.id} className="bg-white border border-gray-100 rounded-xl px-5 py-4 flex items-center gap-4 shadow-sm">
-                  <FileText className="w-6 h-6 text-emerald-500 shrink-0" />
-                  <div className="flex-1 min-w-0">
+                <div key={d.id} style={{ background:"#1e1f38", border:"1px solid rgba(255,255,255,0.06)", borderRadius:14, padding:"16px 20px", display:"flex", alignItems:"center", gap:16 }}>
+                  <FileText style={{ width:22, height:22, color:"#30d158", flexShrink:0 }} />
+                  <div style={{ flex:1, minWidth:0 }}>
                     {/* TODO(store-settings): fallback should be useStoreSettings().storeName */}
-                    <div className="font-semibold text-gray-900">{d.business_name || "Island Tacos"}</div>
-                    <div className="text-sm text-gray-500">{d.period_start} → {d.period_end}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">Last saved {new Date(d.updated_at).toLocaleString()}</div>
+                    <div style={{ fontWeight:600, color:"#e8eaf6", fontSize:15 }}>{d.business_name || "Island Tacos"}</div>
+                    <div style={{ fontSize:13, color:"#7077a1", marginTop:2 }}>{d.period_start} → {d.period_end}</div>
+                    <div style={{ fontSize:11, color:"#7077a1", marginTop:2, opacity:0.7 }}>Last saved {new Date(d.updated_at).toLocaleString()}</div>
                   </div>
                   <button onClick={() => openDraft(d)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors">
+                    style={{ padding:"8px 16px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer" }}>
                     Open
                   </button>
                   <button onClick={() => deleteDraft(d.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                    <Trash2 className="w-4 h-4" />
+                    style={{ padding:8, background:"transparent", border:"none", borderRadius:8, cursor:"pointer", color:"#7077a1", display:"flex" }}>
+                    <Trash2 style={{ width:16, height:16 }} />
                   </button>
                 </div>
               ))}
@@ -621,37 +636,56 @@ export default function AdminFinancials() {
   }
 
   // ── Wizard ────────────────────────────────────────────────────────────────
+  const FC = {
+    card: { background:"#1e1f38", borderRadius:14, border:"1px solid rgba(255,255,255,0.06)", padding:24 } as React.CSSProperties,
+    h2: { fontWeight:700, color:"#e8eaf6", fontSize:17, margin:"0 0 16px" } as React.CSSProperties,
+    desc: { fontSize:13, color:"#7077a1", margin:"0 0 16px", marginTop:-8 } as React.CSSProperties,
+    subLabel: { fontSize:13, fontWeight:500, color:"#b0b8d8", margin:"0 0 8px" } as React.CSSProperties,
+    inlineInput: { flex:1, padding:"7px 10px", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, fontSize:13, background:"#16172b", color:"#e8eaf6", outline:"none" } as React.CSSProperties,
+    inlinePrefix: { padding:"7px 10px", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRight:"none", borderRadius:"8px 0 0 8px", fontSize:11, color:"#7077a1" } as React.CSSProperties,
+    inlinePrefixR: { padding:"7px 10px", border:"1px solid rgba(255,255,255,0.1)", borderLeft:"none", borderRadius:"0 8px 8px 0", fontSize:13, background:"#16172b", color:"#e8eaf6", outline:"none", flex:1, minWidth:0 } as React.CSSProperties,
+    delBtn: { padding:6, background:"transparent", border:"none", cursor:"pointer", color:"#7077a1", display:"flex", borderRadius:6 } as React.CSSProperties,
+    addBtn: { display:"flex", alignItems:"center", gap:4, fontSize:13, fontWeight:500, color:"#7c6af7", background:"transparent", border:"none", cursor:"pointer", padding:"4px 0" } as React.CSSProperties,
+    sumRow: { display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:"1px solid rgba(255,255,255,0.04)", fontSize:13 } as React.CSSProperties,
+    sumCard: { background:"rgba(255,255,255,0.04)", borderRadius:10, padding:14, marginTop:4 } as React.CSSProperties,
+    gridRow: { display:"flex", gap:8, alignItems:"center", marginBottom:8 } as React.CSSProperties,
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
+    <div style={{ minHeight:"100dvh", background:"#16172b", color:"#e8eaf6" }}>
+      <style>{`
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+        .fin-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .fin-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        @media (max-width: 640px) { .fin-grid-2, .fin-grid-3 { grid-template-columns: 1fr; } }
+      `}</style>
+
+      {/* ── Header ── */}
+      <div style={{ background:"#0e1020", borderBottom:"1px solid rgba(255,255,255,0.06)", position:"sticky", top:0, zIndex:10 }}>
+        <div style={{ maxWidth:896, margin:"0 auto", padding:"10px 16px", display:"flex", alignItems:"center", gap:12 }}>
           <button onClick={() => { setInWizard(false); setDraftId(null); setStep(0); loadDrafts(); }}
-            className="p-2 hover:bg-gray-100 rounded-lg">
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            style={{ padding:8, borderRadius:8, background:"transparent", border:"none", cursor:"pointer", color:"#7077a1", display:"flex" }}>
+            <ArrowLeft style={{ width:20, height:20 }} />
           </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold text-gray-900">Financial Statement Wizard</h1>
-            <p className="text-xs text-gray-400">{periodStart} → {periodEnd}
-              {draftId ? ` · Draft #${draftId}` : " · Unsaved"}</p>
+          <div style={{ flex:1, minWidth:0 }}>
+            <h1 style={{ fontSize:15, fontWeight:700, color:"#e8eaf6", margin:0 }}>Financial Statement Wizard</h1>
+            <p style={{ fontSize:11, color:"#7077a1", margin:0 }}>{periodStart} → {periodEnd}{draftId ? ` · Draft #${draftId}` : " · Unsaved"}</p>
           </div>
           <button onClick={() => save()} disabled={saving}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50">
-            {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
+            style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:13, fontWeight:500, color:"#b0b8d8", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, cursor:saving?"not-allowed":"pointer", opacity:saving?0.6:1 }}>
+            {saving ? <RefreshCw style={{ width:14, height:14 }} className="animate-spin" /> : null}
             {saving ? "Saving…" : "Save"}
           </button>
         </div>
 
         {/* Progress steps */}
-        <div className="max-w-4xl mx-auto px-4 pb-3 overflow-x-auto">
-          <div className="flex gap-1 min-w-max">
+        <div style={{ maxWidth:896, margin:"0 auto", padding:"0 16px 10px", overflowX:"auto" }}>
+          <div style={{ display:"flex", gap:4, minWidth:"max-content" }}>
             {STEPS.map((s, i) => (
               <button key={i} onClick={() => { save(); setStep(i); }}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                  i === step ? "bg-emerald-600 text-white" :
-                  i < step  ? "bg-emerald-100 text-emerald-700" :
-                  "bg-gray-100 text-gray-500"
-                }`}>
+                style={{ padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:600, whiteSpace:"nowrap", cursor:"pointer", border:"none",
+                  background: i === step ? "#7c6af7" : i < step ? "rgba(124,106,247,0.2)" : "rgba(255,255,255,0.06)",
+                  color: i === step ? "#fff" : i < step ? "#a89ef7" : "#7077a1" }}>
                 {i + 1}. {s}
               </button>
             ))}
@@ -659,397 +693,387 @@ export default function AdminFinancials() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div style={{ maxWidth:896, margin:"0 auto", padding:"24px 16px" }}>
 
-        {/* ── Step 0: Business Info ─────────────────────────────────────── */}
+        {/* ── Step 0: Business Info ── */}
         {step === 0 && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
-            <h2 className="font-bold text-gray-900 text-lg">Business Information &amp; Period</h2>
-            <div className="grid md:grid-cols-2 gap-4">
+          <div style={FC.card}>
+            <h2 style={FC.h2}>Business Information &amp; Period</h2>
+            <div className="fin-grid-2" style={{ marginBottom:16 }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Financial Period</label>
-                <div className="flex gap-2 items-center">
-                  <input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-                  <span className="text-gray-400 text-sm">to</span>
-                  <input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                <label style={FIN_LABEL}>Financial Period</label>
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} style={{ ...FIN_INPUT, flex:1 }} />
+                  <span style={{ color:"#7077a1", fontSize:13 }}>to</span>
+                  <input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} style={{ ...FIN_INPUT, flex:1 }} />
                 </div>
               </div>
               <div>{textInput("Currency", data.currencyCode, v => update({ currencyCode: v }), "USD")}</div>
             </div>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="fin-grid-2" style={{ marginBottom:16 }}>
               <div>{textInput("Business Name", data.businessName, v => update({ businessName: v }))}</div>
               <div>{textInput("BVI Company Registration No.", data.registrationNumber, v => update({ registrationNumber: v }), "e.g. 1234567")}</div>
             </div>
-            <div>{textInput("Registered Address", data.address, v => update({ address: v }))}</div>
+            <div style={{ marginBottom:16 }}>{textInput("Registered Address", data.address, v => update({ address: v }))}</div>
             <div>{textInput("Director(s)", data.directors, v => update({ directors: v }), "Full name(s) of authorized signatories")}</div>
           </div>
         )}
 
-        {/* ── Step 1: Revenue ───────────────────────────────────────────── */}
+        {/* ── Step 1: Revenue ── */}
         {step === 1 && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
-            <div className="flex items-start justify-between gap-4">
+          <div style={FC.card}>
+            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, marginBottom:16 }}>
               <div>
-                <h2 className="font-bold text-gray-900 text-lg">Revenue</h2>
-                <p className="text-sm text-gray-500 mt-1">Sales data can be pulled automatically from your POS system for the selected period.</p>
+                <h2 style={{ ...FC.h2, margin:0 }}>Revenue</h2>
+                <p style={{ fontSize:13, color:"#7077a1", margin:"4px 0 0" }}>Sales data can be pulled automatically from your POS for the selected period.</p>
               </div>
               <button onClick={fetchPOSData} disabled={fetchingPOS}
-                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg shrink-0 transition-colors">
-                <RefreshCw className={`w-4 h-4 ${fetchingPOS ? "animate-spin" : ""}`} />
+                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:fetchingPOS?"not-allowed":"pointer", opacity:fetchingPOS?0.6:1, flexShrink:0 }}>
+                <RefreshCw style={{ width:14, height:14 }} className={fetchingPOS?"animate-spin":""} />
                 {fetchingPOS ? "Loading…" : "Import from POS"}
               </button>
             </div>
             {data.posDataFetched && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 text-sm text-emerald-700 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" /> POS data imported for {periodStart} → {periodEnd}. You can adjust values below if needed.
+              <div style={{ background:"rgba(48,209,88,0.08)", border:"1px solid rgba(48,209,88,0.2)", borderRadius:8, padding:"8px 14px", fontSize:13, color:"#30d158", display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
+                <CheckCircle2 style={{ width:14, height:14, flexShrink:0 }} /> POS data imported for {periodStart} → {periodEnd}. Adjust below if needed.
               </div>
             )}
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="fin-grid-2" style={{ marginBottom:16 }}>
               {numInput("Gross Sales", data.grossSales, v => update({ grossSales: v }))}
               {numInput("Total Refunds / Returns", data.refunds, v => update({ refunds: v }))}
             </div>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="fin-grid-2" style={{ marginBottom:16 }}>
               {numInput("Other Income", data.otherIncome, v => update({ otherIncome: v }), "Interest, catering events, etc.")}
               <div>{textInput("Other Income Description", data.otherIncomeDesc, v => update({ otherIncomeDesc: v }), "e.g. Catering revenue")}</div>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 flex justify-between items-center">
-              <span className="font-semibold text-gray-700">Net Revenue</span>
-              <span className="text-xl font-bold text-emerald-700">${fmtUSD(totals.netRevenue)}</span>
+            <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontWeight:600, color:"#b0b8d8" }}>Net Revenue</span>
+              <span style={{ fontSize:18, fontWeight:800, color:"#30d158" }}>${fmtUSD(totals.netRevenue)}</span>
             </div>
           </div>
         )}
 
-        {/* ── Step 2: COGS ─────────────────────────────────────────────── */}
+        {/* ── Step 2: COGS ── */}
         {step === 2 && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
-            <h2 className="font-bold text-gray-900 text-lg">Cost of Goods Sold</h2>
-            <p className="text-sm text-gray-500">Enter food, beverage, and supply costs for this period.</p>
-            <div className="grid md:grid-cols-3 gap-4">
+          <div style={FC.card}>
+            <h2 style={FC.h2}>Cost of Goods Sold</h2>
+            <p style={FC.desc}>Enter food, beverage, and supply costs for this period.</p>
+            <div className="fin-grid-3" style={{ marginBottom:16 }}>
               {numInput("Beginning Inventory", data.beginningInventory, v => update({ beginningInventory: v }), "Value of stock at period start")}
               {numInput("Purchases During Period", data.purchases, v => update({ purchases: v }), "Total food & supply purchases")}
               {numInput("Ending Inventory", data.endingInventory, v => update({ endingInventory: v }), "Value of stock at period end")}
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 flex justify-between items-center">
-              <span className="font-semibold text-gray-700">Total COGS</span>
-              <span className="text-xl font-bold text-gray-900">${fmtUSD(totals.cogs)}</span>
+            <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ fontWeight:600, color:"#b0b8d8" }}>Total COGS</span>
+              <span style={{ fontSize:16, fontWeight:700, color:"#e8eaf6" }}>${fmtUSD(totals.cogs)}</span>
             </div>
-            <div className="bg-emerald-50 rounded-lg p-4 flex justify-between items-center">
-              <span className="font-semibold text-gray-700">Gross Profit</span>
-              <span className={`text-xl font-bold ${totals.grossProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
-                ${fmtUSD(totals.grossProfit)}
-              </span>
+            <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", background: totals.grossProfit >= 0 ? "rgba(48,209,88,0.08)" : "rgba(255,69,58,0.08)" }}>
+              <span style={{ fontWeight:600, color:"#b0b8d8" }}>Gross Profit</span>
+              <span style={{ fontSize:18, fontWeight:800, color: totals.grossProfit >= 0 ? "#30d158" : "#ff453a" }}>${fmtUSD(totals.grossProfit)}</span>
             </div>
           </div>
         )}
 
-        {/* ── Step 3: Expenses ─────────────────────────────────────────── */}
+        {/* ── Step 3: Expenses ── */}
         {step === 3 && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
-            <h2 className="font-bold text-gray-900 text-lg">Operating Expenses</h2>
-            <p className="text-sm text-gray-500">Enter each expense category for the period. Add custom rows as needed.</p>
-            <div className="space-y-2">
+          <div style={FC.card}>
+            <h2 style={FC.h2}>Operating Expenses</h2>
+            <p style={FC.desc}>Enter each expense category for the period. Add custom rows as needed.</p>
+            <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
               {data.expenses.map((e) => (
-                <div key={e.id} className="flex gap-2 items-center">
+                <div key={e.id} style={FC.gridRow}>
                   <input type="text" value={e.label}
                     onChange={ev => update({ expenses: data.expenses.map(x => x.id === e.id ? { ...x, label: ev.target.value } : x) })}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-                  <div className="flex items-center w-36">
-                    <span className="px-2 py-2 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg text-xs text-gray-500">$</span>
-                    <input type="number" step="0.01" min="0"
-                      value={e.amount || ""}
-                      onChange={ev => update({ expenses: data.expenses.map(x => x.id === e.id ? { ...x, amount: parseFloat(ev.target.value) || 0 } : x) })}
-                      className="flex-1 px-2 py-2 border border-gray-200 rounded-r-lg text-sm w-24" placeholder="0.00" />
+                    style={FC.inlineInput} />
+                  <div style={{ display:"flex", alignItems:"center", width:148 }}>
+                    <span style={FC.inlinePrefix}>$</span>
+                    <input type="number" step="0.01" min="0" value={e.amount || ""}
+                      onChange={ev => update({ expenses: data.expenses.map(x => x.id === e.id ? { ...x, amount: parseFloat(ev.target.value)||0 } : x) })}
+                      style={FC.inlinePrefixR} placeholder="0.00" />
                   </div>
-                  <button onClick={() => update({ expenses: data.expenses.filter(x => x.id !== e.id) })}
-                    className="p-2 text-gray-300 hover:text-red-400 rounded-lg transition-colors">
-                    <Trash2 className="w-4 h-4" />
+                  <button onClick={() => update({ expenses: data.expenses.filter(x => x.id !== e.id) })} style={FC.delBtn}>
+                    <Trash2 style={{ width:15, height:15 }} />
                   </button>
                 </div>
               ))}
             </div>
-            <button onClick={() => update({ expenses: [...data.expenses, { id: uid(), label: "New Expense", amount: 0 }] })}
-              className="flex items-center gap-1.5 text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-              <Plus className="w-4 h-4" /> Add expense line
+            <button onClick={() => update({ expenses: [...data.expenses, { id: uid(), label: "New Expense", amount: 0 }] })} style={FC.addBtn}>
+              <Plus style={{ width:15, height:15 }} /> Add expense line
             </button>
-            <div className="bg-gray-50 rounded-lg p-4 flex justify-between items-center">
-              <span className="font-semibold text-gray-700">Total Expenses</span>
-              <span className="text-xl font-bold text-gray-900">${fmtUSD(totals.totalExpenses)}</span>
+            <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:16, marginBottom:8 }}>
+              <span style={{ fontWeight:600, color:"#b0b8d8" }}>Total Expenses</span>
+              <span style={{ fontSize:16, fontWeight:700, color:"#e8eaf6" }}>${fmtUSD(totals.totalExpenses)}</span>
             </div>
-            <div className={`rounded-lg p-4 flex justify-between items-center ${totals.netProfit >= 0 ? "bg-emerald-50" : "bg-red-50"}`}>
-              <span className="font-semibold text-gray-700">{totals.netProfit >= 0 ? "Net Profit" : "Net Loss"}</span>
-              <span className={`text-xl font-bold ${totals.netProfit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
-                ${fmtUSD(Math.abs(totals.netProfit))}
-              </span>
+            <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", background: totals.netProfit >= 0 ? "rgba(48,209,88,0.08)" : "rgba(255,69,58,0.08)" }}>
+              <span style={{ fontWeight:600, color:"#b0b8d8" }}>{totals.netProfit >= 0 ? "Net Profit" : "Net Loss"}</span>
+              <span style={{ fontSize:18, fontWeight:800, color: totals.netProfit >= 0 ? "#30d158" : "#ff453a" }}>${fmtUSD(Math.abs(totals.netProfit))}</span>
             </div>
           </div>
         )}
 
-        {/* ── Step 4: Assets ───────────────────────────────────────────── */}
+        {/* ── Step 4: Assets ── */}
         {step === 4 && (
-          <div className="space-y-4">
+          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
             {/* Current Assets */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
-              <h2 className="font-bold text-gray-900 text-lg">Current Assets</h2>
-              <div className="grid md:grid-cols-2 gap-4">
+            <div style={FC.card}>
+              <h2 style={FC.h2}>Current Assets</h2>
+              <div className="fin-grid-2" style={{ marginBottom:16 }}>
                 {numInput("Cash on Hand", data.cashOnHand, v => update({ cashOnHand: v }))}
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Bank Accounts</p>
+              <div style={{ marginBottom:16 }}>
+                <p style={FC.subLabel}>Bank Accounts</p>
                 {data.bankAccounts.map(b => (
-                  <div key={b.id} className="flex gap-2 items-center mb-2">
+                  <div key={b.id} style={FC.gridRow}>
                     <input type="text" value={b.bank} placeholder="Bank name / account"
                       onChange={e => update({ bankAccounts: data.bankAccounts.map(x => x.id === b.id ? { ...x, bank: e.target.value } : x) })}
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-                    <div className="flex items-center w-36">
-                      <span className="px-2 py-2 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg text-xs text-gray-500">$</span>
+                      style={FC.inlineInput} />
+                    <div style={{ display:"flex", alignItems:"center", width:148 }}>
+                      <span style={FC.inlinePrefix}>$</span>
                       <input type="number" step="0.01" min="0" value={b.amount || ""}
-                        onChange={e => update({ bankAccounts: data.bankAccounts.map(x => x.id === b.id ? { ...x, amount: parseFloat(e.target.value) || 0 } : x) })}
-                        className="flex-1 px-2 py-2 border border-gray-200 rounded-r-lg text-sm" placeholder="0.00" />
+                        onChange={e => update({ bankAccounts: data.bankAccounts.map(x => x.id === b.id ? { ...x, amount: parseFloat(e.target.value)||0 } : x) })}
+                        style={FC.inlinePrefixR} placeholder="0.00" />
                     </div>
-                    <button onClick={() => update({ bankAccounts: data.bankAccounts.filter(x => x.id !== b.id) })}
-                      className="p-2 text-gray-300 hover:text-red-400 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => update({ bankAccounts: data.bankAccounts.filter(x => x.id !== b.id) })} style={FC.delBtn}>
+                      <Trash2 style={{ width:15, height:15 }} />
+                    </button>
                   </div>
                 ))}
-                <button onClick={() => update({ bankAccounts: [...data.bankAccounts, { id: uid(), bank: "", amount: 0 }] })}
-                  className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-                  <Plus className="w-4 h-4" /> Add account
+                <button onClick={() => update({ bankAccounts: [...data.bankAccounts, { id: uid(), bank: "", amount: 0 }] })} style={FC.addBtn}>
+                  <Plus style={{ width:15, height:15 }} /> Add account
                 </button>
               </div>
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="fin-grid-3" style={{ marginBottom:16 }}>
                 {numInput("Accounts Receivable", data.accountsReceivable, v => update({ accountsReceivable: v }))}
                 {numInput("Prepaid Expenses", data.prepaidExpenses, v => update({ prepaidExpenses: v }))}
                 {numInput("Other Current Assets", data.otherCurrentAssets, v => update({ otherCurrentAssets: v }))}
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 flex justify-between text-sm">
-                <span className="font-semibold text-gray-700">Total Current Assets</span>
-                <span className="font-bold text-gray-900">${fmtUSD(totals.totalCurrentAssets)}</span>
+              <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontWeight:600, color:"#b0b8d8", fontSize:13 }}>Total Current Assets</span>
+                <span style={{ fontWeight:700, color:"#e8eaf6" }}>${fmtUSD(totals.totalCurrentAssets)}</span>
               </div>
             </div>
 
             {/* Fixed Assets */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
-              <h2 className="font-bold text-gray-900 text-lg">Fixed (Non-Current) Assets</h2>
-              <div className="space-y-3">
+            <div style={FC.card}>
+              <h2 style={FC.h2}>Fixed (Non-Current) Assets</h2>
+              <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
                 {data.fixedAssets.map(a => (
-                  <div key={a.id} className="grid grid-cols-[1fr_130px_140px_36px] gap-2 items-center">
+                  <div key={a.id} style={{ display:"grid", gridTemplateColumns:"1fr 130px 140px 36px", gap:8, alignItems:"center" }}>
                     <input type="text" value={a.description} placeholder="Asset description"
                       onChange={e => update({ fixedAssets: data.fixedAssets.map(x => x.id === a.id ? { ...x, description: e.target.value } : x) })}
-                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-                    <div className="flex items-center">
-                      <span className="px-2 py-2 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg text-xs text-gray-500">Cost $</span>
+                      style={{ ...FC.inlineInput, flex:"unset" }} />
+                    <div style={{ display:"flex", alignItems:"center" }}>
+                      <span style={{ ...FC.inlinePrefix, fontSize:10, padding:"7px 6px" }}>Cost $</span>
                       <input type="number" step="0.01" min="0" value={a.cost || ""}
                         onChange={e => update({ fixedAssets: data.fixedAssets.map(x => x.id === a.id ? { ...x, cost: parseFloat(e.target.value)||0 } : x) })}
-                        className="flex-1 px-2 py-2 border border-gray-200 rounded-r-lg text-xs w-16" placeholder="0" />
+                        style={{ ...FC.inlinePrefixR, padding:"7px 6px", fontSize:12 }} placeholder="0" />
                     </div>
-                    <div className="flex items-center">
-                      <span className="px-2 py-2 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg text-xs text-gray-500">Dep $</span>
+                    <div style={{ display:"flex", alignItems:"center" }}>
+                      <span style={{ ...FC.inlinePrefix, fontSize:10, padding:"7px 6px" }}>Dep $</span>
                       <input type="number" step="0.01" min="0" value={a.accDepreciation || ""}
                         onChange={e => update({ fixedAssets: data.fixedAssets.map(x => x.id === a.id ? { ...x, accDepreciation: parseFloat(e.target.value)||0 } : x) })}
-                        className="flex-1 px-2 py-2 border border-gray-200 rounded-r-lg text-xs w-16" placeholder="0" />
+                        style={{ ...FC.inlinePrefixR, padding:"7px 6px", fontSize:12 }} placeholder="0" />
                     </div>
-                    <button onClick={() => update({ fixedAssets: data.fixedAssets.filter(x => x.id !== a.id) })}
-                      className="p-2 text-gray-300 hover:text-red-400 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => update({ fixedAssets: data.fixedAssets.filter(x => x.id !== a.id) })} style={FC.delBtn}>
+                      <Trash2 style={{ width:15, height:15 }} />
+                    </button>
                   </div>
                 ))}
               </div>
-              <button onClick={() => update({ fixedAssets: [...data.fixedAssets, { id: uid(), description: "", cost: 0, accDepreciation: 0 }] })}
-                className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-                <Plus className="w-4 h-4" /> Add fixed asset
+              <button onClick={() => update({ fixedAssets: [...data.fixedAssets, { id: uid(), description: "", cost: 0, accDepreciation: 0 }] })} style={FC.addBtn}>
+                <Plus style={{ width:15, height:15 }} /> Add fixed asset
               </button>
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="fin-grid-2" style={{ margin:"16px 0" }}>
                 {numInput("Other Non-Current Assets", data.otherNonCurrentAssets, v => update({ otherNonCurrentAssets: v }))}
               </div>
-              <div className="bg-emerald-50 rounded-lg p-3 flex justify-between text-sm">
-                <span className="font-semibold text-gray-700">Total Assets</span>
-                <span className="font-bold text-emerald-700 text-lg">${fmtUSD(totals.totalAssets)}</span>
+              <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(48,209,88,0.08)" }}>
+                <span style={{ fontWeight:600, color:"#b0b8d8", fontSize:13 }}>Total Assets</span>
+                <span style={{ fontSize:18, fontWeight:800, color:"#30d158" }}>${fmtUSD(totals.totalAssets)}</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── Step 5: Liabilities ───────────────────────────────────────── */}
+        {/* ── Step 5: Liabilities ── */}
         {step === 5 && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
-              <h2 className="font-bold text-gray-900 text-lg">Current Liabilities</h2>
-              <div className="grid md:grid-cols-2 gap-4">
+          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            <div style={FC.card}>
+              <h2 style={FC.h2}>Current Liabilities</h2>
+              <div className="fin-grid-2" style={{ marginBottom:16 }}>
                 {numInput("Accounts Payable", data.accountsPayable, v => update({ accountsPayable: v }), "Amounts owed to suppliers")}
                 {numInput("Accrued Expenses", data.accruedExpenses, v => update({ accruedExpenses: v }), "Wages, rent accrued but unpaid")}
                 {numInput("Taxes Payable", data.taxesPayable, v => update({ taxesPayable: v }), "Payroll tax, BVI business tax")}
                 {numInput("Current Portion of Long-Term Debt", data.currentPortionLoans, v => update({ currentPortionLoans: v }))}
                 {numInput("Other Current Liabilities", data.otherCurrentLiabilities, v => update({ otherCurrentLiabilities: v }))}
               </div>
-              <div className="bg-gray-50 rounded-lg p-3 flex justify-between text-sm">
-                <span className="font-semibold text-gray-700">Total Current Liabilities</span>
-                <span className="font-bold text-gray-900">${fmtUSD(totals.totalCurrentLiab)}</span>
+              <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontWeight:600, color:"#b0b8d8", fontSize:13 }}>Total Current Liabilities</span>
+                <span style={{ fontWeight:700, color:"#e8eaf6" }}>${fmtUSD(totals.totalCurrentLiab)}</span>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
-              <h2 className="font-bold text-gray-900 text-lg">Long-Term Liabilities</h2>
-              <div className="space-y-2">
+            <div style={FC.card}>
+              <h2 style={FC.h2}>Long-Term Liabilities</h2>
+              <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:16 }}>
                 {data.longTermLoans.map(l => (
-                  <div key={l.id} className="flex gap-2 items-center">
+                  <div key={l.id} style={FC.gridRow}>
                     <input type="text" value={l.description} placeholder="Loan description"
                       onChange={e => update({ longTermLoans: data.longTermLoans.map(x => x.id === l.id ? { ...x, description: e.target.value } : x) })}
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-                    <div className="flex items-center w-36">
-                      <span className="px-2 py-2 bg-gray-100 border border-r-0 border-gray-200 rounded-l-lg text-xs text-gray-500">$</span>
+                      style={FC.inlineInput} />
+                    <div style={{ display:"flex", alignItems:"center", width:148 }}>
+                      <span style={FC.inlinePrefix}>$</span>
                       <input type="number" step="0.01" min="0" value={l.amount || ""}
                         onChange={e => update({ longTermLoans: data.longTermLoans.map(x => x.id === l.id ? { ...x, amount: parseFloat(e.target.value)||0 } : x) })}
-                        className="flex-1 px-2 py-2 border border-gray-200 rounded-r-lg text-sm" placeholder="0.00" />
+                        style={FC.inlinePrefixR} placeholder="0.00" />
                     </div>
-                    <button onClick={() => update({ longTermLoans: data.longTermLoans.filter(x => x.id !== l.id) })}
-                      className="p-2 text-gray-300 hover:text-red-400 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => update({ longTermLoans: data.longTermLoans.filter(x => x.id !== l.id) })} style={FC.delBtn}>
+                      <Trash2 style={{ width:15, height:15 }} />
+                    </button>
                   </div>
                 ))}
               </div>
-              <button onClick={() => update({ longTermLoans: [...data.longTermLoans, { id: uid(), description: "Loan", amount: 0 }] })}
-                className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-                <Plus className="w-4 h-4" /> Add loan
+              <button onClick={() => update({ longTermLoans: [...data.longTermLoans, { id: uid(), description: "Loan", amount: 0 }] })} style={FC.addBtn}>
+                <Plus style={{ width:15, height:15 }} /> Add loan
               </button>
-              {numInput("Other Long-Term Liabilities", data.otherLongTermLiabilities, v => update({ otherLongTermLiabilities: v }))}
-              <div className="bg-red-50 rounded-lg p-3 flex justify-between text-sm">
-                <span className="font-semibold text-gray-700">Total Liabilities</span>
-                <span className="font-bold text-red-700 text-lg">${fmtUSD(totals.totalLiabilities)}</span>
+              <div style={{ margin:"16px 0" }}>{numInput("Other Long-Term Liabilities", data.otherLongTermLiabilities, v => update({ otherLongTermLiabilities: v }))}</div>
+              <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(255,69,58,0.08)" }}>
+                <span style={{ fontWeight:600, color:"#b0b8d8", fontSize:13 }}>Total Liabilities</span>
+                <span style={{ fontSize:18, fontWeight:800, color:"#ff453a" }}>${fmtUSD(totals.totalLiabilities)}</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── Step 6: Equity ─────────────────────────────────────────────── */}
+        {/* ── Step 6: Equity ── */}
         {step === 6 && (
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
-            <h2 className="font-bold text-gray-900 text-lg">Owner's Equity</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {numInput("Contributed / Paid-In Capital", data.paidInCapital, v => update({ paidInCapital: v }), "Owner's initial investment in the business")}
+          <div style={FC.card}>
+            <h2 style={FC.h2}>Owner's Equity</h2>
+            <div className="fin-grid-2" style={{ marginBottom:16 }}>
+              {numInput("Contributed / Paid-In Capital", data.paidInCapital, v => update({ paidInCapital: v }), "Owner's initial investment")}
               {numInput("Retained Earnings (Beginning of Period)", data.retainedEarningsBeginning, v => update({ retainedEarningsBeginning: v }))}
               {numInput("Owner's Drawings During Period", data.ownerDrawings, v => update({ ownerDrawings: v }), "Cash withdrawn by the owner")}
               {numInput("Other Equity Changes", data.otherEquityChanges, v => update({ otherEquityChanges: v }), "Additional capital contributions, etc.")}
             </div>
-            <div>{textInput("Description for Other Equity Changes", data.otherEquityChangesDesc, v => update({ otherEquityChangesDesc: v }))}</div>
+            <div style={{ marginBottom:16 }}>{textInput("Description for Other Equity Changes", data.otherEquityChangesDesc, v => update({ otherEquityChangesDesc: v }))}</div>
 
-            <div className="bg-gray-50 rounded-lg p-4 space-y-1.5 text-sm">
-              <div className="flex justify-between"><span>Retained Earnings (Beginning)</span><span>${fmtUSD(n(data.retainedEarningsBeginning))}</span></div>
-              <div className="flex justify-between"><span>Add: Net {totals.netProfit >= 0 ? "Profit" : "Loss"}</span><span>${fmtUSD(totals.netProfit)}</span></div>
-              {n(data.ownerDrawings) > 0 && <div className="flex justify-between text-red-600"><span>Less: Owner's Drawings</span><span>−${fmtUSD(n(data.ownerDrawings))}</span></div>}
-              <div className="border-t border-gray-200 pt-1.5 flex justify-between font-semibold"><span>Retained Earnings (End)</span><span>${fmtUSD(totals.retainedEarningsEnd)}</span></div>
-              <div className="flex justify-between"><span>Add: Paid-In Capital</span><span>${fmtUSD(n(data.paidInCapital))}</span></div>
-              <div className="border-t border-gray-200 pt-1.5 flex justify-between font-bold text-emerald-700 text-base"><span>Total Equity</span><span>${fmtUSD(totals.totalEquity)}</span></div>
+            <div style={{ ...FC.sumCard, marginBottom:16 }}>
+              {[
+                ["Retained Earnings (Beginning)",                     n(data.retainedEarningsBeginning), false, false],
+                [`Add: Net ${totals.netProfit >= 0 ? "Profit":"Loss"}`, totals.netProfit,                  false, false],
+                ...(n(data.ownerDrawings) > 0 ? [["Less: Owner's Drawings", -n(data.ownerDrawings), false, true] as [string,number,boolean,boolean]] : []),
+                ["Retained Earnings (End)",                           totals.retainedEarningsEnd,          true,  false],
+                ["Add: Paid-In Capital",                              n(data.paidInCapital),               false, false],
+                ["Total Equity",                                      totals.totalEquity,                  true,  false],
+              ].map(([label, val, bold, red]) => (
+                <div key={label as string} style={{ ...FC.sumRow, fontWeight: bold ? 700 : 400, borderTop: bold ? "1px solid rgba(255,255,255,0.08)" : "none", marginTop: bold ? 6 : 0, paddingTop: bold ? 10 : 6 }}>
+                  <span style={{ color: red ? "#ff453a" : "#b0b8d8" }}>{label as string}</span>
+                  <span style={{ color: red ? "#ff453a" : bold ? "#30d158" : "#e8eaf6" }}>${fmtUSD(val as number)}</span>
+                </div>
+              ))}
             </div>
 
-            <div className="mt-4">
-              {textInput("Notes to Financial Statements (optional)", data.notes, v => update({ notes: v }),
-                "Enter any explanatory notes, accounting policies, or disclosures you want included in the financial statements…", true)}
-            </div>
+            {textInput("Notes to Financial Statements (optional)", data.notes, v => update({ notes: v }),
+              "Explanatory notes, accounting policies, or disclosures…", true)}
           </div>
         )}
 
-        {/* ── Step 7: Review & Generate ────────────────────────────────── */}
+        {/* ── Step 7: Review & Generate ── */}
         {step === 7 && (
-          <div className="space-y-4">
-            {/* Balance check */}
+          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
             {Math.abs(totals.balanceDiff) > 0.05 ? (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                <div className="text-sm text-amber-800">
+              <div style={{ background:"rgba(251,191,36,0.08)", border:"1px solid rgba(251,191,36,0.25)", borderRadius:12, padding:16, display:"flex", gap:12 }}>
+                <AlertTriangle style={{ width:18, height:18, color:"#fbbf24", flexShrink:0, marginTop:2 }} />
+                <div style={{ fontSize:13, color:"#fcd34d", lineHeight:1.6 }}>
                   <strong>Balance sheet gap: ${fmtUSD(Math.abs(totals.balanceDiff))}</strong><br />
                   Total Assets (${fmtUSD(totals.totalAssets)}) and Total Liabilities + Equity (${fmtUSD(totals.totalLiabAndEquity)}) do not match.
                   An accountant can identify and correct the discrepancy before signing off.
                 </div>
               </div>
             ) : (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex gap-3">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                <div className="text-sm text-emerald-800">
+              <div style={{ background:"rgba(48,209,88,0.08)", border:"1px solid rgba(48,209,88,0.2)", borderRadius:12, padding:16, display:"flex", gap:12 }}>
+                <CheckCircle2 style={{ width:18, height:18, color:"#30d158", flexShrink:0, marginTop:2 }} />
+                <div style={{ fontSize:13, color:"#30d158" }}>
                   <strong>Balance sheet balances</strong> — Assets = Liabilities + Equity = ${fmtUSD(totals.totalAssets)}
                 </div>
               </div>
             )}
 
-            {/* Two-column summary */}
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* P&L */}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <h3 className="font-bold text-gray-800 mb-3 text-sm uppercase tracking-wide">Profit & Loss Summary</h3>
+            <div className="fin-grid-2">
+              <div style={FC.card}>
+                <h3 style={{ fontWeight:700, color:"#7077a1", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 12px" }}>Profit &amp; Loss Summary</h3>
                 {[
-                  ["Net Revenue",     totals.netRevenue,     false],
-                  ["Cost of Goods",   totals.cogs,           false],
-                  ["Gross Profit",    totals.grossProfit,    true ],
-                  ["Total Expenses",  totals.totalExpenses,  false],
+                  ["Net Revenue",    totals.netRevenue,    false],
+                  ["Cost of Goods",  totals.cogs,          false],
+                  ["Gross Profit",   totals.grossProfit,   true ],
+                  ["Total Expenses", totals.totalExpenses, false],
                   [totals.netProfit >= 0 ? "Net Profit" : "Net Loss", totals.netProfit, true],
                 ].map(([label, val, bold]) => (
-                  <div key={label as string} className={`flex justify-between py-1.5 border-b border-gray-50 text-sm ${bold ? "font-bold border-t border-gray-200 mt-1 pt-2" : ""}`}>
-                    <span className="text-gray-600">{label as string}</span>
-                    <span className={bold ? (totals.netProfit >= 0 ? "text-emerald-700" : "text-red-600") : "text-gray-900"}>${fmtUSD(val as number)}</span>
+                  <div key={label as string} style={{ ...FC.sumRow, fontWeight: bold ? 700 : 400, borderTop: bold ? "1px solid rgba(255,255,255,0.08)" : "none", marginTop: bold ? 4 : 0 }}>
+                    <span style={{ color:"#b0b8d8" }}>{label as string}</span>
+                    <span style={{ color: bold ? (totals.netProfit >= 0 ? "#30d158" : "#ff453a") : "#e8eaf6" }}>${fmtUSD(val as number)}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Balance Sheet */}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <h3 className="font-bold text-gray-800 mb-3 text-sm uppercase tracking-wide">Balance Sheet Summary</h3>
+              <div style={FC.card}>
+                <h3 style={{ fontWeight:700, color:"#7077a1", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 12px" }}>Balance Sheet Summary</h3>
                 {[
-                  ["Current Assets",   totals.totalCurrentAssets, false],
-                  ["Fixed Assets (net)", totals.totalFixedNet,    false],
-                  ["Total Assets",     totals.totalAssets,        true ],
-                  ["Total Liabilities",totals.totalLiabilities,   false],
-                  ["Total Equity",     totals.totalEquity,        false],
-                  ["Liab. + Equity",   totals.totalLiabAndEquity, true ],
+                  ["Current Assets",     totals.totalCurrentAssets, false],
+                  ["Fixed Assets (net)", totals.totalFixedNet,       false],
+                  ["Total Assets",       totals.totalAssets,         true ],
+                  ["Total Liabilities",  totals.totalLiabilities,    false],
+                  ["Total Equity",       totals.totalEquity,         false],
+                  ["Liab. + Equity",     totals.totalLiabAndEquity,  true ],
                 ].map(([label, val, bold]) => (
-                  <div key={label as string} className={`flex justify-between py-1.5 border-b border-gray-50 text-sm ${bold ? "font-bold border-t border-gray-200 mt-1 pt-2" : ""}`}>
-                    <span className="text-gray-600">{label as string}</span>
-                    <span className="text-gray-900">${fmtUSD(val as number)}</span>
+                  <div key={label as string} style={{ ...FC.sumRow, fontWeight: bold ? 700 : 400, borderTop: bold ? "1px solid rgba(255,255,255,0.08)" : "none", marginTop: bold ? 4 : 0 }}>
+                    <span style={{ color:"#b0b8d8" }}>{label as string}</span>
+                    <span style={{ color: bold ? "#e8eaf6" : "#b0b8d8" }}>${fmtUSD(val as number)}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Generate buttons */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-              <h3 className="font-bold text-gray-900 mb-2">Generate Financial Statements</h3>
-              <p className="text-sm text-gray-500 mb-4">
+            <div style={FC.card}>
+              <h3 style={{ fontWeight:700, color:"#e8eaf6", fontSize:15, margin:"0 0 8px" }}>Generate Financial Statements</h3>
+              <p style={{ fontSize:13, color:"#7077a1", margin:"0 0 20px", lineHeight:1.6 }}>
                 Opens a formatted financial statement document — Statement of Comprehensive Income,
                 Statement of Financial Position, and accountant certification page — ready to share
                 with your CPA for review and sign-off.
               </p>
-              <div className="flex flex-wrap gap-3">
+              <div style={{ display:"flex", flexWrap:"wrap", gap:12 }}>
                 <button onClick={handleGenerate} disabled={generating}
-                  className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors text-sm">
-                  <FileText className="w-5 h-5" />
+                  style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 24px", background:"#30d158", color:"#0a1a10", border:"none", borderRadius:12, fontSize:14, fontWeight:700, cursor:generating?"not-allowed":"pointer", opacity:generating?0.5:1 }}>
+                  <FileText style={{ width:18, height:18 }} />
                   Open Statement (Review / Save PDF)
                 </button>
                 <button onClick={handlePrint} disabled={generating}
-                  className="flex items-center gap-2 px-6 py-3 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors text-sm">
-                  <Printer className="w-5 h-5" />
+                  style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 24px", background:"rgba(255,255,255,0.08)", color:"#e8eaf6", border:"1px solid rgba(255,255,255,0.1)", borderRadius:12, fontSize:14, fontWeight:600, cursor:generating?"not-allowed":"pointer", opacity:generating?0.5:1 }}>
+                  <Printer style={{ width:18, height:18 }} />
                   Print Statement
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-3">
-                Tip: In the statement window, use your browser's "Save as PDF" or "Print → Save as PDF"
-                to create a file you can email to your accountant.
+              <p style={{ fontSize:11, color:"#7077a1", marginTop:12 }}>
+                Tip: In the statement window, use "Save as PDF" or "Print → Save as PDF" to email to your accountant.
               </p>
             </div>
           </div>
         )}
 
-        {/* ── Step navigation ───────────────────────────────────────────── */}
-        <div className="flex justify-between mt-6">
+        {/* ── Navigation ── */}
+        <div style={{ display:"flex", justifyContent:"space-between", marginTop:24 }}>
           <button onClick={goPrev} disabled={step === 0}
-            className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-30 text-gray-700 font-medium rounded-xl transition-colors text-sm">
-            <ChevronLeft className="w-4 h-4" /> Previous
+            style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", border:"1px solid rgba(255,255,255,0.08)", background:"rgba(255,255,255,0.04)", color:"#b0b8d8", borderRadius:12, fontSize:13, fontWeight:500, cursor:step===0?"not-allowed":"pointer", opacity:step===0?0.3:1 }}>
+            <ChevronLeft style={{ width:16, height:16 }} /> Previous
           </button>
           {step < STEPS.length - 1 ? (
             <button onClick={goNext}
-              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors text-sm">
-              Next <ChevronRight className="w-4 h-4" />
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer" }}>
+              Next <ChevronRight style={{ width:16, height:16 }} />
             </button>
           ) : (
             <button onClick={() => save()}
-              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl transition-colors text-sm">
-              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer" }}>
+              {saving ? <RefreshCw style={{ width:16, height:16 }} className="animate-spin" /> : <Download style={{ width:16, height:16 }} />}
               Save Draft
             </button>
           )}

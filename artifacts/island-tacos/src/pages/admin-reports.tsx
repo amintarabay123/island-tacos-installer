@@ -621,231 +621,285 @@ export default function AdminReports() {
 
   const maxSales = report?.daily.reduce((m, d) => Math.max(m, d.sales), 0) ?? 1;
 
+  const S = {
+    card: { background:"#1e1f38", borderRadius:14, border:"1px solid rgba(255,255,255,0.06)" } as React.CSSProperties,
+    label: { display:"block", fontSize:11, fontWeight:600, color:"#7077a1", marginBottom:4, textTransform:"uppercase", letterSpacing:"0.06em" } as React.CSSProperties,
+    input: { padding:"8px 12px", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, fontSize:14, background:"#16172b", color:"#e8eaf6", outline:"none" } as React.CSSProperties,
+    h2: { fontWeight:700, color:"#e8eaf6", fontSize:15, margin:0, marginBottom:16 } as React.CSSProperties,
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Print styles */}
+    <div style={{ minHeight:"100dvh", background:"#16172b", color:"#e8eaf6" }}>
       <style>{`
         @media print {
           .no-print { display: none !important; }
           body { background: white; }
           .print-area { box-shadow: none !important; }
         }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+        .rpt-bar-item:hover .rpt-bar-tip { opacity: 1 !important; }
       `}</style>
 
-      {/* Header */}
-      <div className="no-print bg-white border-b sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0">
-            <button onClick={() => navigate(adminRoutes.dashboard)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors shrink-0">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+      {/* ── Header ── */}
+      <div className="no-print" style={{ background:"#0e1020", borderBottom:"1px solid rgba(255,255,255,0.06)", position:"sticky", top:0, zIndex:10 }}>
+        <div style={{ maxWidth:1152, margin:"0 auto", padding:"10px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
+            <button onClick={() => navigate(adminRoutes.dashboard)}
+              style={{ padding:8, borderRadius:8, background:"transparent", border:"none", cursor:"pointer", color:"#7077a1", display:"flex" }}>
+              <ArrowLeft style={{ width:20, height:20 }} />
             </button>
-            <h1 className="text-lg md:text-xl font-bold text-gray-900 truncate">Sales Reports</h1>
+            <h1 style={{ fontSize:18, fontWeight:700, color:"#e8eaf6", margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Sales Reports</h1>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
             <button onClick={() => setShowPrinterSettings(s => !s)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <Printer className="w-4 h-4" /> <span className="hidden sm:inline">Printer</span>
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 12px", fontSize:13, fontWeight:500, color:"#7077a1", background:"transparent", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, cursor:"pointer" }}>
+              <Printer style={{ width:15, height:15 }} />
+              <span className="hidden sm:inline">Printer</span>
             </button>
             <button onClick={handlePrint} disabled={!report}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
-              <Printer className="w-4 h-4" />
-              <span className="hidden sm:inline">Print Summary</span>
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:13, fontWeight:500, background:"rgba(255,255,255,0.07)", color:"#e8eaf6", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, cursor:!report?"not-allowed":"pointer", opacity:!report?0.4:1 }}>
+              <Printer style={{ width:15, height:15 }} />
+              <span className="hidden sm:inline">Print</span>
             </button>
             <button onClick={handleDownloadPDF} disabled={!report || pdfGenerating}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
-              <Download className={`w-4 h-4 ${pdfGenerating ? "animate-bounce" : ""}`} />
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:13, fontWeight:600, background:"#ff6b00", color:"#fff", border:"none", borderRadius:8, cursor:(!report||pdfGenerating)?"not-allowed":"pointer", opacity:(!report||pdfGenerating)?0.5:1 }}>
+              <Download style={{ width:15, height:15 }} className={pdfGenerating ? "animate-bounce" : ""} />
               <span className="hidden sm:inline">{pdfGenerating ? "Generating…" : "Download PDF"}</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Printer Settings Panel */}
+      {/* ── Printer Settings Panel ── */}
       {showPrinterSettings && (
-        <div className="no-print bg-amber-50 border-b border-amber-200">
-          <div className="max-w-6xl mx-auto px-4 py-4">
-            <h3 className="font-semibold text-amber-900 mb-3 flex items-center gap-2"><Printer className="w-4 h-4" /> Receipt Printer Settings</h3>
-            <div className="flex flex-wrap items-end gap-4">
+        <div className="no-print" style={{ background:"#1a1b30", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ maxWidth:1152, margin:"0 auto", padding:"16px" }}>
+            <h3 style={{ fontWeight:600, color:"#e8eaf6", display:"flex", alignItems:"center", gap:8, fontSize:14, margin:"0 0 12px" }}>
+              <Printer style={{ width:15, height:15, color:"#7077a1" }} /> Receipt Printer Settings
+            </h3>
+            <div style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-end", gap:16, marginBottom:8 }}>
               <div>
-                <label className="block text-xs font-medium text-amber-800 mb-1">Print Mode</label>
+                <label style={S.label}>Print Mode</label>
                 <select value={printerConfig.type ?? "browser"}
                   onChange={e => setPrinterConfig(p => ({ ...p, type: e.target.value as PrinterConfig["type"] }))}
-                  className="px-3 py-2 border border-amber-300 rounded-lg text-sm bg-white">
+                  style={{ ...S.input, paddingRight:28 }}>
                   <option value="network">WiFi Direct — Munbyn (recommended ✓)</option>
                   <option value="bridge">Local Bridge (separate bridge script)</option>
                   <option value="browser">Browser Print (OS print dialog)</option>
                 </select>
               </div>
-
               {printerConfig.type === "bridge" && (
                 <div>
-                  <label className="block text-xs font-medium text-amber-800 mb-1">Bridge URL</label>
+                  <label style={S.label}>Bridge URL</label>
                   <input type="text" placeholder="http://localhost:8765"
                     value={printerConfig.bridgeUrl ?? "http://localhost:8765"}
                     onChange={e => setPrinterConfig(p => ({ ...p, bridgeUrl: e.target.value }))}
-                    className="px-3 py-2 border border-amber-300 rounded-lg text-sm w-52" />
+                    style={{ ...S.input, width:208 }} />
                 </div>
               )}
-
               {printerConfig.type === "network" && (
                 <>
                   <div>
-                    <label className="block text-xs font-medium text-amber-800 mb-1">Printer IP</label>
+                    <label style={S.label}>Printer IP</label>
                     <input type="text" placeholder="192.168.1.100" value={printerConfig.ip ?? ""}
                       onChange={e => setPrinterConfig(p => ({ ...p, ip: e.target.value }))}
-                      className="px-3 py-2 border border-amber-300 rounded-lg text-sm w-40" />
+                      style={{ ...S.input, width:160 }} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-amber-800 mb-1">Port</label>
+                    <label style={S.label}>Port</label>
                     <input type="number" value={printerConfig.port ?? 9100}
                       onChange={e => setPrinterConfig(p => ({ ...p, port: parseInt(e.target.value) }))}
-                      className="px-3 py-2 border border-amber-300 rounded-lg text-sm w-24" />
+                      style={{ ...S.input, width:96 }} />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-amber-800 mb-1">
-                      Local Server URL <span className="font-normal text-amber-600">(for KDS on cloud URL)</span>
+                    <label style={S.label}>
+                      Local Server URL <span style={{ fontWeight:400, textTransform:"none" }}>(for KDS on cloud URL)</span>
                     </label>
                     <input type="text" placeholder="http://192.168.8.x:8080"
                       value={printerConfig.localApiUrl ?? ""}
                       onChange={e => setPrinterConfig(p => ({ ...p, localApiUrl: e.target.value }))}
-                      className="px-3 py-2 border border-amber-300 rounded-lg text-sm w-52" />
+                      style={{ ...S.input, width:208 }} />
                   </div>
                 </>
               )}
-
               <button onClick={savePrinterConfig}
-                className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
-                <Save className="w-4 h-4" /> {printerSaved ? "Saved!" : "Save"}
+                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer" }}>
+                <Save style={{ width:15, height:15 }} /> {printerSaved ? "Saved!" : "Save"}
               </button>
             </div>
-
             {printerConfig.type === "bridge" && (
-              <div className="mt-3 p-3 bg-white border border-amber-200 rounded-lg text-xs text-amber-900 space-y-1.5">
-                <p className="font-semibold">Setup (one-time, ~2 minutes):</p>
-                <p>1. Install <strong>Node.js</strong> on any Windows/Mac computer on your restaurant WiFi (free at nodejs.org).</p>
-                <p>2. <a href="/api/print/bridge.js" download className="underline font-medium text-amber-700">Download the bridge script</a> — open it in a text editor and set PRINTER_IP to your printer's local IP address.</p>
-                <p>3. Open a terminal/command prompt, go to where you saved the file, and run: <code className="bg-amber-100 px-1 rounded">node island-tacos-bridge.js</code></p>
-                <p>4. Leave that window open. The bridge URL to enter above is <strong>http://localhost:8765</strong> (if running on the same computer as the POS browser).</p>
+              <div style={{ marginTop:10, padding:12, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:8, fontSize:12, color:"#7077a1", lineHeight:1.7 }}>
+                <p style={{ fontWeight:600, color:"#e8eaf6", marginBottom:6 }}>Setup (one-time, ~2 minutes):</p>
+                <p>1. Install <strong style={{ color:"#e8eaf6" }}>Node.js</strong> on any Windows/Mac computer on your restaurant WiFi.</p>
+                <p>2. <a href="/api/print/bridge.js" download style={{ color:"#7c6af7", fontWeight:600 }}>Download the bridge script</a> — open in a text editor and set PRINTER_IP to your printer's local IP.</p>
+                <p>3. Run: <code style={{ background:"rgba(255,255,255,0.08)", padding:"1px 6px", borderRadius:4, color:"#e8eaf6" }}>node island-tacos-bridge.js</code></p>
+                <p>4. Leave that window open. Bridge URL = <strong style={{ color:"#e8eaf6" }}>http://localhost:8765</strong></p>
               </div>
             )}
-
-            {printerConfig.type === "browser" && (
-              <p className="text-xs text-amber-700 mt-2">Opens the OS print dialog. Set your receipt printer as the default printer to skip the dialog.</p>
-            )}
-            {printerConfig.type === "network" && (
-              <p className="text-xs text-amber-700 mt-2">Sends print jobs directly to the Munbyn over WiFi. Make sure the printer is on and connected to the Huawei router.</p>
-            )}
+            {printerConfig.type === "browser" && <p style={{ fontSize:12, color:"#7077a1", marginTop:6 }}>Opens the OS print dialog. Set your receipt printer as default to skip the dialog.</p>}
+            {printerConfig.type === "network" && <p style={{ fontSize:12, color:"#7077a1", marginTop:6 }}>Sends print jobs directly to the Munbyn over WiFi. Make sure the printer is on and connected.</p>}
           </div>
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-4 py-6 print-area">
-        {/* Date range controls */}
-        <div className="no-print mb-6">
-          <div className="flex flex-wrap gap-2 mb-3">
+      {/* ── KDS Printer Settings sub-panel ── */}
+      {showPrinterSettings && (
+        <div className="no-print" style={{ background:"#16172b", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+          <div style={{ maxWidth:1152, margin:"0 auto", padding:"12px 16px" }}>
+            <h3 style={{ fontWeight:600, color:"#7077a1", display:"flex", alignItems:"center", gap:8, fontSize:13, margin:"0 0 10px" }}>
+              <Printer style={{ width:14, height:14 }} /> KDS Printer Settings
+            </h3>
+            <div style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-end", gap:16 }}>
+              <div>
+                <label style={S.label}>KDS Print Mode</label>
+                <select value={kdsPrinterConfig.type ?? "browser"}
+                  onChange={e => setKdsPrinterConfig(p => ({ ...p, type: e.target.value as PrinterConfig["type"] }))}
+                  style={{ ...S.input, paddingRight:28 }}>
+                  <option value="network">WiFi Direct — Munbyn</option>
+                  <option value="bridge">Local Bridge</option>
+                  <option value="browser">Browser Print</option>
+                </select>
+              </div>
+              {kdsPrinterConfig.type === "network" && (
+                <>
+                  <div>
+                    <label style={S.label}>KDS Printer IP</label>
+                    <input type="text" placeholder="192.168.1.100" value={kdsPrinterConfig.ip ?? ""}
+                      onChange={e => setKdsPrinterConfig(p => ({ ...p, ip: e.target.value }))}
+                      style={{ ...S.input, width:160 }} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Port</label>
+                    <input type="number" value={kdsPrinterConfig.port ?? 9100}
+                      onChange={e => setKdsPrinterConfig(p => ({ ...p, port: parseInt(e.target.value) }))}
+                      style={{ ...S.input, width:96 }} />
+                  </div>
+                </>
+              )}
+              {kdsPrinterConfig.type === "bridge" && (
+                <div>
+                  <label style={S.label}>KDS Bridge URL</label>
+                  <input type="text" placeholder="http://localhost:8765" value={kdsPrinterConfig.bridgeUrl ?? ""}
+                    onChange={e => setKdsPrinterConfig(p => ({ ...p, bridgeUrl: e.target.value }))}
+                    style={{ ...S.input, width:208 }} />
+                </div>
+              )}
+              <button onClick={saveKdsPrinterConfig}
+                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer" }}>
+                <Save style={{ width:15, height:15 }} /> {kdsConfigSaved ? "Saved!" : "Save KDS"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ maxWidth:1152, margin:"0 auto", padding:"24px 16px" }} className="print-area">
+        {/* ── Date range controls ── */}
+        <div className="no-print" style={{ marginBottom:24 }}>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:12 }}>
             {PRESETS.map(p => (
               <button key={p.label} onClick={() => applyPreset(p.label, p.get)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${activePreset === p.label ? "bg-orange-500 text-white" : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
+                style={{ padding:"6px 14px", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer", border:"none", transition:"background 0.15s",
+                  background: activePreset === p.label ? "#ff6b00" : "rgba(255,255,255,0.06)",
+                  color: activePreset === p.label ? "#fff" : "#7077a1" }}>
                 {p.label}
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap items-end gap-3">
+          <div style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-end", gap:12 }}>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
-              <input type="date" value={from} onChange={e => { setFrom(e.target.value); setActivePreset("Custom"); }}
-                className="px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              <label style={S.label}>From</label>
+              <input type="date" value={from} onChange={e => { setFrom(e.target.value); setActivePreset("Custom"); }} style={S.input} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
-              <input type="date" value={to} onChange={e => { setTo(e.target.value); setActivePreset("Custom"); }}
-                className="px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              <label style={S.label}>To</label>
+              <input type="date" value={to} onChange={e => { setTo(e.target.value); setActivePreset("Custom"); }} style={S.input} />
             </div>
             <button onClick={() => loadReport(from, to)} disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50">
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 18px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:loading?"not-allowed":"pointer", opacity:loading?0.6:1 }}>
+              <RefreshCw style={{ width:15, height:15 }} className={loading ? "animate-spin" : ""} />
               {loading ? "Loading…" : "Apply"}
             </button>
           </div>
         </div>
 
         {/* Print header */}
-        <div className="hidden print:block mb-6 text-center">
-          <div className="text-2xl font-bold">ISLAND TACOS</div>
-          <div className="text-gray-600">Wickhams Cay 1, Road Town, BVI</div>
-          <div className="text-lg font-semibold mt-2">Sales Report</div>
-          <div className="text-gray-600">{from} — {to}</div>
-          <div className="text-xs text-gray-400 mt-1">Generated {new Date().toLocaleString()}</div>
+        <div className="hidden print:block" style={{ marginBottom:24, textAlign:"center" }}>
+          <div style={{ fontSize:24, fontWeight:700 }}>ISLAND TACOS</div>
+          <div style={{ color:"#6b7280" }}>Wickhams Cay 1, Road Town, BVI</div>
+          <div style={{ fontSize:18, fontWeight:600, marginTop:8 }}>Sales Report</div>
+          <div style={{ color:"#6b7280" }}>{from} — {to}</div>
+          <div style={{ fontSize:11, color:"#9ca3af", marginTop:4 }}>Generated {new Date().toLocaleString()}</div>
         </div>
 
-        {error && <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 mb-6">{error}</div>}
+        {error && (
+          <div style={{ background:"rgba(220,38,38,0.12)", border:"1px solid rgba(220,38,38,0.3)", borderRadius:12, padding:16, color:"#f87171", marginBottom:24 }}>{error}</div>
+        )}
 
         {report && (
           <>
-            {/* Summary cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {/* ── KPI cards ── */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:16, marginBottom:24 }}>
               {[
-                { icon: DollarSign, label: "Gross Sales", value: fmt(report.totalSales), sub: `Net: ${fmt(report.netSales)}`, color: "text-green-600" },
-                { icon: ShoppingBag, label: "Orders", value: String(report.paidOrders), sub: `${report.cancelledOrders} cancelled`, color: "text-blue-600" },
-                { icon: TrendingUp, label: "Avg Order", value: fmt(report.avgOrderValue), sub: "per paid order", color: "text-purple-600" },
-                { icon: Percent, label: "Refunds", value: fmt(report.refundTotal), sub: `${report.totalSales > 0 ? ((report.refundTotal / report.totalSales) * 100).toFixed(1) : 0}% of sales`, color: "text-red-500" },
+                { icon: DollarSign, label: "Gross Sales",   value: fmt(report.totalSales),    sub: `Net: ${fmt(report.netSales)}`,    accent:"#30d158" },
+                { icon: ShoppingBag,label: "Orders",        value: String(report.paidOrders), sub: `${report.cancelledOrders} cancelled`, accent:"#7c6af7" },
+                { icon: TrendingUp,  label: "Avg Order",    value: fmt(report.avgOrderValue), sub: "per paid order",                  accent:"#ff6b00" },
+                { icon: Percent,     label: "Refunds",      value: fmt(report.refundTotal),   sub: `${report.totalSales > 0 ? ((report.refundTotal/report.totalSales)*100).toFixed(1):0}% of sales`, accent:"#ff453a" },
               ].map(c => (
-                <div key={c.label} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-                  <c.icon className={`w-5 h-5 mb-2 ${c.color}`} />
-                  <div className="text-2xl font-bold text-gray-900">{c.value}</div>
-                  <div className="text-xs font-medium text-gray-500">{c.label}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{c.sub}</div>
+                <div key={c.label} style={{ ...S.card, padding:20, borderLeft:`3px solid ${c.accent}` }}>
+                  <c.icon style={{ width:18, height:18, marginBottom:10, color:c.accent }} />
+                  <div style={{ fontSize:26, fontWeight:800, color:"#e8eaf6", letterSpacing:"-0.5px" }}>{c.value}</div>
+                  <div style={{ fontSize:11, fontWeight:600, color:"#7077a1", textTransform:"uppercase", letterSpacing:"0.06em", marginTop:2 }}>{c.label}</div>
+                  <div style={{ fontSize:12, color:"#7077a1", marginTop:4 }}>{c.sub}</div>
                 </div>
               ))}
             </div>
 
-            {/* Payment method breakdown */}
-            <div className="grid md:grid-cols-2 gap-6 mb-6">
-              <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-                <h2 className="font-bold text-gray-900 mb-4">Sales by Payment Method</h2>
-                <div className="space-y-3">
+            {/* ── Payment methods + daily chart ── */}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, marginBottom:24 }}>
+              <div style={{ ...S.card, padding:20 }}>
+                <h2 style={S.h2}>Sales by Payment Method</h2>
+                <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
                   {[
-                    { label: "Cash", value: report.byMethod.cash, color: "bg-green-500" },
-                    { label: "Card", value: report.byMethod.card, color: "bg-blue-500" },
-                    { label: "ATH Móvil", value: report.byMethod.athmovil, color: "bg-purple-500" },
-                    { label: "Split", value: report.byMethod.split ?? 0, color: "bg-orange-400" },
-                    { label: "Complimentary", value: report.byMethod.complimentary ?? 0, color: "bg-gray-400" },
+                    { label:"Cash",          value:report.byMethod.cash,              color:"#30d158" },
+                    { label:"Card",          value:report.byMethod.card,              color:"#007aff" },
+                    { label:"ATH Móvil",     value:report.byMethod.athmovil,          color:"#7c6af7" },
+                    { label:"Split",         value:report.byMethod.split ?? 0,        color:"#ff6b00" },
+                    { label:"Complimentary", value:report.byMethod.complimentary ?? 0,color:"#7077a1" },
                   ].filter(m => m.value > 0).map(m => (
                     <div key={m.label}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium text-gray-700">{m.label}</span>
-                        <span className="font-bold text-gray-900">{fmt(m.value)}</span>
+                      <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:5 }}>
+                        <span style={{ fontWeight:500, color:"#b0b8d8" }}>{m.label}</span>
+                        <span style={{ fontWeight:700, color:"#e8eaf6" }}>{fmt(m.value)}</span>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2">
-                        <div className={`${m.color} h-2 rounded-full transition-all`}
-                          style={{ width: report.totalSales > 0 ? `${(m.value / report.totalSales) * 100}%` : "0%" }} />
+                      <div style={{ width:"100%", background:"rgba(255,255,255,0.06)", borderRadius:4, height:6, overflow:"hidden" }}>
+                        <div style={{ background:m.color, height:6, borderRadius:4, transition:"width 0.6s ease",
+                          width: report.totalSales > 0 ? `${(m.value/report.totalSales)*100}%` : "0%" }} />
                       </div>
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {report.totalSales > 0 ? `${((m.value / report.totalSales) * 100).toFixed(1)}%` : "0%"}
+                      <div style={{ fontSize:11, color:"#7077a1", marginTop:2 }}>
+                        {report.totalSales > 0 ? `${((m.value/report.totalSales)*100).toFixed(1)}%` : "0%"}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Daily chart */}
-              {report.daily.length > 1 && (
-                <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-                  <h2 className="font-bold text-gray-900 mb-4">Daily Sales</h2>
-                  <div className="overflow-x-auto">
-                    <div className="flex items-end gap-1 h-36 min-w-0"
-                      style={{ minWidth: `${Math.max(report.daily.length * 18, 200)}px` }}>
+              {report.daily.length > 1 ? (
+                <div style={{ ...S.card, padding:20 }}>
+                  <h2 style={S.h2}>Daily Sales</h2>
+                  <div style={{ overflowX:"auto" }}>
+                    <div style={{ display:"flex", alignItems:"flex-end", gap:3, height:128, minWidth:`${Math.max(report.daily.length*18,200)}px` }}>
                       {report.daily.map(d => {
                         const showLabel = report.daily.length <= 31;
                         return (
-                          <div key={d.date} className="flex-1 min-w-0 flex flex-col items-center gap-0.5 group">
-                            <div className="text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
-                              style={{ fontSize: "9px" }}>{fmt(d.sales)}</div>
-                            <div className="w-full bg-orange-400 rounded-t transition-all hover:bg-orange-500 cursor-default"
-                              style={{ height: `${maxSales > 0 ? (d.sales / maxSales) * 112 : 0}px`, minHeight: d.sales > 0 ? "4px" : "0" }}
+                          <div key={d.date} className="rpt-bar-item" style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", alignItems:"center", gap:2, position:"relative" }}>
+                            <div className="rpt-bar-tip" style={{ fontSize:9, color:"#7077a1", opacity:0, transition:"opacity 0.15s", whiteSpace:"nowrap", position:"absolute", top:-14 }}>{fmt(d.sales)}</div>
+                            <div style={{ width:"100%", background:"#ff6b00", borderRadius:"2px 2px 0 0", cursor:"default", opacity:0.85,
+                              height:`${maxSales>0?(d.sales/maxSales)*110:0}px`,
+                              minHeight: d.sales>0?3:0 }}
                               title={`${d.date}: ${fmt(d.sales)}`} />
                             {showLabel && (
-                              <div className="text-center overflow-hidden w-full" style={{ fontSize: "9px", color: "#9ca3af", lineHeight: 1.2 }}>
+                              <div style={{ fontSize:9, color:"#7077a1", lineHeight:1.2, textAlign:"center", overflow:"hidden", width:"100%" }}>
                                 {d.date.slice(5)}
                               </div>
                             )}
@@ -855,31 +909,35 @@ export default function AdminReports() {
                     </div>
                   </div>
                 </div>
+              ) : (
+                <div style={{ ...S.card, padding:20, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <p style={{ color:"#7077a1", fontSize:13 }}>Select a multi-day range to see daily breakdown</p>
+                </div>
               )}
             </div>
 
-            {/* Top Items */}
+            {/* ── Top Items ── */}
             {report.topItems.length > 0 && (
-              <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm mb-6">
-                <h2 className="font-bold text-gray-900 mb-4">Top Items</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+              <div style={{ ...S.card, padding:20, marginBottom:24 }}>
+                <h2 style={S.h2}>Top Items</h2>
+                <div style={{ overflowX:"auto" }}>
+                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
                     <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left py-2 font-medium text-gray-500">#</th>
-                        <th className="text-left py-2 font-medium text-gray-500">Item</th>
-                        <th className="text-right py-2 font-medium text-gray-500">Revenue</th>
-                        <th className="text-right py-2 font-medium text-gray-500">% of Sales</th>
+                      <tr style={{ borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+                        {["#","Item","Qty","Revenue","% of Sales"].map((h,i) => (
+                          <th key={h} style={{ padding:"6px 8px", fontWeight:600, color:"#7077a1", fontSize:11, textTransform:"uppercase", letterSpacing:"0.05em", textAlign: i<2?"left":"right" }}>{h}</th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
                       {report.topItems.map((item, i) => (
-                        <tr key={item.name} className="border-b border-gray-50 hover:bg-gray-50">
-                          <td className="py-2 text-gray-400">{i + 1}</td>
-                          <td className="py-2 font-medium text-gray-900">{item.name}</td>
-                          <td className="py-2 text-right font-semibold text-gray-900">{fmt(item.revenue)}</td>
-                          <td className="py-2 text-right text-gray-400">
-                            {report.totalSales > 0 ? `${((item.revenue / report.totalSales) * 100).toFixed(1)}%` : "0%"}
+                        <tr key={item.name} style={{ borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+                          <td style={{ padding:"8px 8px", color:"#7077a1" }}>{i+1}</td>
+                          <td style={{ padding:"8px 8px", fontWeight:500, color:"#e8eaf6" }}>{item.name}</td>
+                          <td style={{ padding:"8px 8px", color:"#7077a1", textAlign:"right" }}>{item.quantity.toLocaleString()}</td>
+                          <td style={{ padding:"8px 8px", fontWeight:600, color:"#e8eaf6", textAlign:"right" }}>{fmt(item.revenue)}</td>
+                          <td style={{ padding:"8px 8px", color:"#7077a1", textAlign:"right" }}>
+                            {report.totalSales>0 ? `${((item.revenue/report.totalSales)*100).toFixed(1)}%` : "0%"}
                           </td>
                         </tr>
                       ))}
@@ -889,33 +947,45 @@ export default function AdminReports() {
               </div>
             )}
 
-            {/* Summary totals for print */}
-            <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-              <h2 className="font-bold text-gray-900 mb-3">Summary</h2>
-              <div className="space-y-2 text-sm max-w-xs">
+            {/* ── Summary totals ── */}
+            <div style={{ ...S.card, padding:20 }}>
+              <h2 style={S.h2}>Summary</h2>
+              <div style={{ maxWidth:340 }}>
                 {([
-                  ["Total Orders", report.paidOrders],
-                  ["Gross Sales", fmt(report.totalSales)],
-                  ["Cash Sales", fmt(report.byMethod.cash)],
-                  ["Card Sales", fmt(report.byMethod.card)],
-                  ["ATH Móvil Sales", fmt(report.byMethod.athmovil)],
-                  ...(report.byMethod.split > 0 ? [["Split Sales", fmt(report.byMethod.split)]] : []),
-                  ...(report.byMethod.complimentary > 0 ? [["Complimentary", fmt(report.byMethod.complimentary)]] : []),
-                  ["Total Refunds", `- ${fmt(report.refundTotal)}`],
-                  ["Net Sales", fmt(report.netSales)],
-                ] as [string, string | number][]).map(([label, val]) => (
-                  <div key={label as string} className={`flex justify-between py-1 ${label === "Net Sales" ? "font-bold border-t border-gray-200 text-base" : "border-b border-gray-50 text-gray-700"}`}>
-                    <span>{label}</span>
-                    <span>{val}</span>
-                  </div>
-                ))}
+                  ["Total Orders",     report.paidOrders],
+                  ["Gross Sales",      fmt(report.totalSales)],
+                  ["Cash Sales",       fmt(report.byMethod.cash)],
+                  ["Card Sales",       fmt(report.byMethod.card)],
+                  ["ATH Móvil Sales",  fmt(report.byMethod.athmovil)],
+                  ...(report.byMethod.split>0       ? [["Split Sales",   fmt(report.byMethod.split)]]        : []),
+                  ...(report.byMethod.complimentary>0 ? [["Complimentary",fmt(report.byMethod.complimentary)]] : []),
+                  ["Total Refunds",    `- ${fmt(report.refundTotal)}`],
+                  ["Net Sales",        fmt(report.netSales)],
+                ] as [string, string|number][]).map(([label, val]) => {
+                  const isNet = label === "Net Sales";
+                  return (
+                    <div key={label as string} style={{
+                      display:"flex", justifyContent:"space-between", padding:"7px 0",
+                      borderTop: isNet ? "1px solid rgba(255,255,255,0.1)" : "none",
+                      borderBottom: isNet ? "none" : "1px solid rgba(255,255,255,0.04)",
+                      marginTop: isNet ? 6 : 0,
+                      fontWeight: isNet ? 700 : 400,
+                      fontSize: isNet ? 15 : 13,
+                    }}>
+                      <span style={{ color: isNet ? "#30d158" : "#b0b8d8" }}>{label}</span>
+                      <span style={{ color: isNet ? "#30d158" : "#e8eaf6" }}>{val}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </>
         )}
 
         {!report && !loading && !error && (
-          <div className="text-center py-16 text-gray-400">Select a date range and click Apply</div>
+          <div style={{ textAlign:"center", paddingTop:64, paddingBottom:64, color:"#7077a1", fontSize:14 }}>
+            Select a date range and click Apply
+          </div>
         )}
       </div>
     </div>
