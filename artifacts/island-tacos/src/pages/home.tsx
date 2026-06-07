@@ -380,6 +380,18 @@ export default function Home() {
   // ─── JSX ─────────────────────────────────────────────────────────────────────
   return (
     <Layout>
+      {/* ── Mobile layout overrides ──────────────────────────────────────────── */}
+      <style>{`
+        /* 2-column card grid on phones (< 640 px).
+           Desktop keeps repeat(auto-fill, minmax(190px, 1fr)) from the inline style.
+           640px matches Tailwind's sm breakpoint so tablets/desktops are unaffected. */
+        @media (max-width: 639px) {
+          .home-menu-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+        }
+      `}</style>
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-neutral-900" style={{ minHeight: 500 }}>
         <img
@@ -468,13 +480,18 @@ export default function Home() {
 
       {/* ── Best Sellers ──────────────────────────────────────────────────────── */}
       {!loadingItems && popularItems.length > 0 && (
-        <section style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0", overflowX: "hidden" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 20 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: "#e8eaf6" }}>Best Sellers</h2>
-            {topSellers && topSellers.length > 0 && (
-              <span style={{ fontSize: 11, color: "#7077a1" }}>Based on your orders</span>
-            )}
+        /* overflow:hidden must be on a full-width block, NOT on the maxWidth container —
+           otherwise the inner scroll strip can widen the layout and cause page horizontal scroll */
+        <div style={{ overflow: "hidden", paddingTop: 48 }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: "#e8eaf6" }}>Best Sellers</h2>
+              {topSellers && topSellers.length > 0 && (
+                <span style={{ fontSize: 11, color: "#7077a1" }}>Based on your orders</span>
+              )}
+            </div>
           </div>
+          {/* Scroll strip is full-width with side padding — clipped by the outer overflow:hidden wrapper */}
           <div style={{
             display: "flex",
             gap: 20,
@@ -482,7 +499,11 @@ export default function Home() {
             overflowY: "hidden",
             WebkitOverflowScrolling: "touch",
             scrollbarWidth: "none",
-            paddingBottom: 8,
+            /* stop the horizontal scroll from chaining up to the page on iOS/Android */
+            overscrollBehaviorX: "contain",
+            paddingLeft: 24,
+            paddingRight: 24,
+            paddingBottom: 12,
           }}>
             {popularItems.map((item, idx) => (
               <div key={item.id} style={{ flex: "0 0 210px" }}>
@@ -490,7 +511,7 @@ export default function Home() {
               </div>
             ))}
           </div>
-        </section>
+        </div>
       )}
 
       {/* ── Full Menu ─────────────────────────────────────────────────────────── */}
@@ -540,7 +561,7 @@ export default function Home() {
         {/* Grid */}
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 64px" }}>
           {loadingItems ? (
-            <div style={{ paddingTop: 44, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gridAutoRows: "1fr", gap: 20 }}>
+            <div className="home-menu-grid" style={{ paddingTop: 44, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gridAutoRows: "1fr", gap: 20 }}>
               {[1,2,3,4,5,6,7,8].map(i => (
                 <div key={i}>
                   <Skeleton className="w-full rounded-2xl" style={{ height: 240 }} />
@@ -589,7 +610,7 @@ export default function Home() {
                         }} />
                       </div>
                       {/* Cards */}
-                      <div style={{
+                      <div className="home-menu-grid" style={{
                         display: "grid",
                         gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
                         gap: 20,
@@ -602,7 +623,7 @@ export default function Home() {
             </div>
           ) : (
             /* ── Single-category view: flat grid ──────────────────────────────── */
-            <div style={{
+            <div className="home-menu-grid" style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
               gap: 20,
