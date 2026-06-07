@@ -357,6 +357,24 @@ export default function AdminSettings() {
 
       <div style={{ maxWidth: 768, margin: "0 auto", padding: "32px 16px", display: "flex", flexDirection: "column", gap: 28 }}>
 
+        {/* Stat cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+          {([
+            { emoji: "🕐", label: "Opens",      value: form.open_time  || "—",                                                           color: GREEN },
+            { emoji: "🕗", label: "Closes",     value: form.close_time || "—",                                                           color: OR    },
+            { emoji: "📅", label: "Open Days",  value: `${form.open_days.split(",").filter(Boolean).length}/7`,                          color: PUR   },
+            { emoji: "👥", label: "Staff",       value: empLoading ? "…" : String(employees.filter(e => e.active).length),               color: "#0ea5e9" },
+          ] as const).map(({ emoji, label, value, color }) => (
+            <div key={label} style={{ ...GLOW, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: `${color}22`, border: `1px solid ${color}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{emoji}</div>
+              <div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: TP, letterSpacing: "-0.04em", lineHeight: 1 }}>{value}</div>
+                <div style={{ fontSize: 10, color: TMUTED, fontWeight: 700, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* Sync from Cloud */}
         <section style={GLOW}>
           <div style={{ padding: "24px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20 }}>

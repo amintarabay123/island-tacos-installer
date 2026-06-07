@@ -388,6 +388,24 @@ export default function AdminMenu() {
 
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 16px" }}>
 
+        {/* Stat cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+          {([
+            { emoji: "🌮", label: "Total Items",  value: String(items?.length ?? 0),                              color: OR    },
+            { emoji: "✅", label: "Available",    value: String(items?.filter(i => i.available).length ?? 0),     color: GREEN },
+            { emoji: "📂", label: "Categories",   value: String(categories?.length ?? 0),                        color: PUR   },
+            { emoji: "⚠️", label: "Unavailable",  value: String(items?.filter(i => !i.available).length ?? 0),   color: RED_C },
+          ] as const).map(({ emoji, label, value, color }) => (
+            <div key={label} style={{ ...GLOW, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: `${color}22`, border: `1px solid ${color}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{emoji}</div>
+              <div>
+                <div style={{ fontSize: 26, fontWeight: 900, color: TP, letterSpacing: "-0.04em", lineHeight: 1 }}>{value}</div>
+                <div style={{ fontSize: 10, color: TMUTED, fontWeight: 700, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* Category Management Card */}
         <div style={{ ...GLOW, padding: 20, marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>

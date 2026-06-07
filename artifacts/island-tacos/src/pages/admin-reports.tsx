@@ -794,6 +794,25 @@ export default function AdminReports() {
       )}
 
       <div style={{ maxWidth:1152, margin:"0 auto", padding:"24px 16px" }} className="print-area">
+
+        {/* Stat cards */}
+        <div className="no-print" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:24 }}>
+          {([
+            { emoji:"💰", label:"Gross Sales",     value: report ? `$${report.totalSales.toFixed(2)}`    : "—", color:"#10b981" },
+            { emoji:"📈", label:"Net Sales",        value: report ? `$${report.netSales.toFixed(2)}`     : "—", color:"#7c6af7" },
+            { emoji:"🧾", label:"Paid Orders",      value: report ? String(report.paidOrders)             : "—", color:"#ff6b00" },
+            { emoji:"⚡", label:"Avg Order",        value: report ? `$${report.avgOrderValue.toFixed(2)}` : "—", color:"#0ea5e9" },
+          ] as const).map(({ emoji, label, value, color }) => (
+            <div key={label} style={{ background:"#1e1f38", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16, boxShadow:"0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)", padding:"16px 20px", display:"flex", alignItems:"center", gap:14 }}>
+              <div style={{ width:44, height:44, borderRadius:14, background:`${color}22`, border:`1px solid ${color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{emoji}</div>
+              <div>
+                <div style={{ fontSize:26, fontWeight:900, color:"#e8eaf6", letterSpacing:"-0.04em", lineHeight:1 }}>{value}</div>
+                <div style={{ fontSize:10, color:"#7077a1", fontWeight:700, marginTop:4, textTransform:"uppercase", letterSpacing:"0.06em" }}>{label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* ── Date range controls ── */}
         <div className="no-print" style={{ marginBottom:24 }}>
           <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:12 }}>

@@ -49,7 +49,7 @@ function selectionRuleLabel(mod: Modifier) {
 
 const BG = "#16172b", CARD = "#1e1f38", BORD = "rgba(255,255,255,0.06)";
 const TP = "#e8eaf6", TM = "#b0b8d8", TMUTED = "#7077a1";
-const PUR = "#7c6af7", RED_C = "#ff453a", OR = "#ff6b00";
+const PUR = "#7c6af7", RED_C = "#ff453a", OR = "#ff6b00", GREEN = "#30d158";
 const HDR = "#0e1020";
 const GLOW: React.CSSProperties = {
   background: CARD, border: `1px solid ${BORD}`, borderRadius: 16,
@@ -201,6 +201,25 @@ export default function AdminModifiers() {
       </header>
 
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 16px" }}>
+
+        {/* Stat cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+          {([
+            { emoji: "🎛️", label: "Total Modifiers", value: String(modifiers.length),                                                    color: OR    },
+            { emoji: "⚡", label: "Required",         value: String(modifiers.filter(m => m.required).length),                           color: RED_C },
+            { emoji: "✨", label: "Optional",         value: String(modifiers.filter(m => !m.required).length),                          color: PUR   },
+            { emoji: "📋", label: "Total Options",    value: String(modifiers.reduce((s, m) => s + (m.options?.length ?? 0), 0)),        color: GREEN },
+          ] as const).map(({ emoji, label, value, color }) => (
+            <div key={label} style={{ ...GLOW, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: `${color}22`, border: `1px solid ${color}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{emoji}</div>
+              <div>
+                <div style={{ fontSize: 26, fontWeight: 900, color: TP, letterSpacing: "-0.04em", lineHeight: 1 }}>{value}</div>
+                <div style={{ fontSize: 10, color: TMUTED, fontWeight: 700, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
         <p style={{ fontSize: 13, color: TMUTED, marginBottom: 24 }}>
           Modifiers are add-ons shown at checkout. Set rules like "Required — choose exactly 1" or "Optional — pick up to 3". Options can allow multiple selections (e.g. extra toppings ×2).
         </p>

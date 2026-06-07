@@ -695,6 +695,34 @@ export default function AdminFinancials() {
 
       <div style={{ maxWidth:896, margin:"0 auto", padding:"24px 16px" }}>
 
+        {/* Stat cards */}
+        {(() => {
+          const netRev   = data.grossSales - data.refunds + data.otherIncome;
+          const cogs     = data.beginningInventory + data.purchases - data.endingInventory;
+          const grossPro = netRev - cogs;
+          const totalExp = data.expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+          const netProfit= grossPro - totalExp;
+          const cards = [
+            { emoji:"💰", label:"Gross Sales",   value:`$${data.grossSales.toFixed(2)}`,    color:"#10b981" },
+            { emoji:"📊", label:"Net Revenue",   value:`$${netRev.toFixed(2)}`,             color:"#7c6af7" },
+            { emoji:"📉", label:"Total Expenses",value:`$${totalExp.toFixed(2)}`,           color:"#ff6b00" },
+            { emoji: netProfit >= 0 ? "🟢" : "🔴", label: netProfit >= 0 ? "Net Profit" : "Net Loss", value:`$${Math.abs(netProfit).toFixed(2)}`, color: netProfit >= 0 ? "#30d158" : "#ff453a" },
+          ] as const;
+          return (
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:24 }}>
+              {cards.map(({ emoji, label, value, color }) => (
+                <div key={label} style={{ background:"#1e1f38", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16, boxShadow:"0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)", padding:"16px 20px", display:"flex", alignItems:"center", gap:14 }}>
+                  <div style={{ width:44, height:44, borderRadius:14, background:`${color}22`, border:`1px solid ${color}44`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{emoji}</div>
+                  <div>
+                    <div style={{ fontSize:22, fontWeight:900, color:"#e8eaf6", letterSpacing:"-0.04em", lineHeight:1 }}>{value}</div>
+                    <div style={{ fontSize:10, color:"#7077a1", fontWeight:700, marginTop:4, textTransform:"uppercase", letterSpacing:"0.06em" }}>{label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
         {/* ── Step 0: Business Info ── */}
         {step === 0 && (
           <div style={FC.card}>
