@@ -468,7 +468,7 @@ export default function Home() {
 
       {/* ── Best Sellers ──────────────────────────────────────────────────────── */}
       {!loadingItems && popularItems.length > 0 && (
-        <section style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0" }}>
+        <section style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0", overflowX: "hidden" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 20 }}>
             <h2 style={{ fontSize: 18, fontWeight: 800, color: "#e8eaf6" }}>Best Sellers</h2>
             {topSellers && topSellers.length > 0 && (
@@ -479,8 +479,10 @@ export default function Home() {
             display: "flex",
             gap: 20,
             overflowX: "auto",
+            overflowY: "hidden",
+            WebkitOverflowScrolling: "touch",
             scrollbarWidth: "none",
-            paddingBottom: 4,
+            paddingBottom: 8,
           }}>
             {popularItems.map((item, idx) => (
               <div key={item.id} style={{ flex: "0 0 210px" }}>

@@ -92,40 +92,110 @@ type NavItem = {
 type NavSection = { title: string; items: NavItem[] };
 
 // ── Sidebar ────────────────────────────────────────────────────────────────────
+const ICON_BTN: React.CSSProperties = {
+  width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center",
+  borderRadius: 12, cursor: "pointer", border: "none", background: "transparent",
+  margin: "0 auto", transition: "all 0.15s", flexShrink: 0,
+};
+
 function Sidebar({ sections, onClose, onLogout, isMobile }: {
   sections: NavSection[]; onClose?: () => void; onLogout: () => void; isMobile?: boolean;
 }) {
   const [location] = useLocation();
+
+  // ── Desktop: 64 px icon-only — seamlessly blends with the page bg ──────────
+  if (!isMobile) {
+    return (
+      <div style={{ width: 64, display: "flex", flexDirection: "column", height: "100%", background: "transparent", flexShrink: 0 }}>
+        {/* Brand */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 0 14px", borderBottom: `1px solid ${BORD}` }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 11,
+            background: "linear-gradient(135deg,#ff6b00,#ff9500)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18,
+            boxShadow: "0 0 0 1px rgba(255,107,0,0.3),0 4px 16px rgba(255,107,0,0.4)",
+          }}>🌮</div>
+        </div>
+
+        {/* Nav icons */}
+        <nav style={{ flex: 1, padding: "10px 0", overflowY: "auto", display: "flex", flexDirection: "column", gap: 1 }}>
+          {sections.map((section, si) => (
+            <div key={section.title}>
+              {si > 0 && <div style={{ height: 1, background: BORD, margin: "6px 12px" }} />}
+              {section.items.map((item) => {
+                const isActive = item.href ? location === item.href : false;
+                const btnStyle: React.CSSProperties = {
+                  ...ICON_BTN,
+                  background: isActive ? "rgba(255,107,0,0.15)" : "transparent",
+                  outline: isActive ? "1px solid rgba(255,107,0,0.3)" : "none",
+                  color: isActive ? OR : TM,
+                };
+                if (item.action) return (
+                  <button key={item.label} title={item.label} onClick={() => item.action!()} style={btnStyle}
+                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = TP; } }}
+                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; } }}
+                  ><item.icon style={{ width: 18, height: 18 }} /></button>
+                );
+                if (item.external) return (
+                  <a key={item.label} title={item.label} href={item.href} target="_blank" rel="noopener noreferrer"
+                    style={{ ...btnStyle, textDecoration: "none" }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)"; (e.currentTarget as HTMLElement).style.color = TP; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = TM; }}
+                  ><item.icon style={{ width: 18, height: 18 }} /></a>
+                );
+                return (
+                  <Link key={item.label} href={item.href!}>
+                    <div title={item.label} style={btnStyle}
+                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = TP; } }}
+                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; } }}
+                    ><item.icon style={{ width: 18, height: 18 }} /></div>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        {/* Footer icons */}
+        <div style={{ padding: "10px 0", borderTop: `1px solid ${BORD}`, display: "flex", flexDirection: "column", gap: 1 }}>
+          <Link href="/">
+            <div title="Online Store" style={{ ...ICON_BTN, color: TM }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = TP; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; }}
+            ><Store style={{ width: 18, height: 18 }} /></div>
+          </Link>
+          <button title="Sign Out" onClick={onLogout} style={{ ...ICON_BTN, color: "#f87171" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "#fca5a5"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#f87171"; }}
+          ><LogOut style={{ width: 18, height: 18 }} /></button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Mobile: full-width drawer with labels ────────────────────────────────────
   return (
-    <div
-      className={`flex flex-col h-full ${isMobile ? "w-72" : "w-64"}`}
-      style={{ background: isMobile ? BG : "transparent", color: TP }}
-    >
+    <div className="w-72 flex flex-col h-full" style={{ background: BG, color: TP }}>
       {/* Brand */}
       <div className="flex items-center justify-between px-5 py-5" style={{ borderBottom: `1px solid ${BORD}` }}>
         <div className="flex items-center gap-3">
           <div style={{
             width: 36, height: 36, borderRadius: 11, flexShrink: 0,
-            background: "linear-gradient(135deg, #ff6b00, #ff9500)",
+            background: "linear-gradient(135deg,#ff6b00,#ff9500)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 18,
-            boxShadow: "0 0 0 1px rgba(255,107,0,0.3), 0 4px 16px rgba(255,107,0,0.4)",
+            boxShadow: "0 0 0 1px rgba(255,107,0,0.3),0 4px 16px rgba(255,107,0,0.4)",
           }}>🌮</div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-0.02em", color: TP }}>ISLAND TACOS</div>
             <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: TM, marginTop: 2 }}>Admin Panel</div>
           </div>
         </div>
-        {isMobile && onClose && (
-          <button onClick={onClose}
-            className="p-1.5 rounded-md transition-colors"
-            style={{ color: TM }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
+        <button onClick={onClose} style={{ ...ICON_BTN, width: 32, height: 32, color: TM }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+        ><X className="h-5 w-5" /></button>
       </div>
 
       {/* Nav */}
@@ -138,46 +208,31 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = item.href ? location === item.href : false;
-                const activeStyle: React.CSSProperties = {
-                  background: "rgba(255,107,0,0.12)", color: OR,
-                  border: "1px solid rgba(255,107,0,0.3)", borderRadius: 10,
-                };
-                const inactiveStyle: React.CSSProperties = {
-                  background: "transparent", color: TM,
-                  border: "1px solid transparent", borderRadius: 10,
-                };
+                const activeStyle: React.CSSProperties = { background: "rgba(255,107,0,0.12)", color: OR, border: "1px solid rgba(255,107,0,0.3)", borderRadius: 10 };
+                const inactiveStyle: React.CSSProperties = { background: "transparent", color: TM, border: "1px solid transparent", borderRadius: 10 };
                 const content = (
                   <>
-                    <item.icon
-                      className="h-4 w-4 shrink-0"
-                      style={{ color: isActive ? OR : (item.iconColor ? undefined : TM) }}
-                    />
+                    <item.icon className="h-4 w-4 shrink-0" style={{ color: isActive ? OR : TM }} />
                     <span style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</span>
                   </>
                 );
                 const baseClass = "flex items-center gap-3 w-full px-3 py-2.5 text-left cursor-pointer transition-all";
-                if (item.action) {
-                  return (
-                    <button key={item.label} onClick={() => { item.action!(); onClose?.(); }}
-                      className={baseClass} style={isActive ? activeStyle : inactiveStyle}
-                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = TP; } }}
-                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; } }}
-                    >{content}</button>
-                  );
-                }
-                if (item.external) {
-                  return (
-                    <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClose}
-                      className={baseClass} style={inactiveStyle}
-                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; (e.currentTarget as HTMLElement).style.color = TP; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = TM; }}
-                    >{content}</a>
-                  );
-                }
+                if (item.action) return (
+                  <button key={item.label} onClick={() => { item.action!(); onClose?.(); }} className={baseClass} style={isActive ? activeStyle : inactiveStyle}
+                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = TP; } }}
+                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; } }}
+                  >{content}</button>
+                );
+                if (item.external) return (
+                  <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClose} className={baseClass} style={inactiveStyle}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLElement).style.color = TP; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = TM; }}
+                  >{content}</a>
+                );
                 return (
                   <Link key={item.label} href={item.href!}>
                     <div onClick={onClose} className={baseClass} style={isActive ? activeStyle : inactiveStyle}
-                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = TP; } }}
+                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = TP; } }}
                       onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; } }}
                     >{content}</div>
                   </Link>
@@ -191,23 +246,18 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
       {/* Footer */}
       <div className="px-3 pb-5 pt-4 space-y-0.5" style={{ borderTop: `1px solid ${BORD}` }}>
         <Link href="/">
-          <div onClick={onClose}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm font-medium cursor-pointer transition-all"
+          <div onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm font-medium cursor-pointer transition-all"
             style={{ color: TM, border: "1px solid transparent" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = TP; }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = TP; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; }}
-          >
-            <Store className="h-4 w-4" style={{ color: TM }} /> Online Store
-          </div>
+          ><Store className="h-4 w-4" style={{ color: TM }} /> Online Store</div>
         </Link>
         <button onClick={() => { onLogout(); onClose?.(); }}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-[10px] text-sm font-medium transition-all"
           style={{ color: "#f87171", border: "1px solid transparent" }}
           onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "#fca5a5"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#f87171"; }}
-        >
-          <LogOut className="h-4 w-4" /> Sign Out
-        </button>
+        ><LogOut className="h-4 w-4" /> Sign Out</button>
       </div>
     </div>
   );
@@ -441,14 +491,14 @@ export default function Admin() {
     },
   ];
 
-  // ── Pop-out stat card config ───────────────────────────────────────────────
+  // ── Stat card config ───────────────────────────────────────────────────────
   const avgOrder = stats?.todayOrders ? (stats.todayRevenue ?? 0) / stats.todayOrders : 0;
   const popCards = [
-    { art: ["🌮","💰"], grad: "linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow: "rgba(255,107,0,0.55)", label: "Revenue",   value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, sub: "today's total" },
-    { art: ["🧾","📋"], grad: "linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow: "rgba(124,106,247,0.55)", label: "Orders",    value: String(stats?.todayOrders ?? 0),            sub: `${stats?.pendingOrders ?? 0} still active` },
-    { art: ["✅","⭐"], grad: "linear-gradient(145deg,#10b981,#059669,#064e3b)", glow: "rgba(16,185,129,0.5)", label: "Completed", value: String(stats?.completedOrders ?? 0),        sub: "served today" },
-    { art: ["📈","💹"], grad: "linear-gradient(145deg,#0ea5e9,#0284c7,#1e3a8a)", glow: "rgba(14,165,233,0.5)", label: "Avg Order", value: avgOrder ? `$${avgOrder.toFixed(2)}` : "—",  sub: "per order" },
-    { art: ["🚫","😕"], grad: "linear-gradient(145deg,#ef4444,#dc2626,#7f1d1d)", glow: "rgba(239,68,68,0.4)", label: "Cancelled", value: String(stats?.cancelledOrders ?? 0),         sub: "rejected" },
+    { art: "💰", grad: "linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow: "rgba(255,107,0,0.55)", label: "Revenue",   value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, sub: "today's total" },
+    { art: "🧾", grad: "linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow: "rgba(124,106,247,0.55)", label: "Orders",    value: String(stats?.todayOrders ?? 0),            sub: `${stats?.pendingOrders ?? 0} still active` },
+    { art: "⭐", grad: "linear-gradient(145deg,#10b981,#059669,#064e3b)", glow: "rgba(16,185,129,0.5)", label: "Completed", value: String(stats?.completedOrders ?? 0),        sub: "served today" },
+    { art: "📈", grad: "linear-gradient(145deg,#0ea5e9,#0284c7,#1e3a8a)", glow: "rgba(14,165,233,0.5)", label: "Avg Order", value: avgOrder ? `$${avgOrder.toFixed(2)}` : "—",  sub: "per order" },
+    { art: "🚫", grad: "linear-gradient(145deg,#ef4444,#dc2626,#7f1d1d)", glow: "rgba(239,68,68,0.4)", label: "Cancelled", value: String(stats?.cancelledOrders ?? 0),         sub: "rejected" },
   ];
 
   // ── Tool button helper ─────────────────────────────────────────────────────
@@ -560,26 +610,28 @@ export default function Admin() {
             </span>
           </div>
 
-          {/* ── Pop-out stat cards ─────────────────────────────────────────── */}
-          <div style={{ paddingTop: 52, display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 20 }}
-            className="grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
-            {popCards.map((fc) => (
-              <div key={fc.label} style={{ position: "relative" }}>
-                {/* Floating art */}
-                <div style={{ position: "absolute", top: -44, left: "50%", transform: "translateX(-50%)", zIndex: 10, display: "flex", alignItems: "flex-end", filter: `drop-shadow(0 8px 24px ${fc.glow})`, pointerEvents: "none" }}>
-                  <span style={{ fontSize: 42, lineHeight: 1, transform: "rotate(-15deg) translateX(8px)", opacity: 0.65, filter: `blur(1px) drop-shadow(0 0 10px ${fc.glow})` }}>{fc.art[1]}</span>
-                  <span style={{ fontSize: 56, lineHeight: 1, transform: "rotate(8deg) translateX(-4px)", filter: `drop-shadow(0 0 18px ${fc.glow})` }}>{fc.art[0]}</span>
+          {/* ── Stat cards — horizontal scroll on mobile, inline on desktop ── */}
+          <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", scrollbarWidth: "none", marginBottom: 20, paddingBottom: 2 }}>
+            <div style={{ display: "flex", gap: 14, minWidth: "max-content" }}>
+              {popCards.map((fc) => (
+                <div key={fc.label} style={{ width: 168, flexShrink: 0 }}>
+                  <div style={{ background: fc.grad, borderRadius: 20, padding: "16px 16px 14px", position: "relative", overflow: "hidden", boxShadow: `0 6px 24px ${fc.glow}`, height: 108, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                    {/* Shine */}
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(155deg,rgba(255,255,255,0.14) 0%,transparent 50%)", pointerEvents: "none" }} />
+                    {/* Single emoji — large, faded, decorative */}
+                    <div style={{ position: "absolute", top: -6, right: 0, fontSize: 62, opacity: 0.22, lineHeight: 1, transform: "rotate(14deg)", pointerEvents: "none", userSelect: "none" }}>
+                      {fc.art}
+                    </div>
+                    {/* Text */}
+                    <div style={{ position: "relative", zIndex: 1 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>{fc.label}</div>
+                      <div style={{ fontSize: 26, fontWeight: 900, color: "#fff", letterSpacing: "-0.05em", lineHeight: 1, marginBottom: 3 }}>{fc.value}</div>
+                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: 500 }}>{fc.sub}</div>
+                    </div>
+                  </div>
                 </div>
-                {/* Card body */}
-                <div style={{ background: fc.grad, borderRadius: 22, padding: "48px 18px 18px", position: "relative", overflow: "hidden", boxShadow: `0 8px 32px ${fc.glow}` }}>
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,rgba(255,255,255,0.13) 0%,transparent 50%)", borderRadius: 22, pointerEvents: "none" }} />
-                  <div style={{ position: "absolute", top: -28, left: "50%", transform: "translateX(-50%)", width: 90, height: 90, background: "rgba(255,255,255,0.14)", borderRadius: "50%", filter: "blur(22px)", pointerEvents: "none" }} />
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>{fc.label}</div>
-                  <div style={{ fontSize: 28, fontWeight: 900, color: "#fff", letterSpacing: "-0.05em", lineHeight: 1, marginBottom: 5 }}>{fc.value}</div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: 500 }}>{fc.sub}</div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* ── Charts row ─────────────────────────────────────────────────── */}
