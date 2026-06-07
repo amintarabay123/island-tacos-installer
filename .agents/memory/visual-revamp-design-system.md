@@ -6,7 +6,7 @@ description: Approved design direction for Island Tacos full-system visual revam
 ## Status
 - Store (customer ordering page): ✅ Done
 - Admin dashboard: ✅ Done
-- POS (`pos.tsx`): ✅ Done — full dark revamp applied: IL tokens at module level, ItemCard gradient pop-out art, Numpad, PaymentModal, ReceiptModal, HoldModal, DiscountModal, OpenPriceModal, main wrapper/header/left-panel/cart/mobile-tabs/inline-modals all dark-themed. Typecheck passes clean.
+- POS (`pos.tsx`): ✅ Done — full dark revamp applied to every surface in the POS workflow. IL tokens at module level. ITEM_GRADS gradient glowing cards on: ItemCard, cart items, ticket cards (TicketsDrawer), receipt cards (ReceiptsDrawer list), SplitPayment confirmed items. All modals/panels converted: PaymentModal (blue/purple gradient tabs), ModifierModal, ReceiptsDrawer (detail + list), TicketsDrawer, SoldOutDrawer, OpenShiftModal, CloseShiftModal, PayInOutModal, SplitPayment (confirmed + main + cash overlay). Toolbar notification bell also dark-themed. Typecheck passes clean.
 - KDS: 🔲 Not started
 
 ## Approved Design Direction: "Indigo Luxe"

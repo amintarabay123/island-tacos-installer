@@ -355,13 +355,13 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
       onClick={onClose}
     >
         <div
-          className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[88vh]"
+          style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:672, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", display:"flex", flexDirection:"column", maxHeight:"92dvh" }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header — always visible at top */}
-          <div className="flex-shrink-0 bg-white rounded-t-2xl sm:rounded-t-2xl p-5 border-b border-gray-200">
-            <h2 className="text-gray-900 text-xl font-bold">{item.name}</h2>
-            <p className="text-[#F5A623] text-lg font-semibold">{fmt(total)}</p>
+          <div className="flex-shrink-0 p-5" style={{ borderBottom:`1px solid ${IL.bord}`, borderRadius:"24px 24px 0 0" }}>
+            <h2 style={{ color:IL.tp, fontSize:20, fontWeight:800 }}>{item.name}</h2>
+            <p style={{ color:IL.or, fontSize:17, fontWeight:600 }}>{fmt(total)}</p>
           </div>
           {/* Content — scrollable middle */}
           <div className="flex-1 overflow-y-auto p-5 space-y-6" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
@@ -371,18 +371,18 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
             return (
               <div key={mod.id}>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider">{mod.name}</p>
+                  <p style={{ color:IL.mu, fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em" }}>{mod.name}</p>
                   <div className="flex items-center gap-1.5">
                     {mod.required && groupTotal === 0 && (
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-red-600 bg-red-950/40 px-1.5 py-0.5 rounded">Required</span>
+                      <span style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".04em", color:IL.red, background:"rgba(255,69,58,0.15)", padding:"2px 6px", borderRadius:4 }}>Required</span>
                     )}
                     {mod.minSelections > 0 && (
-                      <span className="text-[11px] text-gray-400">
+                      <span style={{ fontSize:11, color:IL.mu }}>
                         {mod.maxSelections === mod.minSelections ? `Pick ${mod.minSelections}` : mod.maxSelections ? `${mod.minSelections}–${mod.maxSelections}` : `Min ${mod.minSelections}`}
                       </span>
                     )}
                     {mod.maxSelections !== null && mod.minSelections === 0 && (
-                      <span className="text-[11px] text-gray-400">Up to {mod.maxSelections}</span>
+                      <span style={{ fontSize:11, color:IL.mu }}>Up to {mod.maxSelections}</span>
                     )}
                   </div>
                 </div>
@@ -392,23 +392,23 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
                     const sel = qty > 0;
                     if (opt.allowMultiple) {
                       return (
-                        <div key={opt.id} className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all ${sel ? "border-[#F5A623] bg-[#F5A623]/10" : "border-gray-200 bg-gray-100"}`}>
-                          <div className="flex flex-col min-w-0 mr-2">
-                            <span className={`font-medium text-sm leading-tight truncate ${sel ? "text-gray-900" : "text-gray-700"}`}>{opt.name}</span>
-                            {opt.price > 0 && <span className="text-[#F5A623] text-xs font-semibold">+{fmt(opt.price)}</span>}
+                        <div key={opt.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderRadius:14, border: sel ? "1px solid rgba(255,107,0,0.5)" : `1px solid ${IL.bord}`, background: sel ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.05)" }}>
+                          <div style={{ display:"flex", flexDirection:"column", minWidth:0, marginRight:8 }}>
+                            <span style={{ fontWeight:500, fontSize:13, lineHeight:1.3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color: sel ? "#fff" : IL.tm }}>{opt.name}</span>
+                            {opt.price > 0 && <span style={{ color:IL.or, fontSize:11, fontWeight:600 }}>+{fmt(opt.price)}</span>}
                           </div>
-                          <div className="flex items-center gap-1 bg-gray-50 rounded-full px-1 py-0.5 shrink-0">
+                          <div style={{ display:"flex", alignItems:"center", gap:4, background:"rgba(255,255,255,0.08)", borderRadius:20, padding:"2px 4px", flexShrink:0 }}>
                             <button
-                              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 disabled:opacity-30 transition-colors"
+                              style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%", color: qty===0 ? "rgba(255,255,255,0.25)" : IL.mu, background:"none", border:"none", cursor:qty===0?"not-allowed":"pointer", fontFamily:"inherit", fontSize:18, lineHeight:1 }}
                               onClick={() => changeQty(mod, opt, -1)}
                               disabled={qty === 0}
-                            ><span className="text-lg leading-none">−</span></button>
-                            <span className="w-4 text-center text-sm font-bold text-gray-900">{qty}</span>
+                            >−</button>
+                            <span style={{ width:16, textAlign:"center", fontSize:13, fontWeight:700, color:IL.tp }}>{qty}</span>
                             <button
-                              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-900 disabled:opacity-30 transition-colors"
+                              style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%", color: (atMax||qty>=(opt.maxQuantity??1)) ? "rgba(255,255,255,0.25)" : IL.mu, background:"none", border:"none", cursor:(atMax||qty>=(opt.maxQuantity??1))?"not-allowed":"pointer", fontFamily:"inherit", fontSize:18, lineHeight:1 }}
                               onClick={() => changeQty(mod, opt, 1)}
                               disabled={atMax || qty >= (opt.maxQuantity ?? 1)}
-                            ><span className="text-lg leading-none">+</span></button>
+                            >+</button>
                           </div>
                         </div>
                       );
@@ -416,14 +416,14 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
                     return (
                       <button key={opt.id} onClick={() => changeQty(mod, opt, sel ? -1 : 1)}
                         disabled={!sel && atMax}
-                        className={`flex items-center justify-between px-3 py-2.5 rounded-xl border transition-all disabled:opacity-40 ${sel ? "border-[#F5A623] bg-[#F5A623]/10 text-gray-900" : "border-gray-200 bg-gray-100 text-gray-700 hover:border-gray-400"}`}>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${sel ? "border-[#F5A623] bg-[#F5A623]" : "border-gray-400"}`}>
-                            {sel && <div className="w-2 h-2 rounded-full bg-white" />}
+                        style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderRadius:14, border: sel ? "1px solid rgba(255,107,0,0.5)" : `1px solid ${IL.bord}`, background: sel ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.05)", cursor:(!sel&&atMax)?"not-allowed":"pointer", fontFamily:"inherit", opacity:(!sel&&atMax)?0.4:1 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
+                          <div style={{ width:20, height:20, borderRadius:"50%", border: sel ? "2px solid #ff9500" : `2px solid ${IL.mu}`, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", background: sel ? "#ff9500" : "transparent" }}>
+                            {sel && <div style={{ width:8, height:8, borderRadius:"50%", background:"#fff" }} />}
                           </div>
-                          <span className="font-medium text-sm leading-tight text-left">{opt.name}</span>
+                          <span style={{ fontWeight:500, fontSize:13, lineHeight:1.3, textAlign:"left", color: sel ? "#fff" : IL.tm }}>{opt.name}</span>
                         </div>
-                        {opt.price > 0 && <span className="text-[#F5A623] text-xs font-semibold ml-1 shrink-0">+{fmt(opt.price)}</span>}
+                        {opt.price > 0 && <span style={{ color:IL.or, fontSize:11, fontWeight:600, marginLeft:4, flexShrink:0 }}>+{fmt(opt.price)}</span>}
                       </button>
                     );
                   })}
@@ -436,21 +436,21 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
           )}
           </div>
           {/* Special instructions — pinned above buttons */}
-          <div className="flex-shrink-0 px-5 pb-3 border-t border-gray-200 pt-4">
-            <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Special Instructions</p>
+          <div className="flex-shrink-0 px-5 pb-3 pt-4" style={{ borderTop:`1px solid ${IL.bord}` }}>
+            <p style={{ color:IL.mu, fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em", marginBottom:8 }}>Special Instructions</p>
             <textarea
               value={note}
               onChange={e => setNote(e.target.value)}
               placeholder="e.g. chicken slightly burnt, extra crispy…"
               rows={2}
-              className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2.5 text-gray-800 text-sm placeholder-gray-400 resize-none focus:outline-none focus:border-amber-400/60 transition-colors"
+              style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, borderRadius:12, padding:"10px 12px", color:IL.tp, fontSize:13, resize:"none", outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
             />
           </div>
           {/* Action buttons — always visible at bottom */}
           <div className="flex-shrink-0 p-5 pt-2 flex gap-3 pb-safe">
-            <button onClick={onClose} className="flex-1 h-12 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-100 transition-colors">Cancel</button>
+            <button onClick={onClose} style={{ flex:1, height:48, borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>Cancel</button>
             <button onClick={handleConfirm} disabled={!!validationError}
-              className="flex-2 flex-grow h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] disabled:opacity-50 text-black font-bold transition-colors">
+              style={{ flexGrow:2, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:14, opacity:validationError?0.5:1, boxShadow:validationError?"none":"0 4px 16px rgba(255,107,0,0.45)" }}>
               Add to Order · {fmt(total)}
             </button>
           </div>
@@ -572,17 +572,19 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHol
             </div>
           )}
           {tab === "card" && (
-            <div style={{ textAlign:"center", paddingTop:24, paddingBottom:24 }}>
-              <div style={{ fontSize:56, marginBottom:16 }}>💳</div>
-              <p style={{ color:IL.tp, fontWeight:600, marginBottom:4 }}>Swipe or tap card on terminal</p>
-              <p style={{ color:IL.mu, fontSize:13 }}>Confirm payment of <span style={{ color:IL.or, fontWeight:700 }}>{fmt(total)}</span></p>
+            <div style={{ borderRadius:18, padding:28, textAlign:"center", background:"linear-gradient(145deg,#1e3a8a,#0ea5e9,#0284c7)", boxShadow:"0 8px 28px rgba(14,165,233,0.5)", position:"relative", overflow:"hidden" }}>
+              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.12) 0%,transparent 55%)", pointerEvents:"none" }} />
+              <div style={{ fontSize:64, marginBottom:14, position:"relative", filter:"drop-shadow(0 6px 16px rgba(14,165,233,0.6))" }}>💳</div>
+              <p style={{ color:"#fff", fontWeight:700, marginBottom:6, fontSize:16, position:"relative" }}>Swipe or tap card on terminal</p>
+              <p style={{ color:"rgba(255,255,255,0.75)", fontSize:13, position:"relative" }}>Confirm payment of <span style={{ color:"#fff", fontWeight:800 }}>{fmt(total)}</span></p>
             </div>
           )}
           {tab === "athmovil" && (
-            <div style={{ textAlign:"center", paddingTop:24, paddingBottom:24 }}>
-              <div style={{ fontSize:56, marginBottom:16 }}>📱</div>
-              <p style={{ color:IL.tp, fontWeight:600, marginBottom:4 }}>ATH Móvil payment</p>
-              <p style={{ color:IL.mu, fontSize:13 }}>Confirm receipt of <span style={{ color:IL.or, fontWeight:700 }}>{fmt(total)}</span></p>
+            <div style={{ borderRadius:18, padding:28, textAlign:"center", background:"linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", boxShadow:"0 8px 28px rgba(124,106,247,0.55)", position:"relative", overflow:"hidden" }}>
+              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.12) 0%,transparent 55%)", pointerEvents:"none" }} />
+              <div style={{ fontSize:64, marginBottom:14, position:"relative", filter:"drop-shadow(0 6px 16px rgba(124,106,247,0.6))" }}>📱</div>
+              <p style={{ color:"#fff", fontWeight:700, marginBottom:6, fontSize:16, position:"relative" }}>ATH Móvil payment</p>
+              <p style={{ color:"rgba(255,255,255,0.75)", fontSize:13, position:"relative" }}>Confirm receipt of <span style={{ color:"#fff", fontWeight:800 }}>{fmt(total)}</span></p>
             </div>
           )}
           {tab === "split" && !splitCollecting && (
@@ -1154,17 +1156,17 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/70 flex justify-end z-50" onClick={onClose}>
-        <div className="bg-white w-full max-w-sm h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-          <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-gray-900 text-xl font-bold">
+      <div className="fixed inset-0 bg-black/75 flex justify-end z-50" onClick={onClose}>
+        <div className="w-full max-w-sm h-full flex flex-col shadow-2xl" style={{ background:IL.hdr }} onClick={e => e.stopPropagation()}>
+          <div className="p-5 flex items-center justify-between" style={{ borderBottom:`1px solid ${IL.bord}` }}>
+            <h2 style={{ color:IL.tp, fontSize:20, fontWeight:800 }}>
               Orders{orders.length > 0 ? (search.trim() ? ` (${filteredOrders.length} of ${orders.length})` : ` (${orders.length})`) : ""}
             </h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-2xl">×</button>
+            <button onClick={onClose} style={{ color:IL.mu, fontSize:28, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit" }}>×</button>
           </div>
 
           {orders.length > 0 && (
-            <div className="px-4 pt-3 pb-2 border-b border-gray-100 bg-white sticky top-0 z-10">
+            <div className="px-4 pt-3 pb-2 sticky top-0 z-10" style={{ borderBottom:`1px solid ${IL.bord}`, background:IL.hdr }}>
               <div className="relative">
                 <input
                   type="search"
@@ -1172,15 +1174,15 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search name, code, item, or last 4 of phone…"
-                  className="w-full bg-gray-100 border border-gray-200 rounded-xl pl-9 pr-9 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#F5A623] focus:bg-white"
+                  style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, borderRadius:12, paddingLeft:36, paddingRight:36, paddingTop:10, paddingBottom:10, fontSize:13, color:IL.tp, outline:"none", fontFamily:"inherit" }}
                 />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color:IL.mu, fontSize:14, pointerEvents:"none" }}>🔍</span>
                 {search && (
                   <button
                     type="button"
                     onClick={() => setSearch("")}
                     aria-label="Clear search"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-gray-300 hover:bg-gray-400 text-white text-xs flex items-center justify-center"
+                    style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", width:22, height:22, borderRadius:"50%", background:"rgba(255,255,255,0.15)", border:"none", color:IL.tm, fontSize:12, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontFamily:"inherit" }}
                   >
                     ×
                   </button>
@@ -1190,90 +1192,96 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
           )}
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {loading && <p className="text-gray-400 text-center py-8">Loading…</p>}
-            {!loading && orders.length === 0 && <p className="text-gray-400 text-center py-8">No active orders</p>}
+            {loading && <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>Loading…</p>}
+            {!loading && orders.length === 0 && <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>No active orders</p>}
             {!loading && orders.length > 0 && filteredOrders.length === 0 && (
-              <p className="text-gray-400 text-center py-8">No orders match "{search}"</p>
+              <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>No orders match "{search}"</p>
             )}
-            {!loading && filteredOrders.map(o => (
-              <div key={o.id} className="bg-gray-100 rounded-xl p-4">
+            {!loading && filteredOrders.map(o => {
+              const { grad: tg, glow: tGw } = ITEM_GRADS[o.id % ITEM_GRADS.length];
+              return (
+              <div key={o.id} style={{ background:tg, borderRadius:16, padding:14, boxShadow:`0 4px 20px ${tGw}`, position:"relative", overflow:"hidden" }}>
+                <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.10) 0%,transparent 55%)", pointerEvents:"none", zIndex:0 }} />
+                <div style={{ position:"relative", zIndex:1 }}>
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <p className="text-gray-900 font-bold text-base leading-tight">{o.customerName || "Walk-in"}</p>
+                    <p style={{ color:"#fff", fontWeight:800, fontSize:15, lineHeight:1.2 }}>{o.customerName || "Walk-in"}</p>
                     {o.customerPhone && (
-                      <a href={`tel:${o.customerPhone}`} className="text-[#F5A623] text-sm font-semibold hover:underline leading-tight block mt-0.5">
+                      <a href={`tel:${o.customerPhone}`} style={{ color:"rgba(255,255,255,0.85)", fontSize:13, fontWeight:600, display:"block", marginTop:2, textDecoration:"none" }}>
                         📞 {o.customerPhone}
                       </a>
                     )}
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span className="text-gray-400 text-xs font-mono">#{o.confirmationCode}</span>
-                      <span className={`text-xs font-semibold ${STATUS_COLOR[o.status] ?? "text-gray-500"}`}>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span style={{ color:"rgba(255,255,255,0.6)", fontSize:11, fontFamily:"monospace" }}>#{o.confirmationCode}</span>
+                      <span style={{ color:"#fff", fontSize:11, fontWeight:700, background:"rgba(0,0,0,0.28)", borderRadius:6, padding:"1px 6px" }}>
                         {STATUS_LABEL[o.status] ?? o.status}
                       </span>
                       {o.scheduledPickupAt && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 font-semibold">
+                        <span style={{ fontSize:11, color:"#fff", background:"rgba(0,0,0,0.28)", borderRadius:6, padding:"1px 6px", fontWeight:600 }}>
                           ⏰ {new Date(o.scheduledPickupAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" })}
                         </span>
                       )}
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${o.source === "pos" ? "bg-purple-50 text-purple-600" : o.source === "phone" ? "bg-green-50 text-green-700 font-bold" : "bg-blue-50 text-blue-600"}`}>
+                      <span style={{ fontSize:11, color:"#fff", background:"rgba(0,0,0,0.28)", borderRadius:6, padding:"1px 6px", fontWeight:600 }}>
                         {o.source === "pos" ? "POS" : o.source === "phone" ? "📞 Phone" : "Online"}
                       </span>
-                      {(() => { const e = elapsedLabel(o.createdAt, now); return <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${e.cls}`}>⏱ {e.label}</span>; })()}
+                      {(() => { const e = elapsedLabel(o.createdAt, now); const urgent = e.cls.includes("red"); return <span style={{ fontSize:11, color: urgent ? "#fca5a5" : "rgba(255,255,255,0.8)", background:"rgba(0,0,0,0.28)", borderRadius:6, padding:"1px 6px", fontWeight:600 }}>⏱ {e.label}</span>; })()}
                     </div>
                   </div>
-                  <span className="text-[#F5A623] font-bold shrink-0">{fmt(o.total)}</span>
+                  <span style={{ color:"#fff", fontWeight:800, fontSize:16, flexShrink:0 }}>{fmt(o.total)}</span>
                 </div>
                 <div className="mb-2 space-y-0.5">
                   {o.items.map((i, idx) => {
                     const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
                     return (
-                      <div key={idx} className="text-gray-500 text-xs leading-snug">
-                        <span className="font-semibold text-gray-700">{i.quantity}×</span> {i.menuItemName}{mods}
+                      <div key={idx} style={{ color:"rgba(255,255,255,0.75)", fontSize:12, lineHeight:1.4 }}>
+                        <span style={{ fontWeight:700, color:"#fff" }}>{i.quantity}×</span> {i.menuItemName}{mods}
                       </div>
                     );
                   })}
                 </div>
-                {o.notes && <p className="text-gray-500 text-xs italic mb-2">"{o.notes}"</p>}
+                {o.notes && <p style={{ color:"rgba(255,255,255,0.65)", fontSize:11, fontStyle:"italic", marginBottom:8 }}>"{o.notes}"</p>}
                 {o.paymentStatus === "paid" && o.source === "pos" && (
-                  <div className="mb-2 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                    <span className="text-green-700 text-sm font-bold">✓ Pre-paid</span>
-                    <span className="text-green-600 text-sm">{PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}</span>
-                    <span className="text-green-500 text-xs ml-auto">awaiting pickup</span>
+                  <div className="mb-2 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background:"rgba(48,209,88,0.22)", border:"1px solid rgba(48,209,88,0.45)" }}>
+                    <span style={{ color:"#6ee7a0", fontSize:13, fontWeight:700 }}>✓ Pre-paid</span>
+                    <span style={{ color:"#6ee7a0", fontSize:13 }}>{PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}</span>
+                    <span style={{ color:"rgba(110,231,160,0.7)", fontSize:11, marginLeft:"auto" }}>awaiting pickup</span>
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
                   {o.status === "pending" && (o.source === "online" || o.source === "phone") && (
                     <>
-                      <button onClick={() => updateStatus(o.id, "confirmed")} className="flex-1 h-10 rounded-lg bg-blue-600 hover:bg-blue-500 text-gray-900 text-sm font-semibold transition-colors">Accept</button>
-                      <button onClick={() => updateStatus(o.id, "cancelled")} className="h-10 px-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold transition-colors">Reject</button>
+                      <button onClick={() => updateStatus(o.id, "confirmed")} style={{ flex:1, height:40, borderRadius:10, background:"rgba(255,255,255,0.25)", border:"1px solid rgba(255,255,255,0.35)", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Accept</button>
+                      <button onClick={() => updateStatus(o.id, "cancelled")} style={{ height:40, padding:"0 12px", borderRadius:10, background:"rgba(255,69,58,0.3)", border:"1px solid rgba(255,69,58,0.5)", color:"#ffa5a1", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Reject</button>
                     </>
                   )}
                   {o.status === "confirmed" && (
-                    <button onClick={() => updateStatus(o.id, "preparing")} className="flex-1 h-10 rounded-lg bg-orange-600 hover:bg-orange-500 text-gray-900 text-sm font-semibold transition-colors">Start Cooking</button>
+                    <button onClick={() => updateStatus(o.id, "preparing")} style={{ flex:1, height:40, borderRadius:10, background:"rgba(255,107,0,0.35)", border:"1px solid rgba(255,107,0,0.55)", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Start Cooking</button>
                   )}
                   {o.status === "preparing" && (
-                    <button onClick={() => updateStatus(o.id, "ready")} className="flex-1 h-10 rounded-lg bg-green-600 hover:bg-green-500 text-gray-900 text-sm font-semibold transition-colors">Mark Ready</button>
+                    <button onClick={() => updateStatus(o.id, "ready")} style={{ flex:1, height:40, borderRadius:10, background:"rgba(48,209,88,0.3)", border:"1px solid rgba(48,209,88,0.55)", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Mark Ready</button>
                   )}
                   {o.paymentStatus === "pending" && (
-                    <button onClick={() => resume(o)} className="h-10 px-3 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-900 text-sm font-semibold transition-colors">Edit</button>
+                    <button onClick={() => resume(o)} style={{ height:40, padding:"0 12px", borderRadius:10, background:"rgba(255,255,255,0.2)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Edit</button>
                   )}
                   {o.paymentStatus === "pending" ? (
-                    <button onClick={() => chargeTicket(o)} className="flex-1 h-10 rounded-lg bg-[#F5A623] hover:bg-[#E09520] text-black text-sm font-bold transition-colors">
+                    <button onClick={() => chargeTicket(o)} style={{ flex:1, height:40, borderRadius:10, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 3px 14px rgba(255,107,0,0.55)" }}>
                       Charge {fmt(o.total)}
                     </button>
                   ) : o.status === "ready" ? (
-                    <button onClick={() => completeOrder(o.id)} className="flex-1 h-10 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-bold transition-colors">
+                    <button onClick={() => completeOrder(o.id)} style={{ flex:1, height:40, borderRadius:10, background:"linear-gradient(135deg,#10b981,#059669)", border:"none", color:"#fff", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 3px 14px rgba(16,185,129,0.55)" }}>
                       ✓ Complete & Receipt
                     </button>
                   ) : (
-                    <button disabled className="flex-1 h-10 rounded-lg bg-gray-100 text-gray-400 text-sm font-semibold cursor-not-allowed">
+                    <button disabled style={{ flex:1, height:40, borderRadius:10, background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.4)", fontSize:13, cursor:"not-allowed", fontFamily:"inherit" }}>
                       Pre-paid — awaiting kitchen
                     </button>
                   )}
-                  <button onClick={() => voidTicket(o.id)} className="h-10 px-3 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-sm font-semibold transition-colors">Void</button>
+                  <button onClick={() => voidTicket(o.id)} style={{ height:40, padding:"0 12px", borderRadius:10, background:"rgba(255,69,58,0.25)", border:"1px solid rgba(255,69,58,0.45)", color:"#ffa5a1", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Void</button>
+                </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1354,7 +1362,7 @@ const ItemCard = memo(function ItemCard({ item, onClick }: { item: MenuItem; onC
       {!hasImg && (
         <div style={{ position:"absolute", top:-24, left:"50%", transform:"translateX(-50%)", zIndex:5, pointerEvents:"none", filter:`drop-shadow(0 6px 14px ${glow})`, fontSize:46, lineHeight:1 }}>🌮</div>
       )}
-      <div style={{ background: hasImg ? IL.card : grad, borderRadius:18, position:"relative", overflow:"hidden", boxShadow:`0 6px 22px ${glow}`, width:"100%" }}>
+      <div style={{ background: grad, borderRadius:18, position:"relative", overflow:"hidden", boxShadow:`0 6px 22px ${glow}`, width:"100%" }}>
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.08) 0%,transparent 50%)", pointerEvents:"none", zIndex:1 }} />
         {hasImg && (
           <div style={{ position:"relative", width:"100%", aspectRatio:"1", overflow:"hidden" }}>
@@ -1442,80 +1450,80 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   if (selected) {
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setSelected(null)}>
-        <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-          <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-            <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-gray-900 text-sm">← Back</button>
-            <h2 className="text-gray-900 text-lg font-bold">Receipt #{selected.confirmationCode}</h2>
+        <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+          <div style={{ padding:"18px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <button onClick={() => setSelected(null)} style={{ color:IL.mu, fontSize:13, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>← Back</button>
+            <h2 style={{ color:IL.tp, fontSize:16, fontWeight:800 }}>Receipt #{selected.confirmationCode}</h2>
             <div/>
           </div>
-          <div className="p-5 max-h-[70vh] overflow-y-auto font-mono text-sm">
-            <div className="text-center mb-3">
-              <div className="font-bold text-base text-gray-900">ISLAND TACOS</div>
-              <div className="text-gray-500 text-xs">Wickhams Cay 1, Road Town, BVI</div>
+          <div style={{ padding:20, maxHeight:"70vh", overflowY:"auto", fontFamily:"monospace", fontSize:13 }}>
+            <div style={{ textAlign:"center", marginBottom:12 }}>
+              <div style={{ fontWeight:800, fontSize:14, color:IL.tp }}>ISLAND TACOS</div>
+              <div style={{ color:IL.mu, fontSize:11 }}>Wickhams Cay 1, Road Town, BVI</div>
             </div>
-            <div className="border-t border-dashed border-gray-300 my-2"/>
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
+            <div style={{ borderTop:`1px dashed rgba(255,255,255,0.12)`, margin:"8px 0" }}/>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:IL.mu, marginBottom:4 }}>
               <span>#{selected.confirmationCode}</span>
               <span>{new Date(selected.createdAt).toLocaleString()}</span>
             </div>
-            <div className="text-xs text-gray-500 mb-0.5">Customer: {selected.customerName || "Walk-in"}</div>
-            {selected.customerPhone && <div className="text-xs text-gray-500 mb-0.5">Phone: {selected.customerPhone}</div>}
-            <div className="text-xs text-gray-500 mb-2">Payment: {PAY_LABEL[selected.paymentMethod] ?? selected.paymentMethod}</div>
-            <div className="border-t border-dashed border-gray-300 my-2"/>
+            <div style={{ fontSize:11, color:IL.mu, marginBottom:2 }}>Customer: {selected.customerName || "Walk-in"}</div>
+            {selected.customerPhone && <div style={{ fontSize:11, color:IL.mu, marginBottom:2 }}>Phone: {selected.customerPhone}</div>}
+            <div style={{ fontSize:11, color:IL.mu, marginBottom:8 }}>Payment: {PAY_LABEL[selected.paymentMethod] ?? selected.paymentMethod}</div>
+            <div style={{ borderTop:`1px dashed rgba(255,255,255,0.12)`, margin:"8px 0" }}/>
             {selected.items.map((item, i) => (
-              <div key={i} className="mb-2">
-                <div className="flex justify-between text-gray-900 text-sm">
+              <div key={i} style={{ marginBottom:8 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", color:IL.tp, fontSize:13 }}>
                   <span>{item.quantity}× {item.menuItemName}</span>
                   <span>{fmt(item.subtotal)}</span>
                 </div>
                 {item.modifierSelections?.map((m, j) => (
-                  <div key={j} className="flex justify-between text-gray-500 text-xs pl-4">
+                  <div key={j} style={{ display:"flex", justifyContent:"space-between", color:IL.mu, fontSize:11, paddingLeft:16 }}>
                     <span>+ {m.name}</span>
                     {m.price > 0 && <span>+{fmt(m.price)}</span>}
                   </div>
                 ))}
-                {item.notes && <div className="text-gray-400 text-xs pl-4">Note: {item.notes}</div>}
+                {item.notes && <div style={{ color:IL.mu, fontSize:11, paddingLeft:16 }}>Note: {item.notes}</div>}
               </div>
             ))}
-            <div className="border-t border-dashed border-gray-300 my-2"/>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between text-gray-700"><span>Subtotal</span><span>{fmt(selected.subtotal)}</span></div>
-              {selected.discountAmount > 0 && <div className="flex justify-between text-green-700"><span>Discount</span><span>-{fmt(selected.discountAmount)}</span></div>}
-              {selected.tax > 0 && <div className="flex justify-between text-gray-700"><span>Tax</span><span>{fmt(selected.tax)}</span></div>}
-              <div className="flex justify-between text-gray-900 font-bold text-base border-t border-gray-300 pt-1 mt-1">
-                <span>TOTAL</span><span>{fmt(selected.total)}</span>
+            <div style={{ borderTop:`1px dashed rgba(255,255,255,0.12)`, margin:"8px 0" }}/>
+            <div style={{ display:"flex", flexDirection:"column", gap:4, fontSize:13 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", color:IL.tm }}><span>Subtotal</span><span>{fmt(selected.subtotal)}</span></div>
+              {selected.discountAmount > 0 && <div style={{ display:"flex", justifyContent:"space-between", color:IL.grn }}><span>Discount</span><span>-{fmt(selected.discountAmount)}</span></div>}
+              {selected.tax > 0 && <div style={{ display:"flex", justifyContent:"space-between", color:IL.tm }}><span>Tax</span><span>{fmt(selected.tax)}</span></div>}
+              <div style={{ display:"flex", justifyContent:"space-between", color:IL.tp, fontWeight:800, fontSize:15, borderTop:`1px solid ${IL.bord}`, paddingTop:8, marginTop:4 }}>
+                <span>TOTAL</span><span style={{ color:IL.or }}>{fmt(selected.total)}</span>
               </div>
               {selected.amountTendered != null && (
                 <>
-                  <div className="flex justify-between text-gray-700"><span>Tendered</span><span>{fmt(selected.amountTendered)}</span></div>
-                  <div className="flex justify-between text-gray-700"><span>Change</span><span>{fmt(Math.max(0, selected.amountTendered - selected.total))}</span></div>
+                  <div style={{ display:"flex", justifyContent:"space-between", color:IL.tm }}><span>Tendered</span><span>{fmt(selected.amountTendered)}</span></div>
+                  <div style={{ display:"flex", justifyContent:"space-between", color:IL.tm }}><span>Change</span><span>{fmt(Math.max(0, selected.amountTendered - selected.total))}</span></div>
                 </>
               )}
             </div>
-            <div className="border-t border-dashed border-gray-300 my-3"/>
+            <div style={{ borderTop:`1px dashed rgba(255,255,255,0.12)`, margin:"12px 0" }}/>
             {orderRefunds.length > 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-2 space-y-1">
+              <div style={{ background:"rgba(255,69,58,0.12)", border:"1px solid rgba(255,69,58,0.3)", borderRadius:12, padding:12, marginBottom:8, display:"flex", flexDirection:"column", gap:6 }}>
                 {orderRefunds.map(r => (
                   <div key={r.id}>
-                    <div className="flex justify-between items-center">
-                      <span className="text-red-700 font-bold text-sm">REFUNDED</span>
-                      <span className="text-red-700 font-bold text-sm">-{fmt(r.amount)}</span>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span style={{ color:"#ff8a84", fontWeight:700, fontSize:13 }}>REFUNDED</span>
+                      <span style={{ color:"#ff8a84", fontWeight:700, fontSize:13 }}>-{fmt(r.amount)}</span>
                     </div>
-                    <div className="text-red-500 text-xs">{PAY_LABEL[r.refundMethod] ?? r.refundMethod} · {new Date(r.createdAt).toLocaleString()}</div>
-                    {r.reason && <div className="text-red-400 text-xs">Reason: {r.reason}</div>}
+                    <div style={{ color:"rgba(255,138,132,0.7)", fontSize:11 }}>{PAY_LABEL[r.refundMethod] ?? r.refundMethod} · {new Date(r.createdAt).toLocaleString()}</div>
+                    {r.reason && <div style={{ color:"rgba(255,138,132,0.55)", fontSize:11 }}>Reason: {r.reason}</div>}
                   </div>
                 ))}
               </div>
             )}
-            <div className="text-center text-gray-400 text-xs">Thank you!</div>
+            <div style={{ textAlign:"center", color:IL.mu, fontSize:11 }}>Thank you!</div>
           </div>
-          <div className="p-4 border-t border-gray-200 space-y-2">
-            {printError && <p className="text-red-600 text-xs text-center">{printError}</p>}
-            {refundSuccess && <p className="text-green-700 text-xs text-center">✓ Refund recorded</p>}
-            {emailStatus === "sent" && <p className="text-green-700 text-xs text-center">✓ Receipt emailed!</p>}
-            {emailStatus === "error" && <p className="text-red-600 text-xs text-center">Email failed: {emailError}</p>}
-            {refireStatus === "sent" && <p className="text-green-700 text-xs text-center">✓ Re-fired to KDS</p>}
-            {refireStatus === "error" && <p className="text-red-600 text-xs text-center">Re-fire failed — try again</p>}
+          <div style={{ padding:16, borderTop:`1px solid ${IL.bord}`, display:"flex", flexDirection:"column", gap:8 }}>
+            {printError && <p style={{ color:IL.red, fontSize:11, textAlign:"center" }}>{printError}</p>}
+            {refundSuccess && <p style={{ color:IL.grn, fontSize:11, textAlign:"center" }}>✓ Refund recorded</p>}
+            {emailStatus === "sent" && <p style={{ color:IL.grn, fontSize:11, textAlign:"center" }}>✓ Receipt emailed!</p>}
+            {emailStatus === "error" && <p style={{ color:IL.red, fontSize:11, textAlign:"center" }}>Email failed: {emailError}</p>}
+            {refireStatus === "sent" && <p style={{ color:IL.grn, fontSize:11, textAlign:"center" }}>✓ Re-fired to KDS</p>}
+            {refireStatus === "error" && <p style={{ color:IL.red, fontSize:11, textAlign:"center" }}>Re-fire failed — try again</p>}
             <button
               disabled={refiring}
               onClick={async () => {
@@ -1536,7 +1544,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   setRefiring(false);
                 }
               }}
-              className="w-full h-10 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-300 text-purple-700 text-sm font-bold transition-colors disabled:opacity-50"
+              style={{ width:"100%", height:40, borderRadius:12, background:"rgba(124,106,247,0.15)", border:"1px solid rgba(124,106,247,0.35)", color:IL.pur, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:refiring?0.5:1 }}
             >
               {refiring ? "Sending…" : "🔁 Re-fire to KDS"}
             </button>
@@ -1549,7 +1557,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   setPrinting(false);
                 }}
                 disabled={printing}
-                className="flex-1 h-11 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-bold transition-colors disabled:opacity-50"
+                style={{ flex:1, height:44, borderRadius:12, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, opacity:printing?0.5:1, boxShadow:"0 3px 14px rgba(255,107,0,0.4)" }}
               >
                 {printing ? "Printing…" : "🖨 Print"}
               </button>
@@ -1559,26 +1567,26 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   setEmailAddress(selected.customerEmail || "");
                   setEmailStatus("idle");
                 }}
-                className="flex-1 h-11 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-600 font-bold transition-colors"
+                style={{ flex:1, height:44, borderRadius:12, background:"rgba(14,165,233,0.15)", border:"1px solid rgba(14,165,233,0.35)", color:"#38bdf8", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}
               >
                 ✉ Email
               </button>
               <button
                 onClick={() => { setRefundOpen(o => !o); setRefundAmount(selected.total.toFixed(2)); }}
-                className="h-11 px-3 rounded-xl bg-red-100 hover:bg-red-100 border border-red-300 text-red-600 font-bold transition-colors"
+                style={{ height:44, padding:"0 12px", borderRadius:12, background:"rgba(255,69,58,0.15)", border:"1px solid rgba(255,69,58,0.35)", color:"#ff8a84", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:14 }}
               >
                 ↩
               </button>
             </div>
             {emailOpen && (
-              <div className="bg-gray-100 rounded-xl p-4 space-y-2 border border-blue-900/40">
-                <p className="text-blue-600 text-sm font-semibold">Email Receipt</p>
+              <div style={{ background:"rgba(14,165,233,0.1)", borderRadius:12, padding:14, border:"1px solid rgba(14,165,233,0.25)", display:"flex", flexDirection:"column", gap:8 }}>
+                <p style={{ color:"#38bdf8", fontSize:13, fontWeight:600 }}>Email Receipt</p>
                 <input
                   type="email"
                   placeholder="customer@email.com"
                   value={emailAddress}
                   onChange={e => setEmailAddress(e.target.value)}
-                  className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none focus:border-blue-500"
+                  style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, borderRadius:10, padding:"8px 12px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
                 />
                 <button
                   disabled={emailSending || !emailAddress}
@@ -1598,7 +1606,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                     }
                     setEmailSending(false);
                   }}
-                  className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-gray-900 font-bold transition-colors disabled:opacity-50"
+                  style={{ width:"100%", height:40, borderRadius:10, background:"rgba(14,165,233,0.3)", border:"1px solid rgba(14,165,233,0.5)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, opacity:(emailSending||!emailAddress)?0.5:1 }}
                 >
                   {emailSending ? "Sending…" : `Send to ${emailAddress || "…"}`}
                 </button>
@@ -1608,7 +1616,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
               <div className="flex gap-2">
                 <a
                   href={`tel:${selected.customerPhone}`}
-                  className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-600 text-sm font-bold transition-colors"
+                  style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, height:40, borderRadius:12, background:"rgba(14,165,233,0.12)", border:"1px solid rgba(14,165,233,0.28)", color:"#38bdf8", fontSize:13, fontWeight:700, textDecoration:"none" }}
                 >
                   📞 Call
                 </a>
@@ -1617,25 +1625,25 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   href={`https://wa.me/${selected.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${selected.customerName}, your Island Tacos order #${selected.confirmationCode} is ready for pickup! 🌮`)}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-xl bg-green-50 hover:bg-green-100 border border-green-300 text-green-700 text-sm font-bold transition-colors"
+                  style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, height:40, borderRadius:12, background:"rgba(48,209,88,0.12)", border:"1px solid rgba(48,209,88,0.28)", color:"#6ee7a0", fontSize:13, fontWeight:700, textDecoration:"none" }}
                 >
                   💬 WhatsApp
                 </a>
               </div>
             )}
             {refundOpen && (
-              <div className="bg-gray-100 rounded-xl p-4 space-y-3 border border-red-900/40">
-                <p className="text-red-600 text-sm font-semibold">Issue Refund</p>
+              <div style={{ background:"rgba(255,69,58,0.1)", borderRadius:12, padding:14, border:"1px solid rgba(255,69,58,0.28)", display:"flex", flexDirection:"column", gap:10 }}>
+                <p style={{ color:"#ff8a84", fontSize:13, fontWeight:600 }}>Issue Refund</p>
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="text-gray-500 text-xs mb-1 block">Amount</label>
+                    <label style={{ color:IL.mu, fontSize:11, display:"block", marginBottom:4 }}>Amount</label>
                     <input type="number" step="0.01" value={refundAmount} onChange={e => setRefundAmount(e.target.value)}
-                      className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none" />
+                      style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, borderRadius:8, padding:"8px 10px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
                   </div>
                   <div className="flex-1">
-                    <label className="text-gray-500 text-xs mb-1 block">Method</label>
+                    <label style={{ color:IL.mu, fontSize:11, display:"block", marginBottom:4 }}>Method</label>
                     <select value={refundMethod} onChange={e => setRefundMethod(e.target.value)}
-                      className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none">
+                      style={{ width:"100%", background:IL.card, border:`1px solid ${IL.bord}`, borderRadius:8, padding:"8px 10px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}>
                       <option value="cash">Cash</option>
                       <option value="card">Card</option>
                       <option value="athmovil">ATH Móvil</option>
@@ -1643,7 +1651,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
                 <input type="text" placeholder="Reason (optional)" value={refundReason} onChange={e => setRefundReason(e.target.value)}
-                  className="w-full bg-gray-100 border border-gray-200 rounded-lg px-3 py-2 text-gray-900 text-sm outline-none" />
+                  style={{ width:"100%", background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, borderRadius:8, padding:"8px 10px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
                 <button disabled={refundSubmitting || !refundAmount}
                   onClick={async () => {
                     setRefundSubmitting(true);
@@ -1665,7 +1673,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                       setRefundSubmitting(false);
                     }
                   }}
-                  className="w-full h-10 rounded-xl bg-red-600 hover:bg-red-500 text-gray-900 font-bold transition-colors disabled:opacity-50">
+                  style={{ width:"100%", height:40, borderRadius:10, background:"rgba(255,69,58,0.3)", border:"1px solid rgba(255,69,58,0.5)", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, opacity:(refundSubmitting||!refundAmount)?0.4:1 }}>
                   {refundSubmitting ? "Processing…" : `Confirm Refund ${refundAmount ? fmt(parseFloat(refundAmount)) : ""}`}
                 </button>
               </div>
@@ -1677,18 +1685,18 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex justify-end z-50" onClick={onClose}>
-      <div className="bg-white w-full max-w-sm h-full flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-gray-900 text-xl font-bold">Receipts</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-2xl leading-none">×</button>
+    <div className="fixed inset-0 bg-black/75 flex justify-end z-50" onClick={onClose}>
+      <div className="w-full max-w-sm h-full flex flex-col shadow-2xl" style={{ background:IL.hdr }} onClick={e => e.stopPropagation()}>
+        <div className="p-5 flex items-center justify-between" style={{ borderBottom:`1px solid ${IL.bord}` }}>
+          <h2 style={{ color:IL.tp, fontSize:20, fontWeight:800 }}>Receipts</h2>
+          <button onClick={onClose} style={{ color:IL.mu, fontSize:28, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit" }}>×</button>
         </div>
 
         {/* Filter tabs */}
         <div className="flex gap-2 px-4 pt-3 pb-2">
           {(["today", "all"] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              className={`flex-1 h-10 rounded-lg text-sm font-semibold transition-colors ${filter === f ? "bg-[#F5A623] text-black" : "bg-gray-100 text-gray-500 hover:text-gray-900"}`}>
+              style={{ flex:1, height:40, borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background: filter === f ? `linear-gradient(135deg,${IL.or},#ff9500)` : "rgba(255,255,255,0.07)", border: filter === f ? "none" : `1px solid ${IL.bord}`, color: filter === f ? "#fff" : IL.mu, boxShadow: filter === f ? "0 3px 12px rgba(255,107,0,0.4)" : "none" }}>
               {f === "today" ? "Today" : "All Time"}
             </button>
           ))}
@@ -1697,18 +1705,18 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
         {/* Search bar */}
         <div className="px-4 pb-2">
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color:IL.mu, fontSize:14 }}>🔍</span>
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Name, phone, or item…"
-              className="w-full h-10 pl-8 pr-8 bg-gray-100 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#F5A623]"
+              style={{ width:"100%", height:40, paddingLeft:32, paddingRight:32, background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, borderRadius:10, fontSize:13, color:IL.tp, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-lg leading-none"
+                style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", color:IL.mu, background:"none", border:"none", cursor:"pointer", fontSize:18, lineHeight:1, fontFamily:"inherit" }}
               >×</button>
             )}
           </div>
@@ -1716,36 +1724,39 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
 
         {/* Summary bar */}
         {!loading && visible.length > 0 && (
-          <div className="mx-4 mb-2 px-4 py-2 bg-gray-100 rounded-xl flex justify-between text-sm">
-            <span className="text-gray-500">{visible.length} order{visible.length !== 1 ? "s" : ""}</span>
-            <span className="text-[#F5A623] font-bold">{fmt(totalRevenue)}</span>
+          <div style={{ margin:"0 16px 8px", padding:"8px 16px", background:"rgba(255,255,255,0.05)", borderRadius:12, display:"flex", justifyContent:"space-between", alignItems:"center", border:`1px solid ${IL.bord}` }}>
+            <span style={{ color:IL.mu, fontSize:13 }}>{visible.length} order{visible.length !== 1 ? "s" : ""}</span>
+            <span style={{ color:IL.or, fontWeight:700, fontSize:13 }}>{fmt(totalRevenue)}</span>
           </div>
         )}
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {loading && <p className="text-gray-400 text-center py-8">Loading…</p>}
+          {loading && <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>Loading…</p>}
           {!loading && visible.length === 0 && (
-            <p className="text-gray-400 text-center py-8">
+            <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>
               {q ? `No orders matching "${search}"` : filter === "today" ? "No completed orders today" : "No completed orders yet"}
             </p>
           )}
           {visible.map(o => {
             const isRefunded = o.paymentStatus === "refunded";
+            const { grad: rg, glow: rGw } = ITEM_GRADS[o.id % ITEM_GRADS.length];
             return (
               <button key={o.id} onClick={() => { setSelected(o); setRefireStatus("idle"); setRefundSuccess(false); setRefundOpen(false); }}
-                className={`w-full rounded-xl p-4 text-left transition-colors ${isRefunded ? "bg-red-50 hover:bg-red-100 border border-red-200" : "bg-gray-100 hover:bg-gray-200"}`}>
+                style={{ width:"100%", borderRadius:14, padding:14, textAlign:"left", cursor:"pointer", fontFamily:"inherit", background: isRefunded ? "rgba(255,69,58,0.12)" : rg, border: isRefunded ? "1px solid rgba(255,69,58,0.3)" : "none", boxShadow: isRefunded ? "none" : `0 4px 18px ${rGw}`, position:"relative", overflow:"hidden" }}>
+                {!isRefunded && <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.10) 0%,transparent 55%)", pointerEvents:"none", zIndex:0 }} />}
+                <div style={{ position:"relative", zIndex:1 }}>
                 <div className="flex items-start justify-between mb-1">
                   <div>
-                    <span className={`font-bold text-sm ${isRefunded ? "text-gray-500" : "text-gray-900"}`}>{o.customerName || "Walk-in"}</span>
-                    <span className="ml-2 text-gray-400 text-xs">#{o.confirmationCode}</span>
+                    <span style={{ fontWeight:700, fontSize:13, color: isRefunded ? "rgba(255,255,255,0.5)" : "#fff" }}>{o.customerName || "Walk-in"}</span>
+                    <span style={{ marginLeft:8, color:"rgba(255,255,255,0.5)", fontSize:11 }}>#{o.confirmationCode}</span>
                   </div>
-                  <div className="flex flex-col items-end gap-0.5">
-                    <span className={`font-bold text-sm ${isRefunded ? "line-through text-gray-400" : "text-[#F5A623]"}`}>{fmt(o.total)}</span>
-                    {isRefunded && <span className="text-xs font-bold text-red-600">↩ Refunded</span>}
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:2 }}>
+                    <span style={{ fontWeight:700, fontSize:13, color: isRefunded ? "rgba(255,255,255,0.35)" : "#fff", textDecoration: isRefunded ? "line-through" : "none" }}>{fmt(o.total)}</span>
+                    {isRefunded && <span style={{ fontSize:11, fontWeight:700, color:"#ff8a84" }}>↩ Refunded</span>}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-gray-400 text-xs">
+                  <p style={{ color:"rgba(255,255,255,0.6)", fontSize:11 }}>
                     {o.items.map(i => {
                       const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
                       return `${i.quantity}× ${i.menuItemName}${mods}`;
@@ -1753,8 +1764,9 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   </p>
                 </div>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="text-gray-500 text-xs">{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}</span>
+                  <span style={{ color:"rgba(255,255,255,0.5)", fontSize:11 }}>{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                  <span style={{ fontSize:11, padding:"1px 8px", borderRadius:6, background:"rgba(0,0,0,0.28)", color:"rgba(255,255,255,0.7)" }}>{PAY_LABEL[o.paymentMethod] ?? o.paymentMethod}</span>
+                </div>
                 </div>
               </button>
             );
@@ -1869,30 +1881,30 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-stretch justify-end" onClick={onClose}>
-      <div className="bg-white w-full max-w-sm h-full flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div style={{ background:IL.hdr, width:"100%", maxWidth:384, height:"100%", display:"flex", flexDirection:"column", boxShadow:"0 0 60px rgba(0,0,0,0.7)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", borderBottom:`1px solid ${IL.bord}` }}>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">86 List</h2>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <h2 style={{ color:IL.tp, fontSize:17, fontWeight:800 }}>86 List</h2>
+            <p style={{ color:IL.mu, fontSize:11, marginTop:2 }}>
               {anyOff ? "Some items blocked online" : "Everything available online"}
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none px-1">×</button>
+          <button onClick={onClose} style={{ color:IL.mu, fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, padding:"0 4px", fontFamily:"inherit" }}>×</button>
         </div>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+          <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", color:IL.mu, fontSize:13 }}>Loading…</div>
         ) : !data ? (
-          <div className="flex-1 flex items-center justify-center text-red-500 text-sm">Failed to load</div>
+          <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", color:IL.red, fontSize:13 }}>Failed to load</div>
         ) : (
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+          <div style={{ flex:1, overflowY:"auto", padding:"16px 20px", display:"flex", flexDirection:"column", gap:24 }}>
 
             {/* Proteins */}
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Proteins</p>
-              <div className="space-y-2">
+              <p style={{ fontSize:10, fontWeight:700, color:IL.mu, textTransform:"uppercase", letterSpacing:".1em", marginBottom:10 }}>Proteins</p>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {EIGHTY_SIX.filter(p => p.type === "item").map(preset => {
                   const off = isOff(preset);
                   return (
@@ -1900,18 +1912,16 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
                       key={preset.label}
                       onClick={() => toggle(preset)}
                       disabled={!!busy}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all disabled:opacity-50 ${
-                        off ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200 hover:border-gray-300"
-                      }`}
+                      style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", borderRadius:14, border: off ? "1px solid rgba(255,69,58,0.4)" : `1px solid ${IL.bord}`, background: off ? "rgba(255,69,58,0.12)" : "rgba(255,255,255,0.05)", cursor:"pointer", fontFamily:"inherit", opacity:busy?0.5:1 }}
                     >
-                      <span className="flex items-center gap-3">
-                        <span className="text-xl">{preset.emoji}</span>
-                        <span className={`text-sm font-semibold ${off ? "text-red-700" : "text-gray-800"}`}>
+                      <span style={{ display:"flex", alignItems:"center", gap:12 }}>
+                        <span style={{ fontSize:20 }}>{preset.emoji}</span>
+                        <span style={{ fontSize:13, fontWeight:600, color: off ? "#ffa5a1" : IL.tm }}>
                           {preset.label}
                         </span>
                       </span>
-                      <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${off ? "bg-red-500" : "bg-green-500"}`}>
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${off ? "translate-x-1" : "translate-x-6"}`} />
+                      <span style={{ position:"relative", display:"inline-flex", height:24, width:44, alignItems:"center", borderRadius:12, background: off ? IL.red : IL.grn, flexShrink:0 }}>
+                        <span style={{ display:"inline-block", height:16, width:16, borderRadius:"50%", background:"#fff", boxShadow:"0 1px 4px rgba(0,0,0,0.3)", transform: off ? "translateX(4px)" : "translateX(24px)", transition:"transform 0.15s" }} />
                       </span>
                     </button>
                   );
@@ -1921,8 +1931,8 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
 
             {/* Ingredients */}
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Ingredients</p>
-              <div className="space-y-2">
+              <p style={{ fontSize:10, fontWeight:700, color:IL.mu, textTransform:"uppercase", letterSpacing:".1em", marginBottom:10 }}>Ingredients</p>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {EIGHTY_SIX.filter(p => p.type === "modifier").map(preset => {
                   const off = isOff(preset);
                   return (
@@ -1930,18 +1940,16 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
                       key={preset.label}
                       onClick={() => toggle(preset)}
                       disabled={!!busy}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all disabled:opacity-50 ${
-                        off ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200 hover:border-gray-300"
-                      }`}
+                      style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", borderRadius:14, border: off ? "1px solid rgba(255,69,58,0.4)" : `1px solid ${IL.bord}`, background: off ? "rgba(255,69,58,0.12)" : "rgba(255,255,255,0.05)", cursor:"pointer", fontFamily:"inherit", opacity:busy?0.5:1 }}
                     >
-                      <span className="flex items-center gap-3">
-                        <span className="text-xl">{preset.emoji}</span>
-                        <span className={`text-sm font-semibold ${off ? "text-red-700" : "text-gray-800"}`}>
+                      <span style={{ display:"flex", alignItems:"center", gap:12 }}>
+                        <span style={{ fontSize:20 }}>{preset.emoji}</span>
+                        <span style={{ fontSize:13, fontWeight:600, color: off ? "#ffa5a1" : IL.tm }}>
                           {preset.label}
                         </span>
                       </span>
-                      <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${off ? "bg-red-500" : "bg-green-500"}`}>
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${off ? "translate-x-1" : "translate-x-6"}`} />
+                      <span style={{ position:"relative", display:"inline-flex", height:24, width:44, alignItems:"center", borderRadius:12, background: off ? IL.red : IL.grn, flexShrink:0 }}>
+                        <span style={{ display:"inline-block", height:16, width:16, borderRadius:"50%", background:"#fff", boxShadow:"0 1px 4px rgba(0,0,0,0.3)", transform: off ? "translateX(4px)" : "translateX(24px)", transition:"transform 0.15s" }} />
                       </span>
                     </button>
                   );
@@ -1980,33 +1988,33 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6">
-        <div className="text-center mb-6">
-          <div className="text-4xl mb-2">🏪</div>
-          <h2 className="text-gray-900 text-xl font-bold">Open Shift</h2>
-          <p className="text-gray-500 text-sm mt-1">Count your starting cash before opening</p>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", padding:24 }}>
+        <div style={{ textAlign:"center", marginBottom:24 }}>
+          <div style={{ fontSize:40, marginBottom:8 }}>🏪</div>
+          <h2 style={{ color:IL.tp, fontSize:20, fontWeight:800 }}>Open Shift</h2>
+          <p style={{ color:IL.mu, fontSize:13, marginTop:4 }}>Count your starting cash before opening</p>
         </div>
-        <div className="mb-4">
-          <label className="text-gray-500 text-xs font-medium mb-2 block">Starting Cash Float</label>
+        <div style={{ marginBottom:16 }}>
+          <label style={{ color:IL.mu, fontSize:11, fontWeight:600, display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:".05em" }}>Starting Cash Float</label>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg font-bold">$</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color:IL.mu, fontSize:17, fontWeight:700 }}>$</span>
             <input type="number" step="0.01" min="0" value={float} onChange={e => setFloat(e.target.value)}
-              className="w-full bg-gray-100 border border-gray-200 focus:border-amber-400 rounded-xl pl-8 pr-4 py-3 text-gray-900 text-xl font-mono font-bold outline-none" />
+              style={{ width:"100%", background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, borderRadius:14, paddingLeft:32, paddingRight:16, paddingTop:12, paddingBottom:12, color:IL.tp, fontSize:20, fontFamily:"monospace", fontWeight:700, outline:"none", boxSizing:"border-box" }} />
           </div>
         </div>
-        <div className="mb-5">
-          <label className="text-gray-500 text-xs font-medium mb-2 block">Notes (optional)</label>
+        <div style={{ marginBottom:20 }}>
+          <label style={{ color:IL.mu, fontSize:11, fontWeight:600, display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:".05em" }}>Notes (optional)</label>
           <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. regular Tuesday shift"
-            className="w-full bg-gray-100 border border-gray-200 focus:border-amber-400 rounded-xl px-4 py-2.5 text-gray-900 text-sm outline-none placeholder-gray-400" />
+            style={{ width:"100%", background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 16px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
         </div>
-        {error && <p className="text-red-600 text-sm text-center mb-3">{error}</p>}
+        {error && <p style={{ color:IL.red, fontSize:13, textAlign:"center", marginBottom:12 }}>{error}</p>}
         <div className="flex gap-2">
           <button onClick={handleOpen} disabled={submitting}
-            className="flex-1 h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-bold transition-colors disabled:opacity-50">
+            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:15, opacity:submitting?0.5:1, boxShadow:"0 4px 16px rgba(255,107,0,0.45)" }}>
             {submitting ? "Opening…" : "Open Shift"}
           </button>
           <button onClick={() => onOpen({ id: 0, openedAt: new Date().toISOString(), closedAt: null, openingFloat: 0, closingFloat: null, notes: null })}
-            className="px-4 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 text-sm transition-colors">
+            style={{ padding:"0 16px", height:48, borderRadius:14, background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, color:IL.mu, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
             Skip
           </button>
         </div>
@@ -2077,58 +2085,58 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={closed ? onClose : undefined}>
-      <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-gray-900 text-lg font-bold">{closed ? "Shift Closed" : "Close Shift"}</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-2xl leading-none">×</button>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding:"18px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <h2 style={{ color:IL.tp, fontSize:17, fontWeight:800 }}>{closed ? "Shift Closed" : "Close Shift"}</h2>
+          <button onClick={onClose} style={{ color:IL.mu, fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit" }}>×</button>
         </div>
-        <div className="p-5 max-h-[70vh] overflow-y-auto">
+        <div style={{ padding:20, maxHeight:"70vh", overflowY:"auto" }}>
           {summary ? (
-            <div className="space-y-3 font-mono text-sm">
-              <div className="bg-gray-100 rounded-xl p-4 space-y-1.5">
-                <div className="flex justify-between"><span className="text-gray-500">Total Orders</span><span className="text-gray-900">{summary.totalOrders}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Cash Sales</span><span className="text-gray-900">{fmt(summary.byMethod.cash)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Card Sales</span><span className="text-gray-900">{fmt(summary.byMethod.card)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">ATH Móvil</span><span className="text-gray-900">{fmt(summary.byMethod.athmovil)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Refunds</span><span className="text-red-600">-{fmt(summary.refundTotal)}</span></div>
-                <div className="flex justify-between border-t border-gray-200 pt-1.5 mt-1"><span className="text-gray-900 font-bold">Net Sales</span><span className="text-[#F5A623] font-bold text-base">{fmt(summary.netSales)}</span></div>
+            <div style={{ display:"flex", flexDirection:"column", gap:12, fontFamily:"monospace", fontSize:13 }}>
+              <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:14, padding:16, border:`1px solid ${IL.bord}`, display:"flex", flexDirection:"column", gap:6 }}>
+                <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:IL.mu }}>Total Orders</span><span style={{ color:IL.tp }}>{summary.totalOrders}</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:IL.mu }}>Cash Sales</span><span style={{ color:IL.tp }}>{fmt(summary.byMethod.cash)}</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:IL.mu }}>Card Sales</span><span style={{ color:IL.tp }}>{fmt(summary.byMethod.card)}</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:IL.mu }}>ATH Móvil</span><span style={{ color:IL.tp }}>{fmt(summary.byMethod.athmovil)}</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:IL.mu }}>Refunds</span><span style={{ color:IL.red }}>-{fmt(summary.refundTotal)}</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between", borderTop:`1px solid ${IL.bord}`, paddingTop:6, marginTop:2 }}><span style={{ color:IL.tp, fontWeight:700 }}>Net Sales</span><span style={{ color:IL.or, fontWeight:700, fontSize:14 }}>{fmt(summary.netSales)}</span></div>
               </div>
-              <div className="bg-gray-100 rounded-xl p-4 space-y-1.5">
-                <div className="flex justify-between"><span className="text-gray-500">Opening Float</span><span className="text-gray-900">{fmt(shift.openingFloat)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Pay Ins</span><span className="text-green-700">+{fmt(summary.payIns)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Pay Outs</span><span className="text-red-600">-{fmt(summary.payOuts)}</span></div>
-                <div className="flex justify-between border-t border-gray-200 pt-1.5"><span className="text-gray-700">Expected Cash</span><span className="text-gray-900 font-bold">{fmt(summary.expectedCash)}</span></div>
+              <div style={{ background:"rgba(255,255,255,0.05)", borderRadius:14, padding:16, border:`1px solid ${IL.bord}`, display:"flex", flexDirection:"column", gap:6 }}>
+                <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:IL.mu }}>Opening Float</span><span style={{ color:IL.tp }}>{fmt(shift.openingFloat)}</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:IL.mu }}>Pay Ins</span><span style={{ color:IL.grn }}>+{fmt(summary.payIns)}</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between" }}><span style={{ color:IL.mu }}>Pay Outs</span><span style={{ color:IL.red }}>-{fmt(summary.payOuts)}</span></div>
+                <div style={{ display:"flex", justifyContent:"space-between", borderTop:`1px solid ${IL.bord}`, paddingTop:6 }}><span style={{ color:IL.tm }}>Expected Cash</span><span style={{ color:IL.tp, fontWeight:700 }}>{fmt(summary.expectedCash)}</span></div>
               </div>
               {!closed && (
                 <div>
-                  <label className="text-gray-500 text-xs mb-1 block">Actual cash in drawer (optional)</label>
+                  <label style={{ color:IL.mu, fontSize:11, display:"block", marginBottom:4 }}>Actual cash in drawer (optional)</label>
                   <input type="number" step="0.01" value={closingFloat} onChange={e => setClosingFloat(e.target.value)}
                     placeholder={fmt(summary.expectedCash)}
-                    className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2 text-gray-900 text-sm font-mono outline-none" />
-                  {closingFloat && <p className={`text-xs mt-1 ${parseFloat(closingFloat) - summary.expectedCash >= 0 ? "text-green-700" : "text-red-600"}`}>
+                    style={{ width:"100%", background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, borderRadius:12, padding:"8px 12px", color:IL.tp, fontSize:13, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} />
+                  {closingFloat && <p style={{ fontSize:11, marginTop:4, color: parseFloat(closingFloat) - summary.expectedCash >= 0 ? IL.grn : IL.red }}>
                     Difference: {parseFloat(closingFloat) - summary.expectedCash >= 0 ? "+" : ""}{fmt(parseFloat(closingFloat) - summary.expectedCash)}
                   </p>}
                 </div>
               )}
-              {closed && <div className="text-center text-green-700 font-bold text-lg py-2">✓ Shift Closed</div>}
+              {closed && <div style={{ textAlign:"center", color:IL.grn, fontWeight:700, fontSize:17, padding:"8px 0" }}>✓ Shift Closed</div>}
             </div>
           ) : (
-            <p className="text-gray-400 text-center py-8">Loading summary…</p>
+            <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>Loading summary…</p>
           )}
         </div>
-        <div className="p-4 border-t border-gray-200 flex gap-2">
+        <div style={{ padding:16, borderTop:`1px solid ${IL.bord}`, display:"flex", gap:8 }}>
           <button onClick={printZReport} disabled={printingZ || !summary}
-            className="flex-1 h-11 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-900 text-sm font-semibold transition-colors disabled:opacity-50">
+            style={{ flex:1, height:44, borderRadius:12, background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, color:IL.tm, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", opacity:(printingZ||!summary)?0.5:1 }}>
             {printingZ ? "Printing…" : "🖨 Print Z-Report"}
           </button>
           {!closed && (
             <button onClick={handleClose} disabled={closing}
-              className="flex-1 h-11 rounded-xl bg-red-600 hover:bg-red-500 text-gray-900 font-bold transition-colors disabled:opacity-50">
+              style={{ flex:1, height:44, borderRadius:12, background:"rgba(255,69,58,0.25)", border:"1px solid rgba(255,69,58,0.45)", color:"#ffa5a1", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, opacity:closing?0.5:1 }}>
               {closing ? "Closing…" : "Close Shift"}
             </button>
           )}
           {closed && (
-            <button onClick={onClose} className="flex-1 h-11 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-bold transition-colors">
+            <button onClick={onClose} style={{ flex:1, height:44, borderRadius:12, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 16px rgba(255,107,0,0.45)" }}>
               Done
             </button>
           )}
@@ -2172,51 +2180,51 @@ function PayInOutModal({ shiftId, onClose }: { shiftId: number | null; onClose: 
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-gray-900 text-lg font-bold">Cash Management</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 text-2xl leading-none">×</button>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding:"18px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <h2 style={{ color:IL.tp, fontSize:17, fontWeight:800 }}>Cash Management</h2>
+          <button onClick={onClose} style={{ color:IL.mu, fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit" }}>×</button>
         </div>
-        <div className="p-5 space-y-4">
+        <div style={{ padding:20, display:"flex", flexDirection:"column", gap:16 }}>
           <div className="flex gap-2">
             {(["pay_in", "pay_out"] as const).map(t => (
               <button key={t} onClick={() => setType(t)}
-                className={`flex-1 h-10 rounded-xl text-sm font-bold transition-colors ${type === t ? (t === "pay_in" ? "bg-green-600 text-gray-900" : "bg-red-600 text-gray-900") : "bg-gray-100 text-gray-500 hover:text-gray-900"}`}>
+                style={{ flex:1, height:40, borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: type === t ? (t === "pay_in" ? "rgba(48,209,88,0.25)" : "rgba(255,69,58,0.25)") : "rgba(255,255,255,0.07)", border: type === t ? (t === "pay_in" ? "1px solid rgba(48,209,88,0.5)" : "1px solid rgba(255,69,58,0.5)") : `1px solid ${IL.bord}`, color: type === t ? (t === "pay_in" ? IL.grn : "#ffa5a1") : IL.mu }}>
                 {t === "pay_in" ? "💵 Pay In" : "💸 Pay Out"}
               </button>
             ))}
           </div>
           <div>
-            <label className="text-gray-500 text-xs mb-1 block">Amount</label>
+            <label style={{ color:IL.mu, fontSize:11, display:"block", marginBottom:4 }}>Amount</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color:IL.mu, fontWeight:700 }}>$</span>
               <input type="number" step="0.01" min="0" value={amount} onChange={e => setAmount(e.target.value)}
-                className="w-full bg-gray-100 border border-gray-200 focus:border-amber-400 rounded-xl pl-8 pr-4 py-3 text-gray-900 text-xl font-mono font-bold outline-none" />
+                style={{ width:"100%", background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, borderRadius:14, paddingLeft:32, paddingRight:16, paddingTop:12, paddingBottom:12, color:IL.tp, fontSize:20, fontFamily:"monospace", fontWeight:700, outline:"none", boxSizing:"border-box" }} />
             </div>
           </div>
           <div>
-            <label className="text-gray-500 text-xs mb-1 block">Note (optional)</label>
+            <label style={{ color:IL.mu, fontSize:11, display:"block", marginBottom:4 }}>Note (optional)</label>
             <input type="text" value={note} onChange={e => setNote(e.target.value)}
               placeholder="e.g. change for $100 bill, vendor payment…"
-              className="w-full bg-gray-100 border border-gray-200 focus:border-amber-400 rounded-xl px-4 py-2.5 text-gray-900 text-sm outline-none placeholder-gray-400" />
+              style={{ width:"100%", background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 16px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
           </div>
-          {success && <p className="text-green-700 text-sm text-center">{success}</p>}
+          {success && <p style={{ color:IL.grn, fontSize:13, textAlign:"center" }}>{success}</p>}
           <button onClick={submit} disabled={submitting || !amount}
-            className={`w-full h-12 rounded-xl font-bold transition-colors disabled:opacity-50 ${type === "pay_in" ? "bg-green-600 hover:bg-green-500 text-gray-900" : "bg-red-600 hover:bg-red-500 text-gray-900"}`}>
+            style={{ width:"100%", height:48, borderRadius:14, background: type === "pay_in" ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,#ef4444,#dc2626)", border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:14, opacity:(submitting||!amount)?0.5:1, boxShadow: type === "pay_in" ? "0 4px 16px rgba(16,185,129,0.4)" : "0 4px 16px rgba(239,68,68,0.4)" }}>
             {submitting ? "Recording…" : `Record ${type === "pay_in" ? "Pay In" : "Pay Out"}`}
           </button>
 
           {transactions.filter(t => t.type === "pay_in" || t.type === "pay_out").length > 0 && (
             <div>
-              <p className="text-gray-400 text-xs mb-2">Today's Cash Movements</p>
-              <div className="space-y-1 max-h-40 overflow-y-auto">
+              <p style={{ color:IL.mu, fontSize:11, marginBottom:8 }}>Today's Cash Movements</p>
+              <div style={{ display:"flex", flexDirection:"column", gap:4, maxHeight:160, overflowY:"auto" }}>
                 {transactions.filter(t => t.type === "pay_in" || t.type === "pay_out").map(t => (
-                  <div key={t.id} className="flex justify-between items-center py-1.5 px-3 bg-gray-100 rounded-lg">
+                  <div key={t.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 12px", background:"rgba(255,255,255,0.05)", borderRadius:10, border:`1px solid ${IL.bord}` }}>
                     <div>
-                      <span className={`text-xs font-bold ${t.type === "pay_in" ? "text-green-700" : "text-red-600"}`}>{t.type === "pay_in" ? "IN" : "OUT"}</span>
-                      {t.note && <span className="text-gray-400 text-xs ml-2">{t.note}</span>}
+                      <span style={{ fontSize:11, fontWeight:700, color: t.type === "pay_in" ? IL.grn : IL.red }}>{t.type === "pay_in" ? "IN" : "OUT"}</span>
+                      {t.note && <span style={{ color:IL.mu, fontSize:11, marginLeft:8 }}>{t.note}</span>}
                     </div>
-                    <span className={`text-sm font-bold ${t.type === "pay_in" ? "text-green-700" : "text-red-600"}`}>
+                    <span style={{ fontSize:13, fontWeight:700, color: t.type === "pay_in" ? IL.grn : IL.red }}>
                       {t.type === "pay_in" ? "+" : "-"}{fmt(t.amount)}
                     </span>
                   </div>
@@ -2418,48 +2426,52 @@ function SplitPaymentModal({
   if (confirmed) {
     return (
       <div className="fixed inset-0 bg-black/75 flex items-end sm:items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-gray-200 overflow-hidden">
-          <div className="px-5 py-4 bg-green-800/50 border-b border-green-300 flex items-center gap-3">
-            <span className="text-3xl">✅</span>
+        <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }}>
+          <div style={{ padding:"16px 20px", background:"rgba(48,209,88,0.15)", borderBottom:"1px solid rgba(48,209,88,0.3)", display:"flex", alignItems:"center", gap:12 }}>
+            <span style={{ fontSize:28 }}>✅</span>
             <div>
-              <p className="text-gray-900 font-black text-lg">Order Placed!</p>
-              <p className="text-green-700 text-sm">Hand back change if any</p>
+              <p style={{ color:IL.tp, fontWeight:900, fontSize:17 }}>Order Placed!</p>
+              <p style={{ color:IL.grn, fontSize:13 }}>Hand back change if any</p>
             </div>
           </div>
-          <div className="p-5 space-y-3">
+          <div style={{ padding:20, display:"flex", flexDirection:"column", gap:10 }}>
             {cart.map(item => {
               const m = assignments[item.key];
               if (!m) return null;
               const sm = SPLIT_METHODS.find(x => x.key === m);
               const amt = scaledItemAmount(item);
               const r = m === "cash" ? cashReceipts[item.key] : undefined;
+              const { grad: ig, glow: igw } = ITEM_GRADS[item.menuItemId % ITEM_GRADS.length];
               return (
-                <div key={item.key} className="bg-gray-100 rounded-xl px-4 py-3 border border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-900 text-sm font-semibold truncate">
-                      {item.quantity > 1 && <span className="text-[#F5A623] font-black mr-1">{item.quantity}×</span>}
+                <div key={item.key} style={{ borderRadius:14, padding:"12px 16px", background:ig, boxShadow:`0 3px 14px ${igw}`, position:"relative", overflow:"hidden" }}>
+                  <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.10) 0%,transparent 55%)", pointerEvents:"none" }} />
+                  <div style={{ position:"relative" }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <span style={{ color:"#fff", fontSize:13, fontWeight:700 }}>
+                      {item.quantity > 1 && <span style={{ color:"rgba(255,255,255,0.75)", fontWeight:900, marginRight:4 }}>{item.quantity}×</span>}
                       {item.name}
                     </span>
-                    <span className="text-[#F5A623] text-lg font-black flex-shrink-0 ml-2">{sm?.icon} {fmt(amt)}</span>
+                    <span style={{ color:"#fff", fontSize:16, fontWeight:900, flexShrink:0, marginLeft:8 }}>{sm?.icon} {fmt(amt)}</span>
                   </div>
                   {r && r.change > 0.005 && (
-                    <div className="mt-1 flex items-center justify-between text-xs">
-                      <span className="text-gray-500">Tendered {fmt(r.tendered)}</span>
-                      <span className="text-green-700 font-bold">Change {fmt(r.change)}</span>
+                    <div style={{ marginTop:4, display:"flex", alignItems:"center", justifyContent:"space-between", fontSize:11 }}>
+                      <span style={{ color:"rgba(255,255,255,0.6)" }}>Tendered {fmt(r.tendered)}</span>
+                      <span style={{ color:"#fff", fontWeight:700 }}>Change {fmt(r.change)}</span>
                     </div>
                   )}
+                  </div>
                 </div>
               );
             })}
             {totalCashChange > 0.005 && (
-              <div className="bg-green-50 rounded-xl px-4 py-3 flex items-center justify-between border border-green-300">
-                <span className="text-green-700 text-sm font-semibold">Total change due</span>
-                <span className="text-green-700 text-2xl font-black">{fmt(totalCashChange)}</span>
+              <div style={{ background:"rgba(48,209,88,0.15)", borderRadius:14, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", border:"1px solid rgba(48,209,88,0.3)" }}>
+                <span style={{ color:IL.grn, fontSize:13, fontWeight:600 }}>Total change due</span>
+                <span style={{ color:IL.grn, fontSize:22, fontWeight:900 }}>{fmt(totalCashChange)}</span>
               </div>
             )}
           </div>
-          <div className="px-5 pb-5">
-            <button onClick={onClose} className="w-full h-12 rounded-xl bg-[#F5A623] hover:bg-[#E09520] text-black font-black text-base transition-colors">
+          <div style={{ padding:"0 20px 20px" }}>
+            <button onClick={onClose} style={{ width:"100%", height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:900, fontSize:15, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 4px 16px rgba(255,107,0,0.45)" }}>
               Done
             </button>
           </div>
@@ -2471,19 +2483,19 @@ function SplitPaymentModal({
   // ─── Main assign-items screen (with optional cash overlay on top) ────────
   return (
     <div className="fixed inset-0 bg-black/75 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm sm:max-w-2xl shadow-2xl border border-gray-200 flex flex-col max-h-[90vh]">
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:672, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", display:"flex", flexDirection:"column", maxHeight:"90vh" }}>
 
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between gap-3 flex-shrink-0">
-          <div className="min-w-0">
-            <p className="text-gray-900 font-black text-lg">✂ Split Payment</p>
-            <p className="text-gray-500 text-sm">Pick a method for each item — cash collects right away</p>
+        <div style={{ padding:"16px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexShrink:0 }}>
+          <div style={{ minWidth:0 }}>
+            <p style={{ color:IL.tp, fontWeight:900, fontSize:17 }}>✂ Split Payment</p>
+            <p style={{ color:IL.mu, fontSize:13 }}>Pick a method for each item — cash collects right away</p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
             <select
               value=""
               onChange={e => { if (e.target.value) assignAll(e.target.value); }}
-              className="h-10 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-900 text-sm font-semibold cursor-pointer"
+              style={{ height:40, padding:"0 12px", borderRadius:12, background:IL.hdr, border:`1px solid ${IL.bord}`, color:IL.tp, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}
               aria-label="Pay all with…"
             >
               <option value="">Pay all with…</option>
@@ -2491,12 +2503,12 @@ function SplitPaymentModal({
                 <option key={sm.key} value={sm.key}>{sm.icon} {sm.label}</option>
               ))}
             </select>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-900 text-2xl font-bold w-8 h-8 flex items-center justify-center transition-colors">×</button>
+            <button onClick={onClose} style={{ color:IL.mu, fontSize:24, fontWeight:700, width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>×</button>
           </div>
         </div>
 
         {/* Items */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div style={{ flex:1, overflowY:"auto", padding:16, display:"flex", flexDirection:"column", gap:8 }}>
           {cart.map(item => {
             const isSelected = selected.has(item.key);
             const method = assignments[item.key];
@@ -2505,47 +2517,38 @@ function SplitPaymentModal({
             const itemAmt = scaledItemAmount(item);
             const r = method === "cash" ? cashReceipts[item.key] : undefined;
             return (
-              <div key={item.key} className={`rounded-xl border transition-all ${
-                isPaid ? "border-green-500 bg-green-50"
-                : isCashPending ? "border-amber-400 bg-amber-50"
-                : isSelected ? "border-[#F5A623] bg-[#F5A623]/10"
-                : "border-gray-200 bg-gray-50"
-              }`}>
-                <div className="flex items-center gap-3 px-3 py-3">
+              <div key={item.key} style={{ borderRadius:14, border: isPaid ? "1px solid rgba(48,209,88,0.4)" : isCashPending ? "1px solid rgba(245,158,11,0.45)" : isSelected ? "1px solid rgba(255,107,0,0.4)" : `1px solid ${IL.bord}`, background: isPaid ? "rgba(48,209,88,0.1)" : isCashPending ? "rgba(245,158,11,0.1)" : isSelected ? "rgba(255,107,0,0.1)" : "rgba(255,255,255,0.04)" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 12px" }}>
                   <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.key)}
                     className="w-5 h-5 rounded accent-orange-400 cursor-pointer flex-shrink-0" />
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-gray-900 text-sm font-semibold leading-tight">
-                      {item.quantity > 1 && <span className="text-[#F5A623] font-black mr-1">{item.quantity}×</span>}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <p style={{ color:IL.tp, fontSize:13, fontWeight:600, lineHeight:1.3 }}>
+                      {item.quantity > 1 && <span style={{ color:IL.or, fontWeight:900, marginRight:4 }}>{item.quantity}×</span>}
                       {item.name}
                     </p>
                     {item.modifierSelections.length > 0 && (
-                      <p className="text-gray-500 text-xs truncate">{item.modifierSelections.map(m => m.name).join(", ")}</p>
+                      <p style={{ color:IL.mu, fontSize:11, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.modifierSelections.map(m => m.name).join(", ")}</p>
                     )}
                     {r && (
-                      <p className="text-green-700 text-xs font-semibold mt-0.5">
+                      <p style={{ color:IL.grn, fontSize:11, fontWeight:600, marginTop:2 }}>
                         Tendered {fmt(r.tendered)}{r.change > 0.005 ? ` • Change ${fmt(r.change)}` : ""}
                       </p>
                     )}
                   </div>
 
-                  <span className="text-gray-900 text-sm font-bold flex-shrink-0 w-16 text-right">{fmt(itemAmt)}</span>
+                  <span style={{ color:IL.tp, fontSize:13, fontWeight:700, flexShrink:0, width:60, textAlign:"right" }}>{fmt(itemAmt)}</span>
 
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {isPaid && <span className="text-green-600 text-lg flex-shrink-0" title="Paid">✓</span>}
+                  <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+                    {isPaid && <span style={{ color:IL.grn, fontSize:16, flexShrink:0 }} title="Paid">✓</span>}
                     {method === "cash" && r && (
                       <button onClick={() => openCashFor(item.key)} title="Re-enter cash"
-                        className="h-11 px-2 text-xs text-gray-500 hover:text-gray-900 underline">edit</button>
+                        style={{ height:44, padding:"0 8px", fontSize:11, color:IL.mu, background:"none", border:"none", cursor:"pointer", textDecoration:"underline", fontFamily:"inherit" }}>edit</button>
                     )}
                     <select
                       value={method ?? ""}
                       onChange={e => pickMethodForItem(item.key, e.target.value)}
-                      className={`h-11 px-3 rounded-xl text-sm font-semibold cursor-pointer border transition-colors min-w-[140px] ${
-                        isPaid ? "bg-green-100 border-green-300 text-green-900"
-                        : isCashPending ? "bg-amber-100 border-amber-300 text-amber-900"
-                        : "bg-white border-gray-300 text-gray-700 hover:border-gray-400"
-                      }`}
+                      style={{ height:44, padding:"0 12px", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", minWidth:140, background: isPaid ? "rgba(48,209,88,0.15)" : isCashPending ? "rgba(245,158,11,0.15)" : IL.hdr, border: isPaid ? "1px solid rgba(48,209,88,0.4)" : isCashPending ? "1px solid rgba(245,158,11,0.4)" : `1px solid ${IL.bord}`, color: isPaid ? IL.grn : isCashPending ? "#fbbf24" : IL.tm }}
                       aria-label={`Payment method for ${item.name}`}
                     >
                       <option value="">Pay with…</option>
@@ -2560,15 +2563,15 @@ function SplitPaymentModal({
           })}
         </div>
 
-        {/* Bulk assign bar (appears when items are selected via checkbox) */}
+        {/* Bulk assign bar */}
         {selected.size > 0 && (
-          <div className="px-4 pb-2 flex-shrink-0">
-            <div className="bg-[#F5A623]/10 border border-[#F5A623]/40 rounded-xl p-3 flex items-center gap-2 flex-wrap">
-              <span className="text-[#F5A623] text-sm font-black flex-shrink-0">{selected.size} item{selected.size > 1 ? "s" : ""}</span>
-              <span className="text-gray-500 text-xs flex-shrink-0">pay with:</span>
+          <div style={{ padding:"0 16px 8px", flexShrink:0 }}>
+            <div style={{ background:"rgba(255,107,0,0.1)", border:"1px solid rgba(255,107,0,0.3)", borderRadius:14, padding:12, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+              <span style={{ color:IL.or, fontSize:13, fontWeight:900, flexShrink:0 }}>{selected.size} item{selected.size > 1 ? "s" : ""}</span>
+              <span style={{ color:IL.mu, fontSize:11, flexShrink:0 }}>pay with:</span>
               {SPLIT_METHODS.map(sm => (
                 <button key={sm.key} onClick={() => bulkAssign(Array.from(selected), sm.key)}
-                  className="flex-1 min-w-[80px] h-10 rounded-xl text-sm font-black transition-colors bg-white hover:bg-gray-100 text-gray-900 border border-gray-300">
+                  style={{ flex:1, minWidth:80, height:40, borderRadius:12, fontSize:13, fontWeight:900, background:"rgba(255,255,255,0.08)", border:`1px solid ${IL.bord}`, color:IL.tp, cursor:"pointer", fontFamily:"inherit" }}>
                   {sm.icon} {sm.label}
                 </button>
               ))}
@@ -2577,45 +2580,45 @@ function SplitPaymentModal({
         )}
 
         {/* Summary */}
-        <div className="px-4 pb-2 flex-shrink-0 space-y-1.5">
+        <div style={{ padding:"0 16px 8px", flexShrink:0, display:"flex", flexDirection:"column", gap:6 }}>
           {Object.entries(methodTotals).map(([method, { amount }]) => {
             const sm = SPLIT_METHODS.find(x => x.key === method);
             return (
-              <div key={method} className="flex justify-between text-sm">
-                <span className="text-gray-500">{sm?.icon} {sm?.label ?? method}</span>
-                <span className="text-gray-900 font-bold">{fmt(Math.round(amount * 100) / 100)}</span>
+              <div key={method} style={{ display:"flex", justifyContent:"space-between", fontSize:13 }}>
+                <span style={{ color:IL.mu }}>{sm?.icon} {sm?.label ?? method}</span>
+                <span style={{ color:IL.tp, fontWeight:700 }}>{fmt(Math.round(amount * 100) / 100)}</span>
               </div>
             );
           })}
           {unassignedAmt > 0.005 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-amber-700">⚠ Not yet assigned</span>
-              <span className="text-amber-700 font-bold">{fmt(Math.round(unassignedAmt * 100) / 100)}</span>
+            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13 }}>
+              <span style={{ color:"#fbbf24" }}>⚠ Not yet assigned</span>
+              <span style={{ color:"#fbbf24", fontWeight:700 }}>{fmt(Math.round(unassignedAmt * 100) / 100)}</span>
             </div>
           )}
           {allAssigned && !allPaid && (
-            <div className="flex justify-between text-sm">
-              <span className="text-amber-700">⚠ Cash still to collect for {cart.filter(i => assignments[i.key] === "cash" && !cashReceipts[i.key]).length} item(s)</span>
+            <div style={{ fontSize:13 }}>
+              <span style={{ color:"#fbbf24" }}>⚠ Cash still to collect for {cart.filter(i => assignments[i.key] === "cash" && !cashReceipts[i.key]).length} item(s)</span>
             </div>
           )}
-          <div className="flex justify-between text-base font-black border-t border-gray-200 pt-2">
-            <span className="text-gray-900">Total</span>
-            <span className="text-[#F5A623]">{fmt(total)}</span>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:15, fontWeight:900, borderTop:`1px solid ${IL.bord}`, paddingTop:8 }}>
+            <span style={{ color:IL.tp }}>Total</span>
+            <span style={{ color:IL.or }}>{fmt(total)}</span>
           </div>
         </div>
 
         {/* Actions */}
-        <div className="px-4 pb-4 flex gap-3 flex-shrink-0">
-          <button onClick={onClose} className="h-12 px-4 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-100 font-semibold transition-colors">
+        <div style={{ padding:"0 16px 16px", display:"flex", gap:12, flexShrink:0 }}>
+          <button onClick={onClose} style={{ height:48, padding:"0 16px", borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
             Cancel
           </button>
           {Object.keys(assignments).length > 0 && (
-            <button onClick={clearAll} className="h-12 px-4 rounded-xl border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-100 font-semibold transition-colors">
+            <button onClick={clearAll} style={{ height:48, padding:"0 16px", borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
               Clear
             </button>
           )}
           <button onClick={finalizeOrder} disabled={!allPaid || submitting}
-            className="flex-1 h-12 rounded-xl font-black text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[#F5A623] hover:bg-[#E09520] text-black">
+            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit", opacity:(!allPaid||submitting)?0.4:1, boxShadow:(!allPaid||submitting)?"none":"0 4px 16px rgba(255,107,0,0.45)" }}>
             {submitting ? "Placing order…" : allPaid ? "✓ Place Order" : !allAssigned ? "Assign all items first" : "Collect remaining cash first"}
           </button>
         </div>
@@ -2624,49 +2627,45 @@ function SplitPaymentModal({
       {/* Per-item cash overlay — opens when user picks Cash for an item */}
       {cashItem && (
         <div className="fixed inset-0 bg-black/85 z-[60] flex items-end sm:items-center justify-center p-4" onClick={cancelCashCollection}>
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl border border-gray-200 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-              <div className="min-w-0">
-                <p className="text-gray-900 font-black text-base truncate">💵 Cash for {cashItem.quantity > 1 ? `${cashItem.quantity}× ` : ""}{cashItem.name}</p>
-                <p className="text-gray-500 text-sm">Amount due: <span className="text-[#F5A623] font-bold">{fmt(cashItemAmount)}</span></p>
+          <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.06)", display:"flex", flexDirection:"column", maxHeight:"90vh" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding:"16px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+              <div style={{ minWidth:0 }}>
+                <p style={{ color:IL.tp, fontWeight:900, fontSize:15, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>💵 Cash for {cashItem.quantity > 1 ? `${cashItem.quantity}× ` : ""}{cashItem.name}</p>
+                <p style={{ color:IL.mu, fontSize:13 }}>Amount due: <span style={{ color:IL.or, fontWeight:700 }}>{fmt(cashItemAmount)}</span></p>
               </div>
-              <button onClick={cancelCashCollection} className="text-gray-400 hover:text-gray-900 text-2xl font-bold w-8 h-8 flex items-center justify-center transition-colors">×</button>
+              <button onClick={cancelCashCollection} style={{ color:IL.mu, fontSize:24, fontWeight:700, width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>×</button>
             </div>
 
-            <div className="p-5 overflow-y-auto">
-              <p className="text-gray-500 text-sm mb-2">Amount tendered</p>
-              <div className="bg-gray-100 rounded-xl p-3 text-gray-900 text-3xl font-mono font-bold text-right mb-3">
+            <div style={{ padding:20, overflowY:"auto" }}>
+              <p style={{ color:IL.mu, fontSize:13, marginBottom:8 }}>Amount tendered</p>
+              <div style={{ background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, borderRadius:14, padding:12, color:IL.tp, fontSize:30, fontFamily:"monospace", fontWeight:700, textAlign:"right", marginBottom:12 }}>
                 ${cashTendered}
               </div>
               <div className="flex flex-wrap gap-2 mb-2">
                 {cashQuick.map(q => (
                   <button key={q} onClick={() => setCashTendered(String(q))}
-                    className={`flex-1 min-w-[56px] h-10 rounded-xl text-sm font-semibold transition-colors ${
-                      parseFloat(cashTendered) === q
-                        ? "bg-[#F5A623] text-black"
-                        : "bg-gray-100 hover:bg-gray-200 text-gray-900"
-                    }`}>
+                    style={{ flex:1, minWidth:56, height:40, borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background: parseFloat(cashTendered) === q ? `linear-gradient(135deg,${IL.or},#ff9500)` : "rgba(255,255,255,0.07)", border: parseFloat(cashTendered) === q ? "none" : `1px solid ${IL.bord}`, color: parseFloat(cashTendered) === q ? "#fff" : IL.tm, boxShadow: parseFloat(cashTendered) === q ? "0 3px 10px rgba(255,107,0,0.4)" : "none" }}>
                     {fmt(q)}
                   </button>
                 ))}
               </div>
               <Numpad value={cashTendered} onChange={setCashTendered} />
               {cashTenderedEnough ? (
-                <div className="mt-4 bg-green-50 rounded-xl p-4 text-center border border-green-200">
-                  <p className="text-green-700 text-sm font-semibold">Change due</p>
-                  <p className="text-green-700 text-3xl font-black mt-1">{fmt(cashChangeForItem)}</p>
+                <div style={{ marginTop:16, background:"rgba(48,209,88,0.12)", borderRadius:14, padding:16, textAlign:"center", border:"1px solid rgba(48,209,88,0.3)" }}>
+                  <p style={{ color:IL.grn, fontSize:13, fontWeight:600 }}>Change due</p>
+                  <p style={{ color:IL.grn, fontSize:30, fontWeight:900, marginTop:4 }}>{fmt(cashChangeForItem)}</p>
                 </div>
               ) : (
-                <div className="mt-4 bg-red-50 rounded-xl p-3 text-center border border-red-200">
-                  <p className="text-red-600 text-sm font-semibold">Short by {fmt(cashItemAmount - cashTenderedNum)}</p>
+                <div style={{ marginTop:16, background:"rgba(255,69,58,0.1)", borderRadius:14, padding:12, textAlign:"center", border:"1px solid rgba(255,69,58,0.3)" }}>
+                  <p style={{ color:"#ffa5a1", fontSize:13, fontWeight:600 }}>Short by {fmt(cashItemAmount - cashTenderedNum)}</p>
                 </div>
               )}
             </div>
 
-            <div className="p-5 border-t border-gray-200 flex gap-3 flex-shrink-0">
-              <button onClick={cancelCashCollection} className="h-12 px-5 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-100 transition-colors">Cancel</button>
+            <div style={{ padding:"16px 20px", borderTop:`1px solid ${IL.bord}`, display:"flex", gap:12, flexShrink:0 }}>
+              <button onClick={cancelCashCollection} style={{ height:48, padding:"0 20px", borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>Cancel</button>
               <button onClick={saveCashReceipt} disabled={!cashTenderedEnough}
-                className="flex-1 h-12 rounded-xl font-black text-base transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[#F5A623] hover:bg-[#E09520] text-black">
+                style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:900, fontSize:15, cursor:"pointer", fontFamily:"inherit", opacity:cashTenderedEnough?1:0.4, boxShadow:cashTenderedEnough?"0 4px 16px rgba(255,107,0,0.45)":"none" }}>
                 ✓ Save & Next
               </button>
             </div>
@@ -3536,15 +3535,8 @@ export default function POS() {
           <button
             onClick={notifPerm === "granted" ? undefined : requestNotifPermission}
             title={notifPerm === "denied" ? "Enable notifications in your browser/device settings" : undefined}
-            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              incomingOrders.length > 0
-                ? "bg-orange-600 hover:bg-orange-500 text-gray-900 animate-pulse"
-                : notifPerm === "granted"
-                  ? "bg-gray-100 text-green-700"
-                  : notifPerm === "denied"
-                    ? "bg-gray-100 text-red-600 cursor-not-allowed"
-                    : "bg-gray-100 text-yellow-400 hover:bg-gray-200"
-            }`}
+            style={{ position:"relative", display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:notifPerm==="denied"?"not-allowed":"pointer", fontFamily:"inherit", background: incomingOrders.length > 0 ? IL.or : notifPerm === "granted" ? "rgba(48,209,88,0.12)" : notifPerm === "denied" ? "rgba(255,69,58,0.12)" : "rgba(255,255,255,0.07)", border: incomingOrders.length > 0 ? "none" : notifPerm === "granted" ? "1px solid rgba(48,209,88,0.3)" : notifPerm === "denied" ? "1px solid rgba(255,69,58,0.3)" : `1px solid ${IL.bord}`, color: incomingOrders.length > 0 ? "#fff" : notifPerm === "granted" ? IL.grn : notifPerm === "denied" ? IL.red : "#fbbf24", boxShadow: incomingOrders.length > 0 ? "0 0 18px rgba(255,107,0,0.5)" : "none" }}
+            className={incomingOrders.length > 0 ? "animate-pulse" : ""}
           >
             {incomingOrders.length > 0 ? "🔔" : notifPerm === "granted" ? "🔔" : notifPerm === "denied" ? "🔕" : "🔔"}
             <span>
@@ -3557,7 +3549,7 @@ export default function POS() {
                     : "Allow Alerts"}
             </span>
             {incomingOrders.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-gray-900 text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
                 {incomingOrders.length}
               </span>
             )}
@@ -3690,35 +3682,37 @@ export default function POS() {
             ) : (
               cart.map(item => {
                 const lineTotal = (item.price + item.modifierSelections.reduce((s, m) => s + m.price, 0)) * item.quantity;
+                const { grad: cg, glow: cGw } = ITEM_GRADS[item.menuItemId % ITEM_GRADS.length];
                 return (
-                  <div key={item.key} style={{ background:IL.card, borderRadius:14, padding:12, border:`1px solid ${IL.bord}` }}>
-                    <div className="flex items-start gap-2">
+                  <div key={item.key} style={{ background:cg, borderRadius:14, padding:12, boxShadow:`0 4px 18px ${cGw}`, position:"relative", overflow:"hidden" }}>
+                    <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.10) 0%,transparent 55%)", pointerEvents:"none", zIndex:0 }} />
+                    <div className="flex items-start gap-2" style={{ position:"relative", zIndex:1 }}>
                       <button
                         className="flex-1 min-w-0 text-left active:opacity-70 transition-opacity"
                         onClick={() => editCartItem(item)}
                         title="Tap to edit modifiers"
                         style={{ background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}
                       >
-                        <p style={{ color:IL.tp, fontSize:13, fontWeight:700 }} className="truncate">{item.name}</p>
+                        <p style={{ color:"#fff", fontSize:13, fontWeight:700 }} className="truncate">{item.name}</p>
                         {item.modifierSelections.map((m, i) => (
-                          <p key={i} style={{ color:IL.mu, fontSize:11 }}>+ {m.name}{m.price > 0 ? ` (+${fmt(m.price)})` : ""}</p>
+                          <p key={i} style={{ color:"rgba(255,255,255,0.72)", fontSize:11 }}>+ {m.name}{m.price > 0 ? ` (+${fmt(m.price)})` : ""}</p>
                         ))}
-                        {item.notes && <p style={{ color:IL.mu, fontSize:11, fontStyle:"italic" }}>{item.notes}</p>}
+                        {item.notes && <p style={{ color:"rgba(255,255,255,0.72)", fontSize:11, fontStyle:"italic" }}>{item.notes}</p>}
                         {(item.modifierSelections.length > 0 || item.notes) && (
-                          <p style={{ color:IL.mu, fontSize:10, marginTop:2 }}>tap to edit</p>
+                          <p style={{ color:"rgba(255,255,255,0.5)", fontSize:10, marginTop:2 }}>tap to edit</p>
                         )}
                       </button>
-                      <span style={{ color:IL.or, fontSize:13, fontWeight:800, flexShrink:0 }}>{fmt(lineTotal)}</span>
+                      <span style={{ color:"#fff", fontSize:13, fontWeight:800, flexShrink:0 }}>{fmt(lineTotal)}</span>
                     </div>
-                    <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center justify-between mt-2" style={{ position:"relative", zIndex:1 }}>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => changeQty(item.key, -1)} style={{ width:40, height:40, borderRadius:10, background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, color:IL.tp, fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontFamily:"inherit" }}>−</button>
-                        <span style={{ color:IL.tp, fontSize:13, fontWeight:800, width:24, textAlign:"center" }}>{item.quantity}</span>
-                        <button onClick={() => changeQty(item.key, 1)} style={{ width:40, height:40, borderRadius:10, background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, color:IL.tp, fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontFamily:"inherit" }}>+</button>
+                        <button onClick={() => changeQty(item.key, -1)} style={{ width:40, height:40, borderRadius:10, background:"rgba(0,0,0,0.25)", border:"1px solid rgba(255,255,255,0.2)", color:"#fff", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontFamily:"inherit" }}>−</button>
+                        <span style={{ color:"#fff", fontSize:13, fontWeight:800, width:24, textAlign:"center" }}>{item.quantity}</span>
+                        <button onClick={() => changeQty(item.key, 1)} style={{ width:40, height:40, borderRadius:10, background:"rgba(0,0,0,0.25)", border:"1px solid rgba(255,255,255,0.2)", color:"#fff", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontFamily:"inherit" }}>+</button>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setItemNoteModal(item.key)} style={{ color:IL.mu, fontSize:12, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>Note</button>
-                        <button onClick={() => removeItem(item.key)} style={{ color:IL.mu, fontSize:20, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", lineHeight:1 }}>×</button>
+                        <button onClick={() => setItemNoteModal(item.key)} style={{ color:"rgba(255,255,255,0.7)", fontSize:12, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>Note</button>
+                        <button onClick={() => removeItem(item.key)} style={{ color:"rgba(255,255,255,0.7)", fontSize:20, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", lineHeight:1 }}>×</button>
                       </div>
                     </div>
                   </div>
