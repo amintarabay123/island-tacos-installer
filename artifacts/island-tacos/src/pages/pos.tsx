@@ -365,7 +365,7 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
           </div>
           {/* Content — scrollable middle */}
           <div className="flex-1 overflow-y-auto p-5 space-y-6" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
-          {modifiers.map(mod => {
+          {modifiers.map((mod, modIdx) => {
             const groupTotal = totalSelForGroup(mod);
             const atMax = mod.maxSelections !== null && groupTotal >= mod.maxSelections;
             return (
@@ -387,25 +387,28 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {mod.options.sort((a, b) => a.position - b.position).map(opt => {
+                  {mod.options.sort((a, b) => a.position - b.position).map((opt, optIdx) => {
                     const qty = qtys[mod.loyverseId]?.[opt.id] ?? 0;
                     const sel = qty > 0;
+                    const gi = (modIdx * 10 + optIdx) % ITEM_GRADS.length;
+                    const gd = ITEM_GRADS[gi];
                     if (opt.allowMultiple) {
                       return (
-                        <div key={opt.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderRadius:14, border: sel ? "1px solid rgba(255,107,0,0.5)" : `1px solid ${IL.bord}`, background: sel ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.05)" }}>
-                          <div style={{ display:"flex", flexDirection:"column", minWidth:0, marginRight:8 }}>
-                            <span style={{ fontWeight:500, fontSize:13, lineHeight:1.3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color: sel ? "#fff" : IL.tm }}>{opt.name}</span>
-                            {opt.price > 0 && <span style={{ color:IL.or, fontSize:11, fontWeight:600 }}>+{fmt(opt.price)}</span>}
+                        <div key={opt.id} style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderRadius:14, border:"none", background:gd.grad, opacity:sel?1:0.5, boxShadow: sel ? `0 3px 14px ${gd.glow}` : "none" }}>
+                          <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none", opacity: sel ? 1 : 0.6 }} />
+                          <div style={{ display:"flex", flexDirection:"column", minWidth:0, marginRight:8, position:"relative" }}>
+                            <span style={{ fontWeight:600, fontSize:13, lineHeight:1.3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"#fff" }}>{opt.name}</span>
+                            {opt.price > 0 && <span style={{ color:"rgba(255,255,255,0.85)", fontSize:11, fontWeight:700 }}>+{fmt(opt.price)}</span>}
                           </div>
-                          <div style={{ display:"flex", alignItems:"center", gap:4, background:"rgba(255,255,255,0.08)", borderRadius:20, padding:"2px 4px", flexShrink:0 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:4, background:"rgba(0,0,0,0.28)", borderRadius:20, padding:"2px 4px", flexShrink:0, position:"relative" }}>
                             <button
-                              style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%", color: qty===0 ? "rgba(255,255,255,0.25)" : IL.mu, background:"none", border:"none", cursor:qty===0?"not-allowed":"pointer", fontFamily:"inherit", fontSize:18, lineHeight:1 }}
+                              style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%", color: qty===0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.9)", background:"none", border:"none", cursor:qty===0?"not-allowed":"pointer", fontFamily:"inherit", fontSize:18, lineHeight:1 }}
                               onClick={() => changeQty(mod, opt, -1)}
                               disabled={qty === 0}
                             >−</button>
-                            <span style={{ width:16, textAlign:"center", fontSize:13, fontWeight:700, color:IL.tp }}>{qty}</span>
+                            <span style={{ width:16, textAlign:"center", fontSize:13, fontWeight:700, color:"#fff" }}>{qty}</span>
                             <button
-                              style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%", color: (atMax||qty>=(opt.maxQuantity??1)) ? "rgba(255,255,255,0.25)" : IL.mu, background:"none", border:"none", cursor:(atMax||qty>=(opt.maxQuantity??1))?"not-allowed":"pointer", fontFamily:"inherit", fontSize:18, lineHeight:1 }}
+                              style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%", color: (atMax||qty>=(opt.maxQuantity??1)) ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.9)", background:"none", border:"none", cursor:(atMax||qty>=(opt.maxQuantity??1))?"not-allowed":"pointer", fontFamily:"inherit", fontSize:18, lineHeight:1 }}
                               onClick={() => changeQty(mod, opt, 1)}
                               disabled={atMax || qty >= (opt.maxQuantity ?? 1)}
                             >+</button>
@@ -416,14 +419,15 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
                     return (
                       <button key={opt.id} onClick={() => changeQty(mod, opt, sel ? -1 : 1)}
                         disabled={!sel && atMax}
-                        style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderRadius:14, border: sel ? "1px solid rgba(255,107,0,0.5)" : `1px solid ${IL.bord}`, background: sel ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.05)", cursor:(!sel&&atMax)?"not-allowed":"pointer", fontFamily:"inherit", opacity:(!sel&&atMax)?0.4:1 }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
-                          <div style={{ width:20, height:20, borderRadius:"50%", border: sel ? "2px solid #ff9500" : `2px solid ${IL.mu}`, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", background: sel ? "#ff9500" : "transparent" }}>
-                            {sel && <div style={{ width:8, height:8, borderRadius:"50%", background:"#fff" }} />}
+                        style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderRadius:14, border:"none", background:gd.grad, cursor:(!sel&&atMax)?"not-allowed":"pointer", fontFamily:"inherit", opacity:(!sel&&atMax)?0.25:sel?1:0.5, boxShadow: sel ? `0 3px 14px ${gd.glow}` : "none" }}>
+                        <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none", opacity: sel ? 1 : 0.6 }} />
+                        <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0, position:"relative" }}>
+                          <div style={{ width:20, height:20, borderRadius:"50%", border:"2px solid rgba(255,255,255,0.8)", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", background: sel ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.2)" }}>
+                            {sel && <div style={{ width:8, height:8, borderRadius:"50%", background:"#333" }} />}
                           </div>
-                          <span style={{ fontWeight:500, fontSize:13, lineHeight:1.3, textAlign:"left", color: sel ? "#fff" : IL.tm }}>{opt.name}</span>
+                          <span style={{ fontWeight:600, fontSize:13, lineHeight:1.3, textAlign:"left", color:"#fff" }}>{opt.name}</span>
                         </div>
-                        {opt.price > 0 && <span style={{ color:IL.or, fontSize:11, fontWeight:600, marginLeft:4, flexShrink:0 }}>+{fmt(opt.price)}</span>}
+                        {opt.price > 0 && <span style={{ color:"rgba(255,255,255,0.9)", fontSize:11, fontWeight:700, marginLeft:4, flexShrink:0, position:"relative" }}>+{fmt(opt.price)}</span>}
                       </button>
                     );
                   })}
@@ -1158,11 +1162,12 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     <>
       <div className="fixed inset-0 bg-black/75 flex justify-end z-50" onClick={onClose}>
         <div className="w-full max-w-sm h-full flex flex-col shadow-2xl" style={{ background:IL.hdr }} onClick={e => e.stopPropagation()}>
-          <div className="p-5 flex items-center justify-between" style={{ borderBottom:`1px solid ${IL.bord}` }}>
-            <h2 style={{ color:IL.tp, fontSize:20, fontWeight:800 }}>
+          <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"linear-gradient(135deg,#7c6af7,#5b4cf5)", flexShrink:0 }}>
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+            <h2 style={{ color:"#fff", fontSize:20, fontWeight:800, position:"relative" }}>
               Orders{orders.length > 0 ? (search.trim() ? ` (${filteredOrders.length} of ${orders.length})` : ` (${orders.length})`) : ""}
             </h2>
-            <button onClick={onClose} style={{ color:IL.mu, fontSize:28, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit" }}>×</button>
+            <button onClick={onClose} style={{ color:"rgba(255,255,255,0.75)", fontSize:28, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit", position:"relative" }}>×</button>
           </div>
 
           {orders.length > 0 && (
@@ -1451,9 +1456,10 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setSelected(null)}>
         <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
-          <div style={{ padding:"18px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-            <button onClick={() => setSelected(null)} style={{ color:IL.mu, fontSize:13, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>← Back</button>
-            <h2 style={{ color:IL.tp, fontSize:16, fontWeight:800 }}>Receipt #{selected.confirmationCode}</h2>
+          <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:`linear-gradient(135deg,${IL.or},#ff9500)`, flexShrink:0 }}>
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+            <button onClick={() => setSelected(null)} style={{ color:"rgba(255,255,255,0.85)", fontSize:13, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", position:"relative" }}>← Back</button>
+            <h2 style={{ color:"#fff", fontSize:16, fontWeight:800, position:"relative" }}>Receipt #{selected.confirmationCode}</h2>
             <div/>
           </div>
           <div style={{ padding:20, maxHeight:"70vh", overflowY:"auto", fontFamily:"monospace", fontSize:13 }}>
@@ -1687,17 +1693,24 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/75 flex justify-end z-50" onClick={onClose}>
       <div className="w-full max-w-sm h-full flex flex-col shadow-2xl" style={{ background:IL.hdr }} onClick={e => e.stopPropagation()}>
-        <div className="p-5 flex items-center justify-between" style={{ borderBottom:`1px solid ${IL.bord}` }}>
-          <h2 style={{ color:IL.tp, fontSize:20, fontWeight:800 }}>Receipts</h2>
-          <button onClick={onClose} style={{ color:IL.mu, fontSize:28, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit" }}>×</button>
+        <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"linear-gradient(135deg,#0ea5e9,#0284c7)", flexShrink:0 }}>
+          <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+          <h2 style={{ color:"#fff", fontSize:20, fontWeight:800, position:"relative" }}>Receipts</h2>
+          <button onClick={onClose} style={{ color:"rgba(255,255,255,0.75)", fontSize:28, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit", position:"relative" }}>×</button>
         </div>
 
         {/* Filter tabs */}
         <div className="flex gap-2 px-4 pt-3 pb-2">
           {(["today", "all"] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
-              style={{ flex:1, height:40, borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background: filter === f ? `linear-gradient(135deg,${IL.or},#ff9500)` : "rgba(255,255,255,0.07)", border: filter === f ? "none" : `1px solid ${IL.bord}`, color: filter === f ? "#fff" : IL.mu, boxShadow: filter === f ? "0 3px 12px rgba(255,107,0,0.4)" : "none" }}>
-              {f === "today" ? "Today" : "All Time"}
+              style={{ position:"relative", overflow:"hidden", flex:1, height:40, borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+                background: f === "today"
+                  ? (filter === f ? `linear-gradient(135deg,${IL.or},#ff9500)` : "linear-gradient(135deg,rgba(255,107,0,0.35),rgba(255,149,0,0.2))")
+                  : (filter === f ? "linear-gradient(135deg,#7c6af7,#5b4cf5)" : "linear-gradient(135deg,rgba(124,106,247,0.35),rgba(91,76,245,0.2))"),
+                border:"none", color:"#fff",
+                boxShadow: filter === f ? (f === "today" ? "0 3px 12px rgba(255,107,0,0.45)" : "0 3px 12px rgba(124,106,247,0.45)") : "none" }}>
+              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+              <span style={{ position:"relative" }}>{f === "today" ? "Today" : "All Time"}</span>
             </button>
           ))}
         </div>
@@ -1884,14 +1897,15 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
       <div style={{ background:IL.hdr, width:"100%", maxWidth:384, height:"100%", display:"flex", flexDirection:"column", boxShadow:"0 0 60px rgba(0,0,0,0.7)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", borderBottom:`1px solid ${IL.bord}` }}>
-          <div>
-            <h2 style={{ color:IL.tp, fontSize:17, fontWeight:800 }}>86 List</h2>
-            <p style={{ color:IL.mu, fontSize:11, marginTop:2 }}>
+        <div style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", background:"linear-gradient(135deg,#ff453a,#c0392b)", flexShrink:0 }}>
+          <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+          <div style={{ position:"relative" }}>
+            <h2 style={{ color:"#fff", fontSize:17, fontWeight:800 }}>86 List</h2>
+            <p style={{ color:"rgba(255,255,255,0.72)", fontSize:11, marginTop:2 }}>
               {anyOff ? "Some items blocked online" : "Everything available online"}
             </p>
           </div>
-          <button onClick={onClose} style={{ color:IL.mu, fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, padding:"0 4px", fontFamily:"inherit" }}>×</button>
+          <button onClick={onClose} style={{ color:"rgba(255,255,255,0.75)", fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, padding:"0 4px", fontFamily:"inherit", position:"relative" }}>×</button>
         </div>
 
         {loading ? (
@@ -1988,12 +2002,14 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", padding:24 }}>
-        <div style={{ textAlign:"center", marginBottom:24 }}>
-          <div style={{ fontSize:40, marginBottom:8 }}>🏪</div>
-          <h2 style={{ color:IL.tp, fontSize:20, fontWeight:800 }}>Open Shift</h2>
-          <p style={{ color:IL.mu, fontSize:13, marginTop:4 }}>Count your starting cash before opening</p>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }}>
+        <div style={{ position:"relative", overflow:"hidden", padding:"20px 20px 16px", textAlign:"center", background:"linear-gradient(135deg,#10b981,#059669)" }}>
+          <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+          <div style={{ fontSize:36, marginBottom:6, position:"relative" }}>🏪</div>
+          <h2 style={{ color:"#fff", fontSize:20, fontWeight:800, position:"relative" }}>Open Shift</h2>
+          <p style={{ color:"rgba(255,255,255,0.75)", fontSize:12, marginTop:4, position:"relative" }}>Count your starting cash before opening</p>
         </div>
+        <div style={{ padding:24 }}>
         <div style={{ marginBottom:16 }}>
           <label style={{ color:IL.mu, fontSize:11, fontWeight:600, display:"block", marginBottom:6, textTransform:"uppercase", letterSpacing:".05em" }}>Starting Cash Float</label>
           <div className="relative">
@@ -2017,6 +2033,7 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
             style={{ padding:"0 16px", height:48, borderRadius:14, background:"rgba(255,255,255,0.07)", border:`1px solid ${IL.bord}`, color:IL.mu, fontSize:13, cursor:"pointer", fontFamily:"inherit" }}>
             Skip
           </button>
+        </div>
         </div>
       </div>
     </div>
@@ -2086,9 +2103,10 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={closed ? onClose : undefined}>
       <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
-        <div style={{ padding:"18px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <h2 style={{ color:IL.tp, fontSize:17, fontWeight:800 }}>{closed ? "Shift Closed" : "Close Shift"}</h2>
-          <button onClick={onClose} style={{ color:IL.mu, fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit" }}>×</button>
+        <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background: closed ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,#ff453a,#c0392b)" }}>
+          <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+          <h2 style={{ color:"#fff", fontSize:17, fontWeight:800, position:"relative" }}>{closed ? "✓ Shift Closed" : "Close Shift"}</h2>
+          <button onClick={onClose} style={{ color:"rgba(255,255,255,0.75)", fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit", position:"relative" }}>×</button>
         </div>
         <div style={{ padding:20, maxHeight:"70vh", overflowY:"auto" }}>
           {summary ? (
@@ -2181,9 +2199,10 @@ function PayInOutModal({ shiftId, onClose }: { shiftId: number | null; onClose: 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
-        <div style={{ padding:"18px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <h2 style={{ color:IL.tp, fontSize:17, fontWeight:800 }}>Cash Management</h2>
-          <button onClick={onClose} style={{ color:IL.mu, fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit" }}>×</button>
+        <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"linear-gradient(135deg,#10b981,#059669)" }}>
+          <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+          <h2 style={{ color:"#fff", fontSize:17, fontWeight:800, position:"relative" }}>💵 Cash Management</h2>
+          <button onClick={onClose} style={{ color:"rgba(255,255,255,0.75)", fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit", position:"relative" }}>×</button>
         </div>
         <div style={{ padding:20, display:"flex", flexDirection:"column", gap:16 }}>
           <div className="flex gap-2">
@@ -3532,67 +3551,93 @@ export default function POS() {
         </div>
         <div style={{ color:IL.mu, fontSize:13, fontFamily:"monospace" }}>{time}</div>
         <div className="flex items-center gap-2">
+          {/* Bell / Notifications */}
           <button
             onClick={notifPerm === "granted" ? undefined : requestNotifPermission}
             title={notifPerm === "denied" ? "Enable notifications in your browser/device settings" : undefined}
-            style={{ position:"relative", display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:notifPerm==="denied"?"not-allowed":"pointer", fontFamily:"inherit", background: incomingOrders.length > 0 ? IL.or : notifPerm === "granted" ? "rgba(48,209,88,0.12)" : notifPerm === "denied" ? "rgba(255,69,58,0.12)" : "rgba(255,255,255,0.07)", border: incomingOrders.length > 0 ? "none" : notifPerm === "granted" ? "1px solid rgba(48,209,88,0.3)" : notifPerm === "denied" ? "1px solid rgba(255,69,58,0.3)" : `1px solid ${IL.bord}`, color: incomingOrders.length > 0 ? "#fff" : notifPerm === "granted" ? IL.grn : notifPerm === "denied" ? IL.red : "#fbbf24", boxShadow: incomingOrders.length > 0 ? "0 0 18px rgba(255,107,0,0.5)" : "none" }}
+            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:notifPerm==="denied"?"not-allowed":"pointer", fontFamily:"inherit",
+              background: incomingOrders.length > 0 ? `linear-gradient(135deg,${IL.or},#ff9500)` : notifPerm === "granted" ? "linear-gradient(135deg,rgba(48,209,88,0.55),rgba(16,185,129,0.35))" : notifPerm === "denied" ? "linear-gradient(135deg,rgba(255,69,58,0.55),rgba(192,57,43,0.35))" : "linear-gradient(135deg,rgba(251,191,36,0.55),rgba(245,158,11,0.35))",
+              border:"none", color:"#fff",
+              boxShadow: incomingOrders.length > 0 ? "0 2px 16px rgba(255,107,0,0.65)" : "none" }}
             className={incomingOrders.length > 0 ? "animate-pulse" : ""}
           >
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
             {incomingOrders.length > 0 ? "🔔" : notifPerm === "granted" ? "🔔" : notifPerm === "denied" ? "🔕" : "🔔"}
-            <span>
-              {incomingOrders.length > 0
-                ? `${incomingOrders.length} Pending`
-                : notifPerm === "granted"
-                  ? "Alerts On"
-                  : notifPerm === "denied"
-                    ? "Alerts Off"
-                    : "Allow Alerts"}
+            <span style={{ position:"relative" }}>
+              {incomingOrders.length > 0 ? `${incomingOrders.length} Pending` : notifPerm === "granted" ? "Alerts On" : notifPerm === "denied" ? "Alerts Off" : "Allow Alerts"}
             </span>
             {incomingOrders.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center" style={{ zIndex:1 }}>
                 {incomingOrders.length}
               </span>
             )}
           </button>
+          {/* Shift */}
           <button
             onClick={() => currentShift && currentShift.id !== 0 ? setCloseShiftModal(true) : setOpenShiftModal(true)}
-            style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background: currentShift && currentShift.id !== 0 ? "rgba(48,209,88,0.12)" : "rgba(255,69,58,0.12)", border: currentShift && currentShift.id !== 0 ? "1px solid rgba(48,209,88,0.3)" : "1px solid rgba(255,69,58,0.3)", color: currentShift && currentShift.id !== 0 ? IL.grn : IL.red }}
+            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+              background: currentShift && currentShift.id !== 0 ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,rgba(255,69,58,0.7),rgba(192,57,43,0.5))",
+              border:"none", color:"#fff",
+              boxShadow: currentShift && currentShift.id !== 0 ? "0 2px 14px rgba(16,185,129,0.5)" : "0 2px 10px rgba(255,69,58,0.35)" }}
           >
-            ⏱ <span className="hidden sm:inline">{currentShift && currentShift.id !== 0 ? "Shift Open" : "No Shift"}</span>
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+            ⏱ <span className="hidden sm:inline" style={{ position:"relative" }}>{currentShift && currentShift.id !== 0 ? "Shift Open" : "No Shift"}</span>
           </button>
+          {/* Cash */}
           <button
             onClick={() => setCashMgmtOpen(true)}
-            style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, color:IL.tm }}
+            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+              background:"linear-gradient(135deg,#10b981,#059669)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(16,185,129,0.45)" }}
           >
-            💵 <span className="hidden sm:inline">Cash</span>
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+            💵 <span className="hidden sm:inline" style={{ position:"relative" }}>Cash</span>
           </button>
-          <button onClick={() => setReceiptsOpen(true)} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, color:IL.tm }}>
-            🧾 <span className="hidden sm:inline">Receipts</span>
+          {/* Receipts */}
+          <button onClick={() => setReceiptsOpen(true)}
+            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+              background:"linear-gradient(135deg,#0ea5e9,#0284c7)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(14,165,233,0.45)" }}
+          >
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+            🧾 <span className="hidden sm:inline" style={{ position:"relative" }}>Receipts</span>
           </button>
+          {/* Sold Out */}
           <button
             onClick={() => setSoldOutOpen(true)}
-            style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:"rgba(255,69,58,0.1)", border:"1px solid rgba(255,69,58,0.25)", color:IL.red }}
+            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+              background:"linear-gradient(135deg,#ff453a,#c0392b)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(255,69,58,0.45)" }}
           >
-            🚫 <span className="hidden sm:inline">Sold Out</span>
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+            🚫 <span className="hidden sm:inline" style={{ position:"relative" }}>Sold Out</span>
           </button>
+          {/* Tickets / Held */}
           <button
             onClick={() => setTicketsOpen(true)}
-            style={{ position:"relative", display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: ticketCount > 0 ? IL.or : "rgba(255,255,255,0.06)", border: ticketCount > 0 ? "none" : `1px solid ${IL.bord}`, color: ticketCount > 0 ? "#fff" : IL.tm, boxShadow: ticketCount > 0 ? "0 0 18px rgba(255,107,0,0.5)" : "none" }}
+            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+              background: ticketCount > 0 ? `linear-gradient(135deg,${IL.or},#ff9500)` : "linear-gradient(135deg,#7c6af7,#5b4cf5)",
+              border:"none", color:"#fff",
+              boxShadow: ticketCount > 0 ? "0 2px 16px rgba(255,107,0,0.65)" : "0 2px 14px rgba(124,106,247,0.45)" }}
           >
-            🎫 <span className="hidden sm:inline">{ticketCount > 0 ? `${ticketCount} Held` : "Tickets"}</span>
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+            🎫 <span className="hidden sm:inline" style={{ position:"relative" }}>{ticketCount > 0 ? `${ticketCount} Held` : "Tickets"}</span>
             {ticketCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-gray-900 text-xs font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md" style={{ zIndex:1 }}>
                 {ticketCount}
               </span>
             )}
           </button>
-          <button onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.dashboard)}`)} style={{ padding:"6px 12px", borderRadius:10, background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, color:IL.mu, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-            ← <span className="hidden sm:inline">Admin</span>
+          {/* Admin */}
+          <button onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.dashboard)}`)}
+            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+              background:"linear-gradient(135deg,#7c6af7,#5b4cf5)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(124,106,247,0.45)" }}
+          >
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+            ← <span className="hidden sm:inline" style={{ position:"relative" }}>Admin</span>
           </button>
+          {/* Reload */}
           <button
             onClick={() => window.location.reload()}
             title="Reload POS"
-            style={{ padding:"6px 10px", borderRadius:10, background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, color:IL.mu, cursor:"pointer" }}
+            style={{ padding:"6px 10px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:`1px solid ${IL.bord}`, color:IL.mu, cursor:"pointer" }}
           >
             <RefreshCw className="w-4 h-4" />
           </button>
