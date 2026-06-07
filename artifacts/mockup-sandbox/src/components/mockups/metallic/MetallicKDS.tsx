@@ -68,7 +68,7 @@ export function MetallicKDS() {
         <div style={{ flex: 1 }} />
         {/* Status counters stacked vertically */}
         {[["2", "#ff6b00", "rgba(255,107,0,0.15)", "NEW"], ["2", "#ffd60a", "rgba(255,214,10,0.12)", "CKG"], ["1", "#30d158", "rgba(48,209,88,0.12)", "RDY"]].map(([n, color, bgc, lbl]) => (
-          <div key={String(lbl)} style={{ width: 46, background: bgc as string, border: `1px solid ${(color as string) + "44"}`, borderRadius: 10, padding: "5px 0", textAlign: "center", marginBottom: 2 }}>
+          <div key={String(lbl)} style={{ width: 46, background: bgc as string, border: `1px solid ${(color as string) + "44"}`, borderRadius: 10, padding: "5px 0", textAlign: "center", marginBottom: 2, boxShadow: `0 0 14px ${(color as string) + "33"}, 0 4px 12px rgba(0,0,0,0.3)` }}>
             <div style={{ fontSize: 16, fontWeight: 900, color: color as string, lineHeight: 1 }}>{n}</div>
             <div style={{ fontSize: 8, color: color as string, fontWeight: 800, letterSpacing: "0.04em" }}>{lbl}</div>
           </div>
@@ -84,7 +84,7 @@ export function MetallicKDS() {
             <span style={{ fontSize: 12, color: tm, marginLeft: 10 }}>Island Tacos · Road Town, BVI</span>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, padding: "7px 18px", textAlign: "right" }}>
+            <div style={{ background: card, border: `1px solid ${border}`, borderRadius: 12, padding: "7px 18px", textAlign: "right", boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)" }}>
               <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: "-0.05em" }}>6:42 PM</span>
               <span style={{ fontSize: 9, color: tm, fontWeight: 700, letterSpacing: "0.06em", display: "block" }}>SATURDAY</span>
             </div>

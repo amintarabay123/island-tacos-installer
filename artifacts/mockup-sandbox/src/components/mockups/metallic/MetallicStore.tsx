@@ -29,7 +29,7 @@ export function MetallicStore() {
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: bg, color: tp, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
 
       {/* NAV */}
-      <nav style={{ height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", background: "rgba(22,23,43,0.92)", borderBottom: `1px solid ${border}`, backdropFilter: "blur(20px)", position: "sticky", top: 0, zIndex: 20 }}>
+      <nav style={{ height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 40px", background: "rgba(22,23,43,0.92)", borderBottom: `1px solid ${border}`, backdropFilter: "blur(20px)", position: "sticky", top: 0, zIndex: 20, boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 38, height: 38, borderRadius: 13, background: "linear-gradient(135deg,#ff6b00,#ff9500)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, boxShadow: "0 4px 18px rgba(255,107,0,0.45)" }}>🌮</div>
           <div>
@@ -69,7 +69,7 @@ export function MetallicStore() {
         </div>
 
         {/* Open badge */}
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: card, border: `1px solid ${border}`, borderRadius: 20, padding: "6px 16px", marginBottom: 20, position: "relative", zIndex: 2 }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: card, border: `1px solid ${border}`, borderRadius: 20, padding: "6px 16px", marginBottom: 20, position: "relative", zIndex: 2, boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)" }}>
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#30d158", boxShadow: "0 0 10px rgba(48,209,88,0.8)", display: "inline-block" }} />
           <span style={{ fontSize: 11, color: tm, fontWeight: 700, letterSpacing: "0.06em" }}>OPEN NOW  ·  CLOSES 9 PM  ·  284-544-8088</span>
         </div>
