@@ -92,85 +92,148 @@ type NavItem = {
 type NavSection = { title: string; items: NavItem[] };
 
 // ── Sidebar ────────────────────────────────────────────────────────────────────
-const ICON_BTN: React.CSSProperties = {
-  width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center",
-  borderRadius: 12, cursor: "pointer", border: "none", background: "transparent",
-  margin: "0 auto", transition: "all 0.15s", flexShrink: 0,
-};
+// Sidebar bg is intentionally darker than the main content bg so the active-tab
+// "bleed" effect is visible — the active item matches BG (#16172b) and appears
+// to merge seamlessly with the main area while the sidebar reads as separate.
+const SB_BG = "#0e1020";
+const CORNER_R = 14;
+const SIDEBAR_CSS = `
+.nav-tab-active {
+  position: relative;
+  overflow: visible !important;
+}
+.nav-tab-active::before {
+  content: '';
+  position: absolute;
+  top: ${-CORNER_R}px;
+  right: 0;
+  width: ${CORNER_R}px;
+  height: ${CORNER_R}px;
+  background: ${SB_BG};
+  border-bottom-right-radius: ${CORNER_R}px;
+  pointer-events: none;
+  z-index: 2;
+}
+.nav-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: ${-CORNER_R}px;
+  right: 0;
+  width: ${CORNER_R}px;
+  height: ${CORNER_R}px;
+  background: ${SB_BG};
+  border-top-right-radius: ${CORNER_R}px;
+  pointer-events: none;
+  z-index: 2;
+}
+`;
 
 function Sidebar({ sections, onClose, onLogout, isMobile }: {
   sections: NavSection[]; onClose?: () => void; onLogout: () => void; isMobile?: boolean;
 }) {
   const [location] = useLocation();
 
-  // ── Desktop: 64 px icon-only — seamlessly blends with the page bg ──────────
+  // ── Desktop: full labels, scalloped active-tab bleed effect ─────────────────
   if (!isMobile) {
+    const navContent = (items: NavItem[]) => items.map((item) => {
+      const isActive = item.href ? location === item.href : false;
+      const tabContent = (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "10px 14px",
+          background: isActive ? BG : "transparent",
+          borderRadius: isActive ? "12px 0 0 12px" : 10,
+          borderLeft: isActive ? `3px solid ${OR}` : "3px solid transparent",
+          color: isActive ? TP : TM,
+          transition: "all 0.15s",
+          width: "100%",
+        }}>
+          <item.icon style={{ width: 16, height: 16, flexShrink: 0, color: isActive ? OR : TM }} />
+          <span style={{ fontSize: 13, fontWeight: isActive ? 700 : 500, whiteSpace: "nowrap" }}>{item.label}</span>
+        </div>
+      );
+      const wrapClass = isActive ? "nav-tab-active" : undefined;
+      if (item.action) return (
+        <button key={item.label} onClick={() => item.action!()} className={wrapClass}
+          style={{ display: "block", width: "100%", background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}
+          onMouseEnter={e => { if (!isActive) (e.currentTarget.firstElementChild as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+          onMouseLeave={e => { if (!isActive) (e.currentTarget.firstElementChild as HTMLElement).style.background = "transparent"; }}
+        >{tabContent}</button>
+      );
+      if (item.external) return (
+        <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer"
+          className={wrapClass} style={{ display: "block", textDecoration: "none" }}
+          onMouseEnter={e => { if (!isActive) (e.currentTarget.firstElementChild as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+          onMouseLeave={e => { if (!isActive) (e.currentTarget.firstElementChild as HTMLElement).style.background = "transparent"; }}
+        >{tabContent}</a>
+      );
+      return (
+        <Link key={item.label} href={item.href!}>
+          <div className={wrapClass} style={{ cursor: "pointer" }}
+            onMouseEnter={e => { if (!isActive) (e.currentTarget.firstElementChild as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
+            onMouseLeave={e => { if (!isActive) (e.currentTarget.firstElementChild as HTMLElement).style.background = "transparent"; }}
+          >{tabContent}</div>
+        </Link>
+      );
+    });
+
     return (
-      <div style={{ width: 64, display: "flex", flexDirection: "column", height: "100%", background: "transparent", flexShrink: 0 }}>
-        {/* Brand */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 0 14px", borderBottom: `1px solid ${BORD}` }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 11,
-            background: "linear-gradient(135deg,#ff6b00,#ff9500)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 18,
-            boxShadow: "0 0 0 1px rgba(255,107,0,0.3),0 4px 16px rgba(255,107,0,0.4)",
-          }}>🌮</div>
-        </div>
-
-        {/* Nav icons */}
-        <nav style={{ flex: 1, padding: "10px 0", overflowY: "auto", display: "flex", flexDirection: "column", gap: 1 }}>
-          {sections.map((section, si) => (
-            <div key={section.title}>
-              {si > 0 && <div style={{ height: 1, background: BORD, margin: "6px 12px" }} />}
-              {section.items.map((item) => {
-                const isActive = item.href ? location === item.href : false;
-                const btnStyle: React.CSSProperties = {
-                  ...ICON_BTN,
-                  background: isActive ? "rgba(255,107,0,0.15)" : "transparent",
-                  outline: isActive ? "1px solid rgba(255,107,0,0.3)" : "none",
-                  color: isActive ? OR : TM,
-                };
-                if (item.action) return (
-                  <button key={item.label} title={item.label} onClick={() => item.action!()} style={btnStyle}
-                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = TP; } }}
-                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; } }}
-                  ><item.icon style={{ width: 18, height: 18 }} /></button>
-                );
-                if (item.external) return (
-                  <a key={item.label} title={item.label} href={item.href} target="_blank" rel="noopener noreferrer"
-                    style={{ ...btnStyle, textDecoration: "none" }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)"; (e.currentTarget as HTMLElement).style.color = TP; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = TM; }}
-                  ><item.icon style={{ width: 18, height: 18 }} /></a>
-                );
-                return (
-                  <Link key={item.label} href={item.href!}>
-                    <div title={item.label} style={btnStyle}
-                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = TP; } }}
-                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; } }}
-                    ><item.icon style={{ width: 18, height: 18 }} /></div>
-                  </Link>
-                );
-              })}
+      <>
+        <style>{SIDEBAR_CSS}</style>
+        <div style={{ width: 220, display: "flex", flexDirection: "column", height: "100%", background: SB_BG, flexShrink: 0 }}>
+          {/* Brand */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 18px 16px", borderBottom: `1px solid ${BORD}` }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+              background: "linear-gradient(135deg,#ff6b00,#ff9500)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 17,
+              boxShadow: "0 0 0 1px rgba(255,107,0,0.3),0 4px 14px rgba(255,107,0,0.4)",
+            }}>🌮</div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: "-0.01em", color: TP }}>ISLAND TACOS</div>
+              <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: TM, marginTop: 1 }}>Admin Panel</div>
             </div>
-          ))}
-        </nav>
+          </div>
 
-        {/* Footer icons */}
-        <div style={{ padding: "10px 0", borderTop: `1px solid ${BORD}`, display: "flex", flexDirection: "column", gap: 1 }}>
-          <Link href="/">
-            <div title="Online Store" style={{ ...ICON_BTN, color: TM }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.color = TP; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; }}
-            ><Store style={{ width: 18, height: 18 }} /></div>
-          </Link>
-          <button title="Sign Out" onClick={onLogout} style={{ ...ICON_BTN, color: "#f87171" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "#fca5a5"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#f87171"; }}
-          ><LogOut style={{ width: 18, height: 18 }} /></button>
+          {/* Nav — overflow:visible so concave corners aren't clipped */}
+          <nav style={{ flex: 1, padding: "10px 0", overflow: "visible", display: "flex", flexDirection: "column", gap: 1 }}>
+            {sections.map((section, si) => (
+              <div key={section.title}>
+                {si > 0 && <div style={{ height: 1, background: BORD, margin: "8px 16px" }} />}
+                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: TM, padding: "4px 18px 4px", marginBottom: 2 }}>
+                  {section.title}
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {navContent(section.items)}
+                </div>
+              </div>
+            ))}
+          </nav>
+
+          {/* Footer */}
+          <div style={{ borderTop: `1px solid ${BORD}`, padding: "10px 0", display: "flex", flexDirection: "column", gap: 1 }}>
+            <Link href="/">
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", margin: "0",
+                color: TM, cursor: "pointer", borderLeft: "3px solid transparent",
+                borderRadius: 10, transition: "all 0.15s",
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = TP; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; }}
+              ><Store style={{ width: 16, height: 16, flexShrink: 0 }} /><span style={{ fontSize: 13, fontWeight: 500 }}>Online Store</span></div>
+            </Link>
+            <button onClick={onLogout} style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
+              background: "none", border: "none", borderLeft: "3px solid transparent",
+              borderRadius: 10, cursor: "pointer", color: "#f87171", width: "100%", transition: "all 0.15s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; e.currentTarget.style.color = "#fca5a5"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#f87171"; }}
+            ><LogOut style={{ width: 16, height: 16, flexShrink: 0 }} /><span style={{ fontSize: 13, fontWeight: 500 }}>Sign Out</span></button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -192,7 +255,8 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
             <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: TM, marginTop: 2 }}>Admin Panel</div>
           </div>
         </div>
-        <button onClick={onClose} style={{ ...ICON_BTN, width: 32, height: 32, color: TM }}
+        <button onClick={onClose}
+          style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", color: TM }}
           onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
         ><X className="h-5 w-5" /></button>
