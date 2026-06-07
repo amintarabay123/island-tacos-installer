@@ -29,6 +29,23 @@ import {
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
 
+// ── Palette ────────────────────────────────────────────────────────────────────
+const BG    = "#16172b";
+const CARD  = "#1e1f38";
+const BORD  = "rgba(255,255,255,0.06)";
+const TP    = "#e8eaf6";
+const TM    = "#7077a1";
+const OR    = "#ff6b00";
+
+const CHART_TOOLTIP_STYLE = {
+  background: CARD,
+  border: `1px solid ${BORD}`,
+  borderRadius: 12,
+  color: TP,
+  fontSize: 12,
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
 type DatePreset = "today" | "yesterday" | "last7" | "custom";
 
 function toBVIDateStr(date: Date): string {
@@ -39,78 +56,73 @@ function bviNDaysAgo(n: number): string {
   return toBVIDateStr(new Date(Date.now() - n * 24 * 60 * 60 * 1000));
 }
 
+// ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_LABELS: Record<string, string> = {
-  pending: "Pending",
-  confirmed: "Confirmed",
-  preparing: "Preparing",
-  ready: "Ready",
-  completed: "Completed",
-  cancelled: "Cancelled",
+  pending: "Pending", confirmed: "Confirmed", preparing: "Preparing",
+  ready: "Ready", completed: "Completed", cancelled: "Cancelled",
 };
-const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-yellow-900/40 text-yellow-300",
-  confirmed: "bg-blue-900/40 text-blue-300",
-  preparing: "bg-orange-900/40 text-orange-300",
-  ready: "bg-green-900/40 text-green-300",
-  completed: "bg-muted text-muted-foreground",
-  cancelled: "bg-red-900/40 text-red-300",
+
+// Inline style objects so Tailwind arbitrary-value JIT doesn't need to compile them
+const STATUS_STYLE: Record<string, React.CSSProperties> = {
+  pending:   { background: "rgba(255,107,0,0.12)",  color: OR,        border: "1px solid rgba(255,107,0,0.3)"  },
+  confirmed: { background: "rgba(14,165,233,0.12)", color: "#0ea5e9", border: "1px solid rgba(14,165,233,0.3)" },
+  preparing: { background: "rgba(255,214,10,0.12)", color: "#ffd60a", border: "1px solid rgba(255,214,10,0.3)" },
+  ready:     { background: "rgba(48,209,88,0.12)",  color: "#30d158", border: "1px solid rgba(48,209,88,0.3)"  },
+  completed: { background: "rgba(255,255,255,0.05)", color: TM,       border: `1px solid ${BORD}`              },
+  cancelled: { background: "rgba(239,68,68,0.1)",   color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" },
 };
+
 const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
-  pending: "confirmed",
-  confirmed: "preparing",
-  preparing: "ready",
-  ready: "completed",
+  pending: "confirmed", confirmed: "preparing", preparing: "ready", ready: "completed",
 };
+
 const STATUS_DONUT_COLOR: Record<string, string> = {
-  pending: "#f59e0b",
-  confirmed: "#3b82f6",
-  preparing: "#f97316",
-  ready: "#22c55e",
-  cancelled: "#ef4444",
-  "completed-online": "#10b981",
-  "completed-phone": "#ec4899",
-  "completed-pos": "#6366f1",
+  pending: "#ff6b00", confirmed: "#0ea5e9", preparing: "#ffd60a",
+  ready: "#30d158", cancelled: "#ef4444",
+  "completed-online": "#10b981", "completed-phone": "#ec4899", "completed-pos": "#7c6af7",
 };
-const SOURCE_LABELS: Record<string, string> = {
-  online: "Online",
-  phone: "Phone",
-  pos: "Walk-in",
-};
+
+const SOURCE_LABELS: Record<string, string> = { online: "Online", phone: "Phone", pos: "Walk-in" };
 
 type RejectState = { orderId: number; reason: string } | null;
-
 type NavItem = {
-  label: string;
-  icon: React.ElementType;
-  href?: string;
-  action?: () => void;
-  external?: boolean;
-  iconColor?: string;
+  label: string; icon: React.ElementType; href?: string;
+  action?: () => void; external?: boolean; iconColor?: string;
 };
 type NavSection = { title: string; items: NavItem[] };
 
-function Sidebar({
-  sections,
-  onClose,
-  onLogout,
-  isMobile,
-}: {
-  sections: NavSection[];
-  onClose?: () => void;
-  onLogout: () => void;
-  isMobile?: boolean;
+// ── Sidebar ────────────────────────────────────────────────────────────────────
+function Sidebar({ sections, onClose, onLogout, isMobile }: {
+  sections: NavSection[]; onClose?: () => void; onLogout: () => void; isMobile?: boolean;
 }) {
   const [location] = useLocation();
   return (
-    <div className={`flex flex-col h-full bg-background text-foreground ${isMobile ? "w-72" : "w-64"}`}>
+    <div
+      className={`flex flex-col h-full ${isMobile ? "w-72" : "w-64"}`}
+      style={{ background: isMobile ? BG : "transparent", color: TP }}
+    >
       {/* Brand */}
-      <div className="flex items-center justify-between px-5 py-5 border-b border-border">
-        <div>
-          <div className="text-lg font-black tracking-tight text-white">ISLAND TACOS</div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mt-0.5">Admin Panel</div>
+      <div className="flex items-center justify-between px-5 py-5" style={{ borderBottom: `1px solid ${BORD}` }}>
+        <div className="flex items-center gap-3">
+          <div style={{
+            width: 36, height: 36, borderRadius: 11, flexShrink: 0,
+            background: "linear-gradient(135deg, #ff6b00, #ff9500)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18,
+            boxShadow: "0 0 0 1px rgba(255,107,0,0.3), 0 4px 16px rgba(255,107,0,0.4)",
+          }}>🌮</div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-0.02em", color: TP }}>ISLAND TACOS</div>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: TM, marginTop: 2 }}>Admin Panel</div>
+          </div>
         </div>
         {isMobile && onClose && (
-          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-white">
+          <button onClick={onClose}
+            className="p-1.5 rounded-md transition-colors"
+            style={{ color: TM }}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+          >
             <X className="h-5 w-5" />
           </button>
         )}
@@ -120,41 +132,54 @@ function Sidebar({
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-5">
         {sections.map((section) => (
           <div key={section.title}>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-3 mb-1.5">
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: TM, padding: "0 12px", marginBottom: 6 }}>
               {section.title}
             </p>
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = item.href ? location === item.href : false;
-                const base =
-                  "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left cursor-pointer";
-                const activeClass = "bg-muted text-foreground";
-                const inactiveClass = "text-foreground/70 hover:bg-muted hover:text-foreground";
+                const activeStyle: React.CSSProperties = {
+                  background: "rgba(255,107,0,0.12)", color: OR,
+                  border: "1px solid rgba(255,107,0,0.3)", borderRadius: 10,
+                };
+                const inactiveStyle: React.CSSProperties = {
+                  background: "transparent", color: TM,
+                  border: "1px solid transparent", borderRadius: 10,
+                };
                 const content = (
                   <>
-                    <item.icon className={`h-4 w-4 shrink-0 ${item.iconColor ?? "text-muted-foreground"}`} />
-                    {item.label}
+                    <item.icon
+                      className="h-4 w-4 shrink-0"
+                      style={{ color: isActive ? OR : (item.iconColor ? undefined : TM) }}
+                    />
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</span>
                   </>
                 );
+                const baseClass = "flex items-center gap-3 w-full px-3 py-2.5 text-left cursor-pointer transition-all";
                 if (item.action) {
                   return (
-                    <button key={item.label} onClick={() => { item.action!(); onClose?.(); }} className={`${base} ${isActive ? activeClass : inactiveClass}`}>
-                      {content}
-                    </button>
+                    <button key={item.label} onClick={() => { item.action!(); onClose?.(); }}
+                      className={baseClass} style={isActive ? activeStyle : inactiveStyle}
+                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = TP; } }}
+                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; } }}
+                    >{content}</button>
                   );
                 }
                 if (item.external) {
                   return (
-                    <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClose} className={`${base} ${inactiveClass}`}>
-                      {content}
-                    </a>
+                    <a key={item.label} href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClose}
+                      className={baseClass} style={inactiveStyle}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; (e.currentTarget as HTMLElement).style.color = TP; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; (e.currentTarget as HTMLElement).style.color = TM; }}
+                    >{content}</a>
                   );
                 }
                 return (
                   <Link key={item.label} href={item.href!}>
-                    <div onClick={onClose} className={`${base} ${isActive ? activeClass : inactiveClass}`}>
-                      {content}
-                    </div>
+                    <div onClick={onClose} className={baseClass} style={isActive ? activeStyle : inactiveStyle}
+                      onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = TP; } }}
+                      onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; } }}
+                    >{content}</div>
                   </Link>
                 );
               })}
@@ -164,15 +189,22 @@ function Sidebar({
       </nav>
 
       {/* Footer */}
-      <div className="px-3 pb-5 border-t border-border pt-4 space-y-0.5">
+      <div className="px-3 pb-5 pt-4 space-y-0.5" style={{ borderTop: `1px solid ${BORD}` }}>
         <Link href="/">
-          <div onClick={onClose} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground/70 hover:bg-muted hover:text-white transition-colors cursor-pointer">
-            <Store className="h-4 w-4 text-muted-foreground" /> Online Store
+          <div onClick={onClose}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-sm font-medium cursor-pointer transition-all"
+            style={{ color: TM, border: "1px solid transparent" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = TP; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = TM; }}
+          >
+            <Store className="h-4 w-4" style={{ color: TM }} /> Online Store
           </div>
         </Link>
-        <button
-          onClick={() => { onLogout(); onClose?.(); }}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors"
+        <button onClick={() => { onLogout(); onClose?.(); }}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-[10px] text-sm font-medium transition-all"
+          style={{ color: "#f87171", border: "1px solid transparent" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "#fca5a5"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#f87171"; }}
         >
           <LogOut className="h-4 w-4" /> Sign Out
         </button>
@@ -181,9 +213,9 @@ function Sidebar({
   );
 }
 
+// ── Main page ──────────────────────────────────────────────────────────────────
 export default function Admin() {
   useEffect(() => {
-    // TODO(store-settings): use `Admin — ${useStoreSettings().storeName}` once page-meta accepts a getter
     setPageMeta("Admin — Island Tacos", "⚙️", { iconUrl: "/icon-admin-192.png", manifestUrl: "/manifest-admin.json" });
   }, []);
 
@@ -211,10 +243,7 @@ export default function Admin() {
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then((r) => r.json())
-      .then((d) => {
-        if (!d.authed) navigate(adminRoutes.login);
-        else if (d.role !== "admin") navigate(adminRoutes.pos);
-      })
+      .then((d) => { if (!d.authed) navigate(adminRoutes.login); else if (d.role !== "admin") navigate(adminRoutes.pos); })
       .catch(() => navigate(adminRoutes.login));
   }, [navigate]);
 
@@ -253,8 +282,7 @@ export default function Admin() {
 
   const handleLoyverseImport = async () => {
     if (importState === "importing") return;
-    setImportState("importing");
-    setImportMessage("Fetching data from Loyverse… this may take a minute.");
+    setImportState("importing"); setImportMessage("Fetching data from Loyverse… this may take a minute.");
     try {
       const r = await fetch("/api/loyverse/import-history", { method: "POST", credentials: "include", headers: authHeaders() });
       const data = await r.json();
@@ -271,12 +299,10 @@ export default function Admin() {
   };
 
   const handleCSVUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]; if (!file) return;
     setCsvState("uploading"); setCsvMessage("Uploading & importing CSV — please wait…");
     try {
-      const form = new FormData();
-      form.append("file", file);
+      const form = new FormData(); form.append("file", file);
       const r = await fetch("/api/loyverse/import-csv", { method: "POST", credentials: "include", headers: authHeaders(), body: form });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "CSV import failed");
@@ -284,34 +310,25 @@ export default function Admin() {
       setCsvState("success");
       setCsvMessage(`Imported ${imported} orders` + (skipped ? ` (${skipped} already existed)` : "") + (errs ? `, ${errs} row error(s)` : "") + ".");
       setTimeout(() => { setCsvState("idle"); setCsvMessage(""); }, 8000);
-    } catch (e) {
-      setCsvState("error"); setCsvMessage(String(e));
-    } finally {
-      if (csvInputRef.current) csvInputRef.current.value = "";
-    }
+    } catch (e) { setCsvState("error"); setCsvMessage(String(e)); }
+    finally { if (csvInputRef.current) csvInputRef.current.value = ""; }
   };
 
   const dateParams = useMemo(() => {
-    if (preset === "today") return { startDate: bviNDaysAgo(0), endDate: bviNDaysAgo(0) };
+    if (preset === "today")     return { startDate: bviNDaysAgo(0), endDate: bviNDaysAgo(0) };
     if (preset === "yesterday") return { startDate: bviNDaysAgo(1), endDate: bviNDaysAgo(1) };
-    if (preset === "last7") return { startDate: bviNDaysAgo(6), endDate: bviNDaysAgo(0) };
+    if (preset === "last7")     return { startDate: bviNDaysAgo(6), endDate: bviNDaysAgo(0) };
     return {
       startDate: customRange?.from ? toBVIDateStr(customRange.from) : undefined,
       endDate: customRange?.to ? toBVIDateStr(customRange.to) : (customRange?.from ? toBVIDateStr(customRange.from) : undefined),
     };
   }, [preset, customRange]);
 
-  const statsQueryKey = getGetAdminStatsQueryKey(dateParams);
+  const statsQueryKey  = getGetAdminStatsQueryKey(dateParams);
   const ordersQueryKey = getGetRecentOrdersQueryKey({ limit: 50, ...dateParams });
 
-  const { data: stats } = useGetAdminStats(
-    dateParams,
-    { query: { queryKey: statsQueryKey, refetchInterval: 5_000 } }
-  );
-  const { data: orders, isLoading } = useGetRecentOrders(
-    { limit: 50, ...dateParams },
-    { query: { queryKey: ordersQueryKey, refetchInterval: 5_000 } }
-  );
+  const { data: stats } = useGetAdminStats(dateParams, { query: { queryKey: statsQueryKey, refetchInterval: 5_000 } });
+  const { data: orders, isLoading } = useGetRecentOrders({ limit: 50, ...dateParams }, { query: { queryKey: ordersQueryKey, refetchInterval: 5_000 } });
 
   useEffect(() => {
     const refresh = () => {
@@ -328,7 +345,7 @@ export default function Admin() {
 
   useEffect(() => {
     if (!orders) return;
-    const activeIds = new Set(orders.filter((o) => ["pending", "confirmed", "preparing", "ready"].includes(o.status)).map((o) => o.id));
+    const activeIds = new Set(orders.filter((o) => ["pending","confirmed","preparing","ready"].includes(o.status)).map((o) => o.id));
     if (isFirstFetchRef.current) { isFirstFetchRef.current = false; prevOrderIdsRef.current = activeIds; return; }
     const hasNew = [...activeIds].some((id) => !prevOrderIdsRef.current.has(id));
     if (hasNew) toast({ title: "New order received!", description: "Check active orders below." });
@@ -341,32 +358,25 @@ export default function Admin() {
       { onSuccess: () => { queryClient.invalidateQueries({ queryKey: statsQueryKey }); queryClient.invalidateQueries({ queryKey: ordersQueryKey }); setRejectState(null); } }
     );
   };
-
   const handleCancelClick = (orderId: number) => {
     setRejectState(rejectState?.orderId === orderId ? null : { orderId, reason: "" });
   };
 
-  const activeOrders = orders?.filter((o) => ["pending", "confirmed", "preparing", "ready"].includes(o.status)) ?? [];
-  const pastOrders = orders?.filter((o) => ["completed", "cancelled"].includes(o.status)) ?? [];
+  const activeOrders = orders?.filter((o) => ["pending","confirmed","preparing","ready"].includes(o.status)) ?? [];
+  const pastOrders   = orders?.filter((o) => ["completed","cancelled"].includes(o.status)) ?? [];
 
-  // Compute hourly revenue chart from returned orders (already date-filtered)
   const isMultiDay = preset === "last7" || (preset === "custom" && customRange?.to && customRange.from && customRange.to.getTime() !== customRange.from.getTime());
 
   const hourlyData = useMemo(() => {
     if (isMultiDay) {
-      // For multi-day ranges, aggregate by date
       const byDate: Record<string, { revenue: number; count: number }> = {};
       (orders ?? []).forEach((o) => {
         const d = toBVIDateStr(new Date(o.createdAt));
         if (!byDate[d]) byDate[d] = { revenue: 0, count: 0 };
-        byDate[d].revenue += o.total;
-        byDate[d].count++;
+        byDate[d].revenue += o.total; byDate[d].count++;
       });
-      return Object.entries(byDate).sort(([a], [b]) => a.localeCompare(b)).map(([date, d]) => ({
-        hour: date.slice(5),
-        revenue: parseFloat(d.revenue.toFixed(2)),
-        orders: d.count,
-      }));
+      return Object.entries(byDate).sort(([a],[b]) => a.localeCompare(b))
+        .map(([date, d]) => ({ hour: date.slice(5), revenue: parseFloat(d.revenue.toFixed(2)), orders: d.count }));
     }
     const byHour: Record<number, { revenue: number; count: number }> = {};
     for (let h = 10; h <= 20; h++) byHour[h] = { revenue: 0, count: 0 };
@@ -376,28 +386,20 @@ export default function Admin() {
     });
     return Object.entries(byHour).map(([h, d]) => ({
       hour: `${Number(h) % 12 || 12}${Number(h) >= 12 ? "pm" : "am"}`,
-      revenue: parseFloat(d.revenue.toFixed(2)),
-      orders: d.count,
+      revenue: parseFloat(d.revenue.toFixed(2)), orders: d.count,
     }));
   }, [orders, isMultiDay]);
 
-  // Status donut data
   const statusDonut = useMemo(() => {
     const statusCount: Record<string, number> = {};
-    (orders ?? []).forEach((o) => {
-      if (o.status !== "completed") {
-        statusCount[o.status] = (statusCount[o.status] ?? 0) + 1;
-      }
-    });
+    (orders ?? []).forEach((o) => { if (o.status !== "completed") statusCount[o.status] = (statusCount[o.status] ?? 0) + 1; });
     const entries: { name: string; value: number; color: string; key: string }[] = [];
-    const STATUS_ORDER = ["pending", "confirmed", "preparing", "ready", "cancelled"];
-    for (const s of STATUS_ORDER) {
+    for (const s of ["pending","confirmed","preparing","ready","cancelled"]) {
       if (statusCount[s]) entries.push({ key: s, name: STATUS_LABELS[s] ?? s, value: statusCount[s], color: STATUS_DONUT_COLOR[s] ?? "#94a3b8" });
     }
     const cbs = stats?.completedBySource;
     if (cbs) {
-      const sources: Array<keyof typeof cbs> = ["online", "phone", "pos"];
-      for (const src of sources) {
+      for (const src of ["online","phone","pos"] as const) {
         const count = cbs[src] ?? 0;
         if (count > 0) entries.push({ key: `completed-${src}`, name: `Done · ${SOURCE_LABELS[src]}`, value: count, color: STATUS_DONUT_COLOR[`completed-${src}`] ?? "#10b981" });
       }
@@ -405,9 +407,8 @@ export default function Admin() {
     return entries;
   }, [orders, stats]);
 
-  // Top items bar data
   const topItemsData = useMemo(() =>
-    (stats?.popularItems ?? []).slice(0, 8).map((i) => ({ name: i.name.length > 14 ? i.name.slice(0, 13) + "…" : i.name, count: i.count })),
+    (stats?.popularItems ?? []).slice(0, 8).map((i) => ({ name: i.name.length > 14 ? i.name.slice(0,13)+"…" : i.name, count: i.count })),
     [stats]
   );
 
@@ -415,37 +416,54 @@ export default function Admin() {
     {
       title: "Operations",
       items: [
-        { label: "Dashboard", icon: LayoutDashboard, href: adminRoutes.dashboard, iconColor: "text-emerald-400" },
-        {
-          label: "POS Terminal", icon: ShoppingBag, iconColor: "text-amber-400",
-          action: () => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`),
-        },
+        { label: "Dashboard",       icon: LayoutDashboard, href: adminRoutes.dashboard, iconColor: "text-emerald-400" },
+        { label: "POS Terminal",    icon: ShoppingBag, iconColor: "text-amber-400", action: () => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`) },
         { label: "Kitchen Display", icon: ChefHat, href: adminRoutes.kitchen, iconColor: "text-orange-400" },
-        { label: "Customer Display", icon: Monitor, href: adminRoutes.display, external: true, iconColor: "text-blue-400" },
+        { label: "Customer Display",icon: Monitor, href: adminRoutes.display, external: true, iconColor: "text-blue-400" },
       ],
     },
     {
       title: "Manage",
       items: [
-        { label: "Menu Editor", icon: UtensilsCrossed, href: adminRoutes.menu, iconColor: "text-green-400" },
-        { label: "Modifiers", icon: Settings, href: adminRoutes.modifiers, iconColor: "text-green-500" },
-        { label: "Store Settings", icon: Settings, href: adminRoutes.settings, iconColor: "text-muted-foreground" },
+        { label: "Menu Editor",   icon: UtensilsCrossed, href: adminRoutes.menu,      iconColor: "text-green-400" },
+        { label: "Modifiers",     icon: Settings,        href: adminRoutes.modifiers,  iconColor: "text-green-500" },
+        { label: "Store Settings",icon: Settings,        href: adminRoutes.settings,   iconColor: "text-muted-foreground" },
       ],
     },
     {
       title: "Analytics",
       items: [
-        { label: "Reports", icon: BarChart3, href: adminRoutes.reports, iconColor: "text-purple-400" },
-        { label: "Financials", icon: History, href: adminRoutes.financials, iconColor: "text-emerald-400" },
-        { label: "Customers", icon: Users, href: adminRoutes.customers, iconColor: "text-blue-400" },
-        { label: "Customs (HMC-12)", icon: ScrollText, href: adminRoutes.customs, iconColor: "text-amber-400" },
+        { label: "Reports",         icon: BarChart3,  href: adminRoutes.reports,    iconColor: "text-purple-400" },
+        { label: "Financials",      icon: History,    href: adminRoutes.financials,  iconColor: "text-emerald-400" },
+        { label: "Customers",       icon: Users,      href: adminRoutes.customers,   iconColor: "text-blue-400" },
+        { label: "Customs (HMC-12)",icon: ScrollText, href: adminRoutes.customs,     iconColor: "text-amber-400" },
       ],
     },
   ];
 
+  // ── Pop-out stat card config ───────────────────────────────────────────────
+  const avgOrder = stats?.todayOrders ? (stats.todayRevenue ?? 0) / stats.todayOrders : 0;
+  const popCards = [
+    { art: ["🌮","💰"], grad: "linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow: "rgba(255,107,0,0.55)", label: "Revenue",   value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, sub: "today's total" },
+    { art: ["🧾","📋"], grad: "linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow: "rgba(124,106,247,0.55)", label: "Orders",    value: String(stats?.todayOrders ?? 0),            sub: `${stats?.pendingOrders ?? 0} still active` },
+    { art: ["✅","⭐"], grad: "linear-gradient(145deg,#10b981,#059669,#064e3b)", glow: "rgba(16,185,129,0.5)", label: "Completed", value: String(stats?.completedOrders ?? 0),        sub: "served today" },
+    { art: ["📈","💹"], grad: "linear-gradient(145deg,#0ea5e9,#0284c7,#1e3a8a)", glow: "rgba(14,165,233,0.5)", label: "Avg Order", value: avgOrder ? `$${avgOrder.toFixed(2)}` : "—",  sub: "per order" },
+    { art: ["🚫","😕"], grad: "linear-gradient(145deg,#ef4444,#dc2626,#7f1d1d)", glow: "rgba(239,68,68,0.4)", label: "Cancelled", value: String(stats?.cancelledOrders ?? 0),         sub: "rejected" },
+  ];
+
+  // ── Tool button helper ─────────────────────────────────────────────────────
+  type ToolState = "idle" | "syncing" | "success" | "error" | "importing" | "pulling" | "uploading";
+  function toolBtnStyle(state: ToolState, idleColor = OR): React.CSSProperties {
+    if (state === "success") return { background: "rgba(48,209,88,0.1)", color: "#30d158", border: "1px solid rgba(48,209,88,0.3)", borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+    if (state === "error")   return { background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+    const busy = state !== "idle";
+    return { background: `rgba(${idleColor === OR ? "255,107,0" : "124,106,247"},0.1)`, color: idleColor, border: `1px solid rgba(${idleColor === OR ? "255,107,0" : "124,106,247"},0.3)`, borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1 };
+  }
+
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-background">
-      {/* Desktop Sidebar */}
+    <div className="flex overflow-hidden" style={{ height: "100dvh", background: BG, color: TP, fontFamily: "'Inter', system-ui, sans-serif" }}>
+
+      {/* Desktop Sidebar — transparent, blends into bg */}
       <aside className="hidden lg:flex flex-col shrink-0">
         <Sidebar sections={navSections} onLogout={logout} />
       </aside>
@@ -453,7 +471,7 @@ export default function Admin() {
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           <div className="relative h-full shadow-2xl">
             <Sidebar sections={navSections} onClose={() => setSidebarOpen(false)} onLogout={logout} isMobile />
           </div>
@@ -462,50 +480,63 @@ export default function Admin() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top bar */}
-        <header className="shrink-0 flex items-center justify-between h-14 px-4 md:px-6 bg-card border-b border-border">
+
+        {/* Top bar — floating, no hard border */}
+        <header className="shrink-0 flex items-center justify-between px-4 md:px-7" style={{ height: 58 }}>
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-md hover:bg-muted">
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg transition-colors"
+              style={{ color: TM }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
               <Menu className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="font-black text-foreground text-base leading-tight">Dashboard</h1>
-              {/* TODO(store-settings): replace "Island Tacos" with useStoreSettings().storeName */}
-              <p className="text-xs text-muted-foreground leading-tight hidden sm:block">Island Tacos — Admin</p>
+              <h1 style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.04em", color: TP, lineHeight: 1 }}>Dashboard</h1>
+              <p style={{ fontSize: 11, color: TM, marginTop: 2 }}>
+                {/* TODO(store-settings): replace with useStoreSettings().storeName */}
+                Island Tacos — Admin
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground mr-1">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Live
-            </span>
-            <Button
-              size="sm"
-              className="bg-amber-500 hover:bg-amber-600 text-white font-bold"
+            {/* Live pill */}
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(48,209,88,0.1)", border: "1px solid rgba(48,209,88,0.25)", borderRadius: 20, padding: "6px 12px" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#30d158", boxShadow: "0 0 8px rgba(48,209,88,0.8)", display: "inline-block" }} />
+              <span style={{ fontSize: 11, color: "#30d158", fontWeight: 700 }}>Live</span>
+            </div>
+            {/* POS button */}
+            <button
               onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`)}
-            >
-              🧾 POS
-            </Button>
+              style={{ background: "linear-gradient(135deg,#ff6b00,#ff9500)", color: "#fff", border: "none", borderRadius: 20, padding: "8px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 18px rgba(255,107,0,0.4)" }}
+            >🧾 POS</button>
           </div>
         </header>
 
         {/* Scrollable content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto" style={{ padding: "0 28px 32px" }}>
 
           {/* Date range picker */}
-          <div className="flex flex-wrap items-center gap-2">
-            {(["today", "yesterday", "last7", "custom"] as DatePreset[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => { setPreset(p); if (p !== "custom") setCalOpen(false); else setCalOpen(true); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${preset === p ? "bg-muted text-white border-border" : "bg-card text-muted-foreground border-border hover:border-border"}`}
-              >
-                {p === "today" ? "Today" : p === "yesterday" ? "Yesterday" : p === "last7" ? "Last 7 Days" : "Custom"}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            {(["today","yesterday","last7","custom"] as DatePreset[]).map((p) => {
+              const isActive = preset === p;
+              return (
+                <button key={p}
+                  onClick={() => { setPreset(p); if (p !== "custom") setCalOpen(false); else setCalOpen(true); }}
+                  style={{
+                    padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
+                    background: isActive ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.04)",
+                    color: isActive ? OR : TM,
+                    border: isActive ? "1px solid rgba(255,107,0,0.4)" : `1px solid ${BORD}`,
+                  }}
+                >
+                  {p === "today" ? "Today" : p === "yesterday" ? "Yesterday" : p === "last7" ? "Last 7 Days" : "Custom"}
+                </button>
+              );
+            })}
             {preset === "custom" && (
               <Popover open={calOpen} onOpenChange={setCalOpen}>
                 <PopoverTrigger asChild>
-                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border bg-card text-muted-foreground border-border hover:border-border transition-colors">
+                  <button style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", background: "rgba(255,255,255,0.04)", color: TM, border: `1px solid ${BORD}` }}>
                     <CalendarIcon className="h-3.5 w-3.5" />
                     {customRange?.from
                       ? customRange.to && customRange.to.getTime() !== customRange.from.getTime()
@@ -515,20 +546,13 @@ export default function Admin() {
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="range"
-                    selected={customRange}
-                    onSelect={(range) => {
-                      setCustomRange(range);
-                      if (range?.from && range?.to) setCalOpen(false);
-                    }}
-                    numberOfMonths={1}
-                    disabled={{ after: new Date() }}
-                  />
+                  <Calendar mode="range" selected={customRange}
+                    onSelect={(range) => { setCustomRange(range); if (range?.from && range?.to) setCalOpen(false); }}
+                    numberOfMonths={1} disabled={{ after: new Date() }} />
                 </PopoverContent>
               </Popover>
             )}
-            <span className="text-xs text-muted-foreground ml-1">
+            <span style={{ fontSize: 11, color: TM, marginLeft: 4 }}>
               {preset === "today" ? bviNDaysAgo(0)
                 : preset === "yesterday" ? bviNDaysAgo(1)
                 : preset === "last7" ? `${bviNDaysAgo(6)} → ${bviNDaysAgo(0)}`
@@ -536,85 +560,82 @@ export default function Admin() {
             </span>
           </div>
 
-          {/* Stat cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
-            {[
-              { label: "Orders", value: stats?.todayOrders ?? 0, icon: ShoppingBag, bg: "bg-blue-900/30", iconColor: "text-blue-400", trend: null },
-              { label: "Revenue", value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, icon: DollarSign, bg: "bg-green-900/30", iconColor: "text-green-400", trend: null },
-              { label: "Active", value: stats?.pendingOrders ?? 0, icon: Clock, bg: "bg-amber-900/30", iconColor: "text-amber-400", trend: null },
-              { label: "Completed", value: stats?.completedOrders ?? 0, icon: CheckCircle2, bg: "bg-muted", iconColor: "text-muted-foreground", trend: null },
-              { label: "Cancelled", value: stats?.cancelledOrders ?? 0, icon: XCircle, bg: "bg-red-900/30", iconColor: "text-red-400", trend: null },
-            ].map(({ label, value, icon: Icon, bg, iconColor }) => (
-              <div key={label} className="bg-card rounded-xl border shadow-sm p-4 flex items-center gap-4">
-                <div className={`rounded-xl ${bg} p-3 ${iconColor}`}>
-                  <Icon className="h-5 w-5" />
+          {/* ── Pop-out stat cards ─────────────────────────────────────────── */}
+          <div style={{ paddingTop: 52, display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: 20 }}
+            className="grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
+            {popCards.map((fc) => (
+              <div key={fc.label} style={{ position: "relative" }}>
+                {/* Floating art */}
+                <div style={{ position: "absolute", top: -44, left: "50%", transform: "translateX(-50%)", zIndex: 10, display: "flex", alignItems: "flex-end", filter: `drop-shadow(0 8px 24px ${fc.glow})`, pointerEvents: "none" }}>
+                  <span style={{ fontSize: 42, lineHeight: 1, transform: "rotate(-15deg) translateX(8px)", opacity: 0.65, filter: `blur(1px) drop-shadow(0 0 10px ${fc.glow})` }}>{fc.art[1]}</span>
+                  <span style={{ fontSize: 56, lineHeight: 1, transform: "rotate(8deg) translateX(-4px)", filter: `drop-shadow(0 0 18px ${fc.glow})` }}>{fc.art[0]}</span>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium">{label}</p>
-                  <p className="text-2xl font-black text-foreground">{value}</p>
+                {/* Card body */}
+                <div style={{ background: fc.grad, borderRadius: 22, padding: "48px 18px 18px", position: "relative", overflow: "hidden", boxShadow: `0 8px 32px ${fc.glow}` }}>
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,rgba(255,255,255,0.13) 0%,transparent 50%)", borderRadius: 22, pointerEvents: "none" }} />
+                  <div style={{ position: "absolute", top: -28, left: "50%", transform: "translateX(-50%)", width: 90, height: 90, background: "rgba(255,255,255,0.14)", borderRadius: "50%", filter: "blur(22px)", pointerEvents: "none" }} />
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 5 }}>{fc.label}</div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: "#fff", letterSpacing: "-0.05em", lineHeight: 1, marginBottom: 5 }}>{fc.value}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: 500 }}>{fc.sub}</div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Charts row */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            {/* Hourly revenue — takes 2 cols */}
-            <div className="xl:col-span-2 bg-card rounded-xl border shadow-sm p-5">
+          {/* ── Charts row ─────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
+            {/* Revenue chart — 2 cols */}
+            <div className="xl:col-span-2" style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 22, padding: "20px 22px", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 70, background: "linear-gradient(180deg,rgba(255,255,255,0.03) 0%,transparent 100%)", pointerEvents: "none" }} />
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-bold text-foreground">Revenue</h2>
-                  <p className="text-xs text-muted-foreground">{isMultiDay ? "Daily breakdown" : "Hourly breakdown"}</p>
+                  <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.03em", color: TP }}>Revenue</div>
+                  <div style={{ fontSize: 11, color: TM, marginTop: 2 }}>{isMultiDay ? "Daily breakdown" : "Hourly breakdown"}</div>
                 </div>
-                <TrendingUp className="h-5 w-5 text-emerald-500" />
+                <TrendingUp className="h-5 w-5" style={{ color: OR }} />
               </div>
               <ResponsiveContainer width="100%" height={200}>
                 <AreaChart data={hourlyData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      <stop offset="5%"  stopColor={OR} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={OR} stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
-                    formatter={(v: number) => [`$${v.toFixed(2)}`, "Revenue"]}
-                  />
-                  <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2.5} fill="url(#revGrad)" dot={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="hour" tick={{ fontSize: 11, fill: TM }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: TM }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} labelStyle={{ color: TM }} formatter={(v: number) => [`$${v.toFixed(2)}`, "Revenue"]} />
+                  <Area type="monotone" dataKey="revenue" stroke={OR} strokeWidth={2.5} fill="url(#revGrad)" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Order status donut */}
-            <div className="bg-card rounded-xl border shadow-sm p-5">
+            {/* Order mix donut */}
+            <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 22, padding: "20px 22px" }}>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-bold text-foreground">Order Mix</h2>
-                  <p className="text-xs text-muted-foreground">By status (recent 50)</p>
+                  <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.03em", color: TP }}>Order Mix</div>
+                  <div style={{ fontSize: 11, color: TM, marginTop: 2 }}>By status (recent 50)</div>
                 </div>
-                <ShoppingBag className="h-5 w-5 text-blue-400" />
+                <ShoppingBag className="h-5 w-5" style={{ color: "#0ea5e9" }} />
               </div>
               {statusDonut.length === 0 ? (
-                <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">No orders yet</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: TM, fontSize: 14 }}>No orders yet</div>
               ) : (
                 <>
                   <ResponsiveContainer width="100%" height={160}>
                     <PieChart>
                       <Pie data={statusDonut} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
-                        {statusDonut.map((d) => (
-                          <Cell key={d.key} fill={d.color} />
-                        ))}
+                        {statusDonut.map((d) => <Cell key={d.key} fill={d.color} />)}
                       </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
+                      <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
                     {statusDonut.map((d) => (
-                      <span key={d.key} className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
+                      <span key={d.key} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: TM }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: d.color, display: "inline-block", flexShrink: 0 }} />
                         {d.name} ({d.value})
                       </span>
                     ))}
@@ -626,242 +647,256 @@ export default function Admin() {
 
           {/* Top items bar chart */}
           {topItemsData.length > 0 && (
-            <div className="bg-card rounded-xl border shadow-sm p-5">
+            <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 22, padding: "20px 22px", marginBottom: 16 }}>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="font-bold text-foreground">Top Items</h2>
-                  <p className="text-xs text-muted-foreground">Units sold</p>
+                  <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.03em", color: TP }}>Top Items</div>
+                  <div style={{ fontSize: 11, color: TM, marginTop: 2 }}>Units sold</div>
                 </div>
-                <TrendingUp className="h-5 w-5 text-purple-400" />
+                <TrendingUp className="h-5 w-5" style={{ color: "#7c6af7" }} />
               </div>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={topItemsData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} width={90} />
-                  <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }} />
-                  <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={14} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: TM }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: TM }} axisLine={false} tickLine={false} width={90} />
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                  <Bar dataKey="count" fill="#7c6af7" radius={[0,4,4,0]} barSize={14} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           )}
 
-          {/* Data tools */}
-          <div className="bg-card rounded-xl border shadow-sm p-5 space-y-4">
-            <h2 className="font-bold text-foreground text-sm">Data Tools</h2>
+          {/* ── Data tools ─────────────────────────────────────────────────── */}
+          <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 22, padding: "20px 22px", marginBottom: 24 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.02em", color: TP, marginBottom: 16 }}>Data Tools</div>
 
             {/* Menu sync */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4" style={{ borderBottom: `1px solid ${BORD}` }}>
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-blue-900/30 p-2 text-blue-400"><CloudUpload className="h-4 w-4" /></div>
+                <div style={{ background: "rgba(14,165,233,0.12)", borderRadius: 10, padding: 8 }}><CloudUpload className="h-4 w-4" style={{ color: "#0ea5e9" }} /></div>
                 <div>
-                  <p className="font-semibold text-sm text-foreground">Sync Menu to Online Store</p>
-                  <p className="text-xs text-muted-foreground">
-                    {lastSync ? `Last synced: ${lastSync}` : "Pushes your menu to the ordering site"}
-                  </p>
-                  {syncMessage && <p className={`text-xs mt-0.5 ${syncState === "error" ? "text-red-600" : "text-green-600"}`}>{syncMessage}</p>}
+                  <p style={{ fontWeight: 600, fontSize: 13, color: TP }}>Sync Menu to Online Store</p>
+                  <p style={{ fontSize: 11, color: TM }}>{lastSync ? `Last synced: ${lastSync}` : "Pushes your menu to the ordering site"}</p>
+                  {syncMessage && <p style={{ fontSize: 11, marginTop: 2, color: syncState === "error" ? "#f87171" : "#30d158" }}>{syncMessage}</p>}
                 </div>
               </div>
-              <Button size="sm" variant="outline" disabled={syncState === "syncing"} onClick={handleSync}
-                className={syncState === "success" ? "border-green-500 text-green-700" : syncState === "error" ? "border-red-400 text-red-600" : ""}>
-                <CloudUpload className={`h-4 w-4 mr-1.5 ${syncState === "syncing" ? "animate-pulse" : ""}`} />
+              <button onClick={handleSync} disabled={syncState === "syncing"} style={toolBtnStyle(syncState as ToolState, "#0ea5e9")}>
+                <CloudUpload className={`h-3.5 w-3.5 inline mr-1.5 ${syncState === "syncing" ? "animate-pulse" : ""}`} />
                 {syncState === "syncing" ? "Syncing…" : syncState === "success" ? "Synced!" : syncState === "error" ? "Retry" : "Sync Now"}
-              </Button>
+              </button>
             </div>
 
-            {/* Pull menu from cloud */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
+            {/* Pull from cloud */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 pt-4" style={{ borderBottom: `1px solid ${BORD}` }}>
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-teal-900/30 p-2 text-teal-400"><CloudDownload className="h-4 w-4" /></div>
+                <div style={{ background: "rgba(16,185,129,0.12)", borderRadius: 10, padding: 8 }}><CloudDownload className="h-4 w-4" style={{ color: "#10b981" }} /></div>
                 <div>
-                  <p className="font-semibold text-sm text-foreground">Pull Menu from Cloud</p>
-                  <p className="text-xs text-muted-foreground">Resyncs all items &amp; modifiers from the online store to this device</p>
-                  {pullMenuMessage && <p className={`text-xs mt-0.5 ${pullMenuState === "error" ? "text-red-600" : "text-green-600"}`}>{pullMenuMessage}</p>}
+                  <p style={{ fontWeight: 600, fontSize: 13, color: TP }}>Pull Menu from Cloud</p>
+                  <p style={{ fontSize: 11, color: TM }}>Resyncs all items &amp; modifiers from the online store to this device</p>
+                  {pullMenuMessage && <p style={{ fontSize: 11, marginTop: 2, color: pullMenuState === "error" ? "#f87171" : "#30d158" }}>{pullMenuMessage}</p>}
                 </div>
               </div>
-              <Button size="sm" variant="outline" disabled={pullMenuState === "pulling"} onClick={handlePullMenuFromCloud}
-                className={pullMenuState === "success" ? "border-green-500 text-green-700" : pullMenuState === "error" ? "border-red-400 text-red-600" : "border-teal-300 text-teal-400 hover:bg-teal-900/30"}>
-                <CloudDownload className={`h-4 w-4 mr-1.5 ${pullMenuState === "pulling" ? "animate-pulse" : ""}`} />
+              <button onClick={handlePullMenuFromCloud} disabled={pullMenuState === "pulling"} style={toolBtnStyle(pullMenuState as ToolState, "#10b981")}>
+                <CloudDownload className={`h-3.5 w-3.5 inline mr-1.5 ${pullMenuState === "pulling" ? "animate-pulse" : ""}`} />
                 {pullMenuState === "pulling" ? "Pulling…" : pullMenuState === "success" ? "Done!" : pullMenuState === "error" ? "Retry" : "Pull Now"}
-              </Button>
+              </button>
             </div>
 
             {/* Loyverse import */}
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 pt-4" style={{ borderBottom: `1px solid ${BORD}` }}>
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-purple-900/30 p-2 text-purple-300"><History className="h-4 w-4" /></div>
+                <div style={{ background: "rgba(124,106,247,0.12)", borderRadius: 10, padding: 8 }}><History className="h-4 w-4" style={{ color: "#7c6af7" }} /></div>
                 <div>
-                  <p className="font-semibold text-sm text-foreground">Import from Loyverse API</p>
-                  <p className="text-xs text-muted-foreground">
-                    {importState === "importing" ? "Fetching from Loyverse…" : "Imports customers + last 30 days of receipts"}
-                  </p>
-                  {importMessage && <p className={`text-xs mt-0.5 ${importState === "error" ? "text-red-600" : "text-green-600"}`}>{importMessage}</p>}
+                  <p style={{ fontWeight: 600, fontSize: 13, color: TP }}>Import from Loyverse API</p>
+                  <p style={{ fontSize: 11, color: TM }}>{importState === "importing" ? "Fetching from Loyverse…" : "Imports customers + last 30 days of receipts"}</p>
+                  {importMessage && <p style={{ fontSize: 11, marginTop: 2, color: importState === "error" ? "#f87171" : "#30d158" }}>{importMessage}</p>}
                 </div>
               </div>
-              <Button size="sm" variant="outline" disabled={importState === "importing" || importState === "success"} onClick={handleLoyverseImport}
-                className={importState === "success" ? "border-green-500 text-green-700" : importState === "error" ? "border-red-400 text-red-600" : "border-purple-300 text-purple-300 hover:bg-purple-900/30"}>
-                <History className={`h-4 w-4 mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
+              <button onClick={handleLoyverseImport} disabled={importState === "importing" || importState === "success"} style={toolBtnStyle(importState as ToolState, "#7c6af7")}>
+                <History className={`h-3.5 w-3.5 inline mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
                 {importState === "importing" ? "Importing…" : importState === "success" ? "Imported!" : importState === "error" ? "Retry" : "Import Now"}
-              </Button>
+              </button>
             </div>
 
             {/* CSV upload */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-indigo-900/30 p-2 text-indigo-300"><CloudUpload className="h-4 w-4" /></div>
+                <div style={{ background: "rgba(99,102,241,0.12)", borderRadius: 10, padding: 8 }}><CloudUpload className="h-4 w-4" style={{ color: "#6366f1" }} /></div>
                 <div>
-                  <p className="font-semibold text-sm text-foreground">Upload Loyverse CSV</p>
-                  <p className="text-xs text-muted-foreground">Import full order history from exported CSV</p>
-                  {csvMessage && <p className={`text-xs mt-0.5 ${csvState === "error" ? "text-red-600" : "text-green-600"}`}>{csvMessage}</p>}
+                  <p style={{ fontWeight: 600, fontSize: 13, color: TP }}>Upload Loyverse CSV</p>
+                  <p style={{ fontSize: 11, color: TM }}>Import full order history from exported CSV</p>
+                  {csvMessage && <p style={{ fontSize: 11, marginTop: 2, color: csvState === "error" ? "#f87171" : "#30d158" }}>{csvMessage}</p>}
                 </div>
               </div>
               <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCSVUpload} />
-              <Button size="sm" variant="outline" disabled={csvState === "uploading"} onClick={() => csvInputRef.current?.click()}
-                className={csvState === "success" ? "border-green-500 text-green-700" : csvState === "error" ? "border-red-400 text-red-600" : "border-indigo-300 text-indigo-300 hover:bg-indigo-900/30"}>
-                <CloudUpload className={`h-4 w-4 mr-1.5 ${csvState === "uploading" ? "animate-pulse" : ""}`} />
+              <button onClick={() => csvInputRef.current?.click()} disabled={csvState === "uploading"} style={toolBtnStyle(csvState as ToolState, "#6366f1")}>
+                <CloudUpload className={`h-3.5 w-3.5 inline mr-1.5 ${csvState === "uploading" ? "animate-pulse" : ""}`} />
                 {csvState === "uploading" ? "Uploading…" : csvState === "success" ? "Imported!" : csvState === "error" ? "Retry" : "Upload CSV"}
-              </Button>
+              </button>
             </div>
           </div>
 
-          {/* Active orders */}
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <h2 className="text-xl font-black text-foreground">Active Orders</h2>
+          {/* ── Active orders ──────────────────────────────────────────────── */}
+          <section className="mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.04em", color: TP }}>Active Orders</h2>
               {activeOrders.length > 0 && (
-                <span className="text-xs font-bold bg-amber-900/40 text-amber-300 rounded-full px-2.5 py-0.5">
+                <span style={{ fontSize: 11, fontWeight: 800, background: "rgba(255,107,0,0.15)", color: OR, border: "1px solid rgba(255,107,0,0.3)", borderRadius: 20, padding: "2px 10px" }}>
                   {activeOrders.length}
                 </span>
               )}
             </div>
             {isLoading ? (
-              <p className="text-muted-foreground">Loading orders…</p>
+              <p style={{ color: TM }}>Loading orders…</p>
             ) : activeOrders.length === 0 ? (
-              <div className="bg-card rounded-xl border p-8 text-center text-muted-foreground shadow-sm">
+              <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 22, padding: "32px 24px", textAlign: "center", color: TM, fontSize: 14 }}>
                 No active orders right now.
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {activeOrders.map((order) => (
-                  <div key={order.id} className="bg-card rounded-xl border shadow-sm p-5 space-y-4">
-                    <div className="flex items-start justify-between gap-4">
+                  <div key={order.id} style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 22, padding: "18px 20px" }}>
+                    {/* Order header */}
+                    <div className="flex items-start justify-between gap-4 mb-3">
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono font-black text-lg text-emerald-600">{order.confirmationCode}</span>
-                          <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${STATUS_COLORS[order.status]}`}>
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span style={{ fontFamily: "monospace", fontWeight: 900, fontSize: 16, color: "#30d158", letterSpacing: "0.02em" }}>{order.confirmationCode}</span>
+                          <span style={{ ...STATUS_STYLE[order.status], fontSize: 10, fontWeight: 800, borderRadius: 8, padding: "3px 9px", letterSpacing: "0.04em" }}>
                             {STATUS_LABELS[order.status]}
                           </span>
-                          <span className="text-xs bg-muted text-muted-foreground rounded-full px-2 py-0.5 capitalize">{order.orderType}</span>
+                          <span style={{ background: "rgba(255,255,255,0.06)", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>
+                            {order.orderType}
+                          </span>
                         </div>
-                        <p className="font-semibold text-foreground">{order.customerName}</p>
+                        <p style={{ fontWeight: 700, fontSize: 14, color: TP }}>{order.customerName}</p>
                         {order.customerPhone ? (
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-sm text-muted-foreground">{order.customerPhone}</span>
-                            <a href={`tel:${order.customerPhone}`} className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium transition-colors">📞 Call</a>
-                            {/* TODO(store-settings): interpolate useStoreSettings().storeName instead of "Island Tacos" in the wa.me text below */}
-                            <a
-                              href={`https://wa.me/${order.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${order.customerName}, your Island Tacos order #${order.confirmationCode} is ready for pickup! 🌮`)}`}
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span style={{ fontSize: 13, color: TM }}>{order.customerPhone}</span>
+                            <a href={`tel:${order.customerPhone}`}
+                              style={{ fontSize: 11, padding: "2px 10px", borderRadius: 20, background: "rgba(14,165,233,0.12)", color: "#0ea5e9", border: "1px solid rgba(14,165,233,0.25)", fontWeight: 600, textDecoration: "none" }}>
+                              📞 Call
+                            </a>
+                            {/* TODO(store-settings): interpolate store name from getStoreSettings() */}
+                            <a href={`https://wa.me/${order.customerPhone.replace(/\D/g,"")}?text=${encodeURIComponent(`Hi ${order.customerName}, your Island Tacos order #${order.confirmationCode} is ready for pickup! 🌮`)}`}
                               target="_blank" rel="noreferrer"
-                              className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 font-medium transition-colors"
-                            >💬 WhatsApp</a>
+                              style={{ fontSize: 11, padding: "2px 10px", borderRadius: 20, background: "rgba(48,209,88,0.12)", color: "#30d158", border: "1px solid rgba(48,209,88,0.25)", fontWeight: 600, textDecoration: "none" }}>
+                              💬 WhatsApp
+                            </a>
                           </div>
                         ) : (
-                          <p className="text-sm text-muted-foreground">Walk-in</p>
+                          <p style={{ fontSize: 13, color: TM, marginTop: 2 }}>Walk-in</p>
                         )}
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-xl font-black text-foreground">${order.total.toFixed(2)}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </p>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <p style={{ fontSize: 20, fontWeight: 900, color: TP, letterSpacing: "-0.03em" }}>${order.total.toFixed(2)}</p>
+                        <p style={{ fontSize: 11, color: TM, marginTop: 2 }}>{new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
                       </div>
                     </div>
-                    <div className="text-sm space-y-1">
+
+                    {/* Items */}
+                    <div style={{ marginBottom: 14 }} className="space-y-1">
                       {order.items?.map((item) => (
-                        <div key={item.id} className="flex gap-2 text-muted-foreground">
-                          <span className="font-medium text-foreground">{item.quantity}x</span>
-                          <span>{item.menuItemName}</span>
-                          {item.notes && <span className="italic">— {item.notes}</span>}
+                        <div key={item.id} className="flex gap-2" style={{ fontSize: 13 }}>
+                          <span style={{ fontWeight: 700, color: TP }}>{item.quantity}×</span>
+                          <span style={{ color: TM }}>{item.menuItemName}</span>
+                          {item.notes && <span style={{ color: TM, fontStyle: "italic" }}>— {item.notes}</span>}
                         </div>
                       ))}
-                      {order.notes && <p className="text-muted-foreground italic mt-1">Note: {order.notes}</p>}
+                      {order.notes && <p style={{ fontSize: 13, color: TM, fontStyle: "italic", marginTop: 4 }}>Note: {order.notes}</p>}
                     </div>
-                    <div className="space-y-2 pt-1">
-                      <div className="flex items-center gap-3">
-                        {NEXT_STATUS[order.status] && (
-                          <Button size="sm" onClick={() => handleStatusChange(order.id, NEXT_STATUS[order.status])} disabled={updateStatus.isPending}>
-                            Mark as {STATUS_LABELS[NEXT_STATUS[order.status]]}
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant={rejectState?.orderId === order.id ? "outline" : "destructive"}
-                          onClick={() => handleCancelClick(order.id)}
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {NEXT_STATUS[order.status] && (
+                        <button
+                          onClick={() => handleStatusChange(order.id, NEXT_STATUS[order.status])}
                           disabled={updateStatus.isPending}
+                          style={{ background: "linear-gradient(135deg,#ff6b00,#ff9500)", color: "#fff", border: "none", borderRadius: 20, padding: "7px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 14px rgba(255,107,0,0.35)", opacity: updateStatus.isPending ? 0.7 : 1 }}
                         >
-                          <XCircle className="h-3.5 w-3.5 mr-1" />
-                          {rejectState?.orderId === order.id ? "Never mind" : "Cancel Order"}
-                        </Button>
-                      </div>
-                      {rejectState?.orderId === order.id && (
-                        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-3">
-                          <p className="text-sm font-medium text-destructive">What's the reason?</p>
-                          <div className="flex flex-wrap gap-2">
-                            {["Out of chicken", "Out of steak", "Out of shrimp", "Out of salmon", "Out of burger"].map((opt) => (
-                              <button
-                                key={opt} type="button"
-                                onClick={() => setRejectState({ ...rejectState, reason: rejectState.reason === opt ? "" : opt })}
-                                className={`rounded-full px-3 py-1 text-xs font-semibold border transition-colors ${rejectState.reason === opt ? "bg-destructive text-destructive-foreground border-destructive" : "border-destructive/40 text-destructive hover:bg-destructive/10"}`}
-                              >{opt}</button>
-                            ))}
-                          </div>
-                          <Textarea
-                            placeholder="Other reason (optional)"
-                            value={["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].includes(rejectState.reason) ? "" : rejectState.reason}
-                            onChange={(e) => setRejectState({ ...rejectState, reason: e.target.value })}
-                            rows={1} className="text-sm resize-none"
-                          />
-                          <Button size="sm" variant="destructive" onClick={() => handleStatusChange(order.id, "cancelled", rejectState?.reason || undefined)} disabled={updateStatus.isPending}>
-                            {updateStatus.isPending ? "Cancelling..." : "Confirm Cancellation"}
-                          </Button>
-                        </div>
+                          Mark as {STATUS_LABELS[NEXT_STATUS[order.status]]}
+                        </button>
                       )}
+                      <button
+                        onClick={() => handleCancelClick(order.id)}
+                        disabled={updateStatus.isPending}
+                        style={{
+                          background: rejectState?.orderId === order.id ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.1)",
+                          color: "#f87171", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 20,
+                          padding: "7px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                        }}
+                      >
+                        <XCircle className="h-3.5 w-3.5 inline mr-1.5 -mt-0.5" />
+                        {rejectState?.orderId === order.id ? "Never mind" : "Cancel Order"}
+                      </button>
                     </div>
+
+                    {/* Cancel confirm */}
+                    {rejectState?.orderId === order.id && (
+                      <div style={{ marginTop: 12, borderRadius: 14, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.05)", padding: "14px 16px" }} className="space-y-3">
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "#f87171" }}>What's the reason?</p>
+                        <div className="flex flex-wrap gap-2">
+                          {["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].map((opt) => (
+                            <button key={opt} type="button"
+                              onClick={() => setRejectState({ ...rejectState, reason: rejectState.reason === opt ? "" : opt })}
+                              style={{
+                                borderRadius: 20, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                                background: rejectState.reason === opt ? "rgba(239,68,68,0.2)" : "transparent",
+                                color: "#f87171", border: "1px solid rgba(239,68,68,0.3)",
+                              }}
+                            >{opt}</button>
+                          ))}
+                        </div>
+                        <Textarea
+                          placeholder="Other reason (optional)"
+                          value={["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].includes(rejectState.reason) ? "" : rejectState.reason}
+                          onChange={(e) => setRejectState({ ...rejectState, reason: e.target.value })}
+                          rows={1} className="text-sm resize-none bg-transparent border-white/10 text-[#e8eaf6] placeholder:text-[#7077a1]"
+                        />
+                        <button
+                          onClick={() => handleStatusChange(order.id, "cancelled", rejectState?.reason || undefined)}
+                          disabled={updateStatus.isPending}
+                          style={{ background: "rgba(239,68,68,0.2)", color: "#f87171", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 20, padding: "7px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                        >
+                          {updateStatus.isPending ? "Cancelling..." : "Confirm Cancellation"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             )}
           </section>
 
-          {/* Past orders */}
+          {/* ── Past orders ─────────────────────────────────────────────────── */}
           {pastOrders.length > 0 && (
             <section className="pb-6">
-              <h2 className="text-xl font-black text-foreground mb-4">Recent History</h2>
-              <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 border-b">
-                    <tr>
-                      <th className="text-left p-3 font-semibold text-muted-foreground">Code</th>
-                      <th className="text-left p-3 font-semibold text-muted-foreground">Customer</th>
-                      <th className="text-left p-3 font-semibold text-muted-foreground hidden md:table-cell">Items</th>
-                      <th className="text-right p-3 font-semibold text-muted-foreground">Total</th>
-                      <th className="text-left p-3 font-semibold text-muted-foreground">Status</th>
+              <h2 style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.04em", color: TP, marginBottom: 16 }}>Recent History</h2>
+              <div style={{ background: CARD, border: `1px solid ${BORD}`, borderRadius: 22, overflow: "hidden" }}>
+                <table className="w-full" style={{ fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${BORD}`, background: "rgba(255,255,255,0.03)" }}>
+                      <th className="text-left p-3" style={{ fontWeight: 700, color: TM, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Code</th>
+                      <th className="text-left p-3" style={{ fontWeight: 700, color: TM, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Customer</th>
+                      <th className="text-left p-3 hidden md:table-cell" style={{ fontWeight: 700, color: TM, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Items</th>
+                      <th className="text-right p-3" style={{ fontWeight: 700, color: TM, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Total</th>
+                      <th className="text-left p-3" style={{ fontWeight: 700, color: TM, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pastOrders.slice(0, 20).map((order, idx) => (
-                      <tr key={order.id} className={idx % 2 === 0 ? "bg-card" : "bg-muted/40/50"}>
-                        <td className="p-3 font-mono font-bold text-emerald-600">{order.confirmationCode}</td>
+                      <tr key={order.id} style={{ borderTop: `1px solid rgba(255,255,255,0.03)`, background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
+                        <td className="p-3" style={{ fontFamily: "monospace", fontWeight: 900, color: "#30d158" }}>{order.confirmationCode}</td>
                         <td className="p-3">
-                          <div className="font-medium text-foreground">{order.customerName}</div>
-                          <div className="text-muted-foreground text-xs">{new Date(order.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                          <div style={{ fontWeight: 600, color: TP }}>{order.customerName}</div>
+                          <div style={{ color: TM, fontSize: 11 }}>{new Date(order.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
                         </td>
-                        <td className="p-3 hidden md:table-cell text-muted-foreground">
-                          {order.items?.map((i) => <div key={i.id}>{i.quantity}x {i.menuItemName}{i.notes && <span className="italic text-xs"> — {i.notes}</span>}</div>)}
+                        <td className="p-3 hidden md:table-cell" style={{ color: TM }}>
+                          {order.items?.map((i) => <div key={i.id}>{i.quantity}× {i.menuItemName}{i.notes && <span style={{ fontStyle: "italic", fontSize: 11 }}> — {i.notes}</span>}</div>)}
                         </td>
-                        <td className="p-3 text-right font-bold text-foreground">${order.total.toFixed(2)}</td>
+                        <td className="p-3 text-right" style={{ fontWeight: 800, color: TP }}>${order.total.toFixed(2)}</td>
                         <td className="p-3">
-                          <span className={`text-xs font-semibold rounded-full px-2 py-0.5 ${STATUS_COLORS[order.status]}`}>
+                          <span style={{ ...STATUS_STYLE[order.status], fontSize: 10, fontWeight: 800, borderRadius: 8, padding: "3px 9px", letterSpacing: "0.04em", display: "inline-block" }}>
                             {STATUS_LABELS[order.status]}
                           </span>
                         </td>
