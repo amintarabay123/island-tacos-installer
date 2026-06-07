@@ -200,6 +200,7 @@ router.get("/download/install.sh",           serveFile("install.sh",            
 router.get("/download/UPDATE.bat",           serveFile("UPDATE.bat",                           "UPDATE.bat",           "text/plain; charset=utf-8"));
 router.get("/download/UPDATE.ps1",           serveFile("UPDATE.ps1",                           "UPDATE.ps1",           "text/plain; charset=utf-8"));
 router.get("/download/ecosystem.config.cjs", serveFile("local-install/ecosystem.config.cjs",   "ecosystem.config.cjs", "text/plain; charset=utf-8"));
+router.get("/download/monitor.mjs",          serveFile("local-install/monitor.mjs",             "monitor.mjs",          "text/plain; charset=utf-8"));
 router.get("/download/menu-import.sql",      serveFile("local-install/menu-import.sql",         "menu-import.sql",      "text/plain; charset=utf-8"));
 router.get("/download/menu-patch.sql",       serveFile("local-install/menu-patch.sql",          "menu-patch.sql",       "text/plain; charset=utf-8"));
 router.get("/download/server",               serveFile("artifacts/api-server/dist/index.mjs",   "index.mjs",            "application/octet-stream"));

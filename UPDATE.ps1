@@ -19,9 +19,10 @@ Write-Host "   Island Tacos - Update" -ForegroundColor Yellow
 Write-Host "============================================" -ForegroundColor Yellow
 Write-Host ""
 
-# Step 1: Stop PM2 first so index.mjs is not locked
+# Step 1: Stop PM2 processes first so index.mjs is not locked
 Write-Step "Stopping server..."
-try { pm2 delete island-tacos 2>$null | Out-Null } catch {}
+try { pm2 delete island-tacos         2>$null | Out-Null } catch {}
+try { pm2 delete island-tacos-monitor 2>$null | Out-Null } catch {}
 Start-Sleep 1
 Write-OK "Server stopped."
 
@@ -121,6 +122,16 @@ try {
     Write-OK "server.mjs updated."
 } catch {
     Write-Warn "server.mjs update skipped: $_ (non-fatal — existing file will be used)"
+}
+
+# Step 6c: Download monitor agent (watchdog daemon that auto-repairs services)
+Write-Step "Downloading monitor agent..."
+try {
+    Invoke-WebRequest "$CLOUD/api/download/monitor.mjs" `
+        -OutFile "$Root\local-install\monitor.mjs" -UseBasicParsing -ErrorAction Stop
+    Write-OK "monitor.mjs updated."
+} catch {
+    Write-Warn "monitor.mjs update skipped: $_ (non-fatal — existing file will be used if present)"
 }
 
 # Step 7: Self-update — write fresh copies of UPDATE.bat and UPDATE.ps1 to disk.
