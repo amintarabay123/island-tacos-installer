@@ -5,6 +5,29 @@ import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
 import { setPageMeta } from "@/lib/page-meta";
 
+// ── Indigo Luxe Design System ─────────────────────────────────────────────────
+const IL = { bg:"#16172b", card:"#1e1f38", hdr:"#0e1020", bord:"rgba(255,255,255,0.06)", tp:"#e8eaf6", tm:"#b0b8d8", mu:"#7077a1", or:"#ff6b00", pur:"#7c6af7", grn:"#30d158", red:"#ff453a" };
+const ITEM_GRADS: { grad: string; glow: string }[] = [
+  { grad:"linear-gradient(135deg,#ff6b00,#ff9500)",   glow:"rgba(255,107,0,0.45)" },
+  { grad:"linear-gradient(135deg,#7c6af7,#5b4cf5)",   glow:"rgba(124,106,247,0.45)" },
+  { grad:"linear-gradient(135deg,#10b981,#059669)",   glow:"rgba(16,185,129,0.45)" },
+  { grad:"linear-gradient(135deg,#e91e9c,#c2185b)",   glow:"rgba(233,30,156,0.45)" },
+  { grad:"linear-gradient(135deg,#0ea5e9,#0284c7)",   glow:"rgba(14,165,233,0.45)" },
+  { grad:"linear-gradient(135deg,#f59e0b,#d97706)",   glow:"rgba(245,158,11,0.45)" },
+  { grad:"linear-gradient(135deg,#ef4444,#dc2626)",   glow:"rgba(239,68,68,0.45)" },
+  { grad:"linear-gradient(135deg,#8b5cf6,#7c3aed)",   glow:"rgba(139,92,246,0.45)" },
+];
+const STATUS_GRAD: Record<string, string> = {
+  confirmed: "linear-gradient(135deg,#0ea5e9,#0284c7)",
+  preparing: "linear-gradient(135deg,#ff6b00,#ff9500)",
+  ready:     "linear-gradient(135deg,#10b981,#059669)",
+};
+const STATUS_GLOW: Record<string, string> = {
+  confirmed: "rgba(14,165,233,0.5)",
+  preparing: "rgba(255,107,0,0.5)",
+  ready:     "rgba(16,185,129,0.5)",
+};
+
 type OrderItem = {
   id: number;
   menuItemId?: number | null;
@@ -52,11 +75,7 @@ const NEXT_LABEL: Record<string, string> = {
   preparing: "Mark Ready",
 };
 
-const STATUS_CARD: Record<string, { border: string; bg: string }> = {
-  confirmed: { border: "border-blue-400", bg: "bg-blue-950/40" },
-  preparing: { border: "border-orange-400", bg: "bg-amber-950/40" },
-  ready: { border: "border-green-500", bg: "bg-green-950/40" },
-};
+// STATUS_CARD replaced by STATUS_GRAD inline styles
 
 // ─── Printer helpers ──────────────────────────────────────────────────────────
 type PrinterConfig = { type: string; ip?: string; port?: number; bridgeUrl?: string; localApiUrl?: string };
@@ -121,12 +140,7 @@ function buildKitchenTicket(order: { confirmationCode: string; customerName: str
   return lines;
 }
 
-const STATUS_BTN: Record<string, string> = {
-  pending: "bg-yellow-400 hover:bg-yellow-300 text-yellow-950 active:bg-yellow-200",
-  confirmed: "bg-blue-400 hover:bg-blue-300 text-blue-950 active:bg-blue-200",
-  preparing: "bg-green-400 hover:bg-green-300 text-green-950 active:bg-green-200",
-  ready: "bg-card hover:bg-muted text-foreground active:bg-muted",
-};
+// STATUS_BTN replaced by STATUS_GRAD inline styles
 
 const COL_CONFIG = [
   {
@@ -785,54 +799,59 @@ export default function Kitchen() {
   const hasOrders = orders.length > 0;
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col select-none overflow-hidden">
-      <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-card border-b border-border shrink-0 gap-2 shadow-sm">
+    <div className="flex flex-col select-none overflow-hidden" style={{ minHeight:"100dvh", background:IL.bg, color:IL.tp }}>
+      <header style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 16px", background:IL.hdr, borderBottom:`1px solid ${IL.bord}`, flexShrink:0, gap:8 }}>
         <div className="flex items-center gap-2 min-w-0">
           {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
-          <span className="text-base sm:text-lg font-bold truncate">Island Tacos</span>
-          <span className="text-muted-foreground text-sm hidden sm:inline">· Kitchen Display</span>
+          <span style={{ fontSize:17, fontWeight:900, color:IL.tp }} className="truncate">Island Tacos</span>
+          <span style={{ color:IL.mu, fontSize:13 }} className="hidden sm:inline">· Kitchen Display</span>
         </div>
-        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {error ? (
-            <span className="text-red-500 text-xs font-medium hidden sm:block">{error}</span>
+            <span style={{ color:IL.red, fontSize:11, fontWeight:600 }} className="hidden sm:block">{error}</span>
           ) : lastFetch ? (
-            <span className="text-muted-foreground text-xs hidden lg:block">Refreshes every 3s · {lastFetch.toLocaleTimeString()}</span>
+            <span style={{ color:IL.mu, fontSize:11 }} className="hidden lg:block">Refreshes every 3s · {lastFetch.toLocaleTimeString()}</span>
           ) : null}
           <div className="flex items-center gap-1.5">
-            <span className={`w-2 h-2 rounded-full ${error ? "bg-red-500" : "bg-green-500 animate-pulse"}`} />
-            <span className={`text-xs font-medium hidden sm:inline ${error ? "text-red-500" : "text-green-600"}`}>
+            <span style={{ width:8, height:8, borderRadius:"50%", background: error ? IL.red : IL.grn, display:"inline-block", flexShrink:0 }} className={error ? "" : "animate-pulse"} />
+            <span style={{ fontSize:12, fontWeight:600, color: error ? IL.red : IL.grn }} className="hidden sm:inline">
               {error ? "Offline" : "Live"}
             </span>
           </div>
           {(!audioUnlocked || notifPerm === "default") ? (
             <button
               onClick={() => { unlockAudio(); requestNotifPermission(); }}
-              className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-foreground text-xs font-bold transition-colors animate-pulse"
+              style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+                background:"linear-gradient(135deg,#f59e0b,#d97706)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(245,158,11,0.55)" }}
               title="Tap once to enable order chimes and alerts"
+              className="animate-pulse"
             >
-              🔔 <span className="hidden sm:inline">Enable Notifications</span>
+              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+              🔔 <span className="hidden sm:inline" style={{ position:"relative" }}>Enable Alerts</span>
             </button>
           ) : (
-            <span className="text-green-600 text-xs font-medium hidden sm:flex items-center gap-1">
-              🔔 <span>Notifications on</span>
+            <span style={{ color:IL.grn, fontSize:12, fontWeight:600 }} className="hidden sm:flex items-center gap-1">
+              🔔 <span>On</span>
             </span>
           )}
           <button
             onClick={openHistory}
-            className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground/70 text-xs font-semibold transition-colors"
+            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+              background:"linear-gradient(135deg,#7c6af7,#5b4cf5)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(124,106,247,0.45)" }}
           >
-            🕐 <span className="hidden sm:inline">History</span>
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+            🕐 <span className="hidden sm:inline" style={{ position:"relative" }}>History</span>
           </button>
           <button
             onClick={() => window.location.reload()}
             title="Reload Kitchen Display"
-            className="text-muted-foreground hover:text-foreground/70 transition-colors px-2 py-1 rounded"
+            style={{ padding:"6px 10px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:`1px solid ${IL.bord}`, color:IL.mu, cursor:"pointer" }}
           >
             <RefreshCw className="w-4 h-4" />
           </button>
           <button
             onClick={logout}
-            className="text-muted-foreground hover:text-foreground/70 text-xs transition-colors px-2 py-1 rounded"
+            style={{ padding:"6px 10px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:`1px solid ${IL.bord}`, color:IL.mu, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}
           >
             <span className="hidden sm:inline">Sign out</span>
             <span className="sm:hidden">✕</span>
@@ -844,47 +863,61 @@ export default function Kitchen() {
         <>
           {/* Desktop column headers */}
           <div className="hidden sm:grid grid-cols-3 gap-3 px-4 pt-4 pb-2 shrink-0">
-            {COL_CONFIG.map(({ key, label, badge }) => (
-              <div key={key} className="flex items-center gap-2">
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${badge}`}>
-                  {label}
-                </span>
-                <span className="text-muted-foreground text-sm">
-                  {byCol[key].length} {byCol[key].length === 1 ? "order" : "orders"}
-                </span>
-              </div>
-            ))}
+            {COL_CONFIG.map(({ key, label }) => {
+              const colGrad = key === "new" ? "linear-gradient(135deg,#0ea5e9,#0284c7)"
+                : key === "preparing" ? "linear-gradient(135deg,#ff6b00,#ff9500)"
+                : "linear-gradient(135deg,#10b981,#059669)";
+              const colGlow = key === "new" ? "rgba(14,165,233,0.5)"
+                : key === "preparing" ? "rgba(255,107,0,0.5)"
+                : "rgba(16,185,129,0.5)";
+              return (
+                <div key={key} className="flex items-center gap-2">
+                  <span style={{ position:"relative", overflow:"hidden", padding:"3px 12px", borderRadius:20, fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:".08em", background:colGrad, color:"#fff", boxShadow:`0 2px 10px ${colGlow}`, display:"inline-block" }}>
+                    <span style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+                    <span style={{ position:"relative" }}>{label}</span>
+                  </span>
+                  <span style={{ color:IL.mu, fontSize:13 }}>
+                    {byCol[key].length} {byCol[key].length === 1 ? "order" : "orders"}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           {/* Mobile tabs */}
-          <div className="sm:hidden flex border-b border-border shrink-0 bg-card">
-            {COL_CONFIG.map(({ key, label, badge }) => (
-              <button
-                key={key}
-                onClick={() => setMobileTab(key as "new" | "preparing" | "ready")}
-                className={`flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border-b-2 ${
-                  mobileTab === key
-                    ? "border-current text-foreground"
-                    : "border-transparent text-muted-foreground"
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full ${badge.includes("blue") ? "bg-blue-400" : badge.includes("orange") ? "bg-orange-400" : "bg-green-500"}`} />
-                {label.split(" ")[0]}
-                {byCol[key].length > 0 && (
-                  <span className="bg-muted text-muted-foreground rounded-full text-[10px] w-4 h-4 flex items-center justify-center">
-                    {byCol[key].length}
-                  </span>
-                )}
-              </button>
-            ))}
+          <div style={{ display:"flex", borderBottom:`1px solid ${IL.bord}`, flexShrink:0, background:IL.hdr }} className="sm:hidden">
+            {COL_CONFIG.map(({ key, label }) => {
+              const isActive = mobileTab === key;
+              const colGrad = key === "new" ? "linear-gradient(135deg,#0ea5e9,#0284c7)"
+                : key === "preparing" ? "linear-gradient(135deg,#ff6b00,#ff9500)"
+                : "linear-gradient(135deg,#10b981,#059669)";
+              const dotColor = key === "new" ? "#0ea5e9" : key === "preparing" ? "#ff6b00" : "#10b981";
+              return (
+                <button
+                  key={key}
+                  onClick={() => setMobileTab(key as "new" | "preparing" | "ready")}
+                  style={{ flex:1, padding:"10px 0", fontSize:11, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", gap:6, cursor:"pointer", fontFamily:"inherit",
+                    background: isActive ? colGrad : "transparent",
+                    color: isActive ? "#fff" : IL.mu, border:"none" }}
+                >
+                  <span style={{ width:8, height:8, borderRadius:"50%", background:dotColor, display:"inline-block", flexShrink:0 }} />
+                  {label.split(" ")[0]}
+                  {byCol[key].length > 0 && (
+                    <span style={{ background:"rgba(0,0,0,0.3)", color:"rgba(255,255,255,0.8)", borderRadius:20, fontSize:10, width:18, height:18, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, flexShrink:0 }}>
+                      {byCol[key].length}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           <div className="sm:grid sm:grid-cols-3 gap-3 px-3 sm:px-4 py-3 sm:pb-4 flex-1 overflow-y-auto items-start">
             {COL_CONFIG.map(({ key }) => (
               <div key={key} className={`flex flex-col gap-3 ${key === mobileTab ? "flex" : "hidden sm:flex"}`}>
                 {byCol[key].length === 0 && (
-                  <div className="border border-dashed border-border rounded-xl flex items-center justify-center h-28">
-                    <span className="text-muted-foreground text-sm">No orders</span>
+                  <div style={{ border:`1px dashed ${IL.bord}`, borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", height:112 }}>
+                    <span style={{ color:IL.mu, fontSize:13 }}>No orders</span>
                   </div>
                 )}
                 {byCol[key].map((card) => {
@@ -901,81 +934,85 @@ export default function Kitchen() {
                     return (
                       <div
                         key={`addon-${order.id}`}
-                        className="rounded-lg border-2 border-amber-500 bg-amber-950/40 p-4 flex flex-col gap-3 transition-colors ring-2 ring-amber-700/40"
+                        style={{ background:IL.card, borderRadius:16, overflow:"hidden", boxShadow:"0 4px 24px rgba(0,0,0,0.45),0 0 0 1px rgba(255,255,255,0.06)" }}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500 text-amber-950">
-                              <span className="text-xs font-black uppercase tracking-wider">➕ Add-on</span>
+                        {/* Amber gradient header */}
+                        <div style={{ position:"relative", overflow:"hidden", padding:"14px 16px", background:"linear-gradient(135deg,#f59e0b,#d97706)", display:"flex", alignItems:"flex-start", justifyContent:"space-between" }}>
+                          <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+                          <div style={{ position:"relative" }}>
+                            <div style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"2px 8px", borderRadius:6, background:"rgba(0,0,0,0.25)", marginBottom:6 }}>
+                              <span style={{ fontSize:10, fontWeight:900, textTransform:"uppercase" as const, letterSpacing:".08em", color:"#fff" }}>➕ Add-on</span>
                             </div>
-                            <div className="text-2xl font-black tracking-tight leading-none mt-2">
-                              {order.customerName}
-                            </div>
-                            <div className="text-muted-foreground font-mono text-sm mt-1">#{order.confirmationCode}</div>
-                            <div className="text-amber-300 text-xs font-semibold mt-0.5 uppercase tracking-wide">
-                              Added to in-progress order
-                            </div>
+                            <div style={{ fontSize:22, fontWeight:900, color:"#fff", lineHeight:1.1 }}>{order.customerName}</div>
+                            <div style={{ color:"rgba(255,255,255,0.75)", fontFamily:"monospace", fontSize:13, marginTop:2 }}>#{order.confirmationCode}</div>
+                            <div style={{ color:"rgba(255,255,255,0.7)", fontSize:11, fontWeight:700, marginTop:2, textTransform:"uppercase" as const, letterSpacing:".06em" }}>Added to in-progress order</div>
                           </div>
-                          <div className="text-right shrink-0">
-                            <div className="text-sm font-bold tabular-nums text-muted-foreground">{addonAge}</div>
-                            <div className="text-xs text-muted-foreground mt-0.5 capitalize">{order.orderType}</div>
+                          <div style={{ position:"relative", textAlign:"right" as const, flexShrink:0 }}>
+                            <div style={{ fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.85)" }}>{addonAge}</div>
+                            <div style={{ fontSize:11, color:"rgba(255,255,255,0.65)", marginTop:2, textTransform:"capitalize" as const }}>{order.orderType}</div>
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-2">
-                          {card.items.map((item) => {
+                        {/* Items */}
+                        <div style={{ padding:"12px 16px 0", display:"flex", flexDirection:"column" as const, gap:8 }}>
+                          {card.items.map((item, itemIdx) => {
                             const struck = struckItems.get(order.id)?.has(item.id) ?? false;
+                            const gi = itemIdx % ITEM_GRADS.length;
+                            const gd = ITEM_GRADS[gi];
                             return (
                               <button
                                 key={item.id}
                                 onClick={() => toggleStruck(order.id, item.id)}
-                                className={`w-full text-left rounded px-3 py-3 border transition-all active:scale-[0.98] ${
-                                  struck
-                                    ? "bg-muted border-border opacity-60"
-                                    : "bg-card border-amber-300 hover:border-amber-400"
-                                }`}
+                                style={{ position:"relative", overflow:"hidden", width:"100%", textAlign:"left" as const, borderRadius:12, padding:"12px 14px", border:"none",
+                                  background:gd.grad, cursor:"pointer", fontFamily:"inherit",
+                                  opacity: struck ? 0.35 : 1, boxShadow: struck ? "none" : `0 3px 12px ${gd.glow}` }}
                               >
-                                <div className={`flex items-baseline gap-2 ${struck ? "line-through decoration-gray-500 decoration-2" : ""}`}>
-                                  <span className={`text-3xl font-black leading-none ${struck ? "text-muted-foreground" : "text-foreground"}`}>{item.quantity}×</span>
-                                  <span className={`text-xl font-bold leading-snug ${struck ? "text-muted-foreground" : "text-foreground"}`}>{item.menuItemName}</span>
-                                  {struck && <span className="text-xs text-muted-foreground font-normal ml-1 no-underline">done</span>}
+                                <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+                                <div style={{ position:"relative" }}>
+                                  <div className={`flex items-baseline gap-2 ${struck ? "line-through" : ""}`}>
+                                    <span style={{ fontSize:28, fontWeight:900, color:"#fff", lineHeight:1 }}>{item.quantity}×</span>
+                                    <span style={{ fontSize:20, fontWeight:700, color:"#fff", lineHeight:1.3 }}>{item.menuItemName}</span>
+                                    {struck && <span style={{ fontSize:12, color:"rgba(255,255,255,0.7)", fontWeight:500 }}>done</span>}
+                                  </div>
+                                  {!struck && (item.modifierSelections ?? []).length > 0 && (
+                                    <div style={{ color:"rgba(255,255,255,0.9)", fontSize:16, marginTop:8, lineHeight:1.5, fontWeight:600, display:"flex", flexDirection:"column" as const, gap:2 }}>
+                                      {(item.modifierSelections ?? []).map((m, i) => (
+                                        <div key={i}>+ {m.name}</div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {!struck && item.notes && (
+                                    <div style={{ color:"rgba(255,255,255,0.9)", fontSize:16, marginTop:8, lineHeight:1.4, fontWeight:700, whiteSpace:"pre-line" as const }}>
+                                      📝 {item.notes}
+                                    </div>
+                                  )}
                                 </div>
-                                {!struck && (item.modifierSelections ?? []).length > 0 && (
-                                  <div className="text-amber-300 text-xl mt-2 leading-snug font-semibold space-y-1">
-                                    {(item.modifierSelections ?? []).map((m, i) => (
-                                      <div key={i}>+ {m.name}</div>
-                                    ))}
-                                  </div>
-                                )}
-                                {!struck && item.notes && (
-                                  <div className="text-amber-300 text-xl mt-2 leading-snug whitespace-pre-line font-semibold">
-                                    {item.notes}
-                                  </div>
-                                )}
                               </button>
                             );
                           })}
                         </div>
 
-                        <button
-                          onClick={() => markItemsMade(order.id, card.items.map(i => i.id))}
-                          disabled={isMarking}
-                          className="w-full rounded py-3 text-base font-bold bg-amber-500 hover:bg-amber-400 text-amber-950 active:bg-amber-300 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          {isMarking ? "Saving…" : "Made ✓"}
-                        </button>
+                        {/* Made ✓ button */}
+                        <div style={{ padding:16 }}>
+                          <button
+                            onClick={() => markItemsMade(order.id, card.items.map(i => i.id))}
+                            disabled={isMarking}
+                            style={{ width:"100%", height:48, borderRadius:12, background:"linear-gradient(135deg,#f59e0b,#d97706)", border:"none", color:"#fff", fontWeight:800, fontSize:15, cursor:"pointer", fontFamily:"inherit", opacity:isMarking?0.5:1, boxShadow:"0 4px 16px rgba(245,158,11,0.5)", position:"relative", overflow:"hidden" }}
+                          >
+                            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+                            <span style={{ position:"relative" }}>{isMarking ? "Saving…" : "Made ✓"}</span>
+                          </button>
+                        </div>
                       </div>
                     );
                   }
 
-                  // ── FULL order card (original render) ───────────────
+                  // ── FULL order card ─────────────────────────────────
                   const hiddenItemIds = card.hiddenItemIds;
                   const overdue = isOverdue(order.createdAt, now);
                   const age = elapsed(order.createdAt, now);
                   const isAdvancing = advancing.has(order.id);
                   const next = NEXT_STATUS[order.status];
-                  const { border, bg } = STATUS_CARD[order.status] ?? STATUS_CARD.confirmed;
-                  const btnClass = STATUS_BTN[order.status];
 
                   // Uncollected: order has been "ready" for > 1 hour (and not dismissed)
                   const readySince = readyTimestampsRef.current.get(order.id);
@@ -986,11 +1023,10 @@ export default function Kitchen() {
                     && now > dismissedTs;
                   const uncollectedMins = readySince ? Math.floor((now - readySince) / 60000) : 0;
 
-                  const cardBorderBg = isUncollected
-                    ? "border-red-500 bg-red-950/60 animate-pulse"
-                    : overdue
-                      ? "border-red-500 bg-red-950/50 animate-pulse"
-                      : `${border} ${bg}`;
+                  const isAlert = isUncollected || overdue;
+                  const hdrGrad = isAlert ? "linear-gradient(135deg,#ff453a,#c0392b)" : (STATUS_GRAD[order.status] ?? STATUS_GRAD.confirmed);
+                  const cardGlow = isAlert ? "0 0 0 2px #ff453a,0 4px 24px rgba(255,69,58,0.35)"
+                    : `0 4px 24px rgba(0,0,0,0.4),0 0 0 1px ${IL.bord}`;
 
                   // ── Collapsed view ───────────────────────────────────
                   const isCollapsed = collapsedOrders.has(order.id);
@@ -1006,25 +1042,26 @@ export default function Kitchen() {
                       return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
                     })() : null;
                     return (
-                      <div key={order.id} className={`rounded-lg border-2 ${cardBorderBg} transition-colors`}>
+                      <div key={order.id} style={{ background: isAlert ? "rgba(255,69,58,0.1)" : IL.card, borderRadius:16, overflow:"hidden", boxShadow:cardGlow }} className={isAlert ? "animate-pulse" : ""}>
+                        <div style={{ height:3, background:hdrGrad, flexShrink:0 }} />
                         <div
                           className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
                           onClick={() => toggleCollapsed(order.id)}
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap min-w-0">
-                              <span className="text-lg font-black leading-none truncate">{order.customerName}</span>
-                              <span className="text-muted-foreground font-mono text-xs shrink-0">#{order.confirmationCode}</span>
-                              <span className="text-xs font-semibold bg-black/20 text-foreground/50 px-2 py-0.5 rounded-full shrink-0">
+                              <span style={{ fontSize:16, fontWeight:900, color:IL.tp }} className="leading-none truncate">{order.customerName}</span>
+                              <span style={{ color:IL.mu, fontFamily:"monospace", fontSize:11 }} className="shrink-0">#{order.confirmationCode}</span>
+                              <span style={{ fontSize:11, fontWeight:700, background:"rgba(255,255,255,0.08)", color:IL.tm, padding:"2px 8px", borderRadius:20 }} className="shrink-0">
                                 {totalQty} item{totalQty !== 1 ? "s" : ""}
                               </span>
                               {scheduledStr && (
-                                <span className="text-xs font-bold bg-purple-900/60 text-purple-200 border border-purple-500/50 px-2 py-0.5 rounded-full shrink-0">
+                                <span style={{ fontSize:11, fontWeight:800, background:"rgba(139,92,246,0.25)", color:"#c4b5fd", border:"1px solid rgba(139,92,246,0.4)", padding:"2px 8px", borderRadius:20 }} className="shrink-0">
                                   ⏰ {scheduledStr}
                                 </span>
                               )}
                               {order.notes && (
-                                <span className="text-xs text-yellow-300 italic truncate max-w-[140px] shrink-0">
+                                <span style={{ fontSize:11, color:"#fbbf24", fontStyle:"italic" }} className="truncate max-w-[140px] shrink-0">
                                   "{order.notes.length > 40 ? order.notes.slice(0, 40) + "…" : order.notes}"
                                 </span>
                               )}
@@ -1035,12 +1072,14 @@ export default function Kitchen() {
                               <button
                                 onClick={e => { e.stopPropagation(); void advance(order); }}
                                 disabled={isAdvancing}
-                                className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all active:scale-95 ${btnClass} disabled:opacity-40`}
+                                style={{ position:"relative", overflow:"hidden", fontSize:11, fontWeight:800, padding:"6px 12px", borderRadius:10, border:"none", cursor:"pointer", fontFamily:"inherit",
+                                  background: STATUS_GRAD[order.status] ?? STATUS_GRAD.confirmed, color:"#fff", opacity:isAdvancing?0.5:1 }}
                               >
-                                {isAdvancing ? "…" : NEXT_LABEL[order.status]}
+                                <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+                                <span style={{ position:"relative" }}>{isAdvancing ? "…" : NEXT_LABEL[order.status]}</span>
                               </button>
                             )}
-                            <span className="text-muted-foreground text-lg leading-none">▸</span>
+                            <span style={{ color:IL.mu, fontSize:18 }}>▸</span>
                           </div>
                         </div>
                       </div>
@@ -1050,45 +1089,55 @@ export default function Kitchen() {
                   return (
                     <div
                       key={order.id}
-                      className={`rounded-lg border-2 ${cardBorderBg} p-4 flex flex-col gap-3 transition-colors`}
+                      style={{ background: isAlert ? "rgba(255,69,58,0.08)" : IL.card, borderRadius:16, overflow:"hidden", boxShadow:cardGlow }}
+                      className={isAlert ? "animate-pulse" : ""}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="text-2xl font-black tracking-tight leading-none">
+                      {/* Status gradient header */}
+                      <div style={{ position:"relative", overflow:"hidden", padding:"14px 16px", background:hdrGrad, display:"flex", alignItems:"flex-start", justifyContent:"space-between" }}>
+                        <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+                        <div style={{ position:"relative" }}>
+                          <div style={{ fontSize:22, fontWeight:900, color:"#fff", lineHeight:1.1 }}>
                             {order.customerName}
                           </div>
-                          <div className="text-muted-foreground font-mono text-sm mt-1">#{order.confirmationCode}</div>
+                          <div style={{ color:"rgba(255,255,255,0.75)", fontFamily:"monospace", fontSize:13, marginTop:2 }}>
+                            #{order.confirmationCode}
+                          </div>
                           {hiddenItemIds && hiddenItemIds.size > 0 && (
-                            <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-amber-100 border border-amber-400">
-                              <span className="text-amber-800 text-xs font-bold">➕ Add-on in New column</span>
+                            <div style={{ display:"inline-flex", alignItems:"center", gap:4, marginTop:4, padding:"2px 8px", borderRadius:6, background:"rgba(0,0,0,0.25)" }}>
+                              <span style={{ color:"rgba(255,255,255,0.9)", fontSize:11, fontWeight:700 }}>➕ Add-on in New column</span>
                             </div>
                           )}
                           {order.scheduledPickupAt && (() => {
                             const d = new Date(order.scheduledPickupAt);
                             const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" });
                             return (
-                              <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded bg-purple-900/60 border border-purple-500/50">
-                                <span className="text-purple-200 text-xs font-bold">⏰ Scheduled {timeStr}</span>
+                              <div style={{ display:"inline-flex", alignItems:"center", gap:4, marginTop:4, padding:"2px 8px", borderRadius:6, background:"rgba(139,92,246,0.4)" }}>
+                                <span style={{ color:"#e9d5ff", fontSize:11, fontWeight:700 }}>⏰ Scheduled {timeStr}</span>
                               </div>
                             );
                           })()}
                           {!order.scheduledPickupAt && order.status === "confirmed" && (
-                            <div className="text-blue-300 text-xs font-semibold mt-0.5 uppercase tracking-wide">Accepted</div>
+                            <div style={{ color:"rgba(255,255,255,0.75)", fontSize:11, fontWeight:700, marginTop:4, textTransform:"uppercase" as const, letterSpacing:".06em" }}>Accepted</div>
                           )}
-                          {order.status === "ready" && (
-                            <div className="text-green-300 text-xs font-semibold mt-0.5 uppercase tracking-wide">Ready for pickup</div>
+                          {order.status === "ready" && !isUncollected && (
+                            <div style={{ color:"rgba(255,255,255,0.85)", fontSize:11, fontWeight:700, marginTop:4, textTransform:"uppercase" as const, letterSpacing:".06em" }}>Ready for pickup</div>
+                          )}
+                          {isUncollected && (
+                            <div style={{ color:"rgba(255,255,255,0.95)", fontSize:11, fontWeight:900, marginTop:4, textTransform:"uppercase" as const, letterSpacing:".06em" }}>
+                              ⚠️ Waiting {uncollectedMins >= 60 ? `${Math.floor(uncollectedMins / 60)}h ${uncollectedMins % 60}m` : `${uncollectedMins}m`} — call customer
+                            </div>
                           )}
                         </div>
-                        <div className="flex items-start gap-2 shrink-0">
-                          <div className="text-right">
-                            <div className={`text-sm font-bold tabular-nums ${overdue ? "text-red-400" : "text-muted-foreground"}`}>
+                        <div style={{ position:"relative", display:"flex", alignItems:"flex-start", gap:8, flexShrink:0 }}>
+                          <div style={{ textAlign:"right" as const }}>
+                            <div style={{ fontSize:13, fontWeight:700, color: overdue ? "#fca5a5" : "rgba(255,255,255,0.85)" }}>
                               {age}
                             </div>
-                            <div className="text-xs text-muted-foreground mt-0.5 capitalize">{order.orderType}</div>
+                            <div style={{ fontSize:11, color:"rgba(255,255,255,0.65)", marginTop:2, textTransform:"capitalize" as const }}>{order.orderType}</div>
                           </div>
                           <button
                             onClick={() => toggleCollapsed(order.id)}
-                            className="text-muted-foreground hover:text-foreground text-lg leading-none px-1 pt-0.5 transition-colors"
+                            style={{ color:"rgba(255,255,255,0.7)", fontSize:18, lineHeight:1, padding:"0 4px 0", paddingTop:2, background:"none", border:"none", cursor:"pointer" }}
                             title="Collapse order"
                           >
                             ▾
@@ -1096,128 +1145,133 @@ export default function Kitchen() {
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-2">
+                      {/* Item list */}
+                      <div style={{ padding:"12px 16px 0", display:"flex", flexDirection:"column" as const, gap:8 }}>
                         {order.items
                           .filter(item => isKdsItem(item) && !(hiddenItemIds && hiddenItemIds.has(item.id)))
-                          .map((item) => (
-                          item.alreadyMade ? (
-                            <div key={item.id} className="bg-blue-950/40 border border-blue-700/40 rounded px-3 py-2">
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-blue-400 text-base font-bold shrink-0">↻</span>
-                                <div className="flex items-baseline gap-2 flex-1">
-                                  <span className="text-lg font-semibold text-blue-300 leading-none">{item.quantity}×</span>
-                                  <span className="text-base font-medium text-blue-300 leading-snug">{item.menuItemName}</span>
-                                </div>
-                                <span className="text-[10px] uppercase tracking-wide text-blue-400 font-bold ml-auto shrink-0">already firing</span>
-                              </div>
-                              {(item.modifierSelections ?? []).length > 0 && (
-                                <div className="ml-6 mt-1 space-y-0.5">
-                                  {(item.modifierSelections ?? []).map((m, i) => (
-                                    <div key={i} className="text-sm text-blue-400 font-medium">+ {m.name}</div>
-                                  ))}
-                                </div>
-                              )}
-                              {item.notes && (
-                                <div className="ml-6 mt-1 text-sm text-blue-400 font-medium">{item.notes}</div>
-                              )}
-                            </div>
-                          ) : (() => {
-                            const struck = struckItems.get(order.id)?.has(item.id) ?? false;
+                          .map((item, itemIdx) => {
+                          if (item.alreadyMade) {
                             return (
-                              <button
-                                key={item.id}
-                                onClick={() => toggleStruck(order.id, item.id)}
-                                className={`w-full text-left rounded px-3 py-3 border transition-all active:scale-[0.98] ${
-                                  struck
-                                    ? "bg-muted border-border opacity-60"
-                                    : "bg-card border-border hover:border-border"
-                                }`}
-                              >
-                                <div className={`flex items-baseline gap-2 ${struck ? "line-through decoration-gray-500 decoration-2" : ""}`}>
-                                  <span className={`text-3xl font-black leading-none ${struck ? "text-muted-foreground" : "text-foreground"}`}>{item.quantity}×</span>
-                                  <span className={`text-xl font-bold leading-snug ${struck ? "text-muted-foreground" : "text-foreground"}`}>{item.menuItemName}</span>
-                                  {struck && <span className="text-xs text-muted-foreground font-normal ml-1 no-underline">done</span>}
+                              <div key={item.id} style={{ background:"rgba(14,165,233,0.12)", border:"1px solid rgba(14,165,233,0.25)", borderRadius:10, padding:"10px 14px" }}>
+                                <div className="flex items-baseline gap-2">
+                                  <span style={{ color:"#38bdf8", fontSize:15, fontWeight:700, flexShrink:0 }}>↻</span>
+                                  <div className="flex items-baseline gap-2 flex-1">
+                                    <span style={{ fontSize:16, fontWeight:700, color:"#7dd3fc", lineHeight:1 }}>{item.quantity}×</span>
+                                    <span style={{ fontSize:14, fontWeight:600, color:"#7dd3fc", lineHeight:1.3 }}>{item.menuItemName}</span>
+                                  </div>
+                                  <span style={{ fontSize:10, textTransform:"uppercase" as const, letterSpacing:".06em", color:"#38bdf8", fontWeight:700, flexShrink:0 }}>already firing</span>
+                                </div>
+                                {(item.modifierSelections ?? []).length > 0 && (
+                                  <div style={{ marginLeft:24, marginTop:4, display:"flex", flexDirection:"column" as const, gap:2 }}>
+                                    {(item.modifierSelections ?? []).map((m, i) => (
+                                      <div key={i} style={{ fontSize:13, color:"#38bdf8", fontWeight:500 }}>+ {m.name}</div>
+                                    ))}
+                                  </div>
+                                )}
+                                {item.notes && (
+                                  <div style={{ marginLeft:24, marginTop:4, fontSize:13, color:"#38bdf8", fontWeight:500 }}>{item.notes}</div>
+                                )}
+                              </div>
+                            );
+                          }
+                          const struck = struckItems.get(order.id)?.has(item.id) ?? false;
+                          const gi = itemIdx % ITEM_GRADS.length;
+                          const gd = ITEM_GRADS[gi];
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => toggleStruck(order.id, item.id)}
+                              style={{ position:"relative", overflow:"hidden", width:"100%", textAlign:"left" as const, borderRadius:12, padding:"12px 14px", border:"none",
+                                background:gd.grad, cursor:"pointer", fontFamily:"inherit",
+                                opacity: struck ? 0.35 : 1, boxShadow: struck ? "none" : `0 3px 12px ${gd.glow}` }}
+                            >
+                              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+                              <div style={{ position:"relative" }}>
+                                <div className={`flex items-baseline gap-2 ${struck ? "line-through" : ""}`}>
+                                  <span style={{ fontSize:28, fontWeight:900, color:"#fff", lineHeight:1 }}>{item.quantity}×</span>
+                                  <span style={{ fontSize:20, fontWeight:700, color:"#fff", lineHeight:1.3 }}>{item.menuItemName}</span>
+                                  {struck && <span style={{ fontSize:12, color:"rgba(255,255,255,0.7)", fontWeight:500 }}>done</span>}
                                 </div>
                                 {!struck && (item.modifierSelections ?? []).length > 0 && (
-                                  <div className="text-amber-600 text-xl mt-2 leading-snug font-semibold space-y-1">
+                                  <div style={{ color:"rgba(255,255,255,0.9)", fontSize:16, marginTop:8, lineHeight:1.5, fontWeight:600, display:"flex", flexDirection:"column" as const, gap:2 }}>
                                     {(item.modifierSelections ?? []).map((m, i) => (
                                       <div key={i}>+ {m.name}</div>
                                     ))}
                                   </div>
                                 )}
                                 {!struck && item.notes && (
-                                  <div className="text-amber-600 text-xl mt-2 leading-snug whitespace-pre-line font-semibold">
-                                    {item.notes}
+                                  <div style={{ color:"rgba(255,255,255,0.9)", fontSize:16, marginTop:8, lineHeight:1.4, fontWeight:700, whiteSpace:"pre-line" as const }}>
+                                    📝 {item.notes}
                                   </div>
                                 )}
-                              </button>
-                            );
-                          })()
-                        ))}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
 
+                      {/* Order notes */}
                       {order.notes && (
-                        <div className="bg-yellow-50 border border-yellow-300 rounded px-3 py-2 text-yellow-800 text-base leading-snug">
-                          {order.notes}
+                        <div style={{ margin:"12px 16px 0", background:"rgba(251,191,36,0.12)", border:"1px solid rgba(251,191,36,0.3)", borderRadius:10, padding:"10px 14px", color:"#fbbf24", fontSize:14, lineHeight:1.5 }}>
+                          📝 {order.notes}
                         </div>
                       )}
 
+                      {/* Uncollected dismiss */}
                       {isUncollected && (
-                        <div className="bg-red-900/80 border border-red-500 rounded px-2 py-2 space-y-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-base">⚠️</span>
-                            <div>
-                              <div className="text-red-200 text-xs font-black leading-tight">
-                                ORDER NOT COLLECTED
-                              </div>
-                              <div className="text-red-300 text-[10px]">
-                                Waiting {uncollectedMins >= 60
-                                  ? `${Math.floor(uncollectedMins / 60)}h ${uncollectedMins % 60}m`
-                                  : `${uncollectedMins}m`} — please call customer
-                              </div>
-                            </div>
-                          </div>
+                        <div style={{ margin:"12px 16px 0", padding:"10px 14px", background:"rgba(255,69,58,0.12)", border:`1px solid ${IL.red}`, borderRadius:10 }}>
                           <button
                             onClick={() => setDismissedUntil(prev => {
                               const next = new Map(prev);
                               next.set(order.id, Date.now() + 30 * 60 * 1000);
                               return next;
                             })}
-                            className="w-full text-xs py-1 rounded bg-red-950/60 hover:bg-red-900/60 border border-red-700/40 text-red-300 font-semibold transition-colors"
+                            style={{ width:"100%", fontSize:11, padding:"6px", borderRadius:8, background:"rgba(255,69,58,0.2)", border:"1px solid rgba(255,69,58,0.3)", color:"#fca5a5", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}
                           >
                             Remind me again in 30 min
                           </button>
                         </div>
                       )}
 
-
-                      {next && (
-                        <button
-                          onClick={() => advance(order)}
-                          disabled={isAdvancing}
-                          className={`w-full rounded py-3 text-base font-bold transition-all active:scale-95 ${btnClass} disabled:opacity-40 disabled:cursor-not-allowed`}
-                        >
-                          {isAdvancing ? "Updating…" : NEXT_LABEL[order.status]}
-                        </button>
-                      )}
-                      {!next && (
-                        <div className="flex gap-2">
+                      {/* Action buttons */}
+                      <div style={{ padding:16, display:"flex", flexDirection:"column" as const, gap:8 }}>
+                        {next && (
                           <button
-                            onClick={() => printTicket(order)}
-                            disabled={printing.has(order.id)}
-                            className="flex-1 rounded py-2 text-sm font-bold bg-blue-900/50 hover:bg-blue-800/60 text-blue-300 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                          >
-                            {printing.has(order.id) ? "Printing…" : "🖨 Print Ticket"}
-                          </button>
-                          <button
-                            onClick={() => clearFromKds(order)}
+                            onClick={() => advance(order)}
                             disabled={isAdvancing}
-                            className="flex-1 rounded py-2 text-sm font-bold bg-muted hover:bg-muted/80 text-foreground/70 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ width:"100%", height:48, borderRadius:12, border:"none", color:"#fff", fontWeight:800, fontSize:15, cursor:"pointer", fontFamily:"inherit",
+                              background: STATUS_GRAD[order.status] ?? STATUS_GRAD.confirmed,
+                              opacity:isAdvancing?0.5:1, position:"relative", overflow:"hidden",
+                              boxShadow: `0 4px 18px ${STATUS_GLOW[order.status] ?? STATUS_GLOW.confirmed}` }}
                           >
-                            {isAdvancing ? "Clearing…" : "Done ✓ — Clear"}
+                            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+                            <span style={{ position:"relative" }}>{isAdvancing ? "Updating…" : NEXT_LABEL[order.status]}</span>
                           </button>
-                        </div>
-                      )}
+                        )}
+                        {!next && (
+                          <div style={{ display:"flex", gap:8 }}>
+                            <button
+                              onClick={() => printTicket(order)}
+                              disabled={printing.has(order.id)}
+                              style={{ flex:1, height:40, borderRadius:12, border:"none", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"inherit",
+                                background:"linear-gradient(135deg,#0ea5e9,#0284c7)",
+                                opacity:printing.has(order.id)?0.5:1, boxShadow:"0 3px 12px rgba(14,165,233,0.4)", position:"relative", overflow:"hidden" }}
+                            >
+                              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+                              <span style={{ position:"relative" }}>{printing.has(order.id) ? "Printing…" : "🖨 Print Ticket"}</span>
+                            </button>
+                            <button
+                              onClick={() => clearFromKds(order)}
+                              disabled={isAdvancing}
+                              style={{ flex:1, height:40, borderRadius:12, background:"linear-gradient(135deg,#10b981,#059669)", border:"none", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"inherit",
+                                opacity:isAdvancing?0.5:1, boxShadow:"0 3px 12px rgba(16,185,129,0.4)", position:"relative", overflow:"hidden" }}
+                            >
+                              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+                              <span style={{ position:"relative" }}>{isAdvancing ? "Clearing…" : "Done ✓ — Clear"}</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -1226,43 +1280,47 @@ export default function Kitchen() {
           </div>
         </>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3">
-          <div className="text-6xl font-black text-foreground tracking-tight">All Clear</div>
-          <div className="text-muted-foreground text-base">No active orders · refreshing every 10s</div>
+        <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12 }}>
+          <div style={{ fontSize:56, fontWeight:900, color:IL.tp, letterSpacing:"-0.03em" }}>All Clear</div>
+          <div style={{ color:IL.mu, fontSize:15 }}>No active orders · refreshing every 10s</div>
         </div>
       )}
 
       {/* ── History Drawer ── */}
       {historyOpen && (
         <div className="fixed inset-0 bg-black/70 z-50 flex justify-end" onClick={() => setHistoryOpen(false)}>
-          <div className="bg-card w-full max-w-sm h-full flex flex-col shadow-2xl border-l border-border" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <h2 className="text-foreground text-lg font-bold">🕐 Order History</h2>
-              <button onClick={() => setHistoryOpen(false)} className="text-muted-foreground hover:text-foreground text-2xl font-bold w-8 h-8 flex items-center justify-center transition-colors">×</button>
+          <div style={{ background:IL.hdr, width:"100%", maxWidth:384, height:"100%", display:"flex", flexDirection:"column", boxShadow:"0 0 60px rgba(0,0,0,0.7)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"linear-gradient(135deg,#7c6af7,#5b4cf5)", flexShrink:0 }}>
+              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+              <h2 style={{ color:"#fff", fontSize:18, fontWeight:800, position:"relative" }}>🕐 Order History</h2>
+              <button onClick={() => setHistoryOpen(false)} style={{ color:"rgba(255,255,255,0.75)", fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit", position:"relative" }}>×</button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {historyLoading && <p className="text-muted-foreground text-center py-8">Loading…</p>}
+            <div style={{ flex:1, overflowY:"auto", padding:16, display:"flex", flexDirection:"column", gap:12 }}>
+              {historyLoading && <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>Loading…</p>}
               {!historyLoading && historyOrders.length === 0 && (
-                <p className="text-muted-foreground text-center py-8">No completed orders</p>
+                <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>No completed orders</p>
               )}
               {!historyLoading && historyOrders.map(o => (
-                <div key={o.id} className="bg-muted rounded-xl p-4 flex flex-col gap-2">
-                  <div className="flex items-start justify-between gap-2">
+                <div key={o.id} style={{ background:IL.card, borderRadius:14, padding:16, display:"flex", flexDirection:"column", gap:8, border:`1px solid ${IL.bord}` }}>
+                  <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8 }}>
                     <div>
-                      <p className="text-foreground font-bold text-base leading-tight">{o.customerName}</p>
-                      <p className="text-muted-foreground font-mono text-xs">#{o.confirmationCode}</p>
+                      <p style={{ color:IL.tp, fontWeight:700, fontSize:14, lineHeight:1.3 }}>{o.customerName}</p>
+                      <p style={{ color:IL.mu, fontFamily:"monospace", fontSize:11, marginTop:2 }}>#{o.confirmationCode}</p>
                     </div>
-                    <span className="text-muted-foreground text-xs">{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                    <span style={{ color:IL.mu, fontSize:11 }}>{new Date(o.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
                   </div>
-                  <div className="text-muted-foreground text-xs">
+                  <div style={{ color:IL.mu, fontSize:11 }}>
                     {o.items.map(i => `${i.quantity}× ${i.menuItemName}`).join(" · ")}
                   </div>
                   <button
                     disabled={recalling.has(o.id)}
                     onClick={() => recallOrder(o)}
-                    className="w-full h-9 rounded-lg bg-green-700 hover:bg-green-600 disabled:opacity-40 text-foreground text-xs font-bold transition-colors"
+                    style={{ width:"100%", height:36, borderRadius:10, border:"none", color:"#fff", fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"inherit",
+                      background:"linear-gradient(135deg,#10b981,#059669)",
+                      opacity:recalling.has(o.id)?0.5:1, boxShadow:"0 2px 10px rgba(16,185,129,0.4)", position:"relative", overflow:"hidden" }}
                   >
-                    {recalling.has(o.id) ? "Recalling…" : "↩ Recall to Ready"}
+                    <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
+                    <span style={{ position:"relative" }}>{recalling.has(o.id) ? "Recalling…" : "↩ Recall to Ready"}</span>
                   </button>
                 </div>
               ))}
