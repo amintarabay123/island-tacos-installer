@@ -4,7 +4,10 @@ description: Approved design direction for Island Tacos full-system visual revam
 ---
 
 ## Status
-Mockups approved. Implementation NOT yet started. Apply to real app starting with Store, then Admin, then POS, then KDS.
+- Store (customer ordering page): ✅ Done
+- Admin dashboard: ✅ Done
+- POS (`pos.tsx`): ✅ Done — full dark revamp applied: IL tokens at module level, ItemCard gradient pop-out art, Numpad, PaymentModal, ReceiptModal, HoldModal, DiscountModal, OpenPriceModal, main wrapper/header/left-panel/cart/mobile-tabs/inline-modals all dark-themed. Typecheck passes clean.
+- KDS: 🔲 Not started
 
 ## Approved Design Direction: "Indigo Luxe"
 Inspired by premium SaaS gaming dashboards (deep navy/indigo, pop-out 3D art, vibrant gradient cards).
