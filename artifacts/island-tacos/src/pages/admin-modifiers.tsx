@@ -203,18 +203,22 @@ export default function AdminModifiers() {
       <div style={{ maxWidth: 760, margin: "0 auto", padding: "32px 16px" }}>
 
         {/* Stat cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
-          {([
-            { emoji: "🎛️", label: "Total Modifiers", value: String(modifiers.length),                                                    color: OR    },
-            { emoji: "⚡", label: "Required",         value: String(modifiers.filter(m => m.required).length),                           color: RED_C },
-            { emoji: "✨", label: "Optional",         value: String(modifiers.filter(m => !m.required).length),                          color: PUR   },
-            { emoji: "📋", label: "Total Options",    value: String(modifiers.reduce((s, m) => s + (m.options?.length ?? 0), 0)),        color: GREEN },
-          ] as const).map(({ emoji, label, value, color }) => (
-            <div key={label} style={{ ...GLOW, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 14, background: `${color}22`, border: `1px solid ${color}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{emoji}</div>
-              <div>
-                <div style={{ fontSize: 26, fontWeight: 900, color: TP, letterSpacing: "-0.04em", lineHeight: 1 }}>{value}</div>
-                <div style={{ fontSize: 10, color: TMUTED, fontWeight: 700, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+        <div style={{ display: "flex", gap: 14, marginBottom: 24, overflowX: "auto" }}>
+          {[
+            { art: "🎛️", grad: "linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow: "rgba(255,107,0,0.55)",   label: "Total Modifiers", value: String(modifiers.length),                                                 sub: "configured" },
+            { art: "⚡",  grad: "linear-gradient(145deg,#ef4444,#dc2626,#7f1d1d)", glow: "rgba(239,68,68,0.45)",  label: "Required",        value: String(modifiers.filter(m => m.required).length),                        sub: "must choose" },
+            { art: "✨",  grad: "linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow: "rgba(124,106,247,0.55)", label: "Optional",        value: String(modifiers.filter(m => !m.required).length),                       sub: "customer's choice" },
+            { art: "📋",  grad: "linear-gradient(145deg,#10b981,#059669,#064e3b)", glow: "rgba(16,185,129,0.5)",   label: "Total Options",   value: String(modifiers.reduce((s, m) => s + (m.options?.length ?? 0), 0)),    sub: "across all mods" },
+          ].map((fc) => (
+            <div key={fc.label} style={{ width: 168, flexShrink: 0 }}>
+              <div style={{ background: fc.grad, borderRadius: 20, padding: "16px 16px 14px", position: "relative", overflow: "hidden", boxShadow: `0 6px 24px ${fc.glow}`, height: 108, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(155deg,rgba(255,255,255,0.14) 0%,transparent 50%)", pointerEvents: "none" }} />
+                <div style={{ position: "absolute", top: -6, right: 0, fontSize: 62, opacity: 0.22, lineHeight: 1, transform: "rotate(14deg)", pointerEvents: "none", userSelect: "none" }}>{fc.art}</div>
+                <div style={{ position: "relative", zIndex: 1 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 3 }}>{fc.label}</div>
+                  <div style={{ fontSize: 26, fontWeight: 900, color: "#fff", letterSpacing: "-0.05em", lineHeight: 1, marginBottom: 3 }}>{fc.value}</div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: 500 }}>{fc.sub}</div>
+                </div>
               </div>
             </div>
           ))}
