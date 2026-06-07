@@ -162,7 +162,7 @@ export function MetallicPOS() {
           </div>
 
           {/* CART */}
-          <div style={{ width: 300, display: "flex", flexDirection: "column", borderLeft: `1px solid ${border}`, background: "rgba(22,23,43,0.6)" }}>
+          <div style={{ width: 300, display: "flex", flexDirection: "column", borderLeft: `1px solid ${border}`, background: card, boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)" }}>
             <div style={{ padding: "12px 16px 10px", borderBottom: `1px solid ${border}`, flexShrink: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ fontSize: 11, fontWeight: 800, color: tm, letterSpacing: "0.06em", textTransform: "uppercase" }}>Current Order</span>
@@ -193,7 +193,7 @@ export function MetallicPOS() {
             </div>
 
             {/* Totals + payment */}
-            <div style={{ padding: "10px 16px", borderTop: `1px solid ${border}`, flexShrink: 0 }}>
+            <div style={{ padding: "10px 16px", borderTop: `1px solid ${border}`, flexShrink: 0, background: "#1a1b35", boxShadow: "inset 0 1px 0 rgba(124,106,247,0.1)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                 <span style={{ fontSize: 12, color: tm }}>Subtotal</span><span style={{ fontSize: 12, color: tm }}>$70.00</span>
               </div>
