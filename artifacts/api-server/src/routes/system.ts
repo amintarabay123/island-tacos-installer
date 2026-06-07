@@ -2,16 +2,17 @@
  * System health + repair routes — local mini PC only.
  *
  * GET  /api/system/health        — reads current status and last 20 events from
- *                                  local-install/monitor.db (SQLite), written by
- *                                  local-install/monitor.mjs.
+ *                                  local-install/monitor.db (SQLite, written by
+ *                                  local-install/monitor.mjs).
  *                                  Returns { available: false } on cloud (DB absent).
  *
- * POST /api/system/repair/:service — triggers a PM2 restart for recoverable services.
- *                                    Only meaningful on the mini PC; fails gracefully on cloud.
+ * POST /api/system/repair/:service — triggers a PM2 or pg_ctl restart for
+ *                                    recoverable services (api-process, api-http,
+ *                                    postgres). Cloud returns 503 with a clear message.
  *
  * Auth is enforced in routes/index.ts:
- *   GET  /api/system/health       → staff
- *   POST /api/system/repair/*     → admin
+ *   GET  /api/system/health       → requireStaffAuth
+ *   POST /api/system/repair/*     → requireAdminAuth
  */
 
 import { Router } from "express";
@@ -20,13 +21,14 @@ import { join } from "node:path";
 import { createRequire } from "node:module";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import { platform } from "node:os";
 
-const router = Router();
+const router    = Router();
 const execAsync = promisify(exec);
+const OS        = platform();
 
-// node:sqlite is a Node.js 24 built-in (experimental). No @types/node entry yet,
-// so we load it via createRequire and cast. The API server never calls this on
-// cloud (where monitor.db won't exist), so the "experimental" risk is low.
+// node:sqlite is a Node.js 24 built-in (experimental). We load it via
+// createRequire so we can catch if it's unavailable and fall through gracefully.
 const _require = createRequire(import.meta.url);
 
 type SqliteStmt<R = Record<string, unknown>> = {
@@ -50,24 +52,24 @@ function openMonitorDb(dbPath: string): SqliteDb | null {
 // PM2 sets cwd to the project root, so this works on both mini PC and cloud.
 const MONITOR_DB = join(process.cwd(), "local-install", "monitor.db");
 
+type MetaRow    = { key: string; value: string };
 type ServiceRow = {
-  service_id: string;
-  label: string;
-  ok: number;         // SQLite stores booleans as 0/1
-  fail_count: number;
+  service_id:    string;
+  label:         string;
+  ok:            number;   // SQLite 0 | 1
+  fail_count:    number;
   last_check_at: string;
-  error: string | null;
-  details: string | null;
-  updated_at: number;
+  error:         string | null;
+  details:       string | null;
+  updated_at:    number;
 };
-
 type EventRow = {
-  id: string;
-  ts: string;
-  type: string;
-  service: string | null;
-  message: string;
-  detail: string | null;
+  id:        string;
+  ts:        string;
+  type:      string;
+  service:   string | null;
+  message:   string;
+  detail:    string | null;
   diagnosis: string | null;
   fail_count: number | null;
   created_at: number;
@@ -77,16 +79,21 @@ type EventRow = {
 router.get("/system/health", (req, res): void => {
   const db = openMonitorDb(MONITOR_DB);
   if (!db) {
-    res.json({ available: false, reason: "Monitor not running on this host (monitor.db not found)" });
+    res.json({
+      available: false,
+      reason: "Monitor not running on this host (monitor.db not found)",
+    });
     return;
   }
 
-  let statusRows: ServiceRow[] = [];
-  let eventRows: EventRow[]    = [];
+  let metaRows:    MetaRow[]    = [];
+  let statusRows:  ServiceRow[] = [];
+  let eventRows:   EventRow[]   = [];
 
   try {
+    metaRows   = db.prepare<MetaRow>   ("SELECT key, value FROM monitor_meta").all();
     statusRows = db.prepare<ServiceRow>("SELECT * FROM monitor_status ORDER BY service_id").all();
-    eventRows  = db.prepare<EventRow>("SELECT * FROM monitor_events ORDER BY created_at DESC LIMIT 20").all();
+    eventRows  = db.prepare<EventRow>  ("SELECT * FROM monitor_events ORDER BY created_at DESC LIMIT 20").all();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     req.log.warn({ err: msg }, "[system/health] SQLite query failed");
@@ -94,7 +101,11 @@ router.get("/system/health", (req, res): void => {
     return;
   }
 
-  // Normalise SQLite rows to the shape the frontend expects
+  // Build meta map (pid, pollCount, platform, nodeVersion)
+  const meta: Record<string, string> = {};
+  for (const row of metaRows) meta[row.key] = row.value;
+
+  // Normalise SQLite rows → frontend shape
   const services: Record<string, {
     id: string; label: string; ok: boolean; failCount: number;
     lastCheckAt: string; error?: string; details?: string;
@@ -127,15 +138,18 @@ router.get("/system/health", (req, res): void => {
   const allOk   = svcList.length > 0 && svcList.every(s => s.ok);
 
   res.json({
-    available: true,
-    overall:   allOk ? "ok" : "degraded",
-    updatedAt: svcList.length > 0 ? svcList[0]!.lastCheckAt : new Date().toISOString(),
+    available:  true,
+    overall:    allOk ? "ok" : "degraded",
+    updatedAt:  svcList.length > 0 ? svcList[0]!.lastCheckAt : new Date().toISOString(),
+    pollCount:  parseInt(meta["pollCount"] ?? "0", 10),
+    pid:        parseInt(meta["pid"]       ?? "0", 10),
+    platform:   meta["platform"]    ?? OS,
     services,
     events,
   });
 });
 
-const REPAIRABLE = new Set(["api-process", "api-http"]);
+const REPAIRABLE = new Set(["api-process", "api-http", "postgres"]);
 
 // POST /api/system/repair/:service
 router.post("/system/repair/:service", async (req, res): Promise<void> => {
@@ -151,18 +165,34 @@ router.post("/system/repair/:service", async (req, res): Promise<void> => {
 
   req.log.info({ serviceId }, "[system/repair] manual repair triggered");
 
+  let cmd: string;
+  let timeout = 15_000;
+
+  if (serviceId === "postgres") {
+    if (OS === "win32") {
+      cmd = 'powershell -NoProfile -Command "Get-Service -Name \'postgresql*\' | Restart-Service -ErrorAction Stop"';
+      timeout = 30_000;
+    } else {
+      cmd = "systemctl restart postgresql || pg_ctl restart -w";
+      timeout = 25_000;
+    }
+  } else {
+    // api-process or api-http
+    cmd = "pm2 restart island-tacos --update-env";
+  }
+
   try {
-    await execAsync("pm2 restart island-tacos --update-env", { timeout: 15_000 });
-    req.log.info("[system/repair] PM2 restart completed");
-    res.json({ ok: true, message: "PM2 restart initiated for island-tacos" });
+    await execAsync(cmd, { timeout });
+    req.log.info({ serviceId, cmd }, "[system/repair] repair command completed");
+    res.json({ ok: true, message: `Repair command issued for ${serviceId}` });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    req.log.warn({ err: msg }, "[system/repair] PM2 restart failed (expected on cloud)");
-    const isCloud = /not found|not recognized|command not found|ENOENT/i.test(msg);
+    req.log.warn({ err: msg, serviceId }, "[system/repair] repair command failed (expected on cloud)");
+    const isCloud = /not found|not recognized|command not found|ENOENT|cannot find/i.test(msg);
     res.status(503).json({
       ok: false,
       error: isCloud
-        ? "PM2 not available on this host (repair only works on the shop mini PC)"
+        ? `Repair command not available on this host (${serviceId} repair only works on the shop mini PC)`
         : msg,
     });
   }

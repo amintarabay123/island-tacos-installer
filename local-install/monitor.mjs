@@ -3,29 +3,30 @@
  * Island Tacos — Monitor & Repair Agent
  *
  * Runs as a PM2 process on the shop mini PC. Every 30 s it:
- *   1. Checks every critical service (API process, HTTP health, Postgres, printer,
- *      SMS gateway, disk space, internet).
- *   2. On the FIRST consecutive failure: attempts an auto-repair (PM2 restart for
- *      recoverable services).
- *   3. On the SECOND consecutive failure: sends an SMS alert + calls OpenAI for a
- *      plain-English diagnosis.
- *   4. Re-escalates every 10 polls (≈5 min) while still failing.
+ *   1. Checks every critical service (API process, HTTP health, Postgres,
+ *      printer TCP, SMS gateway HTTP, disk space, internet).
+ *   2. On the 1ST consecutive failure  → attempt auto-repair.
+ *   3. On the 2ND consecutive failure  → attempt auto-repair again.
+ *   4. On the 3RD consecutive failure  → SMS alert + OpenAI diagnosis.
+ *      Re-escalates every 10 polls while still failing.
  *
  * Persistence:
- *   local-install/monitor.db — SQLite (node:sqlite built-in) with two tables:
- *     monitor_status  — one row per service, upserted on every poll
- *     monitor_events  — rolling log, newest-first, trimmed to 500 rows
+ *   local-install/monitor.db — SQLite (node:sqlite built-in) with tables:
+ *     monitor_meta    — pid, pollCount, platform (updated every poll)
+ *     monitor_status  — one row per service (upserted on every poll)
+ *     monitor_events  — rolling event log, newest-first, trimmed to 500 rows
  *
- * These are read by GET /api/system/health in the api-server.
+ * These tables are read by GET /api/system/health in the api-server.
  *
- * Zero external dependencies — only Node.js 24 built-ins.
+ * Zero external Node.js dependencies — only built-ins + the `pg` module
+ * already present in the workspace node_modules for the Postgres probe.
  */
 
 import { readFileSync, existsSync } from "node:fs";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { createConnection } from "node:net";
-import { homedir, platform } from "node:os";
+import { homedir, platform as osPlatform } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
@@ -40,8 +41,9 @@ const ROOT     = join(__dirname, "..");
 const DB_PATH  = join(__dirname, "monitor.db");
 const POLL_MS  = 30_000;
 const MAX_EVENTS = 500;
+const PLATFORM   = osPlatform();
 
-// ── .env loader (same logic as ecosystem.config.cjs) ──────────────────────────
+// ── .env loader (mirrors ecosystem.config.cjs) ────────────────────────────────
 
 function loadDotenv(filePath) {
   if (!existsSync(filePath)) return {};
@@ -61,6 +63,7 @@ function loadDotenv(filePath) {
 const dotenv  = loadDotenv(join(ROOT, ".env"));
 const getEnv  = (k, fallback = "") => process.env[k] ?? dotenv[k] ?? fallback;
 
+const DATABASE_URL  = getEnv("DATABASE_URL");
 const API_PORT      = getEnv("PORT", "3001");
 const PRINTER_IP    = getEnv("PRINTER_IP", "");
 const PRINTER_PORT  = parseInt(getEnv("PRINTER_PORT", "9100"), 10);
@@ -71,12 +74,19 @@ const OPENAI_KEY    = getEnv("OPENAI_API_KEY", "");
 const ALERT_PHONE   = getEnv("MONITOR_ALERT_PHONE", "");
 const SMS_DISABLED  = getEnv("SMS_DISABLED", "") === "true";
 const CLOUD_URL     = getEnv("PUBLIC_URL", "https://orders.islandtacosbvi.com");
+const PGDATA        = getEnv("PGDATA", "");
 
 // ── SQLite bootstrap ───────────────────────────────────────────────────────────
 
 const db = new DatabaseSync(DB_PATH);
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS monitor_meta (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS monitor_status (
     service_id    TEXT PRIMARY KEY,
     label         TEXT NOT NULL,
@@ -103,7 +113,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS monitor_events_created_at ON monitor_events (created_at DESC);
 `);
 
-// Prepared statements
+const upsertMeta = db.prepare(`
+  INSERT INTO monitor_meta (key, value, updated_at)
+  VALUES (?, ?, ?)
+  ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+`);
+
 const upsertStatus = db.prepare(`
   INSERT INTO monitor_status (service_id, label, ok, fail_count, last_check_at, error, details, updated_at)
   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -137,16 +152,15 @@ function log(msg) {
   console.log(`[monitor ${nowIso()}] ${msg}`);
 }
 
-/** Append an event to monitor_events and trim to MAX_EVENTS rows. */
 function appendEvent(event) {
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   try {
     insertEvent.run(
       id,
       nowIso(),
-      event.type ?? "unknown",
-      event.service ?? null,
-      event.message ?? "",
+      event.type    ?? "unknown",
+      event.service  ?? null,
+      event.message  ?? "",
       event.detail   ?? null,
       event.diagnosis ?? null,
       event.failCount ?? null,
@@ -158,7 +172,6 @@ function appendEvent(event) {
   }
 }
 
-/** Upsert current service state into monitor_status. */
 function saveStatus(snap) {
   try {
     upsertStatus.run(
@@ -223,10 +236,41 @@ async function checkPm2() {
   }
 }
 
+/**
+ * PostgreSQL health check via real SELECT 1 query.
+ * Falls back to TCP probe if pg module or DATABASE_URL are unavailable.
+ */
+async function checkPostgres() {
+  // Prefer a real query; fall back to TCP if pg is not loadable
+  if (DATABASE_URL) {
+    try {
+      const pgModule = await import("pg");
+      const PgClient = pgModule.default?.Client ?? pgModule.Client;
+      const client = new PgClient({
+        connectionString: DATABASE_URL,
+        connectionTimeoutMillis: 4000,
+        query_timeout: 4000,
+        statement_timeout: 4000,
+      });
+      await client.connect();
+      await client.query("SELECT 1");
+      await client.end();
+      return { ok: true, details: "SELECT 1 ok" };
+    } catch (err) {
+      return { ok: false, error: err.message ?? "postgres query failed" };
+    }
+  }
+  // Fallback: TCP port probe
+  const tcp = await checkTcp("127.0.0.1", 5432);
+  return tcp.ok
+    ? { ok: true, details: "TCP ok (no DATABASE_URL for query)" }
+    : tcp;
+}
+
 /** Disk space — warn when free < 10% of total. */
 async function checkDisk() {
   try {
-    if (platform() === "win32") {
+    if (PLATFORM === "win32") {
       const { stdout } = await execAsync(
         'wmic logicaldisk where "DeviceID=\'C:\'" get FreeSpace,Size /value',
         { timeout: 6000 }
@@ -256,7 +300,7 @@ async function readPm2Logs(processName = "island-tacos", lines = 50) {
   const readTail = async (filePath) => {
     if (!existsSync(filePath)) return "(not found)";
     try {
-      if (platform() === "win32") {
+      if (PLATFORM === "win32") {
         const { stdout } = await execAsync(
           `powershell -Command "Get-Content '${filePath}' -Tail ${lines} -ErrorAction SilentlyContinue"`,
           { timeout: 5000 }
@@ -281,8 +325,9 @@ async function callOpenAI(serviceId, errorMsg, logSnippet) {
   if (!OPENAI_KEY) return null;
   const prompt = [
     "You are a systems admin assistant for a restaurant POS (Island Tacos, British Virgin Islands).",
-    "A service health check failed twice in a row. Give a 2-3 sentence plain-English diagnosis of",
-    "the most likely cause, followed by one concrete actionable fix. Be specific.",
+    "A service health check has failed twice in a row despite two auto-repair attempts. Give a",
+    "2-3 sentence plain-English diagnosis of the most likely cause, followed by one concrete actionable",
+    "fix. Be specific.",
     "",
     `Failed service: ${serviceId}`,
     `Error: ${errorMsg}`,
@@ -338,20 +383,51 @@ async function sendSmsAlert(message) {
   }
 }
 
-// ── Repair & escalation ───────────────────────────────────────────────────────
+// ── Repair ────────────────────────────────────────────────────────────────────
 
-const REPAIRABLE = new Set(["api-process", "api-http"]);
-
+/**
+ * Attempt to repair a service. Returns true if the repair command succeeded.
+ * Note: success here means the repair command ran without error, NOT that
+ * the service is healthy again (the next poll check will verify that).
+ */
 async function attemptRepair(serviceId) {
-  if (!REPAIRABLE.has(serviceId)) return;
-  log(`[repair] restarting island-tacos for ${serviceId}`);
+  log(`[repair] attempting repair for ${serviceId}`);
   try {
-    await execAsync("pm2 restart island-tacos --update-env", { timeout: 15_000 });
-    log("[repair] PM2 restart succeeded");
-    appendEvent({ type: "repair", service: serviceId, message: "Auto-repair: PM2 restart triggered" });
+    if (serviceId === "api-process" || serviceId === "api-http") {
+      await execAsync("pm2 restart island-tacos --update-env", { timeout: 15_000 });
+      log("[repair] PM2 restart issued");
+      appendEvent({ type: "repair", service: serviceId, message: "Auto-repair: PM2 restart triggered" });
+      return true;
+    }
+
+    if (serviceId === "postgres") {
+      if (PLATFORM === "win32") {
+        // Restart whichever postgresql service exists on this machine
+        await execAsync(
+          'powershell -NoProfile -Command "Get-Service -Name \'postgresql*\' | Restart-Service -ErrorAction Stop"',
+          { timeout: 30_000 }
+        );
+      } else if (PGDATA) {
+        await execAsync(`pg_ctl restart -D "${PGDATA}" -w`, { timeout: 30_000 });
+      } else {
+        // Try systemctl (Linux), then pg_ctl with a common default data dir
+        try {
+          await execAsync("systemctl restart postgresql", { timeout: 20_000 });
+        } catch {
+          await execAsync("pg_ctl restart -w", { timeout: 20_000 });
+        }
+      }
+      log("[repair] PostgreSQL restart issued");
+      appendEvent({ type: "repair", service: serviceId, message: "Auto-repair: PostgreSQL service restart triggered" });
+      return true;
+    }
+
+    log(`[repair] ${serviceId} has no auto-repair action`);
+    return false;
   } catch (err) {
-    log(`[repair] PM2 restart failed: ${err.message}`);
+    log(`[repair] repair command failed for ${serviceId}: ${err.message}`);
     appendEvent({ type: "repair-failed", service: serviceId, message: `Auto-repair failed: ${err.message}` });
+    return false;
   }
 }
 
@@ -360,7 +436,7 @@ async function escalate(serviceId, errorMsg) {
   appendEvent({
     type: "escalation",
     service: serviceId,
-    message: `${serviceId} still failing — manual intervention needed`,
+    message: `${serviceId} still failing after auto-repair — manual intervention required`,
     detail: errorMsg,
   });
 
@@ -381,7 +457,10 @@ async function escalate(serviceId, errorMsg) {
 
 // ── Poll state & loop ─────────────────────────────────────────────────────────
 
-const state = {}; // serviceId → { failCount }
+// Per-service state: { failCount, repairCount }
+// failCount  — consecutive failed checks (resets on recovery)
+// repairCount — repair attempts in the current failure run (resets on recovery)
+const state = {};
 let pollCount = 0;
 
 async function poll() {
@@ -391,7 +470,7 @@ async function poll() {
   const checks = [
     { id: "api-process", label: "API Server Process", run: checkPm2 },
     { id: "api-http",    label: "API HTTP Health",    run: () => checkHttp(`http://127.0.0.1:${API_PORT}/api/healthz`) },
-    { id: "postgres",    label: "PostgreSQL",          run: () => checkTcp("127.0.0.1", 5432) },
+    { id: "postgres",    label: "PostgreSQL",          run: checkPostgres },
     { id: "disk",        label: "Disk Space",          run: checkDisk },
     { id: "internet",    label: "Internet (Cloud)",    run: () => checkHttp(`${CLOUD_URL}/api/healthz`, "GET", 8000) },
   ];
@@ -412,14 +491,19 @@ async function poll() {
   );
 
   for (const { id, label, ok, error, details } of rawResults) {
-    if (!state[id]) state[id] = { failCount: 0 };
+    if (!state[id]) state[id] = { failCount: 0, repairCount: 0 };
     const s = state[id];
 
     if (ok) {
       if (s.failCount > 0) {
-        log(`[recovery] ${id} recovered after ${s.failCount} fail(s)`);
-        appendEvent({ type: "recovery", service: id, message: `${label} recovered after ${s.failCount} failure(s)` });
-        s.failCount = 0;
+        log(`[recovery] ${id} recovered after ${s.failCount} consecutive fail(s)`);
+        appendEvent({
+          type: "recovery",
+          service: id,
+          message: `${label} recovered after ${s.failCount} failure(s) and ${s.repairCount} repair attempt(s)`,
+        });
+        s.failCount   = 0;
+        s.repairCount = 0;
       }
     } else {
       s.failCount++;
@@ -427,9 +511,13 @@ async function poll() {
       log(`[fail:${s.failCount}] ${id}: ${err}`);
       appendEvent({ type: "fail", service: id, message: err, failCount: s.failCount });
 
-      if (s.failCount === 1) {
+      if (s.failCount === 1 || s.failCount === 2) {
+        // First two consecutive failures → attempt auto-repair
+        s.repairCount++;
         await attemptRepair(id);
-      } else if (s.failCount === 2 || (s.failCount > 2 && s.failCount % 10 === 0)) {
+      } else if (s.failCount === 3 || (s.failCount > 3 && s.failCount % 10 === 0)) {
+        // Still failing after two repair attempts → escalate
+        // Also re-escalates every 10 polls (~5 min) so alerts don't go silent
         await escalate(id, err);
       }
     }
@@ -442,12 +530,27 @@ async function poll() {
       details: ok ? (details ?? null) : null,
     });
   }
+
+  // Upsert monitor meta so the API can report process info
+  const now = Date.now();
+  for (const [key, value] of [
+    ["pid",         String(process.pid)],
+    ["pollCount",   String(pollCount)],
+    ["platform",    PLATFORM],
+    ["nodeVersion", process.version],
+  ]) {
+    upsertMeta.run(key, value, now);
+  }
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 log("Island Tacos Monitor starting…");
-appendEvent({ type: "startup", message: "Monitor process started", detail: `PID=${process.pid} platform=${platform()} node=${process.version}` });
+appendEvent({
+  type: "startup",
+  message: "Monitor process started",
+  detail: `PID=${process.pid} platform=${PLATFORM} node=${process.version}`,
+});
 
 poll().catch(err => log(`Initial poll error: ${err.message}`));
 setInterval(() => poll().catch(err => log(`Poll error: ${err.message}`)), POLL_MS);
