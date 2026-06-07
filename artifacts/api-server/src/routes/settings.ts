@@ -63,11 +63,19 @@ export function computeStoreStatus(settings: Record<string, string>): {
 
   const openMins = parseTime(openTime);
   const closeMins = parseTime(closeTime);
-  const cutoffMins = closeMins - cutoffMinutes;
+
+  // When close_time is on the next calendar day (e.g. open 11:00, close 02:00)
+  // closeMins will be < openMins. We handle this as a midnight-crossing window.
+  const crossesMidnight = closeMins <= openMins;
+
+  // Effective last-order cutoff in minutes-of-day.
+  // May go negative if close is very early after midnight — wrap with mod 1440.
+  let cutoffMins = closeMins - cutoffMinutes;
+  if (cutoffMins < 0) cutoffMins += 1440;
 
   const cutoffH = Math.floor(cutoffMins / 60);
   const cutoffM = cutoffMins % 60;
-  const closes_orders_at = `${String(cutoffH).padStart(2, "0")}:${String(Math.max(0, cutoffM)).padStart(2, "0")}`;
+  const closes_orders_at = `${String(cutoffH).padStart(2, "0")}:${String(cutoffM).padStart(2, "0")}`;
 
   // BVI = America/Puerto_Rico (UTC-4, no DST)
   const now = new Date();
@@ -76,18 +84,29 @@ export function computeStoreStatus(settings: Record<string, string>): {
   const todayDow = bviDate.getDay(); // 0=Sun … 6=Sat
 
   const openDays = parseOpenDays(settings.open_days);
-  const open_today = openDays.has(todayDow);
+
+  // For midnight-crossing windows: if we are currently in the early-morning
+  // portion (after midnight but before cutoff), we are still inside yesterday's
+  // service window, so the relevant open_days entry is yesterday's.
+  const inEarlyMorning = crossesMidnight && currentMins < cutoffMins;
+  const relevantDow = inEarlyMorning ? (todayDow + 6) % 7 : todayDow;
+  const open_today = openDays.has(relevantDow);
 
   if (!open_today) {
     return {
       is_open: false,
       closes_orders_at,
       open_today: false,
-      closed_today_reason: `Closed on ${DAY_NAMES[todayDow]}s`,
+      closed_today_reason: `Closed on ${DAY_NAMES[relevantDow]}s`,
     };
   }
 
-  const is_open = currentMins >= openMins && currentMins < cutoffMins;
+  // Same-day window: open if openMins ≤ current < cutoffMins
+  // Midnight-crossing window: open if current ≥ openMins OR current < cutoffMins
+  const is_open = crossesMidnight
+    ? currentMins >= openMins || currentMins < cutoffMins
+    : currentMins >= openMins && currentMins < cutoffMins;
+
   return { is_open, closes_orders_at, open_today: true };
 }
 
