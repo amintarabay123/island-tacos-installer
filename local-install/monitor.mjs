@@ -3,25 +3,32 @@
  * Island Tacos — Monitor & Repair Agent
  *
  * Runs as a PM2 process on the shop mini PC. Every 30 s it:
- *   1. Checks every critical service (API process, HTTP health, Postgres, printer, SMS gateway, disk, internet).
- *   2. On the FIRST consecutive failure: attempts an auto-repair (PM2 restart for recoverable services).
- *   3. On the SECOND consecutive failure: sends an SMS alert + calls OpenAI for a plain-English diagnosis.
+ *   1. Checks every critical service (API process, HTTP health, Postgres, printer,
+ *      SMS gateway, disk space, internet).
+ *   2. On the FIRST consecutive failure: attempts an auto-repair (PM2 restart for
+ *      recoverable services).
+ *   3. On the SECOND consecutive failure: sends an SMS alert + calls OpenAI for a
+ *      plain-English diagnosis.
  *   4. Re-escalates every 10 polls (≈5 min) while still failing.
  *
- * Outputs two JSON files consumed by GET /api/system/health:
- *   local-install/monitor-status.json  — current snapshot of every service
- *   local-install/monitor-events.json  — rolling event log (newest-first, max 500 entries)
+ * Persistence:
+ *   local-install/monitor.db — SQLite (node:sqlite built-in) with two tables:
+ *     monitor_status  — one row per service, upserted on every poll
+ *     monitor_events  — rolling log, newest-first, trimmed to 500 rows
+ *
+ * These are read by GET /api/system/health in the api-server.
  *
  * Zero external dependencies — only Node.js 24 built-ins.
  */
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { createConnection } from "node:net";
 import { homedir, platform } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { DatabaseSync } from "node:sqlite";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -29,11 +36,10 @@ const execAsync  = promisify(exec);
 
 // ── Paths & config ─────────────────────────────────────────────────────────────
 
-const ROOT         = join(__dirname, "..");
-const STATUS_FILE  = join(__dirname, "monitor-status.json");
-const EVENTS_FILE  = join(__dirname, "monitor-events.json");
-const MAX_EVENTS   = 500;
-const POLL_MS      = 30_000;
+const ROOT     = join(__dirname, "..");
+const DB_PATH  = join(__dirname, "monitor.db");
+const POLL_MS  = 30_000;
+const MAX_EVENTS = 500;
 
 // ── .env loader (same logic as ecosystem.config.cjs) ──────────────────────────
 
@@ -52,8 +58,8 @@ function loadDotenv(filePath) {
   return env;
 }
 
-const dotenv   = loadDotenv(join(ROOT, ".env"));
-const getEnv   = (k, fallback = "") => process.env[k] ?? dotenv[k] ?? fallback;
+const dotenv  = loadDotenv(join(ROOT, ".env"));
+const getEnv  = (k, fallback = "") => process.env[k] ?? dotenv[k] ?? fallback;
 
 const API_PORT      = getEnv("PORT", "3001");
 const PRINTER_IP    = getEnv("PRINTER_IP", "");
@@ -66,6 +72,63 @@ const ALERT_PHONE   = getEnv("MONITOR_ALERT_PHONE", "");
 const SMS_DISABLED  = getEnv("SMS_DISABLED", "") === "true";
 const CLOUD_URL     = getEnv("PUBLIC_URL", "https://orders.islandtacosbvi.com");
 
+// ── SQLite bootstrap ───────────────────────────────────────────────────────────
+
+const db = new DatabaseSync(DB_PATH);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS monitor_status (
+    service_id    TEXT PRIMARY KEY,
+    label         TEXT NOT NULL,
+    ok            INTEGER NOT NULL,
+    fail_count    INTEGER NOT NULL DEFAULT 0,
+    last_check_at TEXT NOT NULL,
+    error         TEXT,
+    details       TEXT,
+    updated_at    INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS monitor_events (
+    id         TEXT PRIMARY KEY,
+    ts         TEXT NOT NULL,
+    type       TEXT NOT NULL,
+    service    TEXT,
+    message    TEXT NOT NULL,
+    detail     TEXT,
+    diagnosis  TEXT,
+    fail_count INTEGER,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS monitor_events_created_at ON monitor_events (created_at DESC);
+`);
+
+// Prepared statements
+const upsertStatus = db.prepare(`
+  INSERT INTO monitor_status (service_id, label, ok, fail_count, last_check_at, error, details, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  ON CONFLICT (service_id) DO UPDATE SET
+    label         = excluded.label,
+    ok            = excluded.ok,
+    fail_count    = excluded.fail_count,
+    last_check_at = excluded.last_check_at,
+    error         = excluded.error,
+    details       = excluded.details,
+    updated_at    = excluded.updated_at
+`);
+
+const insertEvent = db.prepare(`
+  INSERT INTO monitor_events (id, ts, type, service, message, detail, diagnosis, fail_count, created_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+`);
+
+const trimEvents = db.prepare(`
+  DELETE FROM monitor_events
+  WHERE id NOT IN (
+    SELECT id FROM monitor_events ORDER BY created_at DESC LIMIT ?
+  )
+`);
+
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
 const nowIso = () => new Date().toISOString();
@@ -74,35 +137,43 @@ function log(msg) {
   console.log(`[monitor ${nowIso()}] ${msg}`);
 }
 
-/** Append one event to the rolling JSON log. Trims to MAX_EVENTS. */
+/** Append an event to monitor_events and trim to MAX_EVENTS rows. */
 function appendEvent(event) {
-  let events = [];
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   try {
-    if (existsSync(EVENTS_FILE)) {
-      events = JSON.parse(readFileSync(EVENTS_FILE, "utf-8"));
-      if (!Array.isArray(events)) events = [];
-    }
-  } catch { events = []; }
-  events.unshift({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    ts: nowIso(),
-    ...event,
-  });
-  if (events.length > MAX_EVENTS) events = events.slice(0, MAX_EVENTS);
-  try { writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2)); } catch { /* best-effort */ }
+    insertEvent.run(
+      id,
+      nowIso(),
+      event.type ?? "unknown",
+      event.service ?? null,
+      event.message ?? "",
+      event.detail   ?? null,
+      event.diagnosis ?? null,
+      event.failCount ?? null,
+      Date.now(),
+    );
+    trimEvents.run(MAX_EVENTS);
+  } catch (err) {
+    log(`appendEvent error: ${err.message}`);
+  }
 }
 
-/** Overwrite status snapshot. */
-function writeStatus(services, pollCount) {
+/** Upsert current service state into monitor_status. */
+function saveStatus(snap) {
   try {
-    writeFileSync(STATUS_FILE, JSON.stringify({
-      updatedAt: nowIso(),
-      pollCount,
-      pid: process.pid,
-      platform: platform(),
-      services,
-    }, null, 2));
-  } catch { /* best-effort */ }
+    upsertStatus.run(
+      snap.id,
+      snap.label,
+      snap.ok ? 1 : 0,
+      snap.failCount,
+      snap.lastCheckAt,
+      snap.error   ?? null,
+      snap.details ?? null,
+      Date.now(),
+    );
+  } catch (err) {
+    log(`saveStatus error: ${err.message}`);
+  }
 }
 
 // ── Checkers ──────────────────────────────────────────────────────────────────
@@ -131,20 +202,20 @@ async function checkHttp(url, method = "GET", timeoutMs = 5000) {
   }
 }
 
-/** PM2 process state check. */
+/** PM2 process state check via `pm2 jlist`. */
 async function checkPm2() {
   try {
     const { stdout } = await execAsync("pm2 jlist", { timeout: 5000 });
     const list = JSON.parse(stdout.trim());
     const proc = list.find(p => p.name === "island-tacos");
-    if (!proc) return { ok: false, error: "island-tacos not found in PM2" };
+    if (!proc) return { ok: false, error: "island-tacos not in PM2 list" };
     const status = proc.pm2_env?.status ?? "unknown";
     if (status === "online") {
       const uptimeSec = proc.pm2_env?.pm_uptime
         ? Math.floor((Date.now() - proc.pm2_env.pm_uptime) / 1000)
         : 0;
       const restarts = proc.pm2_env?.restart_time ?? 0;
-      return { ok: true, details: `status=online uptime=${uptimeSec}s restarts=${restarts}` };
+      return { ok: true, details: `online uptime=${uptimeSec}s restarts=${restarts}` };
     }
     return { ok: false, error: `PM2 status=${status}` };
   } catch (err) {
@@ -152,7 +223,7 @@ async function checkPm2() {
   }
 }
 
-/** Disk space check — warns when free < 10 % of total. */
+/** Disk space — warn when free < 10% of total. */
 async function checkDisk() {
   try {
     if (platform() === "win32") {
@@ -178,7 +249,7 @@ async function checkDisk() {
   }
 }
 
-// ── Read PM2 logs for diagnosis ────────────────────────────────────────────────
+// ── PM2 log reader ─────────────────────────────────────────────────────────────
 
 async function readPm2Logs(processName = "island-tacos", lines = 50) {
   const logDir = join(homedir(), ".pm2", "logs");
@@ -247,8 +318,11 @@ async function callOpenAI(serviceId, errorMsg, logSnippet) {
 // ── SMS alert ─────────────────────────────────────────────────────────────────
 
 async function sendSmsAlert(message) {
-  if (SMS_DISABLED)            { log("SMS disabled — skipping alert"); return; }
-  if (!SMS_GW_URL || !ALERT_PHONE) { log("No SMS gateway or MONITOR_ALERT_PHONE configured — skipping alert"); return; }
+  if (SMS_DISABLED)  { log("SMS disabled — skipping alert"); return; }
+  if (!SMS_GW_URL || !ALERT_PHONE) {
+    log("No SMS_GATEWAY_URL or MONITOR_ALERT_PHONE configured — skipping alert");
+    return;
+  }
   const url   = `${SMS_GW_URL.replace(/\/+$/, "")}/messages`;
   const creds = Buffer.from(`${SMS_GW_USER}:${SMS_GW_PASS}`).toString("base64");
   try {
@@ -290,7 +364,6 @@ async function escalate(serviceId, errorMsg) {
     detail: errorMsg,
   });
 
-  // Best-effort OpenAI + SMS — neither failure should crash the monitor
   let diagnosis = null;
   try {
     const logs = await readPm2Logs();
@@ -298,7 +371,7 @@ async function escalate(serviceId, errorMsg) {
   } catch { /* ignore */ }
 
   if (diagnosis) {
-    log(`[ai-diagnosis] ${diagnosis.slice(0, 120)}…`);
+    log(`[ai-diagnosis] ${diagnosis.slice(0, 120)}`);
     appendEvent({ type: "ai-diagnosis", service: serviceId, message: diagnosis });
   }
 
@@ -306,7 +379,7 @@ async function escalate(serviceId, errorMsg) {
   await sendSmsAlert(sms).catch(() => {});
 }
 
-// ── Poll state ────────────────────────────────────────────────────────────────
+// ── Poll state & loop ─────────────────────────────────────────────────────────
 
 const state = {}; // serviceId → { failCount }
 let pollCount = 0;
@@ -315,7 +388,6 @@ async function poll() {
   pollCount++;
   log(`poll #${pollCount}`);
 
-  // Build checks array — optional services only included when configured
   const checks = [
     { id: "api-process", label: "API Server Process", run: checkPm2 },
     { id: "api-http",    label: "API HTTP Health",    run: () => checkHttp(`http://127.0.0.1:${API_PORT}/api/healthz`) },
@@ -330,7 +402,6 @@ async function poll() {
     checks.push({ id: "sms-gateway", label: "SMS Gateway", run: () => checkHttp(`${SMS_GW_URL.replace(/\/+$/, "")}/health`, "GET", 3000) });
   }
 
-  // Run all checks in parallel (each wrapped so one failure can't break the poll)
   const rawResults = await Promise.all(
     checks.map(async ({ id, label, run }) => {
       let result;
@@ -340,14 +411,13 @@ async function poll() {
     })
   );
 
-  const servicesSnap = {};
   for (const { id, label, ok, error, details } of rawResults) {
     if (!state[id]) state[id] = { failCount: 0 };
     const s = state[id];
 
     if (ok) {
       if (s.failCount > 0) {
-        log(`[recovery] ${id} is back (was ${s.failCount} fail(s))`);
+        log(`[recovery] ${id} recovered after ${s.failCount} fail(s)`);
         appendEvent({ type: "recovery", service: id, message: `${label} recovered after ${s.failCount} failure(s)` });
         s.failCount = 0;
       }
@@ -364,27 +434,23 @@ async function poll() {
       }
     }
 
-    servicesSnap[id] = {
+    saveStatus({
       id, label, ok,
       failCount: s.failCount,
       lastCheckAt: nowIso(),
-      ...(error   ? { error }   : {}),
-      ...(details ? { details } : {}),
-    };
+      error:   ok ? null : (error ?? null),
+      details: ok ? (details ?? null) : null,
+    });
   }
-
-  writeStatus(servicesSnap, pollCount);
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 log("Island Tacos Monitor starting…");
-appendEvent({ type: "startup", message: "Monitor process started", detail: `PID=${process.pid} platform=${platform()}` });
+appendEvent({ type: "startup", message: "Monitor process started", detail: `PID=${process.pid} platform=${platform()} node=${process.version}` });
 
-// Run immediately, then every POLL_MS
 poll().catch(err => log(`Initial poll error: ${err.message}`));
 setInterval(() => poll().catch(err => log(`Poll error: ${err.message}`)), POLL_MS);
 
-// Keep process alive; do not exit on unhandled rejections (log and continue)
 process.on("unhandledRejection", reason => log(`Unhandled rejection: ${reason}`));
 process.on("uncaughtException",  err    => log(`Uncaught exception: ${err.message}`));

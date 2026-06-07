@@ -1,6 +1,16 @@
 -- Island Tacos — Database Schema
 -- Safe to run on existing databases (uses CREATE TABLE IF NOT EXISTS)
 -- Run: psql -U ituser -d islandtacos -f schema.sql
+--
+-- NOTE: The monitor/watchdog service uses a SEPARATE SQLite database:
+--   local-install/monitor.db  (created automatically by local-install/monitor.mjs)
+--
+-- Tables in monitor.db:
+--   monitor_status  — one row per checked service (api-process, postgres, disk, …)
+--   monitor_events  — rolling event log: failures, repairs, escalations, AI diagnoses
+--
+-- monitor.db is NOT managed by this file. Do not add its tables here.
+-- It is read by GET /api/system/health in the api-server.
 
 -- ── Menu ──────────────────────────────────────────────────────────────────────
 

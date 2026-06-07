@@ -64,7 +64,8 @@ module.exports = {
       //   PRINTER_PORT            — printer port (default 9100)
       name: "island-tacos-monitor",
       script: "node",
-      args: path.join(root, "local-install/monitor.mjs"),
+      // --no-warnings suppresses the node:sqlite ExperimentalWarning in PM2 logs
+      args: `--no-warnings ${path.join(root, "local-install/monitor.mjs")}`,
       cwd: root,
       env: {
         ...loadEnv(envPath),
@@ -72,7 +73,7 @@ module.exports = {
       },
       watch: false,
       autorestart: true,
-      max_restarts: 20,
+      max_restarts: 5,
       min_uptime: "10s",
       restart_delay: 5000,
       exp_backoff_restart_delay: 200,
