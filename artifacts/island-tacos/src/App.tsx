@@ -15,6 +15,7 @@ import Home from "@/pages/home";
 import Checkout from "@/pages/checkout";
 import TrackOrder from "@/pages/track";
 import NotFound from "@/pages/not-found";
+import PrivacyPolicy from "@/pages/privacy";
 
 // Everything else is lazy — these are staff/admin pages, load only when navigated to
 const Admin = lazy(() => import("@/pages/admin"));
@@ -77,6 +78,7 @@ function Router() {
     <Switch>
       {/* Public customer routes */}
       <Route path="/" component={Home} />
+      <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/track" component={TrackOrder} />
       <Route path="/account" component={AccountPage} />
