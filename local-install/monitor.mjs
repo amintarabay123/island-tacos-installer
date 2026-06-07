@@ -70,9 +70,13 @@ const PRINTER_PORT  = parseInt(getEnv("PRINTER_PORT", "9100"), 10);
 const SMS_GW_URL    = getEnv("SMS_GATEWAY_URL", "");
 const SMS_GW_USER   = getEnv("SMS_GATEWAY_USERNAME", "");
 const SMS_GW_PASS   = getEnv("SMS_GATEWAY_PASSWORD", "");
-const OPENAI_KEY    = getEnv("OPENAI_API_KEY", "");
-const ALERT_PHONE   = getEnv("MONITOR_ALERT_PHONE", "");
-const SMS_DISABLED  = getEnv("SMS_DISABLED", "") === "true";
+const OPENAI_KEY        = getEnv("OPENAI_API_KEY", "");
+const ALERT_PHONE       = getEnv("MONITOR_ALERT_PHONE", "");
+const SMS_DISABLED      = getEnv("SMS_DISABLED", "") === "true";
+const WA_PHONE_ID       = getEnv("META_PHONE_NUMBER_ID", "");
+const WA_ACCESS_TOKEN   = getEnv("META_ACCESS_TOKEN", "");
+const WA_ENABLED        = getEnv("META_WHATSAPP_ENABLED", "") === "true";
+const WA_ALERT_PHONE    = getEnv("MONITOR_ALERT_WA_PHONE", ALERT_PHONE);
 const CLOUD_URL     = getEnv("PUBLIC_URL", "https://orders.islandtacosbvi.com");
 const PGDATA        = getEnv("PGDATA", "");
 
@@ -363,9 +367,9 @@ async function callOpenAI(serviceId, errorMsg, logSnippet) {
 // ── SMS alert ─────────────────────────────────────────────────────────────────
 
 async function sendSmsAlert(message) {
-  if (SMS_DISABLED)  { log("SMS disabled — skipping alert"); return; }
+  if (SMS_DISABLED)  { log("SMS disabled — skipping SMS alert"); return; }
   if (!SMS_GW_URL || !ALERT_PHONE) {
-    log("No SMS_GATEWAY_URL or MONITOR_ALERT_PHONE configured — skipping alert");
+    log("No SMS_GATEWAY_URL or MONITOR_ALERT_PHONE configured — skipping SMS alert");
     return;
   }
   const url   = `${SMS_GW_URL.replace(/\/+$/, "")}/messages`;
@@ -381,6 +385,52 @@ async function sendSmsAlert(message) {
   } catch (err) {
     log(`SMS alert failed: ${err.message}`);
   }
+}
+
+// ── WhatsApp alert (Meta Graph API) ───────────────────────────────────────────
+
+async function sendWhatsAppAlert(message) {
+  if (!WA_ENABLED || !WA_PHONE_ID || !WA_ACCESS_TOKEN || !WA_ALERT_PHONE) {
+    log("WhatsApp not configured — skipping WA alert");
+    return false;
+  }
+  const to = WA_ALERT_PHONE.replace(/\D/g, "");
+  try {
+    const resp = await fetch(
+      `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${WA_ACCESS_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to,
+          type: "text",
+          text: { body: message },
+        }),
+        signal: AbortSignal.timeout(10_000),
+      }
+    );
+    if (resp.ok) {
+      log(`WhatsApp alert sent to ${to}`);
+      return true;
+    }
+    const errData = await resp.json().catch(() => ({}));
+    log(`WhatsApp alert HTTP ${resp.status}: ${JSON.stringify(errData)}`);
+    return false;
+  } catch (err) {
+    log(`WhatsApp alert failed: ${err.message}`);
+    return false;
+  }
+}
+
+// ── Send alert (WhatsApp preferred, SMS fallback) ─────────────────────────────
+
+async function sendAlert(message) {
+  const waSent = await sendWhatsAppAlert(message);
+  if (!waSent) await sendSmsAlert(message);
 }
 
 // ── Repair ────────────────────────────────────────────────────────────────────
@@ -451,8 +501,8 @@ async function escalate(serviceId, errorMsg) {
     appendEvent({ type: "ai-diagnosis", service: serviceId, message: diagnosis });
   }
 
-  const sms = `[IT] ${serviceId} DOWN: ${errorMsg.slice(0, 80)} — check the shop PC`;
-  await sendSmsAlert(sms).catch(() => {});
+  const alertMsg = `[IT] ${serviceId} DOWN: ${errorMsg.slice(0, 80)} — check the shop PC`;
+  await sendAlert(alertMsg).catch(() => {});
 }
 
 // ── Poll state & loop ─────────────────────────────────────────────────────────
