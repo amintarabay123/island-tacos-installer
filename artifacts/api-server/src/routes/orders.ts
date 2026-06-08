@@ -12,6 +12,17 @@ import nodemailer from "nodemailer";
 import { requireStaffAuth, isStaffAuthenticated } from "./auth";
 import { logger } from "../lib/logger";
 
+/**
+ * Normalise any phone number to raw E.164 digits (no + prefix) at save time
+ * so every downstream consumer (WhatsApp API, SMS, webhook lookup) gets a
+ * consistent format.  Empty string is returned as-is (phone is optional).
+ * Examples: "5555555" → "12845555555", "284-555-5555" → "12845555555"
+ */
+function normalizePhone(raw: string): string {
+  if (!raw.trim()) return "";
+  return formatBVIPhone(raw).replace(/^\+/, "");
+}
+
 const mailer = nodemailer.createTransport({
   host: process.env.SMTP_HOST ?? "smtp.gmail.com",
   port: parseInt(process.env.SMTP_PORT ?? "587"),
@@ -447,7 +458,7 @@ router.post("/orders", async (req, res): Promise<void> => {
       confirmationCode,
       customerName: parsed.data.customerName,
       customerEmail: parsed.data.customerEmail ?? "",
-      customerPhone: parsed.data.customerPhone ?? "",
+      customerPhone: normalizePhone(parsed.data.customerPhone ?? ""),
       orderType: parsed.data.orderType ?? "pickup",
       deliveryAddress: parsed.data.deliveryAddress ?? null,
       // POS orders are auto-confirmed so they hit the KDS immediately.
@@ -489,7 +500,7 @@ router.post("/orders", async (req, res): Promise<void> => {
   upsertCustomer(
     parsed.data.customerName,
     parsed.data.customerEmail ?? "",
-    parsed.data.customerPhone ?? "",
+    normalizePhone(parsed.data.customerPhone ?? ""),
     total,
   ).catch(() => {});
 
