@@ -332,15 +332,17 @@ export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<void>
 
 /**
  * Sends cancellation notification via WhatsApp template.
- * Template body param: {{1}} = confirmation code (e.g. IT-4521)
+ * Template body params: {{1}} = name, {{2}} = confirmation code
  */
 export async function sendOrderCancelledWhatsApp(order: OrderLike): Promise<void> {
   if (!order.customerPhone) return;
+
+  const name = order.customerName ?? "there";
 
   await sendWhatsAppTemplate(
     order.customerPhone,
     TEMPLATE_CANCELLED,
     "en",
-    [order.confirmationCode],
+    [name, order.confirmationCode],
   );
 }
