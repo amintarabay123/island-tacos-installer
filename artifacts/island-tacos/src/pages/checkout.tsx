@@ -350,7 +350,7 @@ export default function Checkout() {
                         onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(124,106,247,0.15)`; }}
                         onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
                       />
-                      <p style={{ fontSize: 12, color: MU, margin: 0 }}>We'll text this number when your order is ready.</p>
+                      <p style={{ fontSize: 12, color: MU, margin: 0 }}>Use a WhatsApp number to get order updates &amp; track your order via chat.</p>
                     </div>
                   </div>
                 </section>
