@@ -50,6 +50,7 @@ module.exports = {
       exp_backoff_restart_delay: 100,
       max_memory_restart: "512M",
       log_date_format: "YYYY-MM-DD HH:mm:ss",
+      windowsHide: true,
     },
     {
       // Watchdog: polls services every 30 s, auto-repairs, escalates via SMS + OpenAI.
@@ -79,6 +80,7 @@ module.exports = {
       exp_backoff_restart_delay: 200,
       max_memory_restart: "64M",
       log_date_format: "YYYY-MM-DD HH:mm:ss",
+      windowsHide: true,
     },
   ],
 };
