@@ -74,8 +74,8 @@ $needNode = $false
 try {
     $nv = node --version 2>$null
     $major = [int]($nv -replace "v(\d+)\..*", '$1')
-    if ($major -ge 20) { OK "Node.js $nv already installed" }
-    else                { $needNode = $true }
+    if ($major -ge 22) { OK "Node.js $nv already installed" }
+    else                { $needNode = $true; Warn "Node.js $nv is too old (need 22+) — upgrading..." }
 } catch { $needNode = $true }
 
 if ($needNode) {

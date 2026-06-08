@@ -29,8 +29,6 @@ import { createConnection } from "node:net";
 import { homedir, platform as osPlatform } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DatabaseSync } from "node:sqlite";
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
 const execAsync  = promisify(exec);
@@ -81,41 +79,52 @@ const CLOUD_URL     = getEnv("PUBLIC_URL", "https://orders.islandtacosbvi.com");
 const PGDATA        = getEnv("PGDATA", "");
 
 // ── SQLite bootstrap ───────────────────────────────────────────────────────────
+// node:sqlite (DatabaseSync) requires Node 22.5+.  On older installs we fall
+// back to no-op stubs so the monitor still runs — it just won't persist data
+// to the health-dashboard DB.  Monitoring, alerts, and auto-repair all work.
 
-const db = new DatabaseSync(DB_PATH);
+const _noopStmt = { run: () => {}, get: () => null, all: () => [] };
+let db = { exec: () => {}, prepare: () => _noopStmt };
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS monitor_meta (
-    key        TEXT PRIMARY KEY,
-    value      TEXT NOT NULL,
-    updated_at INTEGER NOT NULL
-  );
+try {
+  const { DatabaseSync } = await import("node:sqlite");
+  const _db = new DatabaseSync(DB_PATH);
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS monitor_meta (
+      key        TEXT PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
 
-  CREATE TABLE IF NOT EXISTS monitor_status (
-    service_id    TEXT PRIMARY KEY,
-    label         TEXT NOT NULL,
-    ok            INTEGER NOT NULL,
-    fail_count    INTEGER NOT NULL DEFAULT 0,
-    last_check_at TEXT NOT NULL,
-    error         TEXT,
-    details       TEXT,
-    updated_at    INTEGER NOT NULL
-  );
+    CREATE TABLE IF NOT EXISTS monitor_status (
+      service_id    TEXT PRIMARY KEY,
+      label         TEXT NOT NULL,
+      ok            INTEGER NOT NULL,
+      fail_count    INTEGER NOT NULL DEFAULT 0,
+      last_check_at TEXT NOT NULL,
+      error         TEXT,
+      details       TEXT,
+      updated_at    INTEGER NOT NULL
+    );
 
-  CREATE TABLE IF NOT EXISTS monitor_events (
-    id         TEXT PRIMARY KEY,
-    ts         TEXT NOT NULL,
-    type       TEXT NOT NULL,
-    service    TEXT,
-    message    TEXT NOT NULL,
-    detail     TEXT,
-    diagnosis  TEXT,
-    fail_count INTEGER,
-    created_at INTEGER NOT NULL
-  );
+    CREATE TABLE IF NOT EXISTS monitor_events (
+      id         TEXT PRIMARY KEY,
+      ts         TEXT NOT NULL,
+      type       TEXT NOT NULL,
+      service    TEXT,
+      message    TEXT NOT NULL,
+      detail     TEXT,
+      diagnosis  TEXT,
+      fail_count INTEGER,
+      created_at INTEGER NOT NULL
+    );
 
-  CREATE INDEX IF NOT EXISTS monitor_events_created_at ON monitor_events (created_at DESC);
-`);
+    CREATE INDEX IF NOT EXISTS monitor_events_created_at ON monitor_events (created_at DESC);
+  `);
+  db = _db;
+} catch {
+  console.warn("[monitor] node:sqlite unavailable (Node < 22.5) — health DB disabled, monitoring continues");
+}
 
 const upsertMeta = db.prepare(`
   INSERT INTO monitor_meta (key, value, updated_at)
