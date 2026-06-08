@@ -289,7 +289,7 @@ export async function sendOrderConfirmationWhatsApp(order: OrderLike): Promise<v
   await sendWhatsAppTemplate(
     order.customerPhone,
     TEMPLATE_CONFIRMATION,
-    "en_US",
+    "en",
     [name, order.confirmationCode, date],
   );
 }
@@ -318,7 +318,7 @@ export async function sendOrderReadyWhatsApp(order: OrderLike): Promise<void> {
   await sendWhatsAppTemplate(
     order.customerPhone,
     TEMPLATE_READY,
-    "en_US",
+    "en",
     isPlaceholder ? [] : [name, order.confirmationCode, payLabel],
   );
 }
