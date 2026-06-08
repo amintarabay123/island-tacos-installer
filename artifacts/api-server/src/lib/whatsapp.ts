@@ -201,18 +201,22 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<voi
 //
 // Template components format: https://developers.facebook.com/docs/whatsapp/api/messages/message-templates
 
+// Returns true if Meta accepted the message, false on any error.
+// Callers that need to record delivery (e.g. wa_reminder_sent_at) should
+// check the return value before stamping — a false means the customer was
+// NOT notified and the stamp should be skipped so a retry can happen.
 export async function sendWhatsAppTemplate(
   to: string,
   templateName: string,
   languageCode: string,
   bodyParams: string[],   // ordered list of {{1}}, {{2}}, … substitutions
-): Promise<void> {
+): Promise<boolean> {
   const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
   const accessToken   = process.env.META_ACCESS_TOKEN;
 
   if (!phoneNumberId || !accessToken) {
     logger.warn("[whatsapp] Missing META_PHONE_NUMBER_ID or META_ACCESS_TOKEN — skipping template");
-    return;
+    return false;
   }
 
   const toNormalized = to.replace(/\D/g, "");
@@ -247,14 +251,16 @@ export async function sendWhatsAppTemplate(
       const errData = await response.json().catch(() => ({}));
       logger.error({ to: toNormalized, template: templateName, status: response.status, errData },
         "[whatsapp] Template send failed");
-      return;
+      return false;
     }
 
     const data = await response.json() as { messages?: { id: string }[] };
     logger.info({ to: toNormalized, template: templateName, msgId: data.messages?.[0]?.id },
       "[whatsapp] Template sent");
+    return true;
   } catch (err) {
     logger.error({ err, to: toNormalized, template: templateName }, "[whatsapp] Template send error");
+    return false;
   }
 }
 
@@ -316,13 +322,15 @@ export async function sendOrderReadyWhatsApp(order: OrderLike): Promise<void> {
  * Template: island_tacos_order_reminder
  * Body params: {{1}} = name, {{2}} = confirmation code
  */
-export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<void> {
-  if (!order.customerPhone) return;
+// Returns true if Meta accepted the message (caller should only stamp
+// wa_reminder_sent_at on true — false means no notification was sent).
+export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<boolean> {
+  if (!order.customerPhone) return false;
 
   const templateName = process.env.WA_TEMPLATE_REMINDER ?? "island_tacos_order_reminder";
   const name = order.customerName ?? "there";
 
-  await sendWhatsAppTemplate(
+  return sendWhatsAppTemplate(
     order.customerPhone,
     templateName,
     "en",

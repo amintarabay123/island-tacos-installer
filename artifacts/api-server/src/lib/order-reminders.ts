@@ -1,15 +1,17 @@
 import { db, ordersTable } from "@workspace/db";
-import { eq, isNull, lt, and, ne } from "drizzle-orm";
+import { eq, isNull, lt, gt, and, ne, isNotNull } from "drizzle-orm";
 import { sendOrderReminderWhatsApp } from "./whatsapp";
 import { logger } from "./logger";
 
-const POLL_INTERVAL_MS  = 10 * 60 * 1000; // 10 minutes
-const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 60 minutes
+const POLL_INTERVAL_MS   = 10 * 60 * 1000; // 10 minutes
+const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 60 minutes — must be ready this long before reminding
+const MAX_AGE_MS         = 48 * 60 * 60 * 1000; // 48 hours — don't remind on ancient orders
 
 async function checkAndSendReminders(): Promise<void> {
   if (process.env.META_WHATSAPP_ENABLED !== "true") return;
 
-  const cutoff = new Date(Date.now() - STALE_THRESHOLD_MS);
+  const minAge = new Date(Date.now() - STALE_THRESHOLD_MS); // ready > 60 min ago
+  const maxAge = new Date(Date.now() - MAX_AGE_MS);         // ready < 48 h ago
 
   try {
     const staleOrders = await db
@@ -19,27 +21,38 @@ async function checkAndSendReminders(): Promise<void> {
         and(
           eq(ordersTable.status, "ready"),
           eq(ordersTable.paymentStatus, "pending"),
+          isNotNull(ordersTable.customerPhone),
           ne(ordersTable.customerPhone, ""),
           isNull(ordersTable.waReminderSentAt),
-          lt(ordersTable.updatedAt, cutoff),
+          lt(ordersTable.updatedAt, minAge),  // ready for at least 60 min
+          gt(ordersTable.updatedAt, maxAge),  // but not older than 48 h
         )
       );
 
+    let sent = 0;
     for (const order of staleOrders) {
       logger.info({ orderId: order.id, code: order.confirmationCode }, "[reminders] sending pickup reminder");
 
-      await sendOrderReminderWhatsApp(order).catch((err) =>
-        logger.error({ err: err?.message, orderId: order.id }, "[reminders] WhatsApp send failed")
-      );
+      const ok = await sendOrderReminderWhatsApp(order).catch((err) => {
+        logger.error({ err: err?.message, orderId: order.id }, "[reminders] WhatsApp send failed");
+        return false;
+      });
 
-      await db
-        .update(ordersTable)
-        .set({ waReminderSentAt: new Date() })
-        .where(eq(ordersTable.id, order.id));
+      if (ok) {
+        // Only stamp after confirmed delivery — failed sends remain un-stamped for retry
+        await db
+          .update(ordersTable)
+          .set({ waReminderSentAt: new Date() })
+          .where(eq(ordersTable.id, order.id));
+        sent++;
+      } else {
+        logger.warn({ orderId: order.id, code: order.confirmationCode },
+          "[reminders] send failed — will retry next poll");
+      }
     }
 
-    if (staleOrders.length > 0) {
-      logger.info({ count: staleOrders.length }, "[reminders] pickup reminders sent");
+    if (sent > 0) {
+      logger.info({ sent, checked: staleOrders.length }, "[reminders] pickup reminders sent");
     }
   } catch (err) {
     logger.error({ err }, "[reminders] check failed");
