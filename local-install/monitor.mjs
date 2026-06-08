@@ -31,7 +31,10 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
-const execAsync  = promisify(exec);
+// Always hide console windows on Windows — bare exec() briefly flashes a cmd
+// window on screen for every shell command the monitor runs.
+const _execRaw  = promisify(exec);
+const execAsync = (cmd, opts = {}) => _execRaw(cmd, { windowsHide: true, ...opts });
 
 // ── Paths & config ─────────────────────────────────────────────────────────────
 
