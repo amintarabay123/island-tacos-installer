@@ -2,6 +2,8 @@ import express, { Router, type IRouter } from "express";
 import crypto from "crypto";
 import { handleInboundMessage, sendWhatsAppMessage } from "../lib/whatsapp";
 import { logger } from "../lib/logger";
+import { db, ordersTable } from "@workspace/db";
+import { eq, and, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -53,15 +55,17 @@ router.post("/whatsapp/webhook", async (req, res): Promise<void> => {
   }
 
   // Parse Meta's webhook payload
+  type MetaMessage = {
+    from: string;
+    type: string;
+    id: string;
+    text?: { body: string };
+    button?: { payload: string; text: string };
+  };
   type MetaEntry = {
     changes?: {
       value?: {
-        messages?: {
-          from: string;
-          type: string;
-          text?: { body: string };
-          id: string;
-        }[];
+        messages?: MetaMessage[];
         statuses?: unknown[];
       };
       field: string;
@@ -76,11 +80,46 @@ router.post("/whatsapp/webhook", async (req, res): Promise<void> => {
     for (const change of entry.changes ?? []) {
       if (change.field !== "messages") continue;
       for (const msg of change.value?.messages ?? []) {
+        const from = msg.from;
+
+        // ── Quick reply button: "I'm on my way" ──────────────────────────────
+        if (msg.type === "button") {
+          const btnText = msg.button?.text ?? msg.button?.payload ?? "";
+          logger.info({ from, btnText }, "[whatsapp] Button reply received");
+
+          if (btnText.toLowerCase().includes("on my way")) {
+            // Find most recent ready order for this customer
+            const normalizedPhone = from.replace(/\D/g, "");
+            const [order] = await db
+              .select()
+              .from(ordersTable)
+              .where(
+                and(
+                  eq(ordersTable.status, "ready"),
+                  eq(ordersTable.customerPhone, normalizedPhone),
+                )
+              )
+              .orderBy(desc(ordersTable.createdAt))
+              .limit(1);
+
+            if (order) {
+              logger.info({ from, code: order.confirmationCode }, "[whatsapp] Customer on their way");
+              await sendWhatsAppMessage(from,
+                `Perfect! Your order #${order.confirmationCode} is waiting at the counter. See you soon! 🌮`
+              ).catch(() => {});
+            } else {
+              await sendWhatsAppMessage(from,
+                `We'll have your order ready at the counter! See you soon 🌮`
+              ).catch(() => {});
+            }
+          }
+          continue;
+        }
+
+        // ── Regular text message → AI assistant ──────────────────────────────
         if (msg.type !== "text" || !msg.text?.body) continue;
 
-        const from = msg.from; // digits only, e.g. "12845448088"
         const text = msg.text.body.trim();
-
         logger.info({ from, text }, "[whatsapp] Inbound message");
 
         try {
@@ -88,7 +127,6 @@ router.post("/whatsapp/webhook", async (req, res): Promise<void> => {
           await sendWhatsAppMessage(from, reply);
         } catch (err) {
           logger.error({ err, from }, "[whatsapp] Handler error");
-          // TODO(store-settings): replace (284) 544-8088 with `${(await getStoreSettings()).phone}`
           await sendWhatsAppMessage(from, "Sorry, something went wrong. Please call us at (284) 544-8088 🌮");
         }
       }
