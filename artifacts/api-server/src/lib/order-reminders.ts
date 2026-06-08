@@ -5,7 +5,7 @@ import { logger } from "./logger";
 
 const POLL_INTERVAL_MS   = 10 * 60 * 1000; // 10 minutes
 const STALE_THRESHOLD_MS = 60 * 60 * 1000; // 60 minutes — must be ready this long before reminding
-const MAX_AGE_MS         = 48 * 60 * 60 * 1000; // 48 hours — don't remind on ancient orders
+const MAX_AGE_MS         = 4 * 60 * 60 * 1000;  // 4 hours — don't remind if order is older than this
 
 async function checkAndSendReminders(): Promise<void> {
   if (process.env.META_WHATSAPP_ENABLED !== "true") return;
