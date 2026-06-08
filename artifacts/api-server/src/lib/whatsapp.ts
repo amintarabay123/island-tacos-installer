@@ -324,6 +324,25 @@ export async function sendOrderReadyWhatsApp(order: OrderLike): Promise<void> {
 }
 
 /**
+ * Sends pickup reminder via WhatsApp template for orders sitting unpaid/uncollected.
+ * Template: island_tacos_order_reminder
+ * Body params: {{1}} = name, {{2}} = confirmation code
+ */
+export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<void> {
+  if (!order.customerPhone) return;
+
+  const templateName = process.env.WA_TEMPLATE_REMINDER ?? "island_tacos_order_reminder";
+  const name = order.customerName ?? "there";
+
+  await sendWhatsAppTemplate(
+    order.customerPhone,
+    templateName,
+    "en_US",
+    [name, order.confirmationCode],
+  );
+}
+
+/**
  * Sends cancellation notification via WhatsApp template.
  * Same placeholder pattern as sendOrderReadyWhatsApp.
  */

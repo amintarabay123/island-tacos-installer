@@ -4,6 +4,7 @@ import { registerAthMovilWebhook } from "./lib/athmovil-webhook-register";
 import { warmAllMenuImages } from "./routes/image-proxy";
 import { startMidnightResetScheduler } from "./lib/midnight-reset";
 import { startOnlineOrdersSync } from "./lib/online-orders-sync";
+import { startOrderReminderJob } from "./lib/order-reminders";
 import { pullMenuFromCloud } from "./routes/sync";
 import { pool, db, menuCategoriesTable } from "@workspace/db";
 
@@ -81,6 +82,7 @@ app.listen(port, (err) => {
   // Pull online orders from cloud into local DB every 5 s (local mode only).
   // Enabled when SYNC_TARGET_URL + SYNC_SECRET are set in .env.
   startOnlineOrdersSync();
+  startOrderReminderJob();
 
   // Auto-seed menu from cloud on startup if local DB is empty (local mode only).
   // This fixes fresh installs where schema ran but menu data was never imported.
