@@ -11,7 +11,7 @@ async function checkAndSendReminders(): Promise<void> {
   if (process.env.META_WHATSAPP_ENABLED !== "true") return;
 
   const minAge = new Date(Date.now() - STALE_THRESHOLD_MS); // ready > 60 min ago
-  const maxAge = new Date(Date.now() - MAX_AGE_MS);         // ready < 48 h ago
+  const maxAge = new Date(Date.now() - MAX_AGE_MS);         // ready < 4 h ago
 
   try {
     const staleOrders = await db
