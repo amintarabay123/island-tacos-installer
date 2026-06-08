@@ -53,3 +53,9 @@ id = "vRS65f6u8E-25nq9YWoJz"
 uri = "file://exports/island-tacos-order-qr.png"
 type = "image"
 title = "Island Tacos — Online Ordering QR Code"
+
+[[outputs]]
+id = "lEA3exmHpu0j4dV-PI7xd"
+uri = "file://sample-receipt.pdf"
+type = "pdf"
+title = "Island Tacos — Sample Receipt PDF"
