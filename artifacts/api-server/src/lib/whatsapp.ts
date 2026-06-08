@@ -270,16 +270,12 @@ type OrderLike = {
 
 /**
  * Sends order confirmation via WhatsApp template.
- *
- * Test template (jaspers_market_order_confirmation_v1) body params:
- *   {{1}} = customer name
- *   {{2}} = order ID / confirmation code
- *   {{3}} = date
- *
- * Replace WA_TEMPLATE_CONFIRMATION with your own approved template when ready.
+ * No-ops until WA_TEMPLATE_CONFIRMATION is set to an approved template name.
+ * Body params: {{1}} = name, {{2}} = confirmation code, {{3}} = date
  */
 export async function sendOrderConfirmationWhatsApp(order: OrderLike): Promise<void> {
   if (!order.customerPhone) return;
+  if (!process.env.WA_TEMPLATE_CONFIRMATION) return; // skip until template is approved
 
   const name = order.customerName ?? "there";
   const date = new Date().toLocaleDateString("en-US", {
@@ -337,7 +333,7 @@ export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<void>
   await sendWhatsAppTemplate(
     order.customerPhone,
     templateName,
-    "en_US",
+    "en",
     [name, order.confirmationCode],
   );
 }
@@ -355,7 +351,7 @@ export async function sendOrderCancelledWhatsApp(order: OrderLike): Promise<void
   await sendWhatsAppTemplate(
     order.customerPhone,
     TEMPLATE_CANCELLED,
-    "en_US",
+    "en",
     isPlaceholder ? [] : [name, order.confirmationCode],
   );
 }
