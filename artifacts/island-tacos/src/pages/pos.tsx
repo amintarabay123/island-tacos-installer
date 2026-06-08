@@ -1414,6 +1414,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   const [emailSending, setEmailSending] = useState(false);
   const [emailStatus, setEmailStatus] = useState<"idle" | "sent" | "error">("idle");
   const [emailError, setEmailError] = useState("");
+  const [waReceiptState, setWaReceiptState] = useState<"idle" | "sending" | "ok" | "error">("idle");
   const [refiring, setRefiring] = useState(false);
   const [refireStatus, setRefireStatus] = useState<"idle" | "sent" | "error">("idle");
 
@@ -1429,6 +1430,8 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { setWaReceiptState("idle"); }, [selected?.id]);
 
   useEffect(() => {
     if (!selected) { setOrderRefunds([]); return; }
@@ -1626,15 +1629,24 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                 >
                   📞 Call
                 </a>
-                {/* TODO(store-settings): interpolate ${useStoreSettings().storeName} instead of "Island Tacos" */}
-                <a
-                  href={`https://wa.me/${selected.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${selected.customerName}, your Island Tacos order #${selected.confirmationCode} is ready for pickup! 🌮`)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, height:40, borderRadius:12, background:"rgba(48,209,88,0.12)", border:"1px solid rgba(48,209,88,0.28)", color:"#6ee7a0", fontSize:13, fontWeight:700, textDecoration:"none" }}
+                <button
+                  disabled={waReceiptState === "sending" || waReceiptState === "ok"}
+                  onClick={async () => {
+                    if (!selected) return;
+                    setWaReceiptState("sending");
+                    try {
+                      const r = await fetch(`/api/orders/${selected.id}/whatsapp-receipt`, { method: "POST", credentials: "include", headers: authHeaders() });
+                      setWaReceiptState(r.ok ? "ok" : "error");
+                      setTimeout(() => setWaReceiptState("idle"), 3000);
+                    } catch {
+                      setWaReceiptState("error");
+                      setTimeout(() => setWaReceiptState("idle"), 3000);
+                    }
+                  }}
+                  style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, height:40, borderRadius:12, background: waReceiptState === "ok" ? "rgba(48,209,88,0.25)" : waReceiptState === "error" ? "rgba(255,69,58,0.15)" : "rgba(48,209,88,0.12)", border:`1px solid ${waReceiptState === "error" ? "rgba(255,69,58,0.4)" : "rgba(48,209,88,0.28)"}`, color: waReceiptState === "error" ? "#ff8a84" : "#6ee7a0", fontSize:13, fontWeight:700, cursor: waReceiptState === "sending" ? "wait" : waReceiptState === "ok" ? "default" : "pointer" }}
                 >
-                  💬 WhatsApp
-                </a>
+                  {waReceiptState === "sending" ? "Sending…" : waReceiptState === "ok" ? "✅ Sent!" : waReceiptState === "error" ? "❌ Failed" : "💬 WhatsApp"}
+                </button>
               </div>
             )}
             {refundOpen && (

@@ -151,13 +151,14 @@ export async function handleInboundMessage(fromPhone: string, text: string): Pro
 
 // ── Outbound: free-text (use only within a 24h customer-service window) ────────
 
-export async function sendWhatsAppMessage(to: string, body: string): Promise<void> {
+// Returns true if Meta accepted the message, false on any error.
+export async function sendWhatsAppMessage(to: string, body: string): Promise<boolean> {
   const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
   const accessToken   = process.env.META_ACCESS_TOKEN;
 
   if (!phoneNumberId || !accessToken) {
     logger.warn("[whatsapp] Missing META_PHONE_NUMBER_ID or META_ACCESS_TOKEN — skipping");
-    return;
+    return false;
   }
 
   const toNormalized = to.replace(/\D/g, "");
@@ -183,13 +184,15 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<voi
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
       logger.error({ to: toNormalized, status: response.status, errData }, "[whatsapp] Send failed");
-      return;
+      return false;
     }
 
     const data = await response.json() as { messages?: { id: string }[] };
     logger.info({ to: toNormalized, msgId: data.messages?.[0]?.id }, "[whatsapp] Message sent");
+    return true;
   } catch (err) {
     logger.error({ err, to: toNormalized }, "[whatsapp] Send error");
+    return false;
   }
 }
 

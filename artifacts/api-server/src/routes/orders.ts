@@ -6,7 +6,7 @@ import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
 import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
 import { pushStatusToCloud } from "../lib/online-orders-sync";
-import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp, sendOrderCancelledWhatsApp } from "../lib/whatsapp";
+import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp, sendOrderCancelledWhatsApp, sendWhatsAppMessage } from "../lib/whatsapp";
 import { sendSms } from "../lib/sms-gateway";
 import nodemailer from "nodemailer";
 import { requireStaffAuth, isStaffAuthenticated } from "./auth";
@@ -1132,6 +1132,67 @@ router.post("/orders/:id/email-receipt", requireStaffAuth, async (req, res): Pro
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     res.status(502).json({ ok: false, error: msg });
+  }
+});
+
+// POST /api/orders/:id/whatsapp-receipt
+// Sends a formatted receipt to the phone number on the order via WhatsApp.
+// Note: Meta only allows free-text messages to numbers that have messaged
+// the business within the last 24 hours. For numbers outside that window,
+// Meta will return an error and this endpoint will respond with 502.
+router.post("/orders/:id/whatsapp-receipt", requireStaffAuth, async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ ok: false, error: "Invalid order ID" });
+    return;
+  }
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+  if (!order) {
+    res.status(404).json({ ok: false, error: "Order not found" });
+    return;
+  }
+  if (!order.customerPhone) {
+    res.status(400).json({ ok: false, error: "Order has no phone number" });
+    return;
+  }
+
+  const items = await db
+    .select()
+    .from(orderItemsTable)
+    .where(eq(orderItemsTable.orderId, id));
+
+  const fmt = (v: string | number | null | undefined) =>
+    `$${parseFloat(String(v ?? 0)).toFixed(2)}`;
+
+  const lines: string[] = [
+    `Island Tacos 🌮`,
+    `Order #${order.confirmationCode}`,
+    ``,
+  ];
+  for (const item of items) {
+    const lineTotal = parseFloat(String(item.menuItemPrice ?? 0)) * (item.quantity ?? 1);
+    lines.push(`• ${item.quantity}x ${item.menuItemName}  ${fmt(lineTotal)}`);
+    if (item.modifierSelections && item.modifierSelections.length > 0) {
+      for (const mod of item.modifierSelections) {
+        if (mod?.name) lines.push(`   + ${mod.name}`);
+      }
+    }
+  }
+  lines.push(``);
+  if (parseFloat(String(order.discountAmount ?? 0)) > 0) {
+    lines.push(`Discount: -${fmt(order.discountAmount)}`);
+  }
+  lines.push(`Total: ${fmt(order.total)}`);
+  lines.push(``);
+  lines.push(`Thank you! See you next time 🌴`);
+
+  const ok = await sendWhatsAppMessage(order.customerPhone, lines.join("\n"));
+  if (ok) {
+    res.json({ ok: true });
+  } else {
+    res.status(502).json({ ok: false, error: "WhatsApp send failed — see server logs for details" });
   }
 });
 

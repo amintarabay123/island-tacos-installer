@@ -336,6 +336,7 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const [waReceiptState, setWaReceiptState] = useState<Record<number, "idle" | "sending" | "ok" | "error">>({});
   const [rejectState, setRejectState] = useState<RejectState>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
@@ -894,11 +895,23 @@ export default function Admin() {
                               📞 Call
                             </a>
                             {/* TODO(store-settings): interpolate store name from getStoreSettings() */}
-                            <a href={`https://wa.me/${order.customerPhone.replace(/\D/g,"")}?text=${encodeURIComponent(`Hi ${order.customerName}, your Island Tacos order #${order.confirmationCode} is ready for pickup! 🌮`)}`}
-                              target="_blank" rel="noreferrer"
-                              style={{ fontSize: 11, padding: "2px 10px", borderRadius: 20, background: "rgba(48,209,88,0.12)", color: "#30d158", border: "1px solid rgba(48,209,88,0.25)", fontWeight: 600, textDecoration: "none" }}>
-                              💬 WhatsApp
-                            </a>
+                            <button
+                              onClick={async () => {
+                                const st = waReceiptState[order.id];
+                                if (st === "sending" || st === "ok") return;
+                                setWaReceiptState(prev => ({ ...prev, [order.id]: "sending" }));
+                                try {
+                                  const r = await fetch(`/api/orders/${order.id}/whatsapp-receipt`, { method: "POST", credentials: "include", headers: authHeaders() });
+                                  setWaReceiptState(prev => ({ ...prev, [order.id]: r.ok ? "ok" : "error" }));
+                                  setTimeout(() => setWaReceiptState(prev => ({ ...prev, [order.id]: "idle" })), 3000);
+                                } catch {
+                                  setWaReceiptState(prev => ({ ...prev, [order.id]: "error" }));
+                                  setTimeout(() => setWaReceiptState(prev => ({ ...prev, [order.id]: "idle" })), 3000);
+                                }
+                              }}
+                              style={{ fontSize: 11, padding: "2px 10px", borderRadius: 20, background: waReceiptState[order.id] === "ok" ? "rgba(48,209,88,0.25)" : waReceiptState[order.id] === "error" ? "rgba(255,59,48,0.15)" : "rgba(48,209,88,0.12)", color: waReceiptState[order.id] === "error" ? "#ff6961" : "#30d158", border: `1px solid ${waReceiptState[order.id] === "error" ? "rgba(255,59,48,0.35)" : "rgba(48,209,88,0.25)"}`, fontWeight: 600, cursor: waReceiptState[order.id] === "sending" ? "wait" : "pointer" }}>
+                              {waReceiptState[order.id] === "sending" ? "Sending…" : waReceiptState[order.id] === "ok" ? "✅ Sent!" : waReceiptState[order.id] === "error" ? "❌ Failed" : "💬 WhatsApp"}
+                            </button>
                           </div>
                         ) : (
                           <p style={{ fontSize: 13, color: TM, marginTop: 2 }}>Walk-in</p>
