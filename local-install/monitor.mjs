@@ -273,7 +273,12 @@ async function checkPostgres() {
       await client.end();
       return { ok: true, details: "SELECT 1 ok" };
     } catch (err) {
-      return { ok: false, error: err.message ?? "postgres query failed" };
+      // If pg module simply isn't installed, fall through to TCP probe
+      if (err.code === "ERR_MODULE_NOT_FOUND" || err.code === "ERR_PACKAGE_PATH_NOT_EXPORTED") {
+        // fall through to TCP below
+      } else {
+        return { ok: false, error: err.message ?? "postgres query failed" };
+      }
     }
   }
   // Fallback: TCP port probe
