@@ -342,6 +342,42 @@ export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<boole
 }
 
 /**
+ * Sends a full itemised receipt via WhatsApp template (business-initiated, no 24h window needed).
+ * Template: island_tacos_order_receipt
+ * Body params:
+ *   {{1}} = customer name
+ *   {{2}} = confirmation code
+ *   {{3}} = formatted items + total block (single multiline string)
+ */
+export async function sendOrderReceiptWhatsApp(
+  order: OrderLike & { items: { name: string; qty: number; lineTotal: string; modifiers?: string[] }[] },
+): Promise<boolean> {
+  if (!order.customerPhone) return false;
+
+  const templateName = process.env.WA_TEMPLATE_RECEIPT ?? "island_tacos_order_receipt";
+  const name = order.customerName ?? "there";
+
+  const itemLines: string[] = [];
+  for (const item of order.items) {
+    itemLines.push(`• ${item.qty}x ${item.name}  ${item.lineTotal}`);
+    for (const mod of item.modifiers ?? []) {
+      itemLines.push(`   + ${mod}`);
+    }
+  }
+  itemLines.push("");
+  itemLines.push(`Total: ${order.total}`);
+
+  const receiptBlock = itemLines.join("\n");
+
+  return sendWhatsAppTemplate(
+    order.customerPhone,
+    templateName,
+    "en",
+    [name, order.confirmationCode, receiptBlock],
+  );
+}
+
+/**
  * Sends cancellation notification via WhatsApp template.
  * Template body param: {{1}} = confirmation code (e.g. IT-4521)
  */

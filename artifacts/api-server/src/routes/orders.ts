@@ -6,7 +6,7 @@ import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
 import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
 import { pushStatusToCloud } from "../lib/online-orders-sync";
-import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp, sendOrderCancelledWhatsApp, sendWhatsAppMessage } from "../lib/whatsapp";
+import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp, sendOrderCancelledWhatsApp, sendWhatsAppMessage, sendOrderReceiptWhatsApp } from "../lib/whatsapp";
 import { sendSms } from "../lib/sms-gateway";
 import nodemailer from "nodemailer";
 import { requireStaffAuth, isStaffAuthenticated } from "./auth";
@@ -1166,33 +1166,31 @@ router.post("/orders/:id/whatsapp-receipt", requireStaffAuth, async (req, res): 
   const fmt = (v: string | number | null | undefined) =>
     `$${parseFloat(String(v ?? 0)).toFixed(2)}`;
 
-  const lines: string[] = [
-    `Island Tacos 🌮`,
-    `Order #${order.confirmationCode}`,
-    ``,
-  ];
-  for (const item of items) {
-    const lineTotal = parseFloat(String(item.menuItemPrice ?? 0)) * (item.quantity ?? 1);
-    lines.push(`• ${item.quantity}x ${item.menuItemName}  ${fmt(lineTotal)}`);
-    if (item.modifierSelections && item.modifierSelections.length > 0) {
-      for (const mod of item.modifierSelections) {
-        if (mod?.name) lines.push(`   + ${mod.name}`);
-      }
-    }
-  }
-  lines.push(``);
-  if (parseFloat(String(order.discountAmount ?? 0)) > 0) {
-    lines.push(`Discount: -${fmt(order.discountAmount)}`);
-  }
-  lines.push(`Total: ${fmt(order.total)}`);
-  lines.push(``);
-  lines.push(`Thank you! See you next time 🌴`);
+  const receiptItems = items.map((item) => ({
+    name: item.menuItemName,
+    qty: item.quantity ?? 1,
+    lineTotal: fmt(parseFloat(String(item.menuItemPrice ?? 0)) * (item.quantity ?? 1)),
+    modifiers: (item.modifierSelections ?? []).map((m) => m.name).filter(Boolean) as string[],
+  }));
 
-  const ok = await sendWhatsAppMessage(order.customerPhone, lines.join("\n"));
+  // Prepend any discount line to the total display
+  const discountAmt = parseFloat(String(order.discountAmount ?? 0));
+  const totalDisplay = discountAmt > 0
+    ? `${fmt(order.total)} (incl. ${fmt(discountAmt)} discount)`
+    : fmt(order.total);
+
+  const ok = await sendOrderReceiptWhatsApp({
+    customerPhone: order.customerPhone,
+    customerName: order.customerName,
+    confirmationCode: order.confirmationCode,
+    total: totalDisplay,
+    items: receiptItems,
+  });
+
   if (ok) {
     res.json({ ok: true });
   } else {
-    res.status(502).json({ ok: false, error: "WhatsApp send failed — see server logs for details" });
+    res.status(502).json({ ok: false, error: "WhatsApp receipt send failed — template may still be pending Meta approval, or the number is unreachable" });
   }
 });
 
