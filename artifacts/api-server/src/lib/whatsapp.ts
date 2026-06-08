@@ -298,24 +298,16 @@ const PAY_LABEL: Record<string, string> = {
 /**
  * Sends "order ready" notification via WhatsApp template.
  *
- * Currently uses hello_world (test placeholder — no params).
- * Set WA_TEMPLATE_READY to your own approved "order ready" template name.
- * That template's body params should be: {{1}} = name, {{2}} = confirmation code.
+ * Template body param: {{1}} = confirmation code (e.g. IT-4521)
  */
 export async function sendOrderReadyWhatsApp(order: OrderLike): Promise<void> {
   if (!order.customerPhone) return;
 
-  const name     = order.customerName ?? "there";
-  const payLabel = order.paymentMethod ? (PAY_LABEL[order.paymentMethod] ?? order.paymentMethod) : "";
-
-  // hello_world has no body params; once you have an approved ready template,
-  // pass [name, order.confirmationCode, payLabel] here.
-  const isPlaceholder = TEMPLATE_READY === "hello_world";
   await sendWhatsAppTemplate(
     order.customerPhone,
     TEMPLATE_READY,
     "en",
-    isPlaceholder ? [] : [name, order.confirmationCode, payLabel],
+    [order.confirmationCode],
   );
 }
 
@@ -340,18 +332,15 @@ export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<void>
 
 /**
  * Sends cancellation notification via WhatsApp template.
- * Same placeholder pattern as sendOrderReadyWhatsApp.
+ * Template body param: {{1}} = confirmation code (e.g. IT-4521)
  */
 export async function sendOrderCancelledWhatsApp(order: OrderLike): Promise<void> {
   if (!order.customerPhone) return;
-
-  const name = order.customerName ?? "there";
-  const isPlaceholder = TEMPLATE_CANCELLED === "hello_world";
 
   await sendWhatsAppTemplate(
     order.customerPhone,
     TEMPLATE_CANCELLED,
     "en",
-    isPlaceholder ? [] : [name, order.confirmationCode],
+    [order.confirmationCode],
   );
 }
