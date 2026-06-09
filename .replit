@@ -59,6 +59,7 @@ META_VERIFY_TOKEN = "island-tacos-verify-2025"
 META_PHONE_NUMBER_ID = "1088934664312843"
 META_WHATSAPP_BUSINESS_ACCOUNT_ID = "956881270482368"
 META_WABA_ID = "956881270482368"
+PLACETOPAY_ENDPOINT = "https://checkout-test.placetopay.com/"
 
 [userenv.production]
 VITE_CLERK_PROXY_URL = "https://order-direct-connect.replit.app/api/__clerk"

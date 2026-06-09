@@ -27,6 +27,7 @@ export const ordersTable = pgTable("orders", {
   estimatedReadyAt: timestamp("estimated_ready_at", { withTimezone: true }),
   scheduledPickupAt: timestamp("scheduled_pickup_at", { withTimezone: true }),
   waReminderSentAt: timestamp("wa_reminder_sent_at", { withTimezone: true }),
+  placetopayRequestId: integer("placetopay_request_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [

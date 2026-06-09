@@ -22,8 +22,14 @@ const INP: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", fontFamily: "inherit",
 };
 
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 function getCode(): string {
   return new URLSearchParams(window.location.search).get("code") ?? "";
+}
+
+function hasPtpReturn(): boolean {
+  return new URLSearchParams(window.location.search).get("ptp") === "1";
 }
 
 export default function TrackOrder() {
@@ -35,6 +41,10 @@ export default function TrackOrder() {
     { query: { enabled: !!code, queryKey: getTrackOrderQueryKey(code) } }
   );
 
+  // Placetopay return state — initialised from URL on mount
+  const [ptpVerifying, setPtpVerifying] = useState(hasPtpReturn);
+  const [ptpFailed,    setPtpFailed]    = useState(false);
+
   // Poll every 8s until terminal
   useEffect(() => {
     if (!code) return;
@@ -45,6 +55,97 @@ export default function TrackOrder() {
     }, 8_000);
     return () => clearInterval(id);
   }, [code, order, queryClient]);
+
+  // Verify Placetopay payment when customer returns from hosted checkout
+  useEffect(() => {
+    if (!ptpVerifying || !code) return;
+    let cancelled = false;
+
+    const verify = async () => {
+      try {
+        const res  = await fetch(`${basePath}/api/payments/placetopay/verify`, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ code }),
+        });
+        const data = await res.json() as { status?: string };
+
+        if (cancelled) return;
+
+        if (data.status === "APPROVED") {
+          // Strip ?ptp=1 from URL so a page refresh doesn't re-verify
+          const url = new URL(window.location.href);
+          url.searchParams.delete("ptp");
+          window.history.replaceState({}, "", url.toString());
+          setPtpVerifying(false);
+          // Refresh order data so the confirmed status shows
+          queryClient.invalidateQueries({ queryKey: getTrackOrderQueryKey(code) });
+        } else if (data.status === "REJECTED" || data.status === "FAILED") {
+          setPtpVerifying(false);
+          setPtpFailed(true);
+        } else {
+          // PENDING — poll again in 3s
+          setTimeout(() => { if (!cancelled) void verify(); }, 3000);
+        }
+      } catch {
+        if (!cancelled) {
+          setPtpVerifying(false);
+          setPtpFailed(true);
+        }
+      }
+    };
+
+    void verify();
+    return () => { cancelled = true; };
+  }, [ptpVerifying, code, queryClient]);
+
+  // ── Placetopay return screens ─────────────────────────────────────────────
+  if (ptpVerifying) {
+    return (
+      <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+          <div style={{ width: 80, height: 80, borderRadius: 999, background: "rgba(124,106,247,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Loader2 style={{ width: 40, height: 40, color: PUR, animation: "spin 1s linear infinite" }} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: TP, margin: "0 0 8px" }}>Verifying your payment…</h1>
+            <p style={{ color: MU, fontSize: 14, margin: 0 }}>Just a moment while we confirm with the payment provider.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (ptpFailed) {
+    return (
+      <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
+        <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+          <div style={{ width: 96, height: 96, borderRadius: 999, background: "rgba(255,69,58,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <XCircle style={{ width: 56, height: 56, color: "#ff453a" }} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: 24, fontWeight: 900, color: TP, margin: "0 0 8px" }}>Payment not completed</h1>
+            <p style={{ color: MU, fontSize: 14, margin: 0, lineHeight: 1.6 }}>Your card payment was not approved. No charge was made.</p>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+            <a
+              href="/"
+              style={{
+                width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "13px 24px", borderRadius: 999, background: `linear-gradient(135deg,${OR},#ff3d00)`,
+                color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none",
+                boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
+              }}
+            >
+              Back to menu
+            </a>
+            <p style={{ fontSize: 12, color: MU, margin: 0 }}>Your order reference: <span style={{ fontFamily: "monospace", color: OR }}>{code}</span></p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // No code in URL — show search prompt
   if (!code) {

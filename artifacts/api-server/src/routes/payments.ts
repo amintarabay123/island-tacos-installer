@@ -7,6 +7,9 @@ import {
 } from "@workspace/api-zod";
 import { randomUUID } from "crypto";
 import { requireStaffAuth } from "./auth";
+import * as ptp from "../lib/placetopay.js";
+
+const STORE_URL = (process.env.STORE_URL ?? "https://orders.islandtacosbvi.com").replace(/\/$/, "");
 
 const ATH_BASE = "https://payments.athmovil.com/api/business-transaction/ecommerce";
 
@@ -309,6 +312,96 @@ router.post("/payments/athmovil/check-status", async (req, res): Promise<void> =
     res.status(502).json({ error: "Could not reach ATH Móvil" });
   }
 });
+
+// ── Placetopay WebCheckout ────────────────────────────────────────────────────
+
+// Public — creates a Placetopay hosted-checkout session for a pending card order.
+// Returns { processUrl } — frontend does window.location.href = processUrl.
+router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
+  const { orderId } = req.body as { orderId?: unknown };
+  if (typeof orderId !== "number") {
+    res.status(400).json({ error: "orderId is required" });
+    return;
+  }
+
+  if (!ptp.isConfigured()) {
+    res.status(503).json({ error: "Card payments not configured" });
+    return;
+  }
+
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+  if (order.paymentStatus === "paid") { res.status(400).json({ error: "Already paid" }); return; }
+
+  const totalUsd  = parseFloat(order.total as unknown as string).toFixed(2);
+  const returnUrl = `${STORE_URL}/track?code=${order.confirmationCode}&ptp=1`;
+
+  try {
+    const session = await ptp.createSession(
+      order.confirmationCode,
+      `Island Tacos order ${order.confirmationCode}`,
+      totalUsd,
+      returnUrl,
+      order.customerName,
+      order.customerPhone || "",
+    );
+
+    // Persist requestId so verify can find it even after a server restart
+    await db.update(ordersTable)
+      .set({ placetopayRequestId: session.requestId })
+      .where(eq(ordersTable.id, orderId));
+
+    req.log.info(`[PTP] session created — orderId=${orderId} requestId=${session.requestId}`);
+    res.json({ processUrl: session.processUrl });
+  } catch (err) {
+    req.log.error({ err }, "[PTP] session creation failed");
+    res.status(502).json({ error: "Could not create payment session. Please try again." });
+  }
+});
+
+// Public — verifies a Placetopay session after customer returns from hosted checkout.
+// Body: { code: string }  (order confirmation code, e.g. "IT-ABCD12")
+// Returns { status: PtpStatus }. Marks order paid when APPROVED.
+router.post("/payments/placetopay/verify", async (req, res): Promise<void> => {
+  const { code } = req.body as { code?: unknown };
+  if (typeof code !== "string" || !code) {
+    res.status(400).json({ error: "code is required" });
+    return;
+  }
+
+  const [order] = await db.select().from(ordersTable)
+    .where(eq(ordersTable.confirmationCode, code.toUpperCase()));
+  if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+
+  // Idempotent — if already marked paid, return APPROVED immediately
+  if (order.paymentStatus === "paid") {
+    res.json({ status: "APPROVED" });
+    return;
+  }
+
+  if (!order.placetopayRequestId) {
+    res.status(400).json({ error: "No Placetopay session associated with this order" });
+    return;
+  }
+
+  try {
+    const status = await ptp.getSessionStatus(order.placetopayRequestId);
+    req.log.info(`[PTP] verify — orderId=${order.id} code=${code} status=${status}`);
+
+    if (status === "APPROVED") {
+      await db.update(ordersTable)
+        .set({ paymentStatus: "paid", status: "confirmed", paymentMethod: "card" })
+        .where(eq(ordersTable.id, order.id));
+    }
+
+    res.json({ status });
+  } catch (err) {
+    req.log.error({ err }, "[PTP] verify failed");
+    res.status(502).json({ error: "Could not verify payment" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Staff-only: marks an order paid by orderId. Without auth, anyone could mark
 // arbitrary orders as paid by guessing IDs.

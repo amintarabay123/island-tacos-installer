@@ -68,6 +68,7 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [enabledMethods, setEnabledMethods] = useState<string[]>(["cash"]);
   const [athState, setAthState] = useState<AthState | null>(null);
+  const [ptpRedirecting, setPtpRedirecting] = useState(false);
   const [storeOpen, setStoreOpen] = useState(true);
   const [openToday, setOpenToday] = useState(true);
   const [storeOpenTime, setStoreOpenTime] = useState("11:00 AM");
@@ -226,6 +227,24 @@ export default function Checkout() {
     );
   }
 
+  if (ptpRedirecting) {
+    return (
+      <Layout>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 16px" }}>
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 20, alignItems: "center", maxWidth: 360 }}>
+            <div style={{ width: 72, height: 72, borderRadius: 999, background: "rgba(124,106,247,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Loader2 style={{ width: 36, height: 36, color: PUR, animation: "spin 1s linear infinite" }} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: TP, margin: "0 0 8px" }}>Redirecting to payment…</h2>
+              <p style={{ color: MU, fontSize: 14, margin: 0 }}>Taking you to our secure payment page.</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <Layout>
@@ -297,6 +316,25 @@ export default function Checkout() {
               phone: customerPhone.trim(),
               status: "waiting",
             });
+          } else if (paymentMethod === "card") {
+            setPtpRedirecting(true);
+            try {
+              const ptpRes = await fetch(`${basePath}/api/payments/placetopay/session`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: order.id }),
+              });
+              const ptpData = await ptpRes.json() as { processUrl?: string; error?: string };
+              if (ptpData.processUrl) {
+                window.location.href = ptpData.processUrl;
+              } else {
+                throw new Error(ptpData.error ?? "No payment URL returned");
+              }
+            } catch (err) {
+              setPtpRedirecting(false);
+              const msg = err instanceof Error ? err.message : "Could not start card payment. Please try again.";
+              toast({ title: msg, variant: "destructive" });
+            }
           } else {
             setLocation(`/track?code=${order.confirmationCode}`);
           }
@@ -312,7 +350,7 @@ export default function Checkout() {
   const methodInfo: Record<string, { label: string; description: string; icon: string }> = {
     cash:      { label: "Pay at Counter",  description: "Cash or card — pay when you pick up your order", icon: "$" },
     athmovil:  { label: "ATH Móvil",       description: "Pay now with ATH Móvil before pickup",           icon: "A" },
-    card:      { label: "Card Online",     description: "Pay now by card before pickup",                   icon: "💳" },
+    card:      { label: "Credit/Debit Card", description: "Pay now — you'll be redirected to a secure payment page", icon: "💳" },
   };
 
   return (
