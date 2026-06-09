@@ -69,12 +69,22 @@ try {
     Write-Warn "Server binary was still updated. Existing frontend will be used."
 }
 
-# Step 5: Ensure firewall rule exists for iPhone and Tailscale
-Write-Step "Checking firewall rule for port 3001..."
+# Step 5: Ensure firewall rules exist for iPhone and Tailscale
+Write-Step "Checking firewall rule for port 3001 (API server)..."
 $rule = Get-NetFirewallRule -DisplayName "Island Tacos Port 3001" -ErrorAction SilentlyContinue
 if (-not $rule) {
     New-NetFirewallRule -DisplayName "Island Tacos Port 3001" `
         -Direction Inbound -Protocol TCP -LocalPort 3001 -Action Allow -Profile Any | Out-Null
+    Write-OK "Firewall rule created."
+} else {
+    Write-OK "Firewall rule already exists."
+}
+
+Write-Step "Checking firewall rule for port 3002 (log viewer)..."
+$rule3002 = Get-NetFirewallRule -DisplayName "Island Tacos Port 3002" -ErrorAction SilentlyContinue
+if (-not $rule3002) {
+    New-NetFirewallRule -DisplayName "Island Tacos Port 3002" `
+        -Direction Inbound -Protocol TCP -LocalPort 3002 -Action Allow -Profile Any | Out-Null
     Write-OK "Firewall rule created."
 } else {
     Write-OK "Firewall rule already exists."

@@ -26,6 +26,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { createConnection } from "node:net";
+import { createServer as createHttpServer } from "node:http";
 import { homedir, platform as osPlatform } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -612,6 +613,118 @@ async function poll() {
     upsertMeta.run(key, value, now);
   }
 }
+
+// ── Log-viewer HTTP server (port 3002) ────────────────────────────────────────
+// Serves the last N lines of PM2 logs as a self-refreshing HTML page so the
+// operator can diagnose a crash-looping API server from any browser on the LAN
+// without needing SSH or Remote Desktop access.
+// Always up — independent of the API server process.
+
+const LOG_VIEWER_PORT = 3002;
+
+async function getLogLines(processName, logType, lines = 120) {
+  const logPath = join(homedir(), ".pm2", "logs", `${processName}-${logType}.log`);
+  if (!existsSync(logPath)) return `(${logPath} — not found)`;
+  try {
+    if (PLATFORM === "win32") {
+      const { stdout } = await execAsync(
+        `powershell -Command "Get-Content '${logPath}' -Tail ${lines} -ErrorAction SilentlyContinue"`,
+        { timeout: 5000 }
+      );
+      return stdout.trim() || "(empty)";
+    } else {
+      const { stdout } = await execAsync(`tail -${lines} "${logPath}"`, { timeout: 5000 });
+      return stdout.trim() || "(empty)";
+    }
+  } catch (err) {
+    return `(read error: ${err.message})`;
+  }
+}
+
+function esc(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+const logViewerServer = createHttpServer(async (req, res) => {
+  if (req.url !== "/" && req.url !== "/logs") {
+    res.writeHead(302, { Location: "/" });
+    res.end();
+    return;
+  }
+  const [errLog, outLog] = await Promise.all([
+    getLogLines("island-tacos", "error", 120),
+    getLogLines("island-tacos", "out",   60),
+  ]);
+
+  // Pull recent events from SQLite for extra context
+  let eventsHtml = "";
+  try {
+    const rows = db.prepare(`
+      SELECT ts, type, service, message, detail, diagnosis
+      FROM monitor_events
+      ORDER BY created_at DESC
+      LIMIT 15
+    `).all();
+    eventsHtml = rows.map(r =>
+      `<tr>
+         <td>${esc(r.ts?.slice(11,19) ?? "")}</td>
+         <td>${esc(r.type ?? "")}</td>
+         <td>${esc(r.service ?? "")}</td>
+         <td>${esc(r.message ?? "")}${r.detail ? `<br><small>${esc(r.detail)}</small>` : ""}${r.diagnosis ? `<br><em>${esc(r.diagnosis)}</em>` : ""}</td>
+       </tr>`
+    ).join("\n");
+  } catch { eventsHtml = "<tr><td colspan='4'>(SQLite unavailable)</td></tr>"; }
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="10">
+  <title>Island Tacos — Monitor Logs</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #eee; margin: 0; padding: 16px; }
+    h2   { color: #f90; margin: 0 0 4px; }
+    p    { margin: 0 0 16px; color: #aaa; font-size: 13px; }
+    pre  { background: #1a1a1a; border: 1px solid #333; padding: 12px; overflow-x: auto;
+           white-space: pre-wrap; word-break: break-word; font-size: 12px; max-height: 40vh; overflow-y: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; margin-bottom: 24px; }
+    th, td { border: 1px solid #333; padding: 4px 8px; text-align: left; vertical-align: top; }
+    th   { background: #222; color: #f90; }
+    .err { color: #f66; }
+  </style>
+</head>
+<body>
+  <h2>Island Tacos — Monitor Log Viewer</h2>
+  <p>Auto-refreshes every 10 s &nbsp;|&nbsp; ${new Date().toISOString()} &nbsp;|&nbsp; <a href="/" style="color:#88f">Refresh now</a></p>
+
+  <h3 class="err">⚠ island-tacos STDERR (last 120 lines)</h3>
+  <pre class="err">${esc(errLog)}</pre>
+
+  <h3>island-tacos STDOUT (last 60 lines)</h3>
+  <pre>${esc(outLog)}</pre>
+
+  <h3>Recent monitor events</h3>
+  <table>
+    <thead><tr><th>Time</th><th>Type</th><th>Service</th><th>Message</th></tr></thead>
+    <tbody>${eventsHtml}</tbody>
+  </table>
+</body>
+</html>`;
+
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+  res.end(html);
+});
+
+logViewerServer.listen(LOG_VIEWER_PORT, "0.0.0.0", () => {
+  log(`Log viewer listening on port ${LOG_VIEWER_PORT} — http://localhost:${LOG_VIEWER_PORT}/`);
+});
+
+logViewerServer.on("error", (err) => {
+  log(`Log viewer server error: ${err.message}`);
+});
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
