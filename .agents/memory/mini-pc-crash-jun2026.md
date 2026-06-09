@@ -1,47 +1,30 @@
 ---
-name: Mini PC crash after UPDATE — June 2026
-description: API server crash-looping after UPDATE.bat; root cause unknown; plan for next session.
+name: Mini PC crash after UPDATE — June 2026 (RESOLVED)
+description: Crash-loop after UPDATE.bat caused by missing pdfkit + installer tar popup storm. Fully fixed.
 ---
 
-# UNRESOLVED — act on this at the start of the next session
+# RESOLVED 2026-06-09
 
-## Situation
-Mini PC ran UPDATE.bat on 2026-06-09 and the API server (PM2 process "island-tacos") immediately
-started crash-looping: ~2s uptime, 319+ restarts. The POS and online ordering are down.
+## Root causes (two separate issues, same UPDATE)
 
-## What we know
-- PostgreSQL is up (monitor shows it green).
-- The crash is in the api-server process itself, not the DB or network.
-- The event log only shows "fetch failed" for api-http — no AI diagnosis because OPENAI_API_KEY
-  is not in the mini PC's .env.
-- The repair button ("Restart Process") was also failing because it used
-  `pm2 restart island-tacos --update-env` (fails on "errored" state). Fixed in latest deploy.
-- WhatsApp / SMS alert never fired: MONITOR_ALERT_PHONE not set in mini PC .env.
-- User cannot RDP or SSH in tonight (no Windows password on hand, PIN rejected by RDP).
+### 1. `Cannot find module 'pdfkit'`
+pdfkit is external in esbuild. The mini PC only gets `dist/index.mjs`, so pdfkit
+must be in `dist/node_modules/pdfkit`. UPDATE.ps1 now installs it automatically
+(Step 3b) using a throwaway `package.json` in `dist/` to avoid EUNSUPPORTEDPROTOCOL
+from npm seeing pnpm workspace specifiers.
 
-## Code changes already deployed (committed, need UPDATE.bat to reach mini PC)
-1. monitor.mjs — added port-3002 log-viewer HTTP server (dark HTML page, auto-refresh 10s,
-   shows last 120 lines of island-tacos-error.log + 60 lines stdout + last 15 monitor events).
-   After UPDATE, user can open http://100.127.143.98:3002/ to see crash logs without SSH/RDP.
-2. monitor.mjs + system.ts — repair command changed to
-   `pm2 restart local-install/ecosystem.config.cjs --update-env` (works from errored state).
-3. UPDATE.ps1 — adds Windows Firewall rule for port 3002.
-4. downloads.ts — MONITOR_ALERT_PHONE + MONITOR_ALERT_WA_PHONE added to pre-filled .env template.
+### 2. Console popup storm (every 2-4 seconds)
+`initInstallerCache()` runs on every server startup and calls `generateAndUpload()`,
+which spawns `tar` to build a GCS archive. On the mini PC:
+- `tar` was spawned without `windowsHide: true` → flashing console window on every restart
+- `tar.stderr` was never drained → pipe buffering caused unclean process exit → crash
+- Server crashed → PM2 restarted → tar spawned again → infinite loop
 
-## Plan for tomorrow morning (user goes to shop)
-1. Log in physically with Windows PIN.
-2. Open Command Prompt → run: `pm2 logs island-tacos --lines 60`
-3. Paste output here — that's the actual crash error; fix will be fast once we see it.
-4. Run UPDATE.bat to get the deployed fixes (log viewer on :3002, fixed repair cmd).
-5. Add to C:\IslandTacos\.env:
-   ```
-   MONITOR_ALERT_PHONE=+1284XXXXXXX   ← owner's number in E.164
-   OPENAI_API_KEY=<same key as cloud>
-   ```
-6. After crash is fixed: `pm2 restart local-install/ecosystem.config.cjs --update-env`
+**Fix:** `gcsReachable` flag in `initInstallerCache` skips `generateAndUpload` entirely
+when GCS throws (i.e. on the mini PC). Also added `windowsHide: true` and
+`tar.stderr.resume()` to the spawn call as defense-in-depth.
 
-## Other context
-- WhatsApp receipt template `purchase_receipt_3` is still "in review" at Meta.
-  When approved: rewrite sendOrderReceiptWhatsApp() in whatsapp.ts to generate PDF
-  per-order (pdfkit), upload to object storage, send with document header component.
-- WA_TEMPLATE_REMINDER env var is set; WA_TEMPLATE_RECEIPT falls back to 'island_tacos_order_receipt'.
+## Lesson
+The shop mini PC has `DEFAULT_OBJECT_STORAGE_BUCKET_ID` in its `.env` (injected by
+`/api/download/env`), so checking that env var is NOT a reliable way to detect
+"is this the mini PC". Use GCS reachability (`gcsReachable` flag) instead.
