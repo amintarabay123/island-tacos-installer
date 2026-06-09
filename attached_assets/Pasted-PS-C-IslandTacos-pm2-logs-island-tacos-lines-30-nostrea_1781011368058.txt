@@ -1,0 +1,64 @@
+PS C:\IslandTacos> pm2 logs island-tacos --lines 30 --nostream
+[TAILING] Tailing last 30 lines for [island-tacos] process (change the value with --lines option)
+C:\Users\amint\.pm2\logs\island-tacos-error.log last 30 lines:
+0|island-t | 2026-06-09 06:09:30:     at defaultResolve (node:internal/modules/esm/resolve:992:11)
+0|island-t | 2026-06-09 06:09:30:     at #cachedDefaultResolve (node:internal/modules/esm/loader:691:20)
+0|island-t | 2026-06-09 06:09:30:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:708:38)
+0|island-t | 2026-06-09 06:09:30:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:740:52)
+0|island-t | 2026-06-09 06:09:30:     at #resolve (node:internal/modules/esm/loader:673:17)
+0|island-t | 2026-06-09 06:09:30:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:593:35)
+0|island-t | 2026-06-09 06:09:30:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:163:33) {
+0|island-t | 2026-06-09 06:09:30:   code: 'ERR_MODULE_NOT_FOUND'
+0|island-t | 2026-06-09 06:09:30: }
+0|island-t | 2026-06-09 06:09:30:
+0|island-t | 2026-06-09 06:09:30: Node.js v24.16.0
+0|island-t | 2026-06-09 06:09:30: node:internal/modules/esm/resolve:201
+0|island-t | 2026-06-09 06:09:30:   const resolvedOption = FSLegacyMainResolve(pkgPath, packageConfig.main, baseStringified);
+0|island-t | 2026-06-09 06:09:30:                          ^
+0|island-t | 2026-06-09 06:09:30:
+0|island-t | 2026-06-09 06:09:30: Error: Cannot find package 'C:\IslandTacos\artifacts\api-server\dist\node_modules\pdfkit\index.js' imported from C:\IslandTacos\artifacts\api-server\dist\index.mjs
+0|island-t | 2026-06-09 06:09:30:     at legacyMainResolve (node:internal/modules/esm/resolve:201:26)
+0|island-t | 2026-06-09 06:09:30:     at packageResolve (node:internal/modules/esm/resolve:778:12)
+0|island-t | 2026-06-09 06:09:30:     at moduleResolve (node:internal/modules/esm/resolve:859:18)
+0|island-t | 2026-06-09 06:09:30:     at defaultResolve (node:internal/modules/esm/resolve:992:11)
+0|island-t | 2026-06-09 06:09:30:     at #cachedDefaultResolve (node:internal/modules/esm/loader:691:20)
+0|island-t | 2026-06-09 06:09:30:     at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:708:38)
+0|island-t | 2026-06-09 06:09:30:     at ModuleLoader.resolveSync (node:internal/modules/esm/loader:740:52)
+0|island-t | 2026-06-09 06:09:30:     at #resolve (node:internal/modules/esm/loader:673:17)
+0|island-t | 2026-06-09 06:09:30:     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:593:35)
+0|island-t | 2026-06-09 06:09:30:     at ModuleJob.syncLink (node:internal/modules/esm/module_job:163:33) {
+0|island-t | 2026-06-09 06:09:30:   code: 'ERR_MODULE_NOT_FOUND'
+0|island-t | 2026-06-09 06:09:30: }
+0|island-t | 2026-06-09 06:09:30:
+0|island-t | 2026-06-09 06:09:30: Node.js v24.16.0
+
+C:\Users\amint\.pm2\logs\island-tacos-out.log last 30 lines:
+0|island-t | }"}
+0|island-t | 2026-06-09 06:21:59: {"level":50,"time":1781011319034,"pid":5084,"hostname":"IslandTacos","err":"request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106","msg":"[frontend] init failed"}
+0|island-t | 2026-06-09 06:21:59: {"level":30,"time":1781011319035,"pid":5084,"hostname":"IslandTacos","msg":"[installer] generating archive..."}
+0|island-t | 2026-06-09 06:21:59: {"level":40,"time":1781011319141,"pid":5084,"hostname":"IslandTacos","msg":"[ATH webhook] Registration attempt returned 403: {\"message\":\"Invalid key=value pair (missing equal-sign) in Authorization header (hashed with SHA-256 and encoded with Base64): 'JB/XqbXtU4YmtSxC9640o1OqI5WbJl4x57f3JY0J3eo='.\"}"}
+0|island-t | 2026-06-09 06:21:59: {"level":40,"time":1781011319259,"pid":5084,"hostname":"IslandTacos","msg":"[ATH webhook] Registration attempt returned 403: {\"message\":\"Missing Authentication Token\"}"}
+0|island-t | 2026-06-09 06:21:59: {"level":40,"time":1781011319259,"pid":5084,"hostname":"IslandTacos","msg":"[ATH webhook] Auto-registration unsuccessful — webhook must be set manually in the ATH Móvil Business app."}
+0|island-t | 2026-06-09 06:22:00: {"level":30,"time":1781011320005,"pid":5084,"hostname":"IslandTacos","req":{"id":2,"method":"GET","url":"/api/orders"},"res":{"statusCode":304},"responseTime":50,"msg":"request completed"}
+0|island-t | 2026-06-09 06:22:02: {"level":30,"time":1781011322315,"pid":13476,"hostname":"IslandTacos","staticPath":"C:\\IslandTacos\\artifacts\\island-tacos\\dist\\public","basePath":"/","msg":"Serving frontend static files"}
+0|island-t | 2026-06-09 06:22:02: {"level":30,"time":1781011322343,"pid":13476,"hostname":"IslandTacos","port":3001,"msg":"Server listening"}
+0|island-t | 2026-06-09 06:22:02: {"level":30,"time":1781011322344,"pid":13476,"hostname":"IslandTacos","cloudUrl":"https://orders.islandtacosbvi.com","msg":"Online orders sync enabled — polling every 5s"}
+0|island-t | 2026-06-09 06:22:02: {"level":30,"time":1781011322364,"pid":13476,"hostname":"IslandTacos","msg":"[reminders] pickup reminder job started (60min threshold, 10min poll)"}
+0|island-t | 2026-06-09 06:22:02: {"level":30,"time":1781011322424,"pid":13476,"hostname":"IslandTacos","req":{"id":1,"method":"GET","url":"/api/healthz"},"res":{"statusCode":200},"responseTime":7,"msg":"request completed"}
+0|island-t | 2026-06-09 06:22:02: {"level":40,"time":1781011322744,"pid":13476,"hostname":"IslandTacos","msg":"[ATH webhook] Registration attempt returned 403: {\"message\":\"Invalid key=value pair (missing equal-sign) in Authorization header (hashed with SHA-256 and encoded with Base64): 'SdkR8es45Vy+Jjj/ziHpmDbjKpxrI5ie+/a/WV/aIas='.\"}"}
+0|island-t | 2026-06-09 06:22:02: {"level":50,"time":1781011322998,"pid":13476,"hostname":"IslandTacos","err":"request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106","msg":"[frontend] init failed"}
+0|island-t | 2026-06-09 06:22:03: {"level":30,"time":1781011322998,"pid":13476,"hostname":"IslandTacos","msg":"[installer] generating archive..."}
+0|island-t | 2026-06-09 06:22:03: {"level":40,"time":1781011323089,"pid":13476,"hostname":"IslandTacos","msg":"[ATH webhook] Registration attempt returned 403: {\"message\":\"Invalid key=value pair (missing equal-sign) in Authorization header (hashed with SHA-256 and encoded with Base64): 'JB/XqbXtU4YmtSxC9640o1OqI5WbJl4x57f3JY0J3eo='.\"}"}
+0|island-t | 2026-06-09 06:22:03: {"level":40,"time":1781011323213,"pid":13476,"hostname":"IslandTacos","msg":"[ATH webhook] Registration attempt returned 403: {\"message\":\"Missing Authentication Token\"}"}
+0|island-t | 2026-06-09 06:22:03: {"level":40,"time":1781011323213,"pid":13476,"hostname":"IslandTacos","msg":"[ATH webhook] Auto-registration unsuccessful — webhook must be set manually in the ATH Móvil Business app."}
+0|island-t | 2026-06-09 06:22:06: {"level":30,"time":1781011326189,"pid":13548,"hostname":"IslandTacos","staticPath":"C:\\IslandTacos\\artifacts\\island-tacos\\dist\\public","basePath":"/","msg":"Serving frontend static files"}
+0|island-t | 2026-06-09 06:22:06: {"level":30,"time":1781011326217,"pid":13548,"hostname":"IslandTacos","port":3001,"msg":"Server listening"}
+0|island-t | 2026-06-09 06:22:06: {"level":30,"time":1781011326218,"pid":13548,"hostname":"IslandTacos","cloudUrl":"https://orders.islandtacosbvi.com","msg":"Online orders sync enabled — polling every 5s"}
+0|island-t | 2026-06-09 06:22:06: {"level":30,"time":1781011326231,"pid":13548,"hostname":"IslandTacos","msg":"[reminders] pickup reminder job started (60min threshold, 10min poll)"}
+0|island-t | 2026-06-09 06:22:06: {"level":30,"time":1781011326361,"pid":13548,"hostname":"IslandTacos","req":{"id":1,"method":"GET","url":"/api/healthz"},"res":{"statusCode":200},"responseTime":6,"msg":"request completed"}
+0|island-t | 2026-06-09 06:22:06: {"level":40,"time":1781011326604,"pid":13548,"hostname":"IslandTacos","msg":"[ATH webhook] Registration attempt returned 403: {\"message\":\"Invalid key=value pair (missing equal-sign) in Authorization header (hashed with SHA-256 and encoded with Base64): 'SdkR8es45Vy+Jjj/ziHpmDbjKpxrI5ie+/a/WV/aIas='.\"}"}
+0|island-t | 2026-06-09 06:22:06: {"level":50,"time":1781011326856,"pid":13548,"hostname":"IslandTacos","err":"request to http://127.0.0.1:1106/credential failed, reason: connect ECONNREFUSED 127.0.0.1:1106","msg":"[frontend] init failed"}
+0|island-t | 2026-06-09 06:22:06: {"level":30,"time":1781011326856,"pid":13548,"hostname":"IslandTacos","msg":"[installer] generating archive..."}
+0|island-t | 2026-06-09 06:22:06: {"level":40,"time":1781011326972,"pid":13548,"hostname":"IslandTacos","msg":"[ATH webhook] Registration attempt returned 403: {\"message\":\"Invalid key=value pair (missing equal-sign) in Authorization header (hashed with SHA-256 and encoded with Base64): 'JB/XqbXtU4YmtSxC9640o1OqI5WbJl4x57f3JY0J3eo='.\"}"}
+0|island-t | 2026-06-09 06:22:07: {"level":40,"time":1781011327097,"pid":13548,"hostname":"IslandTacos","msg":"[ATH webhook] Registration attempt returned 403: {\"message\":\"Missing Authentication Token\"}"}
+0|island-t | 2026-06-09 06:22:07: {"level":40,"time":1781011327097,"pid":13548,"hostname":"IslandTacos","msg":"[ATH webhook] Auto-registration unsuccessful — webhook must be set manually in the ATH Móvil Business app."}
