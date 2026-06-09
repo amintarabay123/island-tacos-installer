@@ -45,16 +45,29 @@ Write-OK "Server binary updated ($([math]::Round($sz/1MB, 1)) MB)."
 # Step 3b: Install external server dependencies that are not bundled
 # pdfkit reads AFM font data files relative to its own directory at runtime,
 # so it cannot be bundled by esbuild and must be present in node_modules.
+# We install into dist/ (next to index.mjs) so Node finds it first,
+# and we create a minimal package.json there so npm doesn't pick up the
+# pnpm workspace package.json (which uses catalog:/workspace: protocols
+# that plain npm cannot resolve — EUNSUPPORTEDPROTOCOL).
 Write-Step "Installing server dependencies..."
-Push-Location "$Root\artifacts\api-server"
+$distDir = "$Root\artifacts\api-server\dist"
+$distPkg = "$distDir\package.json"
+$removedPkg = $false
 try {
-    $npmOut = npm install pdfkit --no-save 2>&1
-    if ($LASTEXITCODE -ne 0) { throw $npmOut }
+    if (-not (Test-Path $distPkg)) {
+        '{"name":"island-tacos-server","version":"1.0.0","private":true}' |
+            Set-Content $distPkg -Encoding UTF8
+        $removedPkg = $true
+    }
+    $npmOut = npm install pdfkit --prefix $distDir --no-save 2>&1
+    if ($LASTEXITCODE -ne 0) { throw ($npmOut -join "`n") }
     Write-OK "pdfkit installed."
 } catch {
     Write-Warn "pdfkit install skipped: $_ (server may fail to start if pdfkit is missing)"
 } finally {
-    Pop-Location
+    if ($removedPkg -and (Test-Path $distPkg)) {
+        Remove-Item $distPkg -Force -ErrorAction SilentlyContinue
+    }
 }
 
 # Step 4: Download updated frontend bundle
