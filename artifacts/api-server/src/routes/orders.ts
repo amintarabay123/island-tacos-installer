@@ -1206,24 +1206,11 @@ router.post("/orders/:id/whatsapp-receipt", requireStaffAuth, async (req, res): 
     return;
   }
 
-  const items = await db
-    .select()
-    .from(orderItemsTable)
-    .where(eq(orderItemsTable.orderId, order.id));
-
-  const ok = await sendOrderReceiptWhatsApp(
-    {
-      customerPhone:    order.customerPhone,
-      customerName:     order.customerName,
-      confirmationCode: order.confirmationCode,
-    },
-    items.map((i) => ({
-      menuItemName: i.menuItemName,
-      quantity:     i.quantity,
-      subtotal:     i.subtotal,
-    })),
-    order.total,
-  );
+  const ok = await sendOrderReceiptWhatsApp({
+    customerPhone:    order.customerPhone,
+    customerName:     order.customerName,
+    confirmationCode: order.confirmationCode,
+  });
 
   if (ok) {
     res.json({ ok: true });

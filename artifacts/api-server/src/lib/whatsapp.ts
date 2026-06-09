@@ -351,32 +351,28 @@ export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<boole
 
 /**
  * Sends a WhatsApp receipt template.
- * Template: island_tacos_order_receipt (approved utility template)
- *   Header:  TEXT — "Your Order Receipt" (static, no component needed)
- *   Body:    {{1}} = customer name, {{2}} = confirmation code, {{3}} = formatted item list
- *   Footer:  "Island Tacos — Wickhams Cay 1, Road Town" (static)
+ * Template: island_tacos_order_receipt (WABA 1725555828883850, approved utility)
+ *   Header:  DOCUMENT — PDF fetched by Meta from GET /api/orders/receipt/:code
+ *   Body:    {{1}} = customer name, {{2}} = confirmation code
+ *   Footer:  "Wickhams Cay 1, Road Town, BVI" (static)
+ *   Language: en_US
  */
 export async function sendOrderReceiptWhatsApp(
   order: Pick<OrderLike, "customerPhone" | "customerName" | "confirmationCode">,
-  items: { menuItemName: string; quantity: number; subtotal: string | number }[],
-  total: string | number,
 ): Promise<boolean> {
   if (!order.customerPhone) return false;
 
   const templateName = process.env.WA_TEMPLATE_RECEIPT ?? "island_tacos_order_receipt";
   const name = order.customerName ?? "there";
-
-  const lines = items.map(
-    (i) => `\u2022 ${i.quantity}x ${i.menuItemName}  $${Number(i.subtotal).toFixed(2)}`,
-  );
-  lines.push(`\nTotal: $${Number(total).toFixed(2)}`);
-  const itemList = lines.join("\n");
+  const publicUrl = (process.env.STORE_URL ?? "https://orders.islandtacosbvi.com").replace(/\/$/, "");
+  const pdfUrl    = `${publicUrl}/api/orders/receipt/${order.confirmationCode}`;
 
   return sendWhatsAppTemplate(
     order.customerPhone,
     templateName,
     "en_US",
-    [name, order.confirmationCode, itemList],
+    [name, order.confirmationCode],
+    { link: pdfUrl, filename: `Island-Tacos-Receipt-${order.confirmationCode}.pdf` },
   );
 }
 
