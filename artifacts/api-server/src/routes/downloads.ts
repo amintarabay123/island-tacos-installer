@@ -70,9 +70,13 @@ async function generateAndUpload(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       const tmp = INSTALLER_CACHE + ".tmp";
       const out = fs.createWriteStream(tmp);
-      const tar = spawn("tar", ["-czf", "-", ...EXCLUDE, "."], { cwd: PROJECT_ROOT });
+      // windowsHide: true prevents a brief console window flashing on Windows
+      // whenever the server restarts (e.g. on the shop mini PC).
+      const tar = spawn("tar", ["-czf", "-", ...EXCLUDE, "."], { cwd: PROJECT_ROOT, windowsHide: true });
 
       tar.stdout.pipe(out);
+      // Drain stderr so the buffer never fills and the process never hangs
+      tar.stderr.resume();
 
       out.on("error", (err) => {
         tar.kill();
@@ -130,17 +134,30 @@ async function generateAndUpload(): Promise<void> {
 // are available right away, then always regenerate a fresh archive in the background
 // so the archive stays in sync with the latest deployed source.
 async function initInstallerCache(): Promise<void> {
+  let gcsReachable = false;
   try {
     const bucket = getBucket();
     const file = bucket.file(GCS_OBJECT_NAME);
     const [exists] = await file.exists();
+    gcsReachable = true; // only set if no exception thrown above
     if (exists) {
       const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID!;
       gcsPublicUrl = await signObjectGetURL(bucketId, GCS_OBJECT_NAME, 7 * 24 * 3600);
       logger.info("[installer] existing GCS object signed — regenerating fresh archive in background...");
     }
   } catch {
-    // No existing object or GCS unavailable — will generate fresh
+    // No existing object or GCS unavailable (e.g. shop mini PC has bucket ID in .env
+    // but no service-account credentials) — gcsReachable stays false, skip generation.
+  }
+
+  // Only regenerate on hosts where GCS is actually reachable (cloud deployment).
+  // The shop mini PC has DEFAULT_OBJECT_STORAGE_BUCKET_ID in its .env but has no
+  // GCS service-account credentials, so the file.exists() call above will throw
+  // (ECONNREFUSED to 127.0.0.1:1106). We track that with gcsReachable so we don't
+  // spawn tar on the mini PC — that would flash a console window on every restart.
+  if (!gcsReachable) {
+    logger.info("[installer] skipping archive generation (GCS unreachable — likely shop mini PC)");
+    return;
   }
 
   // Always regenerate on startup so the archive matches the current deployment
