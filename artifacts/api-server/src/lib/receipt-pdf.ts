@@ -21,6 +21,7 @@ export interface ReceiptPdfData {
   discountAmount:   string;
   total:            string;
   items:            ReceiptPdfItem[];
+  storeEmail?:      string;
 }
 
 const PAY_LABEL: Record<string, string> = {
@@ -36,40 +37,44 @@ function fmtMoney(v: string | number): string {
   return `$${parseFloat(String(v)).toFixed(2)}`;
 }
 
-function dashedLine(doc: InstanceType<typeof PDFDocument>, x: number, w: number, y: number): void {
-  doc.save()
-    .moveTo(x, y).lineTo(x + w, y)
-    .dash(2, { space: 2 })
-    .strokeColor("#cccccc").lineWidth(0.5).stroke()
-    .restore();
+// Dashed line matching the sample receipt style
+function dashes(doc: InstanceType<typeof PDFDocument>, x: number, y: number, w: number): void {
+  doc.fontSize(7).font("Helvetica").fillColor("#555555")
+    .text("- - - - - - - - - - - - - - - - - - - - - - - - -", x, y, {
+      width: w, align: "center", lineBreak: false,
+    });
 }
 
 export function buildReceiptPdf(data: ReceiptPdfData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    // ── Page geometry (80 mm thermal receipt) ─────────────────────────────────
-    const MM_TO_PT = 2.8346;
-    const PAGE_W   = Math.round(80 * MM_TO_PT);   // 227 pts
-    const MARGIN   = 12;
-    const CW       = PAGE_W - MARGIN * 2;          // content width
+    // ── Page geometry (80mm thermal receipt = 227pt wide) ────────────────────
+    const PAGE_W  = 227;
+    const MARGIN  = 10;
+    const CW      = PAGE_W - MARGIN * 2;   // 207
 
-    // Pre-calculate page height so the PDF is snug (no trailing blank space)
-    let estimatedH = 310; // header + order info + totals + footer
-    for (const item of data.items) {
-      estimatedH += 22;
-      estimatedH += (item.modifiers?.filter(m => m.name).length ?? 0) * 13;
-      if (item.notes) estimatedH += 13;
-    }
+    // Column x positions (matched exactly to sample receipt)
+    const COL_NAME  = MARGIN;              // x=10
+    const COL_QTY   = 120;
+    const COL_PRICE = 138;
+    const COL_TTL   = 173;
+    const COL_TTL_W = PAGE_W - MARGIN - COL_TTL; // 34
+
+    // Pre-calculate page height
     const discount = parseFloat(String(data.discountAmount ?? "0"));
-    if (discount > 0) estimatedH += 34;
-    const PAGE_H = estimatedH + 30;
+    let itemH = 0;
+    for (const item of data.items) {
+      itemH += 11;                         // name + total line
+      itemH += 10;                         // qty × price line
+      itemH += (item.modifiers?.filter(m => m.name).length ?? 0) * 10;
+      if (item.notes) itemH += 10;
+      itemH += 3;                          // gap between items
+    }
+    const PAGE_H = 195 + itemH + (discount > 0 ? 20 : 0) + 60;
 
     const doc = new PDFDocument({
-      size:    [PAGE_W, PAGE_H],
-      margin:  0,
-      info: {
-        Title:  `Island Tacos Receipt - ${data.confirmationCode}`,
-        Author: "Island Tacos",
-      },
+      size:   [PAGE_W, PAGE_H],
+      margin: 0,
+      info: { Title: `Island Tacos Receipt - ${data.confirmationCode}`, Author: "Island Tacos" },
     });
 
     const chunks: Buffer[] = [];
@@ -77,91 +82,87 @@ export function buildReceiptPdf(data: ReceiptPdfData): Promise<Buffer> {
     doc.on("end",   ()          => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    let y = MARGIN;
-
-    // ── Logo ───────────────────────────────────────────────────────────────────
-    // Use import.meta.url so the path is correct regardless of process.cwd().
-    // The compiled bundle lives at artifacts/api-server/dist/index.mjs;
-    // logo.png is 512×512 (108 KB) — small enough to embed in a receipt PDF.
-    const __dir = path.dirname(fileURLToPath(import.meta.url));
+    // ── Logo ──────────────────────────────────────────────────────────────────
+    // receipt-logo.png lives in src/assets/ and is copied to dist/assets/ at build time.
+    // That keeps it inside the api-server artifact — no cross-artifact filesystem dependency.
+    const __dir  = path.dirname(fileURLToPath(import.meta.url));
     const logoCandidates = [
-      path.join(__dir, "../../../artifacts/island-tacos/public/logo.png"),
-      path.join(process.cwd(), "artifacts/island-tacos/public/logo.png"),
+      path.join(__dir, "assets/receipt-logo.png"),             // production: dist/assets/
+      path.join(__dir, "../src/assets/receipt-logo.png"),      // dev: src/assets/ (tsx)
+      path.join(process.cwd(), "src/assets/receipt-logo.png"), // fallback
     ];
     const logoPath = logoCandidates.find((p) => existsSync(p));
+
+    let y = 10;
     if (logoPath) {
-      const logoW = 110;
-      doc.image(logoPath, (PAGE_W - logoW) / 2, y, { width: logoW });
-      y += 40;
+      const logoW = 130;
+      const logoH = 65;
+      doc.image(logoPath, (PAGE_W - logoW) / 2, y, { width: logoW, height: logoH });
+      y += logoH + 11;   // y ≈ 86
+    } else {
+      // Fallback: store name in text
+      doc.fontSize(11).font("Helvetica-Bold").fillColor("#e05a00")
+        .text("ISLAND TACOS", MARGIN, y, { width: CW, align: "center" });
+      y += 20;
     }
 
-    // ── Store name & address ───────────────────────────────────────────────────
-    doc.fontSize(11).font("Helvetica-Bold").fillColor("#e05a00")
-      .text("ISLAND TACOS", MARGIN, y, { width: CW, align: "center" });
-    y += 15;
-    doc.fontSize(7.5).font("Helvetica").fillColor("#777")
-      .text("Wickhams Cay 1 · Road Town, BVI", MARGIN, y, { width: CW, align: "center" });
+    // ── Store address & email ─────────────────────────────────────────────────
+    doc.fontSize(7).font("Helvetica").fillColor("#000000")
+      .text("Wickhams Cay 1, Road Town, BVI", MARGIN, y, { width: CW, align: "center" });
+    y += 10;
+    const email = data.storeEmail ?? "orders@islandtacosbvi.com";
+    doc.fontSize(7).font("Helvetica").fillColor("#000000")
+      .text(email, MARGIN, y, { width: CW, align: "center" });
     y += 11;
-    doc.fontSize(7.5).font("Helvetica").fillColor("#777")
-      .text("(284) 544-8088", MARGIN, y, { width: CW, align: "center" });
-    y += 14;
 
-    dashedLine(doc, MARGIN, CW, y); y += 10;
+    // ── Divider ───────────────────────────────────────────────────────────────
+    dashes(doc, MARGIN, y, CW); y += 11;
 
-    // ── Receipt heading ────────────────────────────────────────────────────────
-    doc.fontSize(7).font("Helvetica-Bold").fillColor("#aaa")
-      .text("RECEIPT", MARGIN, y, { width: CW, align: "center", characterSpacing: 1.5 });
+    // ── Receipt heading ───────────────────────────────────────────────────────
+    doc.fontSize(9).font("Helvetica-Bold").fillColor("#000000")
+      .text("ORDER RECEIPT", MARGIN, y, { width: CW, align: "center" });
+    y += 13;
+
+    // ── Order # and date on same line ─────────────────────────────────────────
+    const dateStr = new Date(data.createdAt).toLocaleDateString("en-US", {
+      month: "short", day: "numeric", year: "numeric",
+      timeZone: "America/Puerto_Rico",
+    }) + "  " + new Date(data.createdAt).toLocaleTimeString("en-US", {
+      hour: "numeric", minute: "2-digit",
+      timeZone: "America/Puerto_Rico",
+    });
+    doc.fontSize(7).font("Helvetica").fillColor("#000000")
+      .text(`Order #: ${data.confirmationCode}`, COL_NAME, y, { lineBreak: false });
+    doc.fontSize(7).font("Helvetica").fillColor("#000000")
+      .text(dateStr, 90, y, { width: PAGE_W - MARGIN - 90, align: "right", lineBreak: false });
+    y += 10;
+
+    doc.fontSize(7).font("Helvetica").fillColor("#000000")
+      .text(`Customer: ${data.customerName}`, COL_NAME, y);
+    y += 10;
+
+    doc.fontSize(7).font("Helvetica").fillColor("#000000")
+      .text(`Payment: ${PAY_LABEL[data.paymentMethod] ?? data.paymentMethod}`, COL_NAME, y);
     y += 11;
-    doc.fontSize(11).font("Helvetica-Bold").fillColor("#111")
-      .text(data.confirmationCode, MARGIN, y, { width: CW, align: "center" });
-    y += 16;
-    doc.fontSize(7.5).font("Helvetica").fillColor("#777")
-      .text(
-        new Date(data.createdAt).toLocaleDateString("en-US", {
-          month: "long", day: "numeric", year: "numeric",
-          timeZone: "America/Puerto_Rico",
-        }) + "  " +
-        new Date(data.createdAt).toLocaleTimeString("en-US", {
-          hour: "numeric", minute: "2-digit",
-          timeZone: "America/Puerto_Rico",
-        }),
-        MARGIN, y, { width: CW, align: "center" },
-      );
-    y += 14;
 
-    dashedLine(doc, MARGIN, CW, y); y += 10;
+    // ── Divider ───────────────────────────────────────────────────────────────
+    dashes(doc, MARGIN, y, CW); y += 11;
 
-    // ── Customer ───────────────────────────────────────────────────────────────
-    doc.fontSize(7).font("Helvetica-Bold").fillColor("#aaa")
-      .text("CUSTOMER", MARGIN, y, { characterSpacing: 1 });
-    y += 11;
-    doc.fontSize(9).font("Helvetica-Bold").fillColor("#111")
-      .text(data.customerName, MARGIN, y);
-    y += 15;
+    // ── Column headers ────────────────────────────────────────────────────────
+    doc.fontSize(7.5).font("Helvetica-Bold").fillColor("#000000");
+    doc.text("ITEM",  COL_NAME,  y, { lineBreak: false });
+    doc.text("QTY",   COL_QTY,   y, { lineBreak: false });
+    doc.text("PRICE", COL_PRICE, y, { lineBreak: false });
+    doc.text("TTL",   COL_TTL,   y, { width: COL_TTL_W, align: "right", lineBreak: false });
+    y += 10;
 
-    dashedLine(doc, MARGIN, CW, y); y += 8;
-
-    // ── Column headers ─────────────────────────────────────────────────────────
-    const PRICE_X = MARGIN + CW - 48;
-    const PRICE_W = 48;
-    const NAME_W  = CW - PRICE_W - 4;
-
-    doc.fontSize(7).font("Helvetica-Bold").fillColor("#aaa");
-    doc.text("ITEM",  MARGIN,   y, { width: NAME_W,  characterSpacing: 1 });
-    doc.text("TOTAL", PRICE_X,  y, { width: PRICE_W, align: "right", characterSpacing: 1 });
-    y += 11;
-    dashedLine(doc, MARGIN, CW, y); y += 7;
-
-    // ── Line items ─────────────────────────────────────────────────────────────
+    // ── Line items ────────────────────────────────────────────────────────────
     for (const item of data.items) {
-      doc.fontSize(9).font("Helvetica-Bold").fillColor("#111")
-        .text(item.name, MARGIN, y, { width: NAME_W, lineBreak: false });
-      doc.fontSize(9).font("Helvetica-Bold").fillColor("#111")
-        .text(fmtMoney(item.subtotal), PRICE_X, y, { width: PRICE_W, align: "right", lineBreak: false });
-      y += 13;
-
-      doc.fontSize(7.5).font("Helvetica").fillColor("#888")
-        .text(`${item.quantity} × ${fmtMoney(item.unitPrice)}`, MARGIN + 4, y, { lineBreak: false });
+      doc.fontSize(7.5).font("Helvetica").fillColor("#000000");
+      doc.text(item.name,                COL_NAME,  y, { width: 108, lineBreak: false });
+      doc.text(String(item.quantity),    COL_QTY,   y, { lineBreak: false });
+      doc.text(fmtMoney(item.unitPrice), COL_PRICE, y, { lineBreak: false });
+      doc.text(fmtMoney(item.subtotal),  COL_TTL,   y, { width: COL_TTL_W, align: "right", lineBreak: false });
       y += 11;
 
       for (const mod of item.modifiers ?? []) {
@@ -169,64 +170,51 @@ export function buildReceiptPdf(data: ReceiptPdfData): Promise<Buffer> {
         const label = mod.price > 0
           ? `+ ${mod.name}  +${fmtMoney(mod.price)}`
           : `+ ${mod.name}`;
-        doc.fontSize(7.5).font("Helvetica").fillColor("#aaa")
-          .text(label, MARGIN + 4, y, { width: CW - 8, lineBreak: false });
-        y += 12;
+        doc.fontSize(7).font("Helvetica").fillColor("#555555")
+          .text(label, MARGIN + 6, y, { width: CW - 6, lineBreak: false });
+        y += 10;
       }
 
       if (item.notes) {
-        doc.fontSize(7.5).font("Helvetica-Oblique").fillColor("#aaa")
-          .text(`Note: ${item.notes}`, MARGIN + 4, y, { width: CW - 8, lineBreak: false });
-        y += 12;
+        doc.fontSize(7).font("Helvetica-Oblique").fillColor("#777777")
+          .text(`Note: ${item.notes}`, MARGIN + 6, y, { width: CW - 6, lineBreak: false });
+        y += 10;
       }
 
       y += 3;
     }
 
-    dashedLine(doc, MARGIN, CW, y); y += 9;
+    // ── Divider ───────────────────────────────────────────────────────────────
+    dashes(doc, MARGIN, y, CW); y += 11;
 
-    // ── Totals ─────────────────────────────────────────────────────────────────
-    const LBL_X = MARGIN;
-    const VAL_X = MARGIN + CW - 60;
-    const VAL_W = 60;
-
+    // ── Totals ────────────────────────────────────────────────────────────────
     if (discount > 0) {
-      doc.fontSize(9).font("Helvetica").fillColor("#555");
-      doc.text("Subtotal", LBL_X, y, { lineBreak: false });
-      doc.text(fmtMoney(data.subtotal), VAL_X, y, { width: VAL_W, align: "right", lineBreak: false });
-      y += 14;
+      doc.fontSize(7.5).font("Helvetica").fillColor("#000000")
+        .text("Subtotal", COL_NAME, y, { lineBreak: false });
+      doc.text(fmtMoney(data.subtotal), COL_TTL, y, { width: COL_TTL_W, align: "right", lineBreak: false });
+      y += 10;
 
-      doc.fontSize(9).font("Helvetica").fillColor("#16a34a");
-      doc.text("Discount", LBL_X, y, { lineBreak: false });
-      doc.text(`−${fmtMoney(discount)}`, VAL_X, y, { width: VAL_W, align: "right", lineBreak: false });
-      y += 14;
-
-      dashedLine(doc, MARGIN, CW, y); y += 9;
+      doc.fontSize(7.5).font("Helvetica").fillColor("#000000")
+        .text("Discount", COL_NAME, y, { lineBreak: false });
+      doc.text(`-${fmtMoney(discount)}`, COL_TTL, y, { width: COL_TTL_W, align: "right", lineBreak: false });
+      y += 10;
     }
 
-    doc.fontSize(11).font("Helvetica-Bold").fillColor("#111");
-    doc.text("TOTAL", LBL_X, y, { lineBreak: false });
-    doc.text(fmtMoney(data.total), VAL_X, y, { width: VAL_W, align: "right", lineBreak: false });
-    y += 17;
-
-    doc.fontSize(8).font("Helvetica").fillColor("#aaa")
-      .text(
-        `Paid via ${PAY_LABEL[data.paymentMethod] ?? data.paymentMethod}`,
-        LBL_X, y, { width: CW, align: "right", lineBreak: false },
-      );
-    y += 18;
-
-    dashedLine(doc, MARGIN, CW, y); y += 12;
-
-    // ── Footer ─────────────────────────────────────────────────────────────────
-    doc.fontSize(9).font("Helvetica-Bold").fillColor("#e05a00")
-      .text("Thank you!", MARGIN, y, { width: CW, align: "center" });
+    doc.fontSize(8).font("Helvetica-Bold").fillColor("#000000")
+      .text("TOTAL", COL_NAME, y, { lineBreak: false });
+    doc.fontSize(8).font("Helvetica-Bold").fillColor("#000000")
+      .text(fmtMoney(data.total), COL_TTL, y, { width: COL_TTL_W, align: "right", lineBreak: false });
     y += 13;
-    doc.fontSize(8).font("Helvetica").fillColor("#888")
-      .text("Come visit us again soon 🌮", MARGIN, y, { width: CW, align: "center" });
-    y += 13;
-    doc.fontSize(7).font("Helvetica").fillColor("#bbb")
-      .text("orders.islandtacosbvi.com", MARGIN, y, { width: CW, align: "center" });
+
+    // ── Divider ───────────────────────────────────────────────────────────────
+    dashes(doc, MARGIN, y, CW); y += 11;
+
+    // ── Footer ────────────────────────────────────────────────────────────────
+    doc.fontSize(7.5).font("Helvetica").fillColor("#000000")
+      .text("Thank you for dining with us!", MARGIN, y, { width: CW, align: "center" });
+    y += 10;
+    doc.fontSize(7).font("Helvetica").fillColor("#555555")
+      .text("Pickup Only · Road Town, BVI", MARGIN, y, { width: CW, align: "center" });
 
     doc.end();
   });
