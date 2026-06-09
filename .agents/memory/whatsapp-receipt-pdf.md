@@ -14,3 +14,5 @@ description: Lessons from debugging the island_tacos_order_receipt template deli
 4. **WhatsApp 132001 "template not found"** — always verify: (a) correct WABA ID owns the sending phone, (b) language code matches exactly what Meta stored (`en_US` not `en`), (c) component structure (header type, param count) matches the approved template.
 
 **Why:** 11-second PDF generation → Meta silently drops the document after accepting it (returns wamid but no delivery). Confirmed: A4 PDF with no logo worked; 80mm PDF with 2MB logo did not.
+
+5. **Meta caches document URLs permanently** — once Meta fetches a PDF from a URL, they serve their cached copy on all future sends to that same URL, even after the server-side content changes. Always append `?t=${Date.now()}` (or any unique parameter) to the PDF URL when constructing the template header, so every send uses a URL Meta hasn't cached.

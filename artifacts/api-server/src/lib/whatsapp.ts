@@ -365,7 +365,8 @@ export async function sendOrderReceiptWhatsApp(
   const templateName = process.env.WA_TEMPLATE_RECEIPT ?? "island_tacos_order_receipt";
   const name = order.customerName ?? "there";
   const publicUrl = (process.env.STORE_URL ?? "https://orders.islandtacosbvi.com").replace(/\/$/, "");
-  const pdfUrl    = `${publicUrl}/api/orders/receipt/${order.confirmationCode}`;
+  // Append a timestamp so Meta never serves a cached copy of a previously-sent receipt.
+  const pdfUrl    = `${publicUrl}/api/orders/receipt/${order.confirmationCode}?t=${Date.now()}`;
 
   return sendWhatsAppTemplate(
     order.customerPhone,
