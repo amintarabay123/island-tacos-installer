@@ -7,4 +7,5 @@
 - [Netaurant SaaS strategy](netaurant-saas-strategy.md) — Island Tacos stays separate; Netaurant is the merged SaaS product built from both codebases.
 - [Visual Revamp Design System](visual-revamp-design-system.md) — Approved "Indigo Luxe" design: palette, pop-out art pattern, gradient map, mockup file locations, canvas IDs, implementation order.
 - [Admin sidebar scalloped-tab effect](admin-sidebar-scallop.md) — active nav item "bleeds" into main area using darker SB_BG + CSS ::before/::after concave corners.
-- [Mini PC crash Jun 2026](mini-pc-crash-jun2026.md) — ⚠ UNRESOLVED: API server crash-looping after UPDATE; need pm2 logs from shop tomorrow to diagnose.
+- [Mini PC crash Jun 2026](mini-pc-crash-jun2026.md) — ✅ RESOLVED: pdfkit missing + tar popup storm; fixed via UPDATE.ps1 Step 3b + gcsReachable flag.
+- [WhatsApp WABA mismatch](whatsapp-waba-mismatch.md) — receipt template must be in the Island Tacos WABA, not the "Test" WABA (956881270482368).
