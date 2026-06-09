@@ -35,11 +35,36 @@ function fmtMoney(v: string | number): string {
   return `$${parseFloat(String(v)).toFixed(2)}`;
 }
 
+function dashedLine(doc: InstanceType<typeof PDFDocument>, x: number, w: number, y: number): void {
+  doc.save()
+    .moveTo(x, y).lineTo(x + w, y)
+    .dash(2, { space: 2 })
+    .strokeColor("#cccccc").lineWidth(0.5).stroke()
+    .restore();
+}
+
 export function buildReceiptPdf(data: ReceiptPdfData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
+    // ── Page geometry (80 mm thermal receipt) ─────────────────────────────────
+    const MM_TO_PT = 2.8346;
+    const PAGE_W   = Math.round(80 * MM_TO_PT);   // 227 pts
+    const MARGIN   = 12;
+    const CW       = PAGE_W - MARGIN * 2;          // content width
+
+    // Pre-calculate page height so the PDF is snug (no trailing blank space)
+    let estimatedH = 310; // header + order info + totals + footer
+    for (const item of data.items) {
+      estimatedH += 22;
+      estimatedH += (item.modifiers?.filter(m => m.name).length ?? 0) * 13;
+      if (item.notes) estimatedH += 13;
+    }
+    const discount = parseFloat(String(data.discountAmount ?? "0"));
+    if (discount > 0) estimatedH += 34;
+    const PAGE_H = estimatedH + 30;
+
     const doc = new PDFDocument({
-      size:   "A4",
-      margin: 50,
+      size:    [PAGE_W, PAGE_H],
+      margin:  0,
       info: {
         Title:  `Island Tacos Receipt - ${data.confirmationCode}`,
         Author: "Island Tacos",
@@ -51,150 +76,151 @@ export function buildReceiptPdf(data: ReceiptPdfData): Promise<Buffer> {
     doc.on("end",   ()          => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    const LEFT = 50;
-    const W    = doc.page.width - LEFT * 2; // 495 pts on A4
+    let y = MARGIN;
 
-    // ── Logo + store name (top-left) ─────────────────────────────────────────
-    const logoPath = path.join(process.cwd(), "artifacts/island-tacos/public/logo.png");
-    const HEADER_Y = 40;
-
+    // ── Logo ───────────────────────────────────────────────────────────────────
+    const logoPath = path.join(
+      process.cwd(),
+      "artifacts/island-tacos/public/logo-wordmark.png",
+    );
     if (existsSync(logoPath)) {
-      doc.image(logoPath, LEFT, HEADER_Y, { width: 52 });
-      doc.fontSize(20).font("Helvetica-Bold").fillColor("#e05a00")
-        .text("ISLAND TACOS", LEFT + 62, HEADER_Y + 4);
-      doc.fontSize(9).font("Helvetica").fillColor("#999")
-        .text("Wickhams Cay 1 · Road Town, BVI", LEFT + 62, HEADER_Y + 27);
-    } else {
-      doc.fontSize(20).font("Helvetica-Bold").fillColor("#e05a00")
-        .text("ISLAND TACOS", LEFT, HEADER_Y + 4);
-      doc.fontSize(9).font("Helvetica").fillColor("#999")
-        .text("Wickhams Cay 1 · Road Town, BVI", LEFT, HEADER_Y + 27);
+      const logoW = 110;
+      doc.image(logoPath, (PAGE_W - logoW) / 2, y, { width: logoW });
+      y += 40;
     }
 
-    // ── Receipt label + code + date (top-right) ───────────────────────────────
-    doc.fontSize(11).font("Helvetica-Bold").fillColor("#444")
-      .text("RECEIPT", LEFT, HEADER_Y + 4, { width: W, align: "right" });
-    doc.fontSize(10).font("Helvetica-Bold").fillColor("#e05a00")
-      .text(data.confirmationCode, LEFT, HEADER_Y + 20, { width: W, align: "right" });
-    doc.fontSize(9).font("Helvetica").fillColor("#999")
+    // ── Store name & address ───────────────────────────────────────────────────
+    doc.fontSize(11).font("Helvetica-Bold").fillColor("#e05a00")
+      .text("ISLAND TACOS", MARGIN, y, { width: CW, align: "center" });
+    y += 15;
+    doc.fontSize(7.5).font("Helvetica").fillColor("#777")
+      .text("Wickhams Cay 1 · Road Town, BVI", MARGIN, y, { width: CW, align: "center" });
+    y += 11;
+    doc.fontSize(7.5).font("Helvetica").fillColor("#777")
+      .text("(284) 544-8088", MARGIN, y, { width: CW, align: "center" });
+    y += 14;
+
+    dashedLine(doc, MARGIN, CW, y); y += 10;
+
+    // ── Receipt heading ────────────────────────────────────────────────────────
+    doc.fontSize(7).font("Helvetica-Bold").fillColor("#aaa")
+      .text("RECEIPT", MARGIN, y, { width: CW, align: "center", characterSpacing: 1.5 });
+    y += 11;
+    doc.fontSize(11).font("Helvetica-Bold").fillColor("#111")
+      .text(data.confirmationCode, MARGIN, y, { width: CW, align: "center" });
+    y += 16;
+    doc.fontSize(7.5).font("Helvetica").fillColor("#777")
       .text(
         new Date(data.createdAt).toLocaleDateString("en-US", {
           month: "long", day: "numeric", year: "numeric",
           timeZone: "America/Puerto_Rico",
+        }) + "  " +
+        new Date(data.createdAt).toLocaleTimeString("en-US", {
+          hour: "numeric", minute: "2-digit",
+          timeZone: "America/Puerto_Rico",
         }),
-        LEFT, HEADER_Y + 35, { width: W, align: "right" }
+        MARGIN, y, { width: CW, align: "center" },
       );
+    y += 14;
 
-    // ── Divider ───────────────────────────────────────────────────────────────
-    const AFTER_HEADER = 98;
-    doc.moveTo(LEFT, AFTER_HEADER).lineTo(LEFT + W, AFTER_HEADER)
-      .strokeColor("#ddd").lineWidth(1).stroke();
+    dashedLine(doc, MARGIN, CW, y); y += 10;
 
-    // ── Bill-to ───────────────────────────────────────────────────────────────
-    let y = AFTER_HEADER + 14;
+    // ── Customer ───────────────────────────────────────────────────────────────
     doc.fontSize(7).font("Helvetica-Bold").fillColor("#aaa")
-      .text("BILLED TO", LEFT, y, { characterSpacing: 1 });
-    y += 13;
-    doc.fontSize(12).font("Helvetica-Bold").fillColor("#111")
-      .text(data.customerName, LEFT, y);
-    y += 22;
+      .text("CUSTOMER", MARGIN, y, { characterSpacing: 1 });
+    y += 11;
+    doc.fontSize(9).font("Helvetica-Bold").fillColor("#111")
+      .text(data.customerName, MARGIN, y);
+    y += 15;
 
-    // ── Column headers ────────────────────────────────────────────────────────
-    doc.moveTo(LEFT, y).lineTo(LEFT + W, y).strokeColor("#eee").lineWidth(0.5).stroke();
-    y += 8;
+    dashedLine(doc, MARGIN, CW, y); y += 8;
 
-    // Column x positions and widths
-    const C_NAME  = LEFT;
-    const C_QTY   = LEFT + W * 0.58;
-    const C_PRICE = LEFT + W * 0.72;
-    const C_TOTAL = LEFT + W * 0.86;
-    const CW_NAME  = W * 0.56;
-    const CW_QTY   = W * 0.12;
-    const CW_PRICE = W * 0.13;
-    const CW_TOTAL = W * 0.14;
+    // ── Column headers ─────────────────────────────────────────────────────────
+    const PRICE_X = MARGIN + CW - 48;
+    const PRICE_W = 48;
+    const NAME_W  = CW - PRICE_W - 4;
 
     doc.fontSize(7).font("Helvetica-Bold").fillColor("#aaa");
-    doc.text("ITEM",  C_NAME,  y, { width: CW_NAME,  characterSpacing: 1 });
-    doc.text("QTY",   C_QTY,   y, { width: CW_QTY,   align: "center", characterSpacing: 1 });
-    doc.text("PRICE", C_PRICE, y, { width: CW_PRICE, align: "right",  characterSpacing: 1 });
-    doc.text("TOTAL", C_TOTAL, y, { width: CW_TOTAL, align: "right",  characterSpacing: 1 });
-    y += 14;
-    doc.moveTo(LEFT, y).lineTo(LEFT + W, y).strokeColor("#eee").lineWidth(0.5).stroke();
-    y += 9;
+    doc.text("ITEM",  MARGIN,   y, { width: NAME_W,  characterSpacing: 1 });
+    doc.text("TOTAL", PRICE_X,  y, { width: PRICE_W, align: "right", characterSpacing: 1 });
+    y += 11;
+    dashedLine(doc, MARGIN, CW, y); y += 7;
 
-    // ── Line items ────────────────────────────────────────────────────────────
+    // ── Line items ─────────────────────────────────────────────────────────────
     for (const item of data.items) {
-      doc.fontSize(10).font("Helvetica-Bold").fillColor("#111")
-        .text(item.name, C_NAME, y, { width: CW_NAME, lineBreak: false });
-      doc.fontSize(10).font("Helvetica").fillColor("#333");
-      doc.text(String(item.quantity),    C_QTY,   y, { width: CW_QTY,   align: "center", lineBreak: false });
-      doc.text(fmtMoney(item.unitPrice), C_PRICE, y, { width: CW_PRICE, align: "right",  lineBreak: false });
-      doc.text(fmtMoney(item.subtotal),  C_TOTAL, y, { width: CW_TOTAL, align: "right",  lineBreak: false });
-      y += 18;
+      doc.fontSize(9).font("Helvetica-Bold").fillColor("#111")
+        .text(item.name, MARGIN, y, { width: NAME_W, lineBreak: false });
+      doc.fontSize(9).font("Helvetica-Bold").fillColor("#111")
+        .text(fmtMoney(item.subtotal), PRICE_X, y, { width: PRICE_W, align: "right", lineBreak: false });
+      y += 13;
+
+      doc.fontSize(7.5).font("Helvetica").fillColor("#888")
+        .text(`${item.quantity} × ${fmtMoney(item.unitPrice)}`, MARGIN + 4, y, { lineBreak: false });
+      y += 11;
 
       for (const mod of item.modifiers ?? []) {
         if (!mod.name) continue;
         const label = mod.price > 0
           ? `+ ${mod.name}  +${fmtMoney(mod.price)}`
           : `+ ${mod.name}`;
-        doc.fontSize(8).font("Helvetica").fillColor("#777")
-          .text(label, C_NAME + 10, y, { width: CW_NAME + CW_QTY + CW_PRICE, lineBreak: false });
+        doc.fontSize(7.5).font("Helvetica").fillColor("#aaa")
+          .text(label, MARGIN + 4, y, { width: CW - 8, lineBreak: false });
         y += 12;
       }
 
       if (item.notes) {
-        doc.fontSize(8).font("Helvetica-Oblique").fillColor("#999")
-          .text(`Note: ${item.notes}`, C_NAME + 10, y, { width: W - 20, lineBreak: false });
+        doc.fontSize(7.5).font("Helvetica-Oblique").fillColor("#aaa")
+          .text(`Note: ${item.notes}`, MARGIN + 4, y, { width: CW - 8, lineBreak: false });
         y += 12;
       }
 
-      y += 4;
+      y += 3;
     }
 
-    // ── Totals ────────────────────────────────────────────────────────────────
-    y += 6;
-    doc.moveTo(LEFT, y).lineTo(LEFT + W, y).strokeColor("#ddd").lineWidth(0.5).stroke();
-    y += 14;
+    dashedLine(doc, MARGIN, CW, y); y += 9;
 
-    const LABEL_X = C_PRICE - 60;
-    const LABEL_W = 60 + CW_PRICE;
+    // ── Totals ─────────────────────────────────────────────────────────────────
+    const LBL_X = MARGIN;
+    const VAL_X = MARGIN + CW - 60;
+    const VAL_W = 60;
 
-    const discount = parseFloat(String(data.discountAmount ?? "0"));
     if (discount > 0) {
-      doc.fontSize(10).font("Helvetica").fillColor("#555");
-      doc.text("Subtotal",            LABEL_X, y, { width: LABEL_W, align: "right", lineBreak: false });
-      doc.text(fmtMoney(data.subtotal), C_TOTAL, y, { width: CW_TOTAL, align: "right", lineBreak: false });
-      y += 17;
-      doc.fillColor("#16a34a");
-      doc.text("Discount",            LABEL_X, y, { width: LABEL_W, align: "right", lineBreak: false });
-      doc.text(`-${fmtMoney(discount)}`, C_TOTAL, y, { width: CW_TOTAL, align: "right", lineBreak: false });
-      y += 17;
+      doc.fontSize(9).font("Helvetica").fillColor("#555");
+      doc.text("Subtotal", LBL_X, y, { lineBreak: false });
+      doc.text(fmtMoney(data.subtotal), VAL_X, y, { width: VAL_W, align: "right", lineBreak: false });
+      y += 14;
+
+      doc.fontSize(9).font("Helvetica").fillColor("#16a34a");
+      doc.text("Discount", LBL_X, y, { lineBreak: false });
+      doc.text(`−${fmtMoney(discount)}`, VAL_X, y, { width: VAL_W, align: "right", lineBreak: false });
+      y += 14;
+
+      dashedLine(doc, MARGIN, CW, y); y += 9;
     }
 
-    doc.fontSize(14).font("Helvetica-Bold").fillColor("#111");
-    doc.text("TOTAL",             LABEL_X, y, { width: LABEL_W, align: "right", lineBreak: false });
-    doc.text(fmtMoney(data.total), C_TOTAL, y, { width: CW_TOTAL, align: "right", lineBreak: false });
-    y += 22;
+    doc.fontSize(11).font("Helvetica-Bold").fillColor("#111");
+    doc.text("TOTAL", LBL_X, y, { lineBreak: false });
+    doc.text(fmtMoney(data.total), VAL_X, y, { width: VAL_W, align: "right", lineBreak: false });
+    y += 17;
 
-    doc.fontSize(9).font("Helvetica").fillColor("#aaa")
+    doc.fontSize(8).font("Helvetica").fillColor("#aaa")
       .text(
         `Paid via ${PAY_LABEL[data.paymentMethod] ?? data.paymentMethod}`,
-        LABEL_X, y,
-        { width: LABEL_W + CW_TOTAL, align: "right", lineBreak: false }
+        LBL_X, y, { width: CW, align: "right", lineBreak: false },
       );
-    y += 30;
+    y += 18;
 
-    // ── Footer ────────────────────────────────────────────────────────────────
-    doc.moveTo(LEFT, y).lineTo(LEFT + W, y).strokeColor("#ddd").lineWidth(1).stroke();
-    y += 16;
-    doc.fontSize(10).font("Helvetica").fillColor("#888")
-      .text("Thank you for dining with Island Tacos!", LEFT, y, { width: W, align: "center" });
-    y += 16;
-    doc.fontSize(8).font("Helvetica").fillColor("#ccc")
-      .text(
-        "Wickhams Cay 1 · Road Town, BVI · (284) 544-8088 · orders.islandtacosbvi.com",
-        LEFT, y, { width: W, align: "center" }
-      );
+    dashedLine(doc, MARGIN, CW, y); y += 12;
+
+    // ── Footer ─────────────────────────────────────────────────────────────────
+    doc.fontSize(9).font("Helvetica-Bold").fillColor("#e05a00")
+      .text("Thank you!", MARGIN, y, { width: CW, align: "center" });
+    y += 13;
+    doc.fontSize(8).font("Helvetica").fillColor("#888")
+      .text("Come visit us again soon 🌮", MARGIN, y, { width: CW, align: "center" });
+    y += 13;
+    doc.fontSize(7).font("Helvetica").fillColor("#bbb")
+      .text("orders.islandtacosbvi.com", MARGIN, y, { width: CW, align: "center" });
 
     doc.end();
   });
