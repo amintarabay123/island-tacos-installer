@@ -9,3 +9,4 @@
 - [Admin sidebar scalloped-tab effect](admin-sidebar-scallop.md) — active nav item "bleeds" into main area using darker SB_BG + CSS ::before/::after concave corners.
 - [Mini PC crash Jun 2026](mini-pc-crash-jun2026.md) — ✅ RESOLVED: pdfkit missing + tar popup storm; fixed via UPDATE.ps1 Step 3b + gcsReachable flag.
 - [WhatsApp WABA mismatch](whatsapp-waba-mismatch.md) — receipt template must be in the Island Tacos WABA, not the "Test" WABA (956881270482368).
+- [WhatsApp receipt PDF sizing](whatsapp-receipt-pdf.md) — logo-wordmark.png is 7680x4320 (2.3MB); use logo.png (512x512, 108KB) for PDFs.

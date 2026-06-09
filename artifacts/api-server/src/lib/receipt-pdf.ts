@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import path from "path";
 import { existsSync } from "fs";
+import { fileURLToPath } from "url";
 
 export interface ReceiptPdfItem {
   name:      string;
@@ -79,11 +80,16 @@ export function buildReceiptPdf(data: ReceiptPdfData): Promise<Buffer> {
     let y = MARGIN;
 
     // ── Logo ───────────────────────────────────────────────────────────────────
-    const logoPath = path.join(
-      process.cwd(),
-      "artifacts/island-tacos/public/logo-wordmark.png",
-    );
-    if (existsSync(logoPath)) {
+    // Use import.meta.url so the path is correct regardless of process.cwd().
+    // The compiled bundle lives at artifacts/api-server/dist/index.mjs;
+    // logo.png is 512×512 (108 KB) — small enough to embed in a receipt PDF.
+    const __dir = path.dirname(fileURLToPath(import.meta.url));
+    const logoCandidates = [
+      path.join(__dir, "../../../artifacts/island-tacos/public/logo.png"),
+      path.join(process.cwd(), "artifacts/island-tacos/public/logo.png"),
+    ];
+    const logoPath = logoCandidates.find((p) => existsSync(p));
+    if (logoPath) {
       const logoW = 110;
       doc.image(logoPath, (PAGE_W - logoW) / 2, y, { width: logoW });
       y += 40;
