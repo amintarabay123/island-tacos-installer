@@ -21,16 +21,19 @@ is checked. Creating a template in the test account does nothing for the live nu
 3. The `META_WABA_ID` env var is only used for template management API calls (listing
    templates). It does NOT affect message sending — the phone number ID does.
 
-## island_tacos_order_receipt template (pending)
-Still needs to be created in the correct (Island Tacos) WABA.
-Structure confirmed from test account (same structure needed):
-- Category: Utility
-- Header: TEXT — "Your Order Receipt" (static, no component in API call)
-- Body: `Hi {{1}}, here is your receipt for Order #{{2}}.\n\n{{3}}\n\nThank you...`
-  - {{1}} = customer name, {{2}} = confirmation code, {{3}} = formatted item list
-- Footer: "Island Tacos — Wickhams Cay 1, Road Town" (static)
+## WABA IDs (Island Tacos account)
+- Production WABA: 1725555828883850 (Island Tacos, owned by Amin O. Tarabay)
+- Second WABA: 1358802589471928 (Island Tacos, owned by Amin O. Tarabay)
+- Test WABA: 956881270482368 ("Test WhatsApp Business Account") — wrong one
+- `META_WABA_ID` env var was set to test WABA; the production templates live in 1725555828883850
+
+## island_tacos_order_receipt template
+- Lives in WABA 1725555828883850
+- Language: **en_US** (English US) — NOT plain "en" like the other templates
+- Code must send language code "en_US" for this template or Meta returns 132001
+- Other templates (ready, cancelled, reminder) use plain "en"
 
 ## Code fix applied (2026-06-09)
-`sendOrderReceiptWhatsApp` was updated to send 3 body params (not 2) and no
-document header component (the TEXT header is static). The old code sent a
-document header + 2 params which caused "Invalid parameter" regardless of WABA.
+`sendOrderReceiptWhatsApp` updated: 3 body params (not 2), no document header
+component, language code "en_US" (not "en"). Old code caused "Invalid parameter"
+then 132001 after WABA was identified.

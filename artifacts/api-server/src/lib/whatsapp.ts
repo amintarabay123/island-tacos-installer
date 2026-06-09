@@ -375,7 +375,7 @@ export async function sendOrderReceiptWhatsApp(
   return sendWhatsAppTemplate(
     order.customerPhone,
     templateName,
-    "en",
+    "en_US",
     [name, order.confirmationCode, itemList],
   );
 }
