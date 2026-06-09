@@ -461,7 +461,10 @@ async function attemptRepair(serviceId) {
   log(`[repair] attempting repair for ${serviceId}`);
   try {
     if (serviceId === "api-process" || serviceId === "api-http") {
-      await execAsync("pm2 restart island-tacos --update-env", { timeout: 15_000 });
+      // Use config file path so PM2 re-runs loadEnv() and picks up any .env changes.
+      // "pm2 restart island-tacos --update-env" fails when PM2 has marked the
+      // process as "errored" after max_restarts; the config-file form always works.
+      await execAsync("pm2 restart local-install/ecosystem.config.cjs --update-env", { timeout: 15_000 });
       log("[repair] PM2 restart issued");
       appendEvent({ type: "repair", service: serviceId, message: "Auto-repair: PM2 restart triggered" });
       return true;
