@@ -213,6 +213,7 @@ export async function sendWhatsAppTemplate(
   templateName: string,
   languageCode: string,
   bodyParams: string[],   // ordered list of {{1}}, {{2}}, … substitutions
+  headerDocument?: { link: string; filename: string }, // optional PDF/document header
 ): Promise<boolean> {
   const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
   const accessToken   = process.env.META_ACCESS_TOKEN;
@@ -224,9 +225,16 @@ export async function sendWhatsAppTemplate(
 
   const toNormalized = to.replace(/\D/g, "");
 
-  const components = bodyParams.length > 0
-    ? [{ type: "body", parameters: bodyParams.map(text => ({ type: "text", text })) }]
-    : [];
+  const components: object[] = [];
+  if (headerDocument) {
+    components.push({
+      type: "header",
+      parameters: [{ type: "document", document: { link: headerDocument.link, filename: headerDocument.filename } }],
+    });
+  }
+  if (bodyParams.length > 0) {
+    components.push({ type: "body", parameters: bodyParams.map(text => ({ type: "text", text })) });
+  }
 
   try {
     const response = await fetch(
@@ -342,38 +350,31 @@ export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<boole
 }
 
 /**
- * Sends a full itemised receipt via WhatsApp template (business-initiated, no 24h window needed).
- * Template: island_tacos_order_receipt
- * Body params:
- *   {{1}} = customer name
- *   {{2}} = confirmation code
- *   {{3}} = formatted items + total block (single multiline string)
+ * Sends a WhatsApp receipt template with a PDF attachment.
+ * Template: island_tacos_order_receipt (approved utility template)
+ *   Header:  document — PDF fetched by Meta from our public API at delivery time
+ *   Body:    {{1}} = customer name, {{2}} = confirmation code
+ *
+ * The PDF is generated on-demand at GET /api/orders/receipt/:code — no GCS
+ * upload needed. Meta fetches the URL directly when delivering the message.
  */
 export async function sendOrderReceiptWhatsApp(
-  order: OrderLike & { items: { name: string; qty: number; lineTotal: string; modifiers?: string[] }[] },
+  order: Pick<OrderLike, "customerPhone" | "customerName" | "confirmationCode">,
 ): Promise<boolean> {
   if (!order.customerPhone) return false;
 
   const templateName = process.env.WA_TEMPLATE_RECEIPT ?? "island_tacos_order_receipt";
   const name = order.customerName ?? "there";
 
-  const itemLines: string[] = [];
-  for (const item of order.items) {
-    itemLines.push(`• ${item.qty}x ${item.name}  ${item.lineTotal}`);
-    for (const mod of item.modifiers ?? []) {
-      itemLines.push(`   + ${mod}`);
-    }
-  }
-  itemLines.push("");
-  itemLines.push(`Total: ${order.total}`);
-
-  const receiptBlock = itemLines.join("\n");
+  const publicUrl = (process.env.STORE_URL ?? "https://orders.islandtacosbvi.com").replace(/\/$/, "");
+  const pdfUrl    = `${publicUrl}/api/orders/receipt/${order.confirmationCode}`;
 
   return sendWhatsAppTemplate(
     order.customerPhone,
     templateName,
     "en",
-    [name, order.confirmationCode, receiptBlock],
+    [name, order.confirmationCode],
+    { link: pdfUrl, filename: `Island-Tacos-Receipt-${order.confirmationCode}.pdf` },
   );
 }
 

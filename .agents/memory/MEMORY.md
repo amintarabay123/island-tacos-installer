@@ -1,4 +1,5 @@
 - [KDS card split rules](kds-card-split-rules.md) — split on any mix of alreadyMade lines; never gate on order.status (POS resume creates a new `confirmed` order).
+- [pdfkit esbuild external](pdfkit-esbuild-external.md) — pdfkit must be in build.mjs external list or AFM font file lookups crash at runtime.
 - [POS stale closure trap](pos-stale-closure-trap.md)
 - [Pending order popup gaps](pending-order-popup-gaps.md)
 - [Resumed ticket patch rule](resumed-ticket-patch-rule.md)

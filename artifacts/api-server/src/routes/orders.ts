@@ -7,6 +7,7 @@ import { broadcastOrderEvent } from "./pos-events";
 import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
 import { pushStatusToCloud } from "../lib/online-orders-sync";
 import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp, sendOrderCancelledWhatsApp, sendWhatsAppMessage, sendOrderReceiptWhatsApp } from "../lib/whatsapp";
+import { buildReceiptPdf } from "../lib/receipt-pdf";
 import { sendSms } from "../lib/sms-gateway";
 import nodemailer from "nodemailer";
 import { requireStaffAuth, isStaffAuthenticated } from "./auth";
@@ -1135,11 +1136,58 @@ router.post("/orders/:id/email-receipt", requireStaffAuth, async (req, res): Pro
   }
 });
 
+// GET /api/orders/receipt/:code
+// Public endpoint — generates and streams a PDF receipt for the given
+// confirmation code. No auth required (the code itself is semi-secret).
+// Meta fetches this URL directly when delivering the WhatsApp receipt template.
+router.get("/orders/receipt/:code", async (req, res): Promise<void> => {
+  const rawCode = Array.isArray(req.params.code) ? req.params.code[0] : req.params.code;
+  // Strip a trailing .pdf extension so both /receipt/IT-1234 and /receipt/IT-1234.pdf work
+  const code = rawCode.replace(/\.pdf$/i, "");
+
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.confirmationCode, code));
+
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
+  const items = await db
+    .select()
+    .from(orderItemsTable)
+    .where(eq(orderItemsTable.orderId, order.id));
+
+  const pdfBuffer = await buildReceiptPdf({
+    confirmationCode: order.confirmationCode,
+    customerName:     order.customerName,
+    createdAt:        order.createdAt,
+    paymentMethod:    order.paymentMethod,
+    subtotal:         String(order.subtotal),
+    discountAmount:   String(order.discountAmount ?? "0"),
+    total:            String(order.total),
+    items: items.map((item) => ({
+      name:      item.menuItemName,
+      quantity:  item.quantity ?? 1,
+      unitPrice: String(item.menuItemPrice),
+      subtotal:  String(item.subtotal),
+      modifiers: (item.modifierSelections ?? []).map((m) => ({ name: m.name, price: m.price })),
+      notes:     item.notes,
+    })),
+  });
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename="Island-Tacos-Receipt-${order.confirmationCode}.pdf"`);
+  res.setHeader("Cache-Control", "private, max-age=300");
+  res.send(pdfBuffer);
+});
+
 // POST /api/orders/:id/whatsapp-receipt
-// Sends a formatted receipt to the phone number on the order via WhatsApp.
-// Note: Meta only allows free-text messages to numbers that have messaged
-// the business within the last 24 hours. For numbers outside that window,
-// Meta will return an error and this endpoint will respond with 502.
+// Sends a WhatsApp receipt template (island_tacos_order_receipt) with a PDF
+// attachment. Meta fetches the PDF from GET /api/orders/receipt/:code at
+// delivery time — no upload needed.
 router.post("/orders/:id/whatsapp-receipt", requireStaffAuth, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const id = parseInt(rawId, 10);
@@ -1158,39 +1206,16 @@ router.post("/orders/:id/whatsapp-receipt", requireStaffAuth, async (req, res): 
     return;
   }
 
-  const items = await db
-    .select()
-    .from(orderItemsTable)
-    .where(eq(orderItemsTable.orderId, id));
-
-  const fmt = (v: string | number | null | undefined) =>
-    `$${parseFloat(String(v ?? 0)).toFixed(2)}`;
-
-  const receiptItems = items.map((item) => ({
-    name: item.menuItemName,
-    qty: item.quantity ?? 1,
-    lineTotal: fmt(parseFloat(String(item.menuItemPrice ?? 0)) * (item.quantity ?? 1)),
-    modifiers: (item.modifierSelections ?? []).map((m) => m.name).filter(Boolean) as string[],
-  }));
-
-  // Prepend any discount line to the total display
-  const discountAmt = parseFloat(String(order.discountAmount ?? 0));
-  const totalDisplay = discountAmt > 0
-    ? `${fmt(order.total)} (incl. ${fmt(discountAmt)} discount)`
-    : fmt(order.total);
-
   const ok = await sendOrderReceiptWhatsApp({
-    customerPhone: order.customerPhone,
-    customerName: order.customerName,
+    customerPhone:    order.customerPhone,
+    customerName:     order.customerName,
     confirmationCode: order.confirmationCode,
-    total: totalDisplay,
-    items: receiptItems,
   });
 
   if (ok) {
     res.json({ ok: true });
   } else {
-    res.status(502).json({ ok: false, error: "WhatsApp receipt send failed — template may still be pending Meta approval, or the number is unreachable" });
+    res.status(502).json({ ok: false, error: "WhatsApp receipt send failed — verify the 'island_tacos_order_receipt' template is approved in Meta Business Manager" });
   }
 });
 

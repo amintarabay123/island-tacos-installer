@@ -100,6 +100,10 @@ async function buildAll() {
       "puppeteer",
       "puppeteer-core",
       "electron",
+      // pdfkit reads AFM font data files relative to its own __dirname at
+      // runtime — bundling it breaks those paths. Externalise so it loads
+      // straight from node_modules where the data/ directory lives.
+      "pdfkit",
     ],
     sourcemap: "linked",
     plugins: [
