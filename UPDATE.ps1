@@ -42,6 +42,21 @@ Invoke-WebRequest "$CLOUD/api/download/server" `
 $sz = (Get-Item "$Root\artifacts\api-server\dist\index.mjs").Length
 Write-OK "Server binary updated ($([math]::Round($sz/1MB, 1)) MB)."
 
+# Step 3b: Install external server dependencies that are not bundled
+# pdfkit reads AFM font data files relative to its own directory at runtime,
+# so it cannot be bundled by esbuild and must be present in node_modules.
+Write-Step "Installing server dependencies..."
+Push-Location "$Root\artifacts\api-server"
+try {
+    $npmOut = npm install pdfkit --no-save 2>&1
+    if ($LASTEXITCODE -ne 0) { throw $npmOut }
+    Write-OK "pdfkit installed."
+} catch {
+    Write-Warn "pdfkit install skipped: $_ (server may fail to start if pdfkit is missing)"
+} finally {
+    Pop-Location
+}
+
 # Step 4: Download updated frontend bundle
 Write-Step "Downloading frontend bundle (may take 30 seconds)..."
 try {
