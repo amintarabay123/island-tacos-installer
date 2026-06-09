@@ -11,3 +11,4 @@
 - [WhatsApp WABA mismatch](whatsapp-waba-mismatch.md) — receipt template must be in the Island Tacos WABA, not the "Test" WABA (956881270482368).
 - [WhatsApp receipt PDF sizing](whatsapp-receipt-pdf.md) — logo-wordmark.png is 7680x4320 (2.3MB); use logo.png (512x512, 108KB) for PDFs.
 - [Receipt PDF logo and layout](receipt-pdf-layout.md) — logo lives in api-server/src/assets/, copied to dist/assets/ at build; layout matches approved WA sample exactly.
+- [Placetopay tranKey algorithm](placetopay-auth-algorithm.md) — secret key goes in raw (no SHA-1); all SHA-1 variants return error 102 on their test server.

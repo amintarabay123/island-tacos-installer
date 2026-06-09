@@ -12,10 +12,11 @@ function buildAuth() {
   const seed     = new Date().toISOString();
   const rawNonce = randomBytes(16);
   const nonce    = rawNonce.toString("base64");
-  // tranKey = Base64( SHA-256( rawNonce || seed || SHA-1(secretKey) ) )
-  const secretHash = createHash("sha1").update(SECRET).digest();
-  const tranKey    = createHash("sha256")
-    .update(Buffer.concat([rawNonce, Buffer.from(seed), secretHash]))
+  // tranKey = Base64( SHA-256( rawNonce || seed || secretKey ) )
+  // NOTE: secret key is concatenated raw (no SHA-1 pre-hashing) — confirmed by
+  // exhaustive variant testing against checkout-test.placetopay.com (Jun 2026).
+  const tranKey = createHash("sha256")
+    .update(Buffer.concat([rawNonce, Buffer.from(seed), Buffer.from(SECRET)]))
     .digest("base64");
   return { login: LOGIN, seed, nonce, tranKey };
 }
