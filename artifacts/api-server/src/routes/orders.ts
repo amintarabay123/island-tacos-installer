@@ -4,7 +4,7 @@ import { db, ordersTable, orderItemsTable, menuItemsTable, menuCategoriesTable, 
 import { upsertCustomer } from "./customers";
 import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
-import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
+import { isBVIMobile, formatBVIPhone, normalizePhoneForWhatsApp } from "../lib/phone-utils";
 import { pushStatusToCloud } from "../lib/online-orders-sync";
 import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp, sendOrderCancelledWhatsApp, sendWhatsAppMessage, sendOrderReceiptWhatsApp, WhatsAppApiError } from "../lib/whatsapp";
 import { buildReceiptPdf } from "../lib/receipt-pdf";
@@ -1208,7 +1208,7 @@ router.post("/orders/:id/whatsapp-receipt", requireStaffAuth, async (req, res): 
 
   try {
     const ok = await sendOrderReceiptWhatsApp({
-      customerPhone:    formatBVIPhone(order.customerPhone),
+      customerPhone:    normalizePhoneForWhatsApp(order.customerPhone),
       customerName:     order.customerName,
       confirmationCode: order.confirmationCode,
     });

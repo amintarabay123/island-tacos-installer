@@ -161,7 +161,8 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<boo
     return false;
   }
 
-  const toNormalized = to.replace(/\D/g, "");
+  const rawDigits0 = to.replace(/\D/g, "");
+  const toNormalized = rawDigits0.length === 7 ? `284${rawDigits0}` : rawDigits0;
 
   try {
     const response = await fetch(
@@ -237,7 +238,8 @@ export async function sendWhatsAppTemplate(
     return false;
   }
 
-  const toNormalized = to.replace(/\D/g, "");
+  const rawDigits1 = to.replace(/\D/g, "");
+  const toNormalized = rawDigits1.length === 7 ? `284${rawDigits1}` : rawDigits1;
 
   const components: object[] = [];
   if (headerDocument) {
