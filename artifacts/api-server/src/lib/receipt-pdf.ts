@@ -3,6 +3,19 @@ import path from "path";
 import { existsSync } from "fs";
 import { fileURLToPath } from "url";
 
+/**
+ * Strip emoji and other non-Latin characters that PDFKit's built-in
+ * Helvetica font cannot render (they produce garbled glyphs in the PDF).
+ */
+function stripEmoji(text: string): string {
+  return text
+    .replace(/\p{Emoji_Presentation}/gu, "")
+    .replace(/\p{Emoji}\uFE0F/gu, "")
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 export interface ReceiptPdfItem {
   name:      string;
   quantity:  number;
@@ -159,7 +172,7 @@ export function buildReceiptPdf(data: ReceiptPdfData): Promise<Buffer> {
     // ── Line items ────────────────────────────────────────────────────────────
     for (const item of data.items) {
       doc.fontSize(7.5).font("Helvetica").fillColor("#000000");
-      doc.text(item.name,                COL_NAME,  y, { width: 108, lineBreak: false });
+      doc.text(stripEmoji(item.name),    COL_NAME,  y, { width: 108, lineBreak: false });
       doc.text(String(item.quantity),    COL_QTY,   y, { lineBreak: false });
       doc.text(fmtMoney(item.unitPrice), COL_PRICE, y, { lineBreak: false });
       doc.text(fmtMoney(item.subtotal),  COL_TTL,   y, { width: COL_TTL_W, align: "right", lineBreak: false });
@@ -168,8 +181,8 @@ export function buildReceiptPdf(data: ReceiptPdfData): Promise<Buffer> {
       for (const mod of item.modifiers ?? []) {
         if (!mod.name) continue;
         const label = mod.price > 0
-          ? `+ ${mod.name}  +${fmtMoney(mod.price)}`
-          : `+ ${mod.name}`;
+          ? `+ ${stripEmoji(mod.name)}  +${fmtMoney(mod.price)}`
+          : `+ ${stripEmoji(mod.name)}`;
         doc.fontSize(7).font("Helvetica").fillColor("#555555")
           .text(label, MARGIN + 6, y, { width: CW - 6, lineBreak: false });
         y += 10;
@@ -177,7 +190,7 @@ export function buildReceiptPdf(data: ReceiptPdfData): Promise<Buffer> {
 
       if (item.notes) {
         doc.fontSize(7).font("Helvetica-Oblique").fillColor("#777777")
-          .text(`Note: ${item.notes}`, MARGIN + 6, y, { width: CW - 6, lineBreak: false });
+          .text(`Note: ${stripEmoji(item.notes)}`, MARGIN + 6, y, { width: CW - 6, lineBreak: false });
         y += 10;
       }
 
