@@ -261,20 +261,17 @@ export default function TrackOrder() {
         orderSummary={{ items: items ?? [], total }}
         progress={status}
         action={
-          (isReady || isDone) ? (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%" }}>
-              <Link href="/" style={{
-                display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 24px", borderRadius: 999,
-                background: `linear-gradient(135deg,${OR},#ff3d00)`, color: "#fff", fontSize: 14, fontWeight: 700,
-                textDecoration: "none", boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
-              }}>
-                Order Again <ArrowRight style={{ width: 16, height: 16 }} />
-              </Link>
-              <TrackLink label="Track order" code={code} />
-            </div>
-          ) : (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%" }}>
+            <Link href="/" style={{
+              width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+              padding: "12px 24px", borderRadius: 999,
+              background: `linear-gradient(135deg,${OR},#ff3d00)`, color: "#fff", fontSize: 14, fontWeight: 700,
+              textDecoration: "none", boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
+            }}>
+              {(isReady || isDone) ? "Order Again" : "Back to Menu"} <ArrowRight style={{ width: 16, height: 16 }} />
+            </Link>
             <TrackLink label="Track order" code={code} />
-          )
+          </div>
         }
       />
     );
@@ -289,7 +286,19 @@ export default function TrackOrder() {
       pickupTime={pickupTimeLabel}
       code={confirmationCode}
       orderSummary={{ items: items ?? [], total }}
-      action={<TrackLink label="Refresh status" code={code} />}
+      action={
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%" }}>
+          <Link href="/" style={{
+            width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+            padding: "12px 24px", borderRadius: 999,
+            background: `linear-gradient(135deg,${OR},#ff3d00)`, color: "#fff", fontSize: 14, fontWeight: 700,
+            textDecoration: "none", boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
+          }}>
+            Back to Menu <ArrowRight style={{ width: 16, height: 16 }} />
+          </Link>
+          <TrackLink label="Refresh status" code={code} />
+        </div>
+      }
     />
   );
 }
