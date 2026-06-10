@@ -1208,7 +1208,7 @@ router.post("/orders/:id/whatsapp-receipt", requireStaffAuth, async (req, res): 
 
   try {
     const ok = await sendOrderReceiptWhatsApp({
-      customerPhone:    order.customerPhone,
+      customerPhone:    formatBVIPhone(order.customerPhone),
       customerName:     order.customerName,
       confirmationCode: order.confirmationCode,
     });
