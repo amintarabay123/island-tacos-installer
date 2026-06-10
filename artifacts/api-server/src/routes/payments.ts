@@ -353,7 +353,7 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
       .set({ placetopayRequestId: session.requestId })
       .where(eq(ordersTable.id, orderId));
 
-    req.log.info(`[PTP] session created — orderId=${orderId} requestId=${session.requestId}`);
+    req.log.info(`[PTP] session created — orderId=${orderId} requestId=${session.requestId} returnUrl=${returnUrl}`);
     res.json({ processUrl: session.processUrl });
   } catch (err) {
     req.log.error({ err }, "[PTP] session creation failed");
