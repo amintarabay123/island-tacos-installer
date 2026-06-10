@@ -204,10 +204,24 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<boo
 //
 // Template components format: https://developers.facebook.com/docs/whatsapp/api/messages/message-templates
 
+/** Thrown when Meta's Graph API rejects a template send. Includes the raw Meta error body. */
+export class WhatsAppApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly metaBody: unknown,
+  ) {
+    super(message);
+    this.name = "WhatsAppApiError";
+  }
+}
+
 // Returns true if Meta accepted the message, false on any error.
 // Callers that need to record delivery (e.g. wa_reminder_sent_at) should
 // check the return value before stamping — a false means the customer was
 // NOT notified and the stamp should be skipped so a retry can happen.
+// Throws WhatsAppApiError when Meta explicitly rejects (so callers can surface
+// the exact error code instead of a generic 502).
 export async function sendWhatsAppTemplate(
   to: string,
   templateName: string,
@@ -259,10 +273,15 @@ export async function sendWhatsAppTemplate(
     );
 
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      logger.error({ to: toNormalized, template: templateName, status: response.status, errData },
+      const errBody = await response.json().catch(() => ({}));
+      logger.error({ to: toNormalized, template: templateName, status: response.status, errBody },
         "[whatsapp] Template send failed");
-      return false;
+      // Throw so route handlers can surface the Meta error code directly
+      throw new WhatsAppApiError(
+        `Meta rejected template "${templateName}" (HTTP ${response.status})`,
+        response.status,
+        errBody,
+      );
     }
 
     const data = await response.json() as { messages?: { id: string }[] };
@@ -270,6 +289,7 @@ export async function sendWhatsAppTemplate(
       "[whatsapp] Template sent");
     return true;
   } catch (err) {
+    if (err instanceof WhatsAppApiError) throw err; // let explicit rejections propagate
     logger.error({ err, to: toNormalized, template: templateName }, "[whatsapp] Template send error");
     return false;
   }

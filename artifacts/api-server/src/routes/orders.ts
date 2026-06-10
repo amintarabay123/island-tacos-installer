@@ -6,7 +6,7 @@ import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
 import { isBVIMobile, formatBVIPhone } from "../lib/phone-utils";
 import { pushStatusToCloud } from "../lib/online-orders-sync";
-import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp, sendOrderCancelledWhatsApp, sendWhatsAppMessage, sendOrderReceiptWhatsApp } from "../lib/whatsapp";
+import { sendOrderConfirmationWhatsApp, sendOrderReadyWhatsApp, sendOrderCancelledWhatsApp, sendWhatsAppMessage, sendOrderReceiptWhatsApp, WhatsAppApiError } from "../lib/whatsapp";
 import { buildReceiptPdf } from "../lib/receipt-pdf";
 import { sendSms } from "../lib/sms-gateway";
 import nodemailer from "nodemailer";
@@ -1206,16 +1206,27 @@ router.post("/orders/:id/whatsapp-receipt", requireStaffAuth, async (req, res): 
     return;
   }
 
-  const ok = await sendOrderReceiptWhatsApp({
-    customerPhone:    order.customerPhone,
-    customerName:     order.customerName,
-    confirmationCode: order.confirmationCode,
-  });
+  try {
+    const ok = await sendOrderReceiptWhatsApp({
+      customerPhone:    order.customerPhone,
+      customerName:     order.customerName,
+      confirmationCode: order.confirmationCode,
+    });
 
-  if (ok) {
-    res.json({ ok: true });
-  } else {
-    res.status(502).json({ ok: false, error: "WhatsApp receipt send failed — verify the 'island_tacos_order_receipt' template is approved in Meta Business Manager" });
+    if (ok) {
+      res.json({ ok: true });
+    } else {
+      // ok===false means env vars missing (META_PHONE_NUMBER_ID / META_ACCESS_TOKEN)
+      res.status(502).json({ ok: false, error: "WhatsApp not configured — META_PHONE_NUMBER_ID or META_ACCESS_TOKEN missing" });
+    }
+  } catch (err) {
+    if (err instanceof WhatsAppApiError) {
+      req.log.error({ metaStatus: err.status, metaBody: err.metaBody }, "[whatsapp] receipt send rejected by Meta");
+      res.status(502).json({ ok: false, error: err.message, metaBody: err.metaBody });
+    } else {
+      req.log.error({ err }, "[whatsapp] receipt send unexpected error");
+      res.status(502).json({ ok: false, error: "WhatsApp receipt send failed — unexpected error" });
+    }
   }
 });
 
