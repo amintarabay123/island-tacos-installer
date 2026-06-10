@@ -319,10 +319,11 @@ export default function Checkout() {
           } else if (paymentMethod === "card") {
             setPtpRedirecting(true);
             try {
+              const returnUrl = `${window.location.origin}${basePath}/track?code=${order.confirmationCode}&ptp=1`;
               const ptpRes = await fetch(`${basePath}/api/payments/placetopay/session`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId: order.id }),
+                body: JSON.stringify({ orderId: order.id, returnUrl }),
               });
               const ptpData = await ptpRes.json() as { processUrl?: string; error?: string };
               if (ptpData.processUrl) {

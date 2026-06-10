@@ -318,7 +318,7 @@ router.post("/payments/athmovil/check-status", async (req, res): Promise<void> =
 // Public — creates a Placetopay hosted-checkout session for a pending card order.
 // Returns { processUrl } — frontend does window.location.href = processUrl.
 router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
-  const { orderId } = req.body as { orderId?: unknown };
+  const { orderId, returnUrl: clientReturnUrl } = req.body as { orderId?: unknown; returnUrl?: unknown };
   if (typeof orderId !== "number") {
     res.status(400).json({ error: "orderId is required" });
     return;
@@ -334,7 +334,9 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
   if (order.paymentStatus === "paid") { res.status(400).json({ error: "Already paid" }); return; }
 
   const totalUsd  = parseFloat(order.total as unknown as string).toFixed(2);
-  const returnUrl = `${STORE_URL}/track?code=${order.confirmationCode}&ptp=1`;
+  const returnUrl = (typeof clientReturnUrl === "string" && clientReturnUrl.startsWith("http"))
+    ? clientReturnUrl
+    : `${STORE_URL}/track?code=${order.confirmationCode}&ptp=1`;
 
   try {
     const session = await ptp.createSession(
