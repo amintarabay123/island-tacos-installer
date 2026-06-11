@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, ordersTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable } from "@workspace/db";
 import {
   InitiatePaymentBody,
   ConfirmPaymentBody,
@@ -8,6 +8,7 @@ import {
 import { randomUUID } from "crypto";
 import { requireStaffAuth } from "./auth";
 import * as ptp from "../lib/placetopay.js";
+import { notifyOrderPaid } from "./orders";
 
 const STORE_URL = (process.env.STORE_URL ?? "https://orders.islandtacosbvi.com").replace(/\/$/, "");
 
@@ -298,6 +299,8 @@ router.post("/payments/athmovil/check-status", async (req, res): Promise<void> =
         .where(eq(ordersTable.id, orderId));
 
       athSessions.delete(orderId);
+      // Notify POS + customer now that payment is confirmed
+      notifyOrderPaid(orderId).catch(() => {});
       res.json({ status: "COMPLETED", referenceNumber: findData?.data?.referenceNumber });
       return;
     }
@@ -394,6 +397,8 @@ router.post("/payments/placetopay/verify", async (req, res): Promise<void> => {
       await db.update(ordersTable)
         .set({ paymentStatus: "paid", status: "confirmed", paymentMethod: "card" })
         .where(eq(ordersTable.id, order.id));
+      // Notify POS + customer now that payment is confirmed
+      notifyOrderPaid(order.id).catch(() => {});
     }
 
     res.json({ status });

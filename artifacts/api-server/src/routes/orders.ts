@@ -160,6 +160,31 @@ async function sendConfirmationEmail(order: OrderRow, items: OrderItemRow[]) {
   });
 }
 
+/**
+ * Called by payments.ts after card/ATH payment is confirmed.
+ * Fires the POS broadcast + customer notifications that were held at order
+ * creation time (because payment was still pending).
+ */
+export async function notifyOrderPaid(orderId: number): Promise<void> {
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderId));
+  if (!order) return;
+
+  const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderId));
+
+  broadcastOrderEvent("order_created", orderId);
+
+  if (order.customerEmail) {
+    sendConfirmationEmail(order, items).catch((err) =>
+      logger.error({ err: err?.message }, "[email] post-payment confirmation failed")
+    );
+  }
+  if (order.customerPhone) {
+    sendOrderConfirmationWhatsApp(order).catch((err) =>
+      logger.error({ err: err?.message }, "[whatsapp] post-payment confirmation failed")
+    );
+  }
+}
+
 async function sendReadyEmail(order: OrderRow) {
   if (!order.customerEmail) return;
 
@@ -506,20 +531,28 @@ router.post("/orders", async (req, res): Promise<void> => {
     total,
   ).catch(() => {});
 
-  // Send confirmation email for online orders with an email address
-  if (order.source !== "pos" && order.customerEmail) {
-    sendConfirmationEmail(order, items).catch((err) =>
-      logger.error({ err: err?.message }, "[email] confirmation failed")
-    );
-  }
-  // Send WhatsApp confirmation for online orders with a phone number
-  if (order.source !== "pos" && order.customerPhone) {
-    sendOrderConfirmationWhatsApp(order).catch((err) =>
-      logger.error({ err: err?.message }, "[whatsapp] confirmation failed")
-    );
-  }
+  // Online card orders (Placetopay / ATH Móvil) are awaiting payment — hold
+  // POS notifications and customer confirmations until payment is verified.
+  // "Pay at pickup" online orders and all POS orders notify immediately.
+  const awaitingPayment =
+    order.source !== "pos" &&
+    (order.paymentMethod === "card" || order.paymentMethod === "athmovil");
 
-  broadcastOrderEvent("order_created", order.id);
+  if (!awaitingPayment) {
+    // Send confirmation email for online orders with an email address
+    if (order.source !== "pos" && order.customerEmail) {
+      sendConfirmationEmail(order, items).catch((err) =>
+        logger.error({ err: err?.message }, "[email] confirmation failed")
+      );
+    }
+    // Send WhatsApp confirmation for online orders with a phone number
+    if (order.source !== "pos" && order.customerPhone) {
+      sendOrderConfirmationWhatsApp(order).catch((err) =>
+        logger.error({ err: err?.message }, "[whatsapp] confirmation failed")
+      );
+    }
+    broadcastOrderEvent("order_created", order.id);
+  }
   res.status(201).json(formatOrder(order as unknown as Record<string, unknown>, items as unknown as Record<string, unknown>[]));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
