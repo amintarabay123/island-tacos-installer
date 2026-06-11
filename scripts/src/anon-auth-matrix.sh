@@ -91,6 +91,7 @@ check GET    /api/orders/receipt/IT-0000                200\|404
 # Placetopay WebCheckout — public customer-facing routes (auth done by order ownership, not session)
 check POST   /api/payments/placetopay/session           400\|404\|502\|503
 check POST   /api/payments/placetopay/verify            400\|404\|502
+check POST   /api/payments/placetopay/notify            200
 check POST   /api/orders/1/whatsapp-receipt             401\|403
 check POST   /api/orders/1/add-items                     401\|403
 check POST   /api/orders/1/items/mark-made                401\|403

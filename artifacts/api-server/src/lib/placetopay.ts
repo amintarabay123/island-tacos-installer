@@ -27,16 +27,17 @@ export interface PtpSessionResult {
 }
 
 export async function createSession(
-  reference:    string,
-  description:  string,
-  totalUsd:     string,
-  returnUrl:    string,
-  customerName: string,
-  customerPhone: string,
+  reference:       string,
+  description:     string,
+  totalUsd:        string,
+  returnUrl:       string,
+  customerName:    string,
+  customerPhone:   string,
+  notificationUrl?: string,
 ): Promise<PtpSessionResult> {
   const expiration = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
-  const body = {
+  const body: Record<string, unknown> = {
     auth: buildAuth(),
     buyer: {
       name:   customerName,
@@ -52,6 +53,8 @@ export async function createSession(
     ipAddress: "127.0.0.1",
     userAgent:  "IslandTacos/1.0",
   };
+
+  if (notificationUrl) body.notificationUrl = notificationUrl;
 
   const res  = await fetch(`${ENDPOINT}/api/session`, {
     method:  "POST",

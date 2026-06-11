@@ -342,6 +342,7 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
     : `${STORE_URL}/track?code=${order.confirmationCode}&ptp=1`;
 
   try {
+    const notificationUrl = `${STORE_URL}/api/payments/placetopay/notify`;
     const session = await ptp.createSession(
       order.confirmationCode,
       `Island Tacos order ${order.confirmationCode}`,
@@ -349,6 +350,7 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
       returnUrl,
       order.customerName,
       order.customerPhone || "",
+      notificationUrl,
     );
 
     // Persist requestId so verify can find it even after a server restart
@@ -361,6 +363,43 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
   } catch (err) {
     req.log.error({ err }, "[PTP] session creation failed");
     res.status(502).json({ error: "Could not create payment session. Please try again." });
+  }
+});
+
+// Public — server-to-server webhook Placetopay fires when a payment session changes
+// state. Runs the same verify logic as /verify so orders go through even when the
+// customer never clicks "Back to merchant."
+// Placetopay docs: notificationUrl receives { requestId, status: { status } }
+router.post("/payments/placetopay/notify", async (req, res): Promise<void> => {
+  // Always respond 200 immediately — Placetopay will retry on non-2xx
+  res.json({ ok: true });
+
+  const body = req.body as { requestId?: unknown };
+  const requestId = typeof body.requestId === "number" ? body.requestId : null;
+  if (!requestId) return;
+
+  const [order] = await db.select().from(ordersTable)
+    .where(eq(ordersTable.placetopayRequestId, requestId));
+  if (!order) return;
+  if (order.paymentStatus === "paid") return; // already handled
+
+  try {
+    const status = await ptp.getSessionStatus(requestId);
+    req.log.info(`[PTP] notify — orderId=${order.id} requestId=${requestId} status=${status}`);
+
+    if (status === "APPROVED") {
+      await db.update(ordersTable)
+        .set({ paymentStatus: "paid", status: "pending", paymentMethod: "card" })
+        .where(eq(ordersTable.id, order.id));
+      notifyOrderPaid(order.id).catch(() => {});
+    } else if (status === "REJECTED" || status === "FAILED") {
+      await db.update(ordersTable)
+        .set({ status: "cancelled" })
+        .where(eq(ordersTable.id, order.id));
+      req.log.info(`[PTP] notify: order ${order.id} cancelled after ${status}`);
+    }
+  } catch (err) {
+    req.log.error({ err }, "[PTP] notify verify failed");
   }
 });
 
