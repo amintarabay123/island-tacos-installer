@@ -24,7 +24,7 @@ import {
   ShoppingBag, DollarSign, Clock, CheckCircle2, TrendingUp,
   Settings, Monitor, LogOut, XCircle, BarChart3, Users,
   CloudUpload, CloudDownload, Menu, X, ChefHat, UtensilsCrossed, Store,
-  History, LayoutDashboard, CalendarIcon, Activity,
+  History, LayoutDashboard, CalendarIcon, Activity, PauseCircle, PlayCircle,
 } from "lucide-react";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -351,6 +351,9 @@ export default function Admin() {
   const [csvMessage, setCsvMessage] = useState("");
   const [pullMenuState, setPullMenuState] = useState<"idle" | "pulling" | "success" | "error">("idle");
   const [pullMenuMessage, setPullMenuMessage] = useState("");
+  const [pausedUntil, setPausedUntil] = useState<string | null>(null);
+  const [showPauseDialog, setShowPauseDialog] = useState(false);
+  const [pauseLoading, setPauseLoading] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const prevOrderIdsRef = useRef<Set<number>>(new Set());
   const isFirstFetchRef = useRef(true);
@@ -361,6 +364,59 @@ export default function Admin() {
       .then((d) => { if (!d.authed) navigate(adminRoutes.login); else if (d.role !== "admin") navigate(adminRoutes.pos); })
       .catch(() => navigate(adminRoutes.login));
   }, [navigate]);
+
+  useEffect(() => {
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${base}/api/settings`, { credentials: "include", headers: authHeaders() })
+      .then(r => r.json())
+      .then((d: Record<string, string>) => {
+        const val = d.paused_until ?? "";
+        setPausedUntil(val && new Date(val) > new Date() ? val : null);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handlePause = async (hours: number) => {
+    setPauseLoading(true);
+    const until = new Date(Date.now() + hours * 3_600_000).toISOString();
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const r = await fetch(`${base}/api/settings`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ paused_until: until }),
+      });
+      if (!r.ok) throw new Error("Failed");
+      setPausedUntil(until);
+      setShowPauseDialog(false);
+      toast({ title: "Store paused", description: `Online ordering paused until ${new Date(until).toLocaleDateString("en-US", { timeZone: "America/Puerto_Rico", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.` });
+    } catch {
+      toast({ title: "Error", description: "Could not pause the store. Try again.", variant: "destructive" });
+    } finally {
+      setPauseLoading(false);
+    }
+  };
+
+  const handleResume = async () => {
+    setPauseLoading(true);
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const r = await fetch(`${base}/api/settings`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ paused_until: "" }),
+      });
+      if (!r.ok) throw new Error("Failed");
+      setPausedUntil(null);
+      toast({ title: "Store resumed", description: "Online ordering is back on." });
+    } catch {
+      toast({ title: "Error", description: "Could not resume the store. Try again.", variant: "destructive" });
+    } finally {
+      setPauseLoading(false);
+    }
+  };
 
   const logout = async () => {
     clearAuthToken();
@@ -614,11 +670,37 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Live pill */}
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(48,209,88,0.1)", border: "1px solid rgba(48,209,88,0.25)", borderRadius: 20, padding: "6px 12px" }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#30d158", boxShadow: "0 0 8px rgba(48,209,88,0.8)", display: "inline-block" }} />
-              <span style={{ fontSize: 11, color: "#30d158", fontWeight: 700 }}>Live</span>
-            </div>
+            {/* Pause / Live pill */}
+            {pausedUntil ? (
+              <button
+                onClick={handleResume}
+                disabled={pauseLoading}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 20, padding: "6px 12px", cursor: "pointer" }}
+              >
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 8px rgba(239,68,68,0.8)", display: "inline-block" }} />
+                <span style={{ fontSize: 11, color: "#f87171", fontWeight: 700 }}>PAUSED</span>
+              </button>
+            ) : (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(48,209,88,0.1)", border: "1px solid rgba(48,209,88,0.25)", borderRadius: 20, padding: "6px 12px" }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#30d158", boxShadow: "0 0 8px rgba(48,209,88,0.8)", display: "inline-block" }} />
+                <span style={{ fontSize: 11, color: "#30d158", fontWeight: 700 }}>Live</span>
+              </div>
+            )}
+            {/* Pause button */}
+            <button
+              onClick={() => pausedUntil ? handleResume() : setShowPauseDialog(true)}
+              disabled={pauseLoading}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                background: pausedUntil ? "rgba(48,209,88,0.1)" : "rgba(239,68,68,0.1)",
+                color: pausedUntil ? "#30d158" : "#f87171",
+                border: `1px solid ${pausedUntil ? "rgba(48,209,88,0.3)" : "rgba(239,68,68,0.3)"}`,
+                borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: pauseLoading ? "default" : "pointer", opacity: pauseLoading ? 0.6 : 1,
+              }}
+            >
+              {pausedUntil ? <PlayCircle className="h-3.5 w-3.5" /> : <PauseCircle className="h-3.5 w-3.5" />}
+              {pausedUntil ? "Resume" : "Pause"}
+            </button>
             {/* POS button */}
             <button
               onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`)}
@@ -626,6 +708,71 @@ export default function Admin() {
             >🧾 POS</button>
           </div>
         </header>
+
+        {/* Pause banner */}
+        {pausedUntil && (
+          <div style={{ margin: "0 28px 0", padding: "10px 18px", borderRadius: 14, background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <PauseCircle style={{ color: "#f87171", flexShrink: 0 }} className="h-4 w-4" />
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#f87171" }}>
+                Online ordering is paused
+              </span>
+              <span style={{ fontSize: 12, color: "#fca5a5" }}>
+                · resumes {new Date(pausedUntil).toLocaleDateString("en-US", { timeZone: "America/Puerto_Rico", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+              </span>
+            </div>
+            <button
+              onClick={handleResume}
+              disabled={pauseLoading}
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(48,209,88,0.12)", color: "#30d158", border: "1px solid rgba(48,209,88,0.3)", borderRadius: 10, padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: pauseLoading ? "default" : "pointer" }}
+            >
+              <PlayCircle className="h-3.5 w-3.5" /> Resume Now
+            </button>
+          </div>
+        )}
+
+        {/* Pause dialog */}
+        {showPauseDialog && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
+            onClick={() => setShowPauseDialog(false)}>
+            <div style={{ background: "#1e1f38", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 22, padding: "28px 28px 24px", width: "min(92vw, 360px)", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <PauseCircle style={{ color: "#f87171" }} className="h-5 w-5" />
+                <span style={{ fontSize: 17, fontWeight: 900, color: "#e8eaf6", letterSpacing: "-0.03em" }}>Pause Online Ordering</span>
+              </div>
+              <p style={{ fontSize: 13, color: "#7077a1", marginBottom: 20, lineHeight: 1.5 }}>
+                Customers won't be able to place new online orders during the pause. Walk-in POS is unaffected.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  { label: "Until tomorrow morning", hours: 24 },
+                  { label: "2 days",                 hours: 48 },
+                  { label: "3 days",                 hours: 72 },
+                  { label: "1 week",                 hours: 168 },
+                ].map(opt => (
+                  <button
+                    key={opt.hours}
+                    onClick={() => handlePause(opt.hours)}
+                    disabled={pauseLoading}
+                    style={{ padding: "11px 16px", borderRadius: 12, background: "rgba(239,68,68,0.08)", color: "#f87171", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, fontWeight: 700, cursor: pauseLoading ? "default" : "pointer", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.16)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
+                  >
+                    <span>{opt.label}</span>
+                    <span style={{ fontSize: 11, color: "#fca5a5", fontWeight: 500 }}>
+                      until {new Date(Date.now() + opt.hours * 3_600_000).toLocaleDateString("en-US", { timeZone: "America/Puerto_Rico", weekday: "short", month: "short", day: "numeric" })}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowPauseDialog(false)}
+                style={{ marginTop: 16, width: "100%", padding: "9px", borderRadius: 10, background: "transparent", color: "#7077a1", border: "1px solid rgba(255,255,255,0.07)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >Cancel</button>
+            </div>
+          </div>
+        )}
 
         {/* Scrollable content */}
         <main className="flex-1 overflow-y-auto" style={{ padding: "0 28px 32px" }}>

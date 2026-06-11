@@ -51,6 +51,7 @@ export function computeStoreStatus(settings: Record<string, string>): {
   closes_orders_at: string;
   open_today: boolean;
   closed_today_reason?: string;
+  is_paused?: boolean;
 } {
   const openTime = settings.open_time ?? "11:00";
   const closeTime = settings.close_time ?? "19:00";
@@ -76,6 +77,24 @@ export function computeStoreStatus(settings: Record<string, string>): {
   const cutoffH = Math.floor(cutoffMins / 60);
   const cutoffM = cutoffMins % 60;
   const closes_orders_at = `${String(cutoffH).padStart(2, "0")}:${String(cutoffM).padStart(2, "0")}`;
+
+  // Manual pause overrides all time-based logic. Check before anything else.
+  const pausedUntilStr = settings.paused_until;
+  if (pausedUntilStr) {
+    const pausedUntil = new Date(pausedUntilStr);
+    if (pausedUntil > new Date()) {
+      const formatted = pausedUntil.toLocaleDateString("en-US", {
+        timeZone: "America/Puerto_Rico", weekday: "short", month: "short", day: "numeric",
+      });
+      return {
+        is_open:    false,
+        closes_orders_at,
+        open_today: false,
+        closed_today_reason: `Temporarily closed · resumes ${formatted}`,
+        is_paused:  true,
+      };
+    }
+  }
 
   // BVI = America/Puerto_Rico (UTC-4, no DST)
   const now = new Date();
@@ -139,13 +158,15 @@ router.get("/settings", async (req, res): Promise<void> => {
     req.log.warn({ err }, "store_profile not available — serving K/V defaults for /api/settings");
   }
 
-  const { is_open, closes_orders_at, open_today, closed_today_reason } = computeStoreStatus(result);
-  // In dev mode (Replit preview) bypass store hours so testing isn't gated by real open/close times.
-  const devOverride = process.env.NODE_ENV === "development";
+  const { is_open, closes_orders_at, open_today, closed_today_reason, is_paused } = computeStoreStatus(result);
+  // Dev mode bypasses time-based hours — but a manual pause always wins even in dev,
+  // so admins can actually test the pause feature.
+  const devOverride = process.env.NODE_ENV === "development" && !is_paused;
   result.is_open = (devOverride || is_open) ? "true" : "false";
   result.open_today = (devOverride || open_today) ? "true" : "false";
-  if (!devOverride && closed_today_reason) result.closed_today_reason = closed_today_reason;
+  if ((!devOverride || is_paused) && closed_today_reason) result.closed_today_reason = closed_today_reason;
   result.closes_orders_at = closes_orders_at;
+  if (is_paused) result.is_paused = "true";
 
   res.json(result);
 });
