@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq, desc, and, inArray, count, or, gte } from "drizzle-orm";
+import { eq, desc, and, inArray, count, or, gte, ne, notInArray } from "drizzle-orm";
 import { db, ordersTable, orderItemsTable, menuItemsTable, menuCategoriesTable, refundsTable, storeSettingsTable } from "@workspace/db";
 import { upsertCustomer } from "./customers";
 import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
@@ -266,6 +266,20 @@ router.get("/orders", requireStaffUnlessCustomerPhoneHistory, async (req, res): 
 
   // Build up where clauses
   const conditions = [];
+
+  // Always hide online card/ATH orders that haven't been paid yet.
+  // These are awaiting Placetopay/ATH Móvil confirmation and should not
+  // appear in the POS queue or admin until payment clears.
+  // "Pay at counter" (cash) online orders are unaffected (paymentMethod = 'cash').
+  // POS orders are always included regardless of paymentMethod.
+  conditions.push(
+    or(
+      eq(ordersTable.source, "pos"),
+      ne(ordersTable.paymentStatus, "pending"),
+      notInArray(ordersTable.paymentMethod, ["card", "athmovil"]),
+    )!
+  );
+
   if (queryParsed.data.status) {
     conditions.push(eq(ordersTable.status, queryParsed.data.status));
   }
