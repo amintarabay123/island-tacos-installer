@@ -342,7 +342,15 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
     : `${STORE_URL}/track?code=${order.confirmationCode}&ptp=1`;
 
   try {
-    const notificationUrl = `${STORE_URL}/api/payments/placetopay/notify`;
+    // Build the notification URL from the actual incoming request host so it
+    // works both on dev (Replit preview domain) and production (STORE_URL).
+    const proto = (req.headers["x-forwarded-proto"] as string | undefined)
+      ?.split(",")[0]?.trim() ?? "https";
+    const host  = (req.headers["x-forwarded-host"] as string | undefined)
+      ?? req.get("host")
+      ?? STORE_URL.replace(/^https?:\/\//, "");
+    const notificationUrl = `${proto}://${host}/api/payments/placetopay/notify`;
+    req.log.info(`[PTP] notificationUrl=${notificationUrl}`);
     const session = await ptp.createSession(
       order.confirmationCode,
       `Island Tacos order ${order.confirmationCode}`,
