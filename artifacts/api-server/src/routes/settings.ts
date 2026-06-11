@@ -140,9 +140,11 @@ router.get("/settings", async (req, res): Promise<void> => {
   }
 
   const { is_open, closes_orders_at, open_today, closed_today_reason } = computeStoreStatus(result);
-  result.is_open = is_open ? "true" : "false";
-  result.open_today = open_today ? "true" : "false";
-  if (closed_today_reason) result.closed_today_reason = closed_today_reason;
+  // In dev mode (Replit preview) bypass store hours so testing isn't gated by real open/close times.
+  const devOverride = process.env.NODE_ENV === "development";
+  result.is_open = (devOverride || is_open) ? "true" : "false";
+  result.open_today = (devOverride || open_today) ? "true" : "false";
+  if (!devOverride && closed_today_reason) result.closed_today_reason = closed_today_reason;
   result.closes_orders_at = closes_orders_at;
 
   res.json(result);

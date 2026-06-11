@@ -304,7 +304,8 @@ router.post("/orders", async (req, res): Promise<void> => {
     const settings: Record<string, string> = { ...SETTING_DEFAULTS };
     for (const row of settingRows) settings[row.key] = row.value;
     const { is_open } = computeStoreStatus(settings);
-    if (!is_open) {
+    const devOverride = process.env.NODE_ENV === "development";
+    if (!devOverride && !is_open) {
       const [ch, cm] = (settings.open_time ?? "11:00").split(":").map(Number);
       const ampm = ch >= 12 ? "PM" : "AM";
       const hour = ch % 12 || 12;
