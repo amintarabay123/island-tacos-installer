@@ -523,7 +523,12 @@ async function escalate(serviceId, errorMsg) {
   }
 
   const alertMsg = `[IT] ${serviceId} DOWN: ${errorMsg.slice(0, 80)} — check the shop PC`;
+  // Send short alert via WhatsApp + SMS fallback; then send the AI diagnosis as a
+  // follow-up WhatsApp message (WA supports long text; SMS is capped at 160 chars).
   await sendAlert(alertMsg).catch(() => {});
+  if (diagnosis) {
+    await sendWhatsAppAlert(`🤖 AI Diagnosis for ${serviceId}:\n${diagnosis}`).catch(() => {});
+  }
 }
 
 // ── Poll state & loop ─────────────────────────────────────────────────────────

@@ -137,13 +137,28 @@ router.get("/system/health", (req, res): void => {
   const svcList = Object.values(services);
   const allOk   = svcList.length > 0 && svcList.every(s => s.ok);
 
+  // Detect if the monitor process itself has gone silent.
+  // monitor_meta.updated_at is a Unix ms timestamp written every poll cycle (every 30 s).
+  // If the freshest row is older than 2 minutes we consider the monitor stale.
+  const STALE_MS = 2 * 60 * 1000;
+  let monitorStale = false;
+  try {
+    const freshRow = db
+      .prepare<{ ts: number }>("SELECT MAX(updated_at) AS ts FROM monitor_meta")
+      .all()[0];
+    if (freshRow && typeof freshRow.ts === "number") {
+      monitorStale = Date.now() - freshRow.ts > STALE_MS;
+    }
+  } catch { /* non-fatal */ }
+
   res.json({
-    available:  true,
-    overall:    allOk ? "ok" : "degraded",
-    updatedAt:  svcList.length > 0 ? svcList[0]!.lastCheckAt : new Date().toISOString(),
-    pollCount:  parseInt(meta["pollCount"] ?? "0", 10),
-    pid:        parseInt(meta["pid"]       ?? "0", 10),
-    platform:   meta["platform"]    ?? OS,
+    available:    true,
+    overall:      allOk ? "ok" : "degraded",
+    updatedAt:    svcList.length > 0 ? svcList[0]!.lastCheckAt : new Date().toISOString(),
+    pollCount:    parseInt(meta["pollCount"] ?? "0", 10),
+    pid:          parseInt(meta["pid"]       ?? "0", 10),
+    platform:     meta["platform"]    ?? OS,
+    monitorStale,
     services,
     events,
   });

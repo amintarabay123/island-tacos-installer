@@ -66,6 +66,7 @@ type HealthPayload = {
   pollCount: number;
   pid: number;
   platform?: string;
+  monitorStale?: boolean;
   services: Record<string, ServiceSnap>;
   events: MonitorEvent[];
 };
@@ -235,6 +236,27 @@ export default function AdminSystem() {
           </section>
         )}
 
+        {/* Monitor stale warning — shows when the watchdog process itself has gone silent */}
+        {fullData?.monitorStale && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "14px 18px",
+            background: "rgba(255,214,10,0.07)", border: `1px solid rgba(255,214,10,0.25)`,
+            borderRadius: 12,
+          }}>
+            <AlertTriangle style={{ width: 18, height: 18, color: YLW, flexShrink: 0 }} />
+            <div>
+              <p style={{ fontWeight: 700, fontSize: 13, color: YLW, marginBottom: 2 }}>
+                Watchdog process appears offline
+              </p>
+              <p style={{ fontSize: 12, color: MU, lineHeight: 1.5 }}>
+                No poll received in the last 2 minutes. The <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 4 }}>island-tacos-monitor</code> PM2 process may have crashed.
+                Run <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 4 }}>pm2 start local-install/ecosystem.config.cjs</code> on the shop PC to restart it.
+                Service status shown below reflects the last known state.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Meta row (poll count, last updated, PID) */}
         {fullData && (
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -261,7 +283,7 @@ export default function AdminSystem() {
             <h2 style={{ fontWeight: 700, fontSize: 13, color: MU, letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 12 }}>Services</h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
               {services.map(svc => {
-                const isRepairable = svc.id === "api-process" || svc.id === "api-http";
+                const isRepairable = svc.id === "api-process" || svc.id === "api-http" || svc.id === "postgres";
                 const isRepairing  = repairing === svc.id;
                 return (
                   <div key={svc.id} style={{
@@ -325,7 +347,7 @@ export default function AdminSystem() {
                         }}
                       >
                         <Wrench style={{ width: 12, height: 12, animation: isRepairing ? "spin 1s linear infinite" : "none" }} />
-                        {isRepairing ? "Restarting…" : "Restart Process"}
+                        {isRepairing ? "Restarting…" : svc.id === "postgres" ? "Restart Postgres" : "Restart Process"}
                       </button>
                     )}
                   </div>
