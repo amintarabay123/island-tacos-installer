@@ -152,7 +152,7 @@ router.post("/payments/athmovil/verify", async (req, res): Promise<void> => {
 
   await db
     .update(ordersTable)
-    .set({ paymentStatus: "paid", status: "confirmed" })
+    .set({ paymentStatus: "paid", status: "pending" })
     .where(eq(ordersTable.id, order.id));
 
   res.json({ success: true, referenceNumber });
@@ -292,10 +292,10 @@ router.post("/payments/athmovil/check-status", async (req, res): Promise<void> =
         }
       }
 
-      // Mark order paid
+      // Mark order paid — keep status "pending" so the POS new-order popup fires
       await db
         .update(ordersTable)
-        .set({ paymentStatus: "paid", status: "confirmed", paymentMethod: "athmovil" })
+        .set({ paymentStatus: "paid", status: "pending", paymentMethod: "athmovil" })
         .where(eq(ordersTable.id, orderId));
 
       athSessions.delete(orderId);
@@ -394,11 +394,19 @@ router.post("/payments/placetopay/verify", async (req, res): Promise<void> => {
     req.log.info(`[PTP] verify — orderId=${order.id} code=${code} status=${status}`);
 
     if (status === "APPROVED") {
+      // Keep status "pending" so the POS new-order popup + chime fires normally.
+      // The list filter allows it through once paymentStatus = "paid".
       await db.update(ordersTable)
-        .set({ paymentStatus: "paid", status: "confirmed", paymentMethod: "card" })
+        .set({ paymentStatus: "paid", status: "pending", paymentMethod: "card" })
         .where(eq(ordersTable.id, order.id));
       // Notify POS + customer now that payment is confirmed
       notifyOrderPaid(order.id).catch(() => {});
+    } else if (status === "REJECTED" || status === "FAILED") {
+      // Card declined — cancel the order so it doesn't sit as an abandoned pending forever
+      await db.update(ordersTable)
+        .set({ status: "cancelled" })
+        .where(eq(ordersTable.id, order.id));
+      req.log.info(`[PTP] order ${order.id} cancelled after ${status}`);
     }
 
     res.json({ status });
