@@ -5,6 +5,7 @@ import { warmAllMenuImages } from "./routes/image-proxy";
 import { startMidnightResetScheduler } from "./lib/midnight-reset";
 import { startOnlineOrdersSync } from "./lib/online-orders-sync";
 import { startOrderReminderJob } from "./lib/order-reminders";
+import { startPlacetopayPoller } from "./lib/placetopay-poller";
 import { pullMenuFromCloud } from "./routes/sync";
 import { pool, db, menuCategoriesTable } from "@workspace/db";
 
@@ -83,6 +84,7 @@ app.listen(port, (err) => {
   // Enabled when SYNC_TARGET_URL + SYNC_SECRET are set in .env.
   startOnlineOrdersSync();
   startOrderReminderJob();
+  startPlacetopayPoller();
 
   // Auto-seed menu from cloud on startup if local DB is empty (local mode only).
   // This fixes fresh installs where schema ran but menu data was never imported.
