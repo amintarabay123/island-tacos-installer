@@ -79,6 +79,11 @@ const WA_PHONE_ID       = getEnv("META_PHONE_NUMBER_ID", "");
 const WA_ACCESS_TOKEN   = getEnv("META_ACCESS_TOKEN", "");
 const WA_ENABLED        = getEnv("META_WHATSAPP_ENABLED", "") === "true";
 const WA_ALERT_PHONE    = getEnv("MONITOR_ALERT_WA_PHONE", ALERT_PHONE);
+// Optional: name of an approved Meta utility template whose body is {{1}} = message.
+// If unset, falls back to "hello_world" (just says "Hello World!" — acts as a ping).
+// Recommended: create a utility template in Meta Business Manager with body {{1}}
+// and set WA_ALERT_TEMPLATE=your_template_name here.
+const WA_ALERT_TEMPLATE = getEnv("WA_ALERT_TEMPLATE", "");
 const CLOUD_URL     = getEnv("PUBLIC_URL", "https://orders.islandtacosbvi.com");
 const PGDATA        = getEnv("PGDATA", "");
 
@@ -412,34 +417,68 @@ async function sendWhatsAppAlert(message) {
     log("WhatsApp not configured — skipping WA alert");
     return false;
   }
-  const to = WA_ALERT_PHONE.replace(/\D/g, "");
-  try {
+
+  // Normalize to full E.164 digits (no +).
+  // BVI 7-digit → 1284XXXXXXX, 10-digit 284XXXXXXX → 1284XXXXXXX, 11-digit pass-through.
+  const digits = WA_ALERT_PHONE.replace(/\D/g, "");
+  let to = digits;
+  if      (digits.length === 7)                                  to = `1284${digits}`;
+  else if (digits.length === 10 && digits.startsWith("284"))     to = `1${digits}`;
+
+  // Helper — POST one message payload to the Graph API
+  async function postWA(payload) {
     const resp = await fetch(
       `https://graph.facebook.com/v21.0/${WA_PHONE_ID}/messages`,
       {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${WA_ACCESS_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to,
-          type: "text",
-          text: { body: message },
-        }),
+        headers: { "Authorization": `Bearer ${WA_ACCESS_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ messaging_product: "whatsapp", to, ...payload }),
         signal: AbortSignal.timeout(10_000),
       }
     );
-    if (resp.ok) {
-      log(`WhatsApp alert sent to ${to}`);
+    if (!resp.ok) {
+      const errData = await resp.json().catch(() => ({}));
+      throw Object.assign(new Error(`HTTP ${resp.status}`), { errData });
+    }
+    return true;
+  }
+
+  try {
+    if (WA_ALERT_TEMPLATE) {
+      // Custom utility template — body has a single {{1}} parameter = message.
+      await postWA({
+        type: "template",
+        template: {
+          name: WA_ALERT_TEMPLATE,
+          language: { code: "en_US" },
+          components: [{ type: "body", parameters: [{ type: "text", text: message.slice(0, 1024) }] }],
+        },
+      });
+      log(`WhatsApp alert sent via template "${WA_ALERT_TEMPLATE}" to ${to}`);
       return true;
     }
-    const errData = await resp.json().catch(() => ({}));
-    log(`WhatsApp alert HTTP ${resp.status}: ${JSON.stringify(errData)}`);
-    return false;
+
+    // No custom template: try plain text first (works within 24-h customer service window).
+    // If Meta rejects it (error code 131047 = outside window), fall through to hello_world ping.
+    try {
+      await postWA({ type: "text", text: { body: message } });
+      log(`WhatsApp alert sent (text) to ${to}`);
+      return true;
+    } catch (textErr) {
+      const code = textErr.errData?.error?.code;
+      if (code !== 131047 && code !== 131026) throw textErr; // unexpected error — re-throw
+      // Outside 24-h window — send hello_world template as a ping so owner at least
+      // gets notified, then immediately follow up with the message text.
+      log(`WhatsApp text rejected (outside 24-h window) — sending hello_world ping`);
+      await postWA({ type: "template", template: { name: "hello_world", language: { code: "en_US" } } });
+      // Small delay then resend the actual text (hello_world opens a 24-h window)
+      await new Promise(r => setTimeout(r, 1500));
+      await postWA({ type: "text", text: { body: `🖥️ Shop PC alert:\n\n${message}` } });
+      log(`WhatsApp alert (hello_world + text) sent to ${to}`);
+      return true;
+    }
   } catch (err) {
-    log(`WhatsApp alert failed: ${err.message}`);
+    log(`WhatsApp alert failed: ${err.message} ${JSON.stringify(err.errData ?? {})}`);
     return false;
   }
 }
