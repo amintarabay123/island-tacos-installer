@@ -351,6 +351,13 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
       ?? STORE_URL.replace(/^https?:\/\//, "");
     const notificationUrl = `${proto}://${host}/api/payments/placetopay/notify`;
     req.log.info(`[PTP] notificationUrl=${notificationUrl}`);
+    // Resolve real client IP — check X-Forwarded-For first (set by Replit proxy)
+    const clientIp = (req.headers["x-forwarded-for"] as string | undefined)
+      ?.split(",")[0]?.trim()
+      ?? req.socket.remoteAddress
+      ?? "127.0.0.1";
+    const clientUa = req.headers["user-agent"] ?? "Mozilla/5.0 IslandTacos/1.0";
+
     const session = await ptp.createSession(
       order.confirmationCode,
       `Island Tacos order ${order.confirmationCode}`,
@@ -360,6 +367,8 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
       order.customerPhone || "",
       notificationUrl,
       order.email ?? undefined,
+      clientIp,
+      clientUa,
     );
 
     // Persist requestId so verify can find it even after a server restart

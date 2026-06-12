@@ -56,6 +56,8 @@ export async function createSession(
   customerPhone:    string,
   notificationUrl?: string,
   customerEmail?:   string,
+  ipAddress?:       string,
+  userAgent?:       string,
 ): Promise<PtpSessionResult> {
   const expiration = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
@@ -82,8 +84,8 @@ export async function createSession(
     },
     expiration,
     returnUrl,
-    ipAddress: "127.0.0.1",
-    userAgent:  "IslandTacos/1.0",
+    ipAddress: ipAddress ?? "127.0.0.1",
+    userAgent:  userAgent  ?? "Mozilla/5.0 IslandTacos/1.0",
   };
 
   if (notificationUrl) body.notificationUrl = notificationUrl;
