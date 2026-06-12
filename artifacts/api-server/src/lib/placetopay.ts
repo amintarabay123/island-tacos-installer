@@ -8,6 +8,27 @@ export function isConfigured(): boolean {
   return !!(LOGIN && SECRET);
 }
 
+/**
+ * Validate the sha256 signature that PlaceToPay includes in webhook notifications.
+ * Signature format: "sha256:<hex>" computed as sha256(requestId + status + date + secretKey).
+ * Returns false if the signature is missing, malformed, or doesn't match.
+ */
+export function verifyWebhookSignature(
+  requestId:         number,
+  statusStatus:      string,
+  statusDate:        string,
+  receivedSignature: string,
+): boolean {
+  if (!SECRET) return false;
+  const prefix = "sha256:";
+  if (!receivedSignature.startsWith(prefix)) return false;
+  const received = receivedSignature.slice(prefix.length);
+  const expected = createHash("sha256")
+    .update(`${requestId}${statusStatus}${statusDate}${SECRET}`)
+    .digest("hex");
+  return received === expected;
+}
+
 function buildAuth() {
   const seed     = new Date().toISOString();
   const rawNonce = randomBytes(16);
@@ -27,22 +48,33 @@ export interface PtpSessionResult {
 }
 
 export async function createSession(
-  reference:       string,
-  description:     string,
-  totalUsd:        string,
-  returnUrl:       string,
-  customerName:    string,
-  customerPhone:   string,
+  reference:        string,
+  description:      string,
+  totalUsd:         string,
+  returnUrl:        string,
+  customerName:     string,
+  customerPhone:    string,
   notificationUrl?: string,
+  customerEmail?:   string,
 ): Promise<PtpSessionResult> {
   const expiration = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
+  // Split "First Last" → name + surname for PlaceToPay buyer object.
+  // PlaceToPay certification requires separate name/surname fields.
+  const nameParts = customerName.trim().split(/\s+/);
+  const buyerName    = nameParts[0] ?? customerName;
+  const buyerSurname = nameParts.length > 1 ? nameParts.slice(1).join(" ") : buyerName;
+
+  const buyer: Record<string, string> = {
+    name:    buyerName,
+    surname: buyerSurname,
+    mobile:  customerPhone,
+  };
+  if (customerEmail) buyer.email = customerEmail;
+
   const body: Record<string, unknown> = {
     auth: buildAuth(),
-    buyer: {
-      name:   customerName,
-      mobile: customerPhone,
-    },
+    buyer,
     payment: {
       reference,
       description,

@@ -359,6 +359,7 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
       order.customerName,
       order.customerPhone || "",
       notificationUrl,
+      order.email ?? undefined,
     );
 
     // Persist requestId so verify can find it even after a server restart
@@ -374,17 +375,36 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
   }
 });
 
-// Public — server-to-server webhook Placetopay fires when a payment session changes
+// Public — server-to-server webhook PlaceToPay fires when a payment session changes
 // state. Runs the same verify logic as /verify so orders go through even when the
 // customer never clicks "Back to merchant."
-// Placetopay docs: notificationUrl receives { requestId, status: { status } }
+// Body per PlaceToPay docs: { requestId, reference, signature, status: { status, reason, message, date } }
 router.post("/payments/placetopay/notify", async (req, res): Promise<void> => {
-  // Always respond 200 immediately — Placetopay will retry on non-2xx
+  // Always respond 200 immediately — PlaceToPay will retry on non-2xx
   res.json({ ok: true });
 
-  const body = req.body as { requestId?: unknown };
+  const body = req.body as {
+    requestId?: unknown;
+    reference?: unknown;
+    signature?: unknown;
+    status?:    { status?: string; date?: string; message?: string };
+  };
+
   const requestId = typeof body.requestId === "number" ? body.requestId : null;
   if (!requestId) return;
+
+  // Validate the sha256 signature to ensure the notification is genuinely from PlaceToPay.
+  // Format: sha256(requestId + status.status + status.date + secretKey) → hex → "sha256:<hex>"
+  const signature   = typeof body.signature === "string" ? body.signature : "";
+  const statusStr   = body.status?.status ?? "";
+  const statusDate  = body.status?.date   ?? "";
+  if (signature) {
+    const valid = ptp.verifyWebhookSignature(requestId, statusStr, statusDate, signature);
+    if (!valid) {
+      req.log.warn({ requestId, signature }, "[PTP] notify: invalid signature — ignoring");
+      return;
+    }
+  }
 
   const [order] = await db.select().from(ordersTable)
     .where(eq(ordersTable.placetopayRequestId, requestId));
@@ -392,7 +412,13 @@ router.post("/payments/placetopay/notify", async (req, res): Promise<void> => {
   if (order.paymentStatus === "paid") return; // already handled
 
   try {
-    const status = await ptp.getSessionStatus(requestId);
+    // Use the status from the (signature-validated) notification body directly.
+    // This avoids an extra round-trip to PlaceToPay for the common case.
+    // Fall back to querying PTP if the notification body had no status.
+    const status = statusStr
+      ? (statusStr as ptp.PtpStatus)
+      : await ptp.getSessionStatus(requestId);
+
     req.log.info(`[PTP] notify — orderId=${order.id} requestId=${requestId} status=${status}`);
 
     if (status === "APPROVED") {
@@ -405,6 +431,18 @@ router.post("/payments/placetopay/notify", async (req, res): Promise<void> => {
         .set({ status: "cancelled" })
         .where(eq(ordersTable.id, order.id));
       req.log.info(`[PTP] notify: order ${order.id} cancelled after ${status}`);
+    } else if (status === "REVERSED") {
+      const { db: dbRef, refundsTable } = await import("@workspace/db");
+      await dbRef.insert(refundsTable).values({
+        orderId:      order.id,
+        amount:       order.total ?? "0",
+        reason:       "Reversed by PlaceToPay",
+        refundMethod: "card",
+      }).onConflictDoNothing();
+      await db.update(ordersTable)
+        .set({ paymentStatus: "refunded" })
+        .where(eq(ordersTable.id, order.id));
+      req.log.info(`[PTP] notify: order ${order.id} reversed — marked refunded`);
     }
   } catch (err) {
     req.log.error({ err }, "[PTP] notify verify failed");

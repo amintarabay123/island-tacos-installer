@@ -62,8 +62,15 @@ export default function Checkout() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const [customerName, setCustomerName] = useState("");
+  const [customerName,  setCustomerName]  = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+
+  // PlaceToPay certification: names must contain only letters (incl. accented/ñ),
+  // spaces, hyphens, and apostrophes — no numbers or symbols.
+  const NAME_RE  = /^[\p{L}\p{M}'\- ]+$/u;
+  // Simple structural email check — must have @, a domain, and a TLD.
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   const [notes, setNotes] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [enabledMethods, setEnabledMethods] = useState<string[]>(["cash"]);
@@ -273,6 +280,14 @@ export default function Checkout() {
       toast({ title: "Please enter your name", variant: "destructive" });
       return;
     }
+    if (!NAME_RE.test(customerName.trim())) {
+      toast({ title: "Name must contain only letters, spaces, or hyphens — no numbers or symbols", variant: "destructive" });
+      return;
+    }
+    if (customerEmail.trim() && !EMAIL_RE.test(customerEmail.trim())) {
+      toast({ title: "Please enter a valid email address", variant: "destructive" });
+      return;
+    }
     if (!customerPhone.trim()) {
       toast({ title: "Please enter your phone number", variant: "destructive" });
       return;
@@ -283,13 +298,13 @@ export default function Checkout() {
     }
 
     // Remember for next time (shared with track page)
-    saveCustomer({ name: customerName.trim(), phone: customerPhone.trim(), email: "" });
+    saveCustomer({ name: customerName.trim(), phone: customerPhone.trim(), email: customerEmail.trim() });
 
     createOrder.mutate(
       {
         data: {
           customerName: customerName.trim(),
-          customerEmail: "",
+          customerEmail: customerEmail.trim() || null,
           customerPhone: customerPhone.trim(),
           orderType: "pickup",
           deliveryAddress: null,
@@ -376,6 +391,16 @@ export default function Checkout() {
                         id="name" type="text" placeholder="First name is fine"
                         value={customerName} onChange={e => setCustomerName(e.target.value)}
                         autoComplete="given-name" required style={INP}
+                        onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(124,106,247,0.15)`; }}
+                        onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <label htmlFor="email" style={LBL}>Email <span style={{ color: MU, fontWeight: 400 }}>(optional)</span></label>
+                      <input
+                        id="email" type="email" placeholder="you@example.com"
+                        value={customerEmail} onChange={e => setCustomerEmail(e.target.value)}
+                        autoComplete="email" style={INP}
                         onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(124,106,247,0.15)`; }}
                         onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
                       />
