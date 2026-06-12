@@ -4,7 +4,7 @@ import { isConfigured, getSessionStatus } from "./placetopay.js";
 import { notifyOrderPaid } from "../routes/orders";
 import { logger } from "./logger";
 
-const POLL_INTERVAL_MS  = 15_000;  // check every 15 s
+const POLL_INTERVAL_MS  = 10_000;  // check every 10 s
 const MAX_AGE_MINUTES   = 35;      // Placetopay sessions expire after 30 min; give a little extra
 
 /**

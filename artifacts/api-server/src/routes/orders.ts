@@ -336,6 +336,21 @@ router.post("/orders", async (req, res): Promise<void> => {
     return;
   }
 
+  // In dev mode, reject order creation requests that originate from the
+  // production domain. This prevents production customers from accidentally
+  // hitting the dev server (same shared DB) and avoids test orders mingling
+  // with real ones. POS orders (source=pos) are always allowed.
+  if (process.env.NODE_ENV === "development" && parsed.data.source !== "pos") {
+    const origin = (req.headers.origin ?? req.headers.referer ?? "") as string;
+    const PROD_DOMAINS = ["islandtacosbvi.com", "orders.islandtacosbvi"];
+    const isProduction = PROD_DOMAINS.some(d => origin.includes(d));
+    if (isProduction) {
+      req.log.warn({ origin }, "[orders] rejected production-origin order in dev mode");
+      res.status(403).json({ error: "Dev server does not accept orders from the production site." });
+      return;
+    }
+  }
+
   // Enforce business hours for online orders only + validate scheduled pickup
   let scheduledPickupAtDate: Date | null = null;
   if (parsed.data.source !== "pos") {
