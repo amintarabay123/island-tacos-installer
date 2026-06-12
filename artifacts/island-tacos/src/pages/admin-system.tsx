@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, RefreshCw, CheckCircle2, XCircle, AlertTriangle,
   Activity, Cpu, HardDrive, Wifi, WifiOff, Server, Printer,
-  MessageSquare, Wrench, Info,
+  MessageSquare, Wrench, Info, Download,
 } from "lucide-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -114,6 +114,10 @@ export default function AdminSystem() {
   const [loading, setLoading]   = useState(true);
   const [repairing, setRepairing] = useState<string | null>(null);
 
+  // Update flow: idle → confirm → updating (reconnecting) → done
+  const [updateState, setUpdateState] = useState<"idle" | "confirm" | "updating" | "done">("idle");
+  const [reconnectSecs, setReconnectSecs] = useState(0);
+
   const fetchHealth = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
@@ -134,6 +138,42 @@ export default function AdminSystem() {
     const id = setInterval(() => fetchHealth(true), 10_000);
     return () => clearInterval(id);
   }, [fetchHealth]);
+
+  const handleRunUpdate = async () => {
+    setUpdateState("updating");
+    setReconnectSecs(0);
+    try {
+      const res = await fetch(`${API}/api/admin/run-update`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const body = await res.json() as { ok: boolean; error?: string };
+      if (!res.ok || !body.ok) {
+        toast({ title: body.error ?? "Update failed", variant: "destructive" });
+        setUpdateState("idle");
+        return;
+      }
+      // Server will restart — poll until it comes back
+      let elapsed = 0;
+      const poll = setInterval(async () => {
+        elapsed += 2;
+        setReconnectSecs(elapsed);
+        try {
+          const r = await fetch(`${API}/api/healthz`, { cache: "no-store" });
+          if (r.ok) {
+            clearInterval(poll);
+            setUpdateState("done");
+            setTimeout(() => window.location.reload(), 1500);
+          }
+        } catch {
+          // still offline, keep polling
+        }
+      }, 2000);
+    } catch {
+      toast({ title: "Could not reach the server", variant: "destructive" });
+      setUpdateState("idle");
+    }
+  };
 
   const handleRepair = async (serviceId: string) => {
     setRepairing(serviceId);
@@ -207,10 +247,48 @@ export default function AdminSystem() {
           </div>
           <button
             onClick={() => fetchHealth()}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "rgba(255,255,255,0.06)", border: `1px solid ${BORD}`, color: TM, cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+            disabled={updateState === "updating"}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "rgba(255,255,255,0.06)", border: `1px solid ${BORD}`, color: TM, cursor: updateState === "updating" ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600, opacity: updateState === "updating" ? 0.4 : 1 }}
           >
             <RefreshCw style={{ width: 13, height: 13 }} /> Refresh
           </button>
+
+          {/* Update button / confirm / states */}
+          {updateState === "idle" && (
+            <button
+              onClick={() => setUpdateState("confirm")}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "rgba(124,106,247,0.15)", border: `1px solid rgba(124,106,247,0.35)`, color: PUR, cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+            >
+              <Download style={{ width: 13, height: 13 }} /> Update
+            </button>
+          )}
+          {updateState === "confirm" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 12, color: YLW, fontWeight: 600 }}>Run UPDATE.ps1?</span>
+              <button
+                onClick={handleRunUpdate}
+                style={{ padding: "4px 10px", borderRadius: 7, background: PUR, border: "none", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700 }}
+              >Yes</button>
+              <button
+                onClick={() => setUpdateState("idle")}
+                style={{ padding: "4px 10px", borderRadius: 7, background: "rgba(255,255,255,0.08)", border: `1px solid ${BORD}`, color: TM, cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+              >Cancel</button>
+            </div>
+          )}
+          {updateState === "updating" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 12px", borderRadius: 8, background: "rgba(255,214,10,0.08)", border: `1px solid rgba(255,214,10,0.25)` }}>
+              <RefreshCw style={{ width: 12, height: 12, color: YLW, animation: "spin 1s linear infinite" }} />
+              <span style={{ fontSize: 12, color: YLW, fontWeight: 600 }}>
+                {reconnectSecs === 0 ? "Starting…" : `Reconnecting… ${reconnectSecs}s`}
+              </span>
+            </div>
+          )}
+          {updateState === "done" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 8, background: "rgba(48,209,88,0.1)", border: `1px solid rgba(48,209,88,0.25)` }}>
+              <CheckCircle2 style={{ width: 12, height: 12, color: GRN }} />
+              <span style={{ fontSize: 12, color: GRN, fontWeight: 600 }}>Back online — reloading</span>
+            </div>
+          )}
         </div>
       </header>
 

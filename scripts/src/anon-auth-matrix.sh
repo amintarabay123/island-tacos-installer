@@ -127,6 +127,7 @@ check GET    /api/reports/sales                          401\|403
 # Real /api/admin/* route — verifies the admin prefix guard itself, not just
 # the uploaded-images bypass.
 check GET    /api/admin/stats                            401\|403
+check POST   /api/admin/run-update                      401\|403
 
 echo
 echo "── M2M sync (X-Sync-Secret required) ───────────────────────────────"

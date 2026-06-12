@@ -522,4 +522,37 @@ router.get("/download/server.mjs", (req: Request, res: Response): void => {
   res.send(fs.readFileSync(serverPath, "utf-8"));
 });
 
+// ── Run UPDATE.ps1 on the shop mini PC ────────────────────────────────────────
+// POST /api/admin/run-update  (admin auth, Windows only)
+//
+// Responds 202 BEFORE spawning the script because UPDATE.ps1 calls
+// `pm2 restart` which kills this very process before it finishes.
+// Spawn detached + unref so the child outlives the parent process.
+router.post("/admin/run-update", requireAdminAuth, (req: Request, res: Response): void => {
+  if (process.platform !== "win32") {
+    res.status(501).json({ ok: false, error: "Software update is only available on the shop mini PC (Windows)." });
+    return;
+  }
+
+  const scriptPath = path.join(PROJECT_ROOT, "UPDATE.ps1");
+  if (!fs.existsSync(scriptPath)) {
+    res.status(404).json({ ok: false, error: "UPDATE.ps1 not found in the install directory. Re-run REINSTALL.ps1 to restore it." });
+    return;
+  }
+
+  // Flush response BEFORE the spawn — pm2 restart will kill this process.
+  res.status(202).json({ ok: true, message: "Update script started. Server will restart momentarily." });
+
+  // 300 ms grace period so Express can flush the response headers/body.
+  setTimeout(() => {
+    const child = spawn(
+      "powershell.exe",
+      ["-ExecutionPolicy", "Bypass", "-NonInteractive", "-File", scriptPath],
+      { cwd: PROJECT_ROOT, detached: true, stdio: "ignore", windowsHide: true },
+    );
+    child.unref();
+    logger.info({ scriptPath }, "[update] UPDATE.ps1 launched detached");
+  }, 300);
+});
+
 export default router;
