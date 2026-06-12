@@ -1087,14 +1087,41 @@ router.post("/orders/:id/refund", requireStaffAuth, async (req, res): Promise<vo
   if (!amount || amount <= 0) { res.status(400).json({ error: "amount required" }); return; }
   const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, id)).limit(1);
   if (!order) { res.status(404).json({ error: "Order not found" }); return; }
+
+  // For card orders paid via PlaceToPay, attempt an automatic reversal so the
+  // money is actually returned to the customer's card — not just marked in our DB.
+  let ptpReversed = false;
+  let ptpMessage: string | undefined;
+  if (order.paymentMethod === "card" && order.placetopayRequestId) {
+    try {
+      const { reverseSession } = await import("../lib/placetopay.js");
+      const result = await reverseSession(order.placetopayRequestId);
+      ptpReversed = result.reversed;
+      ptpMessage  = result.message;
+      if (ptpReversed) {
+        req.log.info({ orderId: id, requestId: order.placetopayRequestId }, "[refund] PlaceToPay reversal accepted");
+      } else {
+        req.log.warn({ orderId: id, requestId: order.placetopayRequestId, msg: ptpMessage }, "[refund] PlaceToPay reversal not accepted — recording manual refund");
+      }
+    } catch (err) {
+      req.log.error({ err, orderId: id }, "[refund] PlaceToPay reversal failed — recording manual refund");
+      ptpMessage = "PlaceToPay reversal error — process manually if needed";
+    }
+  }
+
   const [refund] = await db.insert(refundsTable).values({
     orderId: id,
     amount: String(amount),
     reason: reason ?? null,
-    refundMethod,
+    refundMethod: order.paymentMethod === "card" ? "card" : refundMethod,
   }).returning();
   await db.update(ordersTable).set({ paymentStatus: "refunded" }).where(eq(ordersTable.id, id));
-  res.status(201).json({ ...refund, amount: parseFloat(refund.amount) });
+  res.status(201).json({
+    ...refund,
+    amount: parseFloat(refund.amount),
+    ptpReversed,
+    ...(ptpMessage ? { ptpMessage } : {}),
+  });
 });
 
 router.get("/orders/:id/refunds", requireStaffAuth, async (req, res): Promise<void> => {

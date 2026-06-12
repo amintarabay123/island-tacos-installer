@@ -74,9 +74,19 @@ export async function createSession(
   return { requestId: data.requestId, processUrl: data.processUrl };
 }
 
-export type PtpStatus = "PENDING" | "APPROVED" | "REJECTED" | "FAILED" | "UNKNOWN";
+export type PtpStatus = "PENDING" | "APPROVED" | "REJECTED" | "FAILED" | "REVERSED" | "UNKNOWN";
+
+export interface PtpSessionDetail {
+  status:            PtpStatus;
+  internalReference: number | null;  // payment-level reference needed for reversals
+}
 
 export async function getSessionStatus(requestId: number): Promise<PtpStatus> {
+  const detail = await getSessionDetail(requestId);
+  return detail.status;
+}
+
+export async function getSessionDetail(requestId: number): Promise<PtpSessionDetail> {
   const res  = await fetch(`${ENDPOINT}/api/session/${requestId}`, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
@@ -84,7 +94,7 @@ export async function getSessionStatus(requestId: number): Promise<PtpStatus> {
   });
   const data = await res.json() as {
     status?:   { status?: string };
-    payment?:  Array<{ status?: { status?: string } }>;
+    payment?:  Array<{ status?: { status?: string }; internalReference?: number }>;
   };
 
   const norm = (s?: string): PtpStatus => {
@@ -92,14 +102,51 @@ export async function getSessionStatus(requestId: number): Promise<PtpStatus> {
     if (s === "REJECTED") return "REJECTED";
     if (s === "PENDING")  return "PENDING";
     if (s === "FAILED")   return "FAILED";
+    if (s === "REVERSED") return "REVERSED";
     return "UNKNOWN";
   };
 
-  // Overall session status takes priority
-  const sessionSt = norm(data.status?.status);
-  if (sessionSt !== "UNKNOWN") return sessionSt;
-
-  // Fall back to the last individual payment attempt
   const last = data.payment?.at(-1);
-  return norm(last?.status?.status);
+  const paymentSt = norm(last?.status?.status);
+
+  // Overall session status takes priority; fall back to last payment attempt
+  const sessionSt = norm(data.status?.status);
+  const status    = sessionSt !== "UNKNOWN" ? sessionSt : paymentSt;
+
+  return {
+    status,
+    internalReference: last?.internalReference ?? null,
+  };
+}
+
+/**
+ * Reverse (void/refund) a previously APPROVED PlaceToPay payment.
+ * Requires the payment-level internalReference (not the session requestId).
+ * Returns true if PlaceToPay accepted the reversal, false otherwise.
+ */
+export async function reversePayment(internalReference: number): Promise<boolean> {
+  const res  = await fetch(`${ENDPOINT}/api/reverse`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify({ auth: buildAuth(), internalReference }),
+  });
+  const data = await res.json() as { status?: { status?: string; message?: string } };
+  return data.status?.status === "REVERSED";
+}
+
+/**
+ * Convenience: query session to get internalReference then reverse it.
+ * Returns { reversed, message } — reversed=false means PlaceToPay declined
+ * or the session wasn't in a reversible state (no APPROVED payment found).
+ */
+export async function reverseSession(requestId: number): Promise<{ reversed: boolean; message?: string }> {
+  const detail = await getSessionDetail(requestId);
+  if (detail.status !== "APPROVED") {
+    return { reversed: false, message: `Session not in APPROVED state (${detail.status})` };
+  }
+  if (!detail.internalReference) {
+    return { reversed: false, message: "No internalReference found on session" };
+  }
+  const ok = await reversePayment(detail.internalReference);
+  return { reversed: ok, message: ok ? undefined : "PlaceToPay did not accept the reversal" };
 }

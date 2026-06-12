@@ -127,6 +127,21 @@ export function startPlacetopayReconciler(): void {
               .set({ status: "cancelled" })
               .where(eq(ordersTable.id, order.id));
             logger.info(`[PTP reconciler] order ${order.id} cancelled after ${status}`);
+          } else if (status === "REVERSED") {
+            // PlaceToPay reversed the payment on their side (e.g. chargeback/void).
+            // Mark as refunded in our DB and record a refund entry.
+            const { db: dbRef, refundsTable } = await import("@workspace/db");
+            await dbRef.insert(refundsTable).values({
+              orderId:      order.id,
+              amount:       order.total ?? "0",
+              reason:       "Reversed by PlaceToPay",
+              refundMethod: "card",
+            }).onConflictDoNothing();
+            await db
+              .update(ordersTable)
+              .set({ paymentStatus: "refunded" })
+              .where(eq(ordersTable.id, order.id));
+            logger.info(`[PTP reconciler] order ${order.id} REVERSED — marked refunded`);
           }
         } catch (err) {
           logger.error({ err }, `[PTP reconciler] status check failed for order ${order.id}`);
