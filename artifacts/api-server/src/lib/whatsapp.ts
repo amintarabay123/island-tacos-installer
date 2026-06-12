@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { db, menuCategoriesTable, menuItemsTable, storeSettingsTable } from "@workspace/db";
 import { SETTING_DEFAULTS, formatOpenDays } from "../routes/settings";
 import { logger } from "./logger";
+import { normalizePhoneForWhatsApp } from "./phone-utils";
 
 const STORE_URL = (process.env.STORE_URL ?? "https://orders.islandtacosbvi.com").replace(/\/$/, "");
 const META_API_VERSION = "v21.0";
@@ -161,8 +162,7 @@ export async function sendWhatsAppMessage(to: string, body: string): Promise<boo
     return false;
   }
 
-  const rawDigits0 = to.replace(/\D/g, "");
-  const toNormalized = rawDigits0.length === 7 ? `284${rawDigits0}` : rawDigits0;
+  const toNormalized = normalizePhoneForWhatsApp(to);
 
   try {
     const response = await fetch(
@@ -238,8 +238,7 @@ export async function sendWhatsAppTemplate(
     return false;
   }
 
-  const rawDigits1 = to.replace(/\D/g, "");
-  const toNormalized = rawDigits1.length === 7 ? `284${rawDigits1}` : rawDigits1;
+  const toNormalized = normalizePhoneForWhatsApp(to);
 
   const components: object[] = [];
   if (headerDocument) {

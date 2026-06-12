@@ -18,20 +18,22 @@ export function formatBVIPhone(raw: string): string {
 /**
  * Normalise a phone number for WhatsApp Business API.
  *
- * WhatsApp sends use digits-only (no + prefix). For BVI 7-digit numbers we
- * prepend the area code only (284) rather than the full country prefix (1284),
- * because NANP accounts are often registered in 10-digit format on WhatsApp
- * and the 11-digit variant may not match the registered identity.
+ * Meta's API requires digits-only in E.164 format (no + prefix).
+ * BVI numbers must include the NANP country code (1) — i.e. 1284XXXXXXX —
+ * otherwise Meta cannot look up the WhatsApp account and silently accepts
+ * the send request but the message is never delivered.
  *
  * Examples:
- *   "4991449"      → "2844991449"   (7-digit BVI → prepend 284)
- *   "2844991449"   → "2844991449"   (already 10-digit BVI, keep)
- *   "12844991449"  → "12844991449"  (full E.164 digits, keep)
- *   "+18005551234" → "18005551234"  (strip + only)
+ *   "4991449"      → "12844991449"  (7-digit BVI → full E.164)
+ *   "2844991449"   → "12844991449"  (10-digit BVI → prepend country code)
+ *   "12844991449"  → "12844991449"  (already full E.164, keep)
+ *   "+18005551234" → "18005551234"  (strip + only, non-BVI passes through)
  */
 export function normalizePhoneForWhatsApp(raw: string): string {
   const digits = raw.replace(/\D/g, "");
-  if (digits.length === 7) return `284${digits}`;
+  if (digits.length === 7)                                   return `1284${digits}`;
+  if (digits.length === 10 && digits.startsWith("284"))      return `1${digits}`;
+  if (digits.startsWith("1284") && digits.length === 11)     return digits;
   return digits;
 }
 
