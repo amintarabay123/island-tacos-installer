@@ -437,7 +437,8 @@ router.post("/payments/placetopay/verify", async (req, res): Promise<void> => {
   }
 
   try {
-    const status = await ptp.getSessionStatus(order.placetopayRequestId);
+    const detail = await ptp.getSessionDetail(order.placetopayRequestId);
+    const { status, date, reasonMessage } = detail;
     req.log.info(`[PTP] verify — orderId=${order.id} code=${code} status=${status}`);
 
     if (status === "APPROVED") {
@@ -456,7 +457,15 @@ router.post("/payments/placetopay/verify", async (req, res): Promise<void> => {
       req.log.info(`[PTP] order ${order.id} cancelled after ${status}`);
     }
 
-    res.json({ status });
+    // Return the full session summary required by PlaceToPay certification:
+    // Reference, Transaction Amount, Date, and Status.
+    res.json({
+      status,
+      reference:   order.confirmationCode,
+      amount:      parseFloat(order.total as unknown as string),
+      date:        date ?? null,
+      reason:      reasonMessage ?? null,
+    });
   } catch (err) {
     req.log.error({ err }, "[PTP] verify failed");
     res.status(502).json({ error: "Could not verify payment" });

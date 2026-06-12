@@ -79,6 +79,8 @@ export type PtpStatus = "PENDING" | "APPROVED" | "REJECTED" | "FAILED" | "REVERS
 export interface PtpSessionDetail {
   status:            PtpStatus;
   internalReference: number | null;  // payment-level reference needed for reversals
+  date:              string | null;  // ISO-8601 timestamp of the latest status change
+  reasonMessage:     string | null;  // human-readable status message from PlaceToPay
 }
 
 export async function getSessionStatus(requestId: number): Promise<PtpStatus> {
@@ -93,8 +95,11 @@ export async function getSessionDetail(requestId: number): Promise<PtpSessionDet
     body:    JSON.stringify({ auth: buildAuth() }),
   });
   const data = await res.json() as {
-    status?:   { status?: string };
-    payment?:  Array<{ status?: { status?: string }; internalReference?: number }>;
+    status?:   { status?: string; date?: string; message?: string };
+    payment?:  Array<{
+      status?:            { status?: string; date?: string; message?: string };
+      internalReference?: number;
+    }>;
   };
 
   const norm = (s?: string): PtpStatus => {
@@ -106,16 +111,22 @@ export async function getSessionDetail(requestId: number): Promise<PtpSessionDet
     return "UNKNOWN";
   };
 
-  const last = data.payment?.at(-1);
+  const last      = data.payment?.at(-1);
   const paymentSt = norm(last?.status?.status);
 
   // Overall session status takes priority; fall back to last payment attempt
   const sessionSt = norm(data.status?.status);
   const status    = sessionSt !== "UNKNOWN" ? sessionSt : paymentSt;
 
+  // Prefer the payment-level date (most specific); fall back to session-level date
+  const date          = last?.status?.date ?? data.status?.date ?? null;
+  const reasonMessage = last?.status?.message ?? data.status?.message ?? null;
+
   return {
     status,
     internalReference: last?.internalReference ?? null,
+    date,
+    reasonMessage,
   };
 }
 

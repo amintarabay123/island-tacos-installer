@@ -44,6 +44,9 @@ export default function TrackOrder() {
   // Placetopay return state — initialised from URL on mount
   const [ptpVerifying, setPtpVerifying] = useState(hasPtpReturn);
   const [ptpFailed,    setPtpFailed]    = useState(false);
+  const [ptpSummary,   setPtpSummary]   = useState<{
+    reference: string; amount: number; date: string | null; status: string; reason: string | null;
+  } | null>(null);
 
   // Poll every 8s until terminal
   useEffect(() => {
@@ -68,7 +71,10 @@ export default function TrackOrder() {
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ code }),
         });
-        const data = await res.json() as { status?: string };
+        const data = await res.json() as {
+          status?: string; reference?: string; amount?: number;
+          date?: string | null; reason?: string | null;
+        };
 
         if (cancelled) return;
 
@@ -81,10 +87,27 @@ export default function TrackOrder() {
           // Refresh order data so the confirmed status shows
           queryClient.invalidateQueries({ queryKey: getTrackOrderQueryKey(code) });
         } else if (data.status === "REJECTED" || data.status === "FAILED") {
+          setPtpSummary({
+            reference: data.reference ?? code,
+            amount:    data.amount ?? 0,
+            date:      data.date ?? null,
+            status:    data.status ?? "REJECTED",
+            reason:    data.reason ?? null,
+          });
           setPtpVerifying(false);
           setPtpFailed(true);
         } else {
-          // PENDING — poll again in 3s
+          // PENDING — show summary while still polling
+          if (data.reference) {
+            setPtpSummary({
+              reference: data.reference,
+              amount:    data.amount ?? 0,
+              date:      data.date ?? null,
+              status:    "PENDING",
+              reason:    data.reason ?? null,
+            });
+          }
+          // Poll again in 3s
           setTimeout(() => { if (!cancelled) void verify(); }, 3000);
         }
       } catch {
@@ -104,7 +127,7 @@ export default function TrackOrder() {
     return (
       <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+        <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
           <div style={{ width: 80, height: 80, borderRadius: 999, background: "rgba(124,106,247,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Loader2 style={{ width: 40, height: 40, color: PUR, animation: "spin 1s linear infinite" }} />
           </div>
@@ -112,6 +135,8 @@ export default function TrackOrder() {
             <h1 style={{ fontSize: 22, fontWeight: 800, color: TP, margin: "0 0 8px" }}>Verifying your payment…</h1>
             <p style={{ color: MU, fontSize: 14, margin: 0 }}>Just a moment while we confirm with the payment provider.</p>
           </div>
+          {/* Show session summary as soon as we have data (PENDING state) */}
+          {ptpSummary && <PtpSessionSummary summary={ptpSummary} fallbackCode={code} />}
         </div>
       </div>
     );
@@ -120,7 +145,8 @@ export default function TrackOrder() {
   if (ptpFailed) {
     return (
       <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
-        <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+        <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: -8 }}>Island Tacos</div>
           <div style={{ width: 96, height: 96, borderRadius: 999, background: "rgba(255,69,58,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <XCircle style={{ width: 56, height: 56, color: "#ff453a" }} />
           </div>
@@ -128,6 +154,8 @@ export default function TrackOrder() {
             <h1 style={{ fontSize: 24, fontWeight: 900, color: TP, margin: "0 0 8px" }}>Payment not completed</h1>
             <p style={{ color: MU, fontSize: 14, margin: 0, lineHeight: 1.6 }}>Your card payment was not approved. No charge was made.</p>
           </div>
+          {/* Session summary — required by PlaceToPay certification */}
+          <PtpSessionSummary summary={ptpSummary} fallbackCode={code} />
           <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
             <a
               href="/"
@@ -140,7 +168,6 @@ export default function TrackOrder() {
             >
               Back to menu
             </a>
-            <p style={{ fontSize: 12, color: MU, margin: 0 }}>Your order reference: <span style={{ fontFamily: "monospace", color: OR }}>{code}</span></p>
           </div>
         </div>
       </div>
@@ -304,6 +331,60 @@ export default function TrackOrder() {
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
+
+/**
+ * Session summary card — PlaceToPay certification requirement.
+ * Shows Reference, Transaction Amount, Date, and Status after returning from checkout.
+ */
+function PtpSessionSummary({
+  summary, fallbackCode,
+}: {
+  summary: { reference: string; amount: number; date: string | null; status: string; reason: string | null } | null;
+  fallbackCode: string;
+}) {
+  const ref    = summary?.reference ?? fallbackCode;
+  const amount = summary?.amount ?? null;
+  const status = summary?.status ?? null;
+  const reason = summary?.reason ?? null;
+  const date   = summary?.date
+    ? new Date(summary.date).toLocaleString("en-US", {
+        month: "short", day: "numeric", year: "numeric",
+        hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico",
+      })
+    : null;
+
+  const statusColor = (s: string | null) => {
+    if (s === "APPROVED") return GRN;
+    if (s === "REJECTED" || s === "FAILED") return "#ff453a";
+    return "#ffd60a";
+  };
+  const statusLabel = (s: string | null) => {
+    if (!s) return "—";
+    const m: Record<string, string> = {
+      APPROVED: "Approved", REJECTED: "Rejected", FAILED: "Failed",
+      PENDING: "Pending", REVERSED: "Reversed",
+    };
+    return m[s] ?? s;
+  };
+
+  const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+      <span style={{ fontSize: 13, color: MU, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 13, color: TP, fontWeight: 600, textAlign: "right", wordBreak: "break-all" }}>{value}</span>
+    </div>
+  );
+
+  return (
+    <div style={{ width: "100%", borderRadius: 14, border: `1px solid rgba(255,255,255,0.1)`, background: CARD, padding: "16px 20px", display: "flex", flexDirection: "column", gap: 10, textAlign: "left" }}>
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: MU, margin: 0 }}>Transaction summary</p>
+      <Row label="Reference"  value={<span style={{ fontFamily: "monospace", color: OR }}>{ref}</span>} />
+      {amount !== null && <Row label="Amount" value={`$${amount.toFixed(2)} USD`} />}
+      {date   && <Row label="Date" value={date} />}
+      {status && <Row label="Status" value={<span style={{ color: statusColor(status) }}>{statusLabel(status)}</span>} />}
+      {reason && <Row label="Message" value={<span style={{ color: MU, fontWeight: 400 }}>{reason}</span>} />}
+    </div>
+  );
+}
 
 type ModSel = { name: string; price: number };
 type Item = { id: number; menuItemName: string; quantity: number; subtotal: number; notes?: string | null; modifierSelections?: ModSel[] | null };
