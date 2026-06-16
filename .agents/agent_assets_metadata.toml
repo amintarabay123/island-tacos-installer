@@ -30,6 +30,12 @@ uri = "file://artifacts/island-tacos/public/images/veggie-taco.png"
 type = "image"
 title = "Veggie Taco"
 
+[[generated]]
+id = "waISpRnGfmPQnW_olJv0C"
+uri = "file://attached_assets/island-tacos-ptp-facebook-post.png"
+type = "image"
+title = "island tacos placetopay facebook post"
+
 [[outputs]]
 id = "6QtvND-2Msj8jUq8Kz61s"
 uri = "file://island-tacos-order-qr.png"
@@ -59,3 +65,9 @@ id = "lEA3exmHpu0j4dV-PI7xd"
 uri = "file://sample-receipt.pdf"
 type = "pdf"
 title = "Island Tacos — 80mm Receipt (trimmed)"
+
+[[outputs]]
+id = "8K2u8tqSvFi30U8ms2nPe"
+uri = "file://attached_assets/island-tacos-ptp-facebook-post.png"
+type = "image"
+title = "Island Tacos × PlaceToPay — Facebook Post"
