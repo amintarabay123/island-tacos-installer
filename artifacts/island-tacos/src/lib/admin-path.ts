@@ -15,4 +15,5 @@ export const adminRoutes = {
   display: `${base}/display`,
   settings: `${ADMIN_PATH}/settings`,
   system: `${ADMIN_PATH}/system`,
+  paymentEvents: `${ADMIN_PATH}/payment-events`,
 };

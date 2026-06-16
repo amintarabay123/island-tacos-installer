@@ -268,3 +268,20 @@ SELECT setval(pg_get_serial_sequence('refunds','id'),        COALESCE(MAX(id),0)
 SELECT setval(pg_get_serial_sequence('customers','id'),      COALESCE(MAX(id),0)+1, false) FROM customers;
 SELECT setval(pg_get_serial_sequence('employees','id'),      COALESCE(MAX(id),0)+1, false) FROM employees;
 SELECT setval(pg_get_serial_sequence('store_profile','id'),  COALESCE(MAX(id),0)+1, false) FROM store_profile;
+
+-- ── payment_events ─────────────────────────────────────────────────────────────
+-- Audit log for every PlaceToPay webhook notification received.
+-- Contains no card data — only status events (APPROVED, REJECTED, etc.)
+CREATE TABLE IF NOT EXISTS payment_events (
+  id          SERIAL PRIMARY KEY,
+  request_id  INTEGER,
+  order_id    INTEGER REFERENCES orders(id),
+  order_ref   TEXT,
+  event       TEXT NOT NULL,
+  raw_status  TEXT,
+  sig_present BOOLEAN NOT NULL DEFAULT false,
+  sig_valid   BOOLEAN,
+  notes       TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+SELECT setval(pg_get_serial_sequence('payment_events','id'), COALESCE(MAX(id),0)+1, false) FROM payment_events;

@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, desc, sql, and, gte, lt } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, paymentEventsTable } from "@workspace/db";
 import {
   GetRecentOrdersQueryParams,
   GetAdminStatsQueryParams,
@@ -163,6 +163,17 @@ router.get("/admin/recent-orders", async (req, res): Promise<void> => {
   );
 
   res.json(result);
+});
+
+// Admin — returns the last 200 PlaceToPay webhook events, newest first.
+// Intentionally simple: no pagination yet, just a live audit log for the meeting.
+router.get("/admin/payment-events", async (_req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(paymentEventsTable)
+    .orderBy(desc(paymentEventsTable.createdAt))
+    .limit(200);
+  res.json(rows);
 });
 
 export default router;

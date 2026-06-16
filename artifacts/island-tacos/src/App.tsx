@@ -25,7 +25,8 @@ const AdminReports = lazy(() => import("@/pages/admin-reports"));
 const AdminFinancials = lazy(() => import("@/pages/admin-financials"));
 const AdminCustomers = lazy(() => import("@/pages/admin-customers"));
 const AdminSettings = lazy(() => import("@/pages/admin-settings"));
-const AdminSystem   = lazy(() => import("@/pages/admin-system"));
+const AdminSystem        = lazy(() => import("@/pages/admin-system"));
+const AdminPaymentEvents = lazy(() => import("@/pages/admin-payment-events"));
 const AccountPage = lazy(() => import("@/pages/account"));
 const Kitchen = lazy(() => import("@/pages/kitchen"));
 const POS = lazy(() => import("@/pages/pos"));
@@ -111,6 +112,9 @@ function Router() {
       </Route>
       <Route path={adminRoutes.system}>
         <ProtectedRoute adminOnly><AdminSystem /></ProtectedRoute>
+      </Route>
+      <Route path={adminRoutes.paymentEvents}>
+        <ProtectedRoute adminOnly><AdminPaymentEvents /></ProtectedRoute>
       </Route>
       <Route path={adminRoutes.customers}>
         <ProtectedRoute><AdminCustomers /></ProtectedRoute>

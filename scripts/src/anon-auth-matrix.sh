@@ -128,6 +128,7 @@ check GET    /api/reports/sales                          401\|403
 # the uploaded-images bypass.
 check GET    /api/admin/stats                            401\|403
 check POST   /api/admin/run-update                      401\|403
+check GET    /api/admin/payment-events                  401\|403
 
 echo
 echo "── M2M sync (X-Sync-Secret required) ───────────────────────────────"

@@ -123,6 +123,22 @@ export type Employee = typeof employeesTable.$inferSelect;
 
 // One row per calendar day — used to store historical daily sales data imported from
 // a Loyverse CSV summary export, for dates not covered by individual order records.
+// Audit log for every PlaceToPay webhook notification received.
+// Contains no card data — only status events (APPROVED, REJECTED, etc.)
+export const paymentEventsTable = pgTable("payment_events", {
+  id:          serial("id").primaryKey(),
+  requestId:   integer("request_id"),                           // PTP requestId
+  orderId:     integer("order_id").references(() => ordersTable.id),
+  orderRef:    text("order_ref"),                               // confirmation code e.g. IT-ABCD12
+  event:       text("event").notNull(),                         // APPROVED | REJECTED | FAILED | REVERSED | SIG_INVALID | ORDER_NOT_FOUND | ALREADY_PAID | ERROR
+  rawStatus:   text("raw_status"),                              // raw status string from PTP body
+  sigPresent:  boolean("sig_present").notNull().default(false),
+  sigValid:    boolean("sig_valid"),                            // null = not checked (absent)
+  notes:       text("notes"),
+  createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export type PaymentEvent = typeof paymentEventsTable.$inferSelect;
+
 export const loyverseDailySummaryTable = pgTable("loyverse_daily_summary", {
   date: date("date").primaryKey(),
   grossSales: numeric("gross_sales", { precision: 10, scale: 2 }).notNull().default("0"),

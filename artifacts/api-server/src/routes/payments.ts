@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, paymentEventsTable } from "@workspace/db";
 import {
   InitiatePaymentBody,
   ConfirmPaymentBody,
@@ -384,6 +384,29 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
   }
 });
 
+// Audit-log helper — fire-and-forget, never throws
+async function logPaymentEvent(fields: {
+  requestId?:  number | null;
+  orderId?:    number | null;
+  orderRef?:   string | null;
+  event:       string;
+  rawStatus?:  string | null;
+  sigPresent:  boolean;
+  sigValid?:   boolean | null;
+  notes?:      string | null;
+}) {
+  db.insert(paymentEventsTable).values({
+    requestId:  fields.requestId  ?? null,
+    orderId:    fields.orderId    ?? null,
+    orderRef:   fields.orderRef   ?? null,
+    event:      fields.event,
+    rawStatus:  fields.rawStatus  ?? null,
+    sigPresent: fields.sigPresent,
+    sigValid:   fields.sigValid   ?? null,
+    notes:      fields.notes      ?? null,
+  }).catch(() => {});
+}
+
 // Public — server-to-server webhook PlaceToPay fires when a payment session changes
 // state. Runs the same verify logic as /verify so orders go through even when the
 // customer never clicks "Back to merchant."
@@ -399,26 +422,41 @@ router.post("/payments/placetopay/notify", async (req, res): Promise<void> => {
     status?:    { status?: string; date?: string; message?: string };
   };
 
-  const requestId = typeof body.requestId === "number" ? body.requestId : null;
-  if (!requestId) return;
+  const requestId  = typeof body.requestId === "number" ? body.requestId : null;
+  const signature  = typeof body.signature === "string" ? body.signature : "";
+  const statusStr  = body.status?.status ?? "";
+  const statusDate = body.status?.date   ?? "";
+  const sigPresent = !!signature;
+
+  if (!requestId) {
+    await logPaymentEvent({ event: "UNKNOWN", sigPresent, notes: "missing requestId in body" });
+    return;
+  }
 
   // Validate the sha256 signature to ensure the notification is genuinely from PlaceToPay.
   // Format: sha256(requestId + status.status + status.date + secretKey) → hex → "sha256:<hex>"
-  const signature   = typeof body.signature === "string" ? body.signature : "";
-  const statusStr   = body.status?.status ?? "";
-  const statusDate  = body.status?.date   ?? "";
-  if (signature) {
+  if (sigPresent) {
     const valid = ptp.verifyWebhookSignature(requestId, statusStr, statusDate, signature);
     if (!valid) {
       req.log.warn({ requestId, signature }, "[PTP] notify: invalid signature — ignoring");
+      await logPaymentEvent({ requestId, event: "SIG_INVALID", rawStatus: statusStr, sigPresent, sigValid: false });
       return;
     }
   }
 
   const [order] = await db.select().from(ordersTable)
     .where(eq(ordersTable.placetopayRequestId, requestId));
-  if (!order) return;
-  if (order.paymentStatus === "paid") return; // already handled
+
+  if (!order) {
+    req.log.warn({ requestId }, "[PTP] notify: no order found for requestId");
+    await logPaymentEvent({ requestId, event: "ORDER_NOT_FOUND", rawStatus: statusStr, sigPresent, sigValid: sigPresent ? true : null });
+    return;
+  }
+
+  if (order.paymentStatus === "paid") {
+    await logPaymentEvent({ requestId, orderId: order.id, orderRef: order.confirmationCode, event: "ALREADY_PAID", rawStatus: statusStr, sigPresent, sigValid: sigPresent ? true : null });
+    return;
+  }
 
   try {
     // Use the status from the (signature-validated) notification body directly.
@@ -434,11 +472,13 @@ router.post("/payments/placetopay/notify", async (req, res): Promise<void> => {
       await db.update(ordersTable)
         .set({ paymentStatus: "paid", status: "pending", paymentMethod: "card" })
         .where(eq(ordersTable.id, order.id));
+      await logPaymentEvent({ requestId, orderId: order.id, orderRef: order.confirmationCode, event: "APPROVED", rawStatus: statusStr, sigPresent, sigValid: sigPresent ? true : null });
       notifyOrderPaid(order.id).catch(() => {});
     } else if (status === "REJECTED" || status === "FAILED") {
       await db.update(ordersTable)
         .set({ status: "cancelled" })
         .where(eq(ordersTable.id, order.id));
+      await logPaymentEvent({ requestId, orderId: order.id, orderRef: order.confirmationCode, event: status, rawStatus: statusStr, sigPresent, sigValid: sigPresent ? true : null });
       req.log.info(`[PTP] notify: order ${order.id} cancelled after ${status}`);
     } else if (status === "REVERSED") {
       const { db: dbRef, refundsTable } = await import("@workspace/db");
@@ -451,10 +491,14 @@ router.post("/payments/placetopay/notify", async (req, res): Promise<void> => {
       await db.update(ordersTable)
         .set({ paymentStatus: "refunded" })
         .where(eq(ordersTable.id, order.id));
+      await logPaymentEvent({ requestId, orderId: order.id, orderRef: order.confirmationCode, event: "REVERSED", rawStatus: statusStr, sigPresent, sigValid: sigPresent ? true : null });
       req.log.info(`[PTP] notify: order ${order.id} reversed — marked refunded`);
+    } else {
+      await logPaymentEvent({ requestId, orderId: order.id, orderRef: order.confirmationCode, event: "PENDING", rawStatus: statusStr, sigPresent, sigValid: sigPresent ? true : null, notes: `unhandled status: ${status}` });
     }
   } catch (err) {
     req.log.error({ err }, "[PTP] notify verify failed");
+    await logPaymentEvent({ requestId, orderId: order.id, orderRef: order.confirmationCode, event: "ERROR", rawStatus: statusStr, sigPresent, notes: String(err) });
   }
 });
 

@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, UtensilsCrossed, LogOut } from "lucide-react";
+import { LayoutDashboard, UtensilsCrossed, LogOut, CreditCard } from "lucide-react";
+import { adminRoutes } from "@/lib/admin-path";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -32,6 +33,15 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             >
               <UtensilsCrossed className="mr-3 h-5 w-5" />
               Menu Management
+            </Button>
+          </Link>
+          <Link href={adminRoutes.paymentEvents}>
+            <Button
+              variant={location === adminRoutes.paymentEvents ? "secondary" : "ghost"}
+              className="w-full justify-start h-11"
+            >
+              <CreditCard className="mr-3 h-5 w-5" />
+              Payment Events
             </Button>
           </Link>
         </nav>
