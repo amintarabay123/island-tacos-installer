@@ -366,7 +366,7 @@ export default function Checkout() {
   const methodInfo: Record<string, { label: string; description: string; icon: string }> = {
     cash:      { label: "Pay at Counter",  description: "Cash or card — pay when you pick up your order", icon: "$" },
     athmovil:  { label: "ATH Móvil",       description: "Pay now with ATH Móvil before pickup",           icon: "A" },
-    card:      { label: "Credit/Debit Card", description: "Pay now — you'll be redirected to a secure payment page", icon: "💳" },
+    card:      { label: "Credit/Debit Card", description: "Secure payment via PlaceToPay", icon: "💳" },
   };
 
   return (
@@ -506,6 +506,7 @@ export default function Checkout() {
                       {enabledMethods.map(m => {
                         const meta = methodInfo[m] ?? { label: m, description: "", icon: "$" };
                         const selected = paymentMethod === m;
+                        const isPtp = m === "card";
                         return (
                           <button
                             key={m} type="button" onClick={() => setPaymentMethod(m)}
@@ -517,13 +518,28 @@ export default function Checkout() {
                               cursor: "pointer", transition: "all 0.15s",
                             }}
                           >
-                            <div style={{
-                              width: 36, height: 36, borderRadius: 999, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                              background: selected ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.06)",
-                              color: selected ? OR : MU, fontWeight: 900, fontSize: 18,
-                            }}>
-                              {meta.icon}
-                            </div>
+                            {isPtp ? (
+                              <div style={{
+                                width: 88, height: 36, borderRadius: 8, flexShrink: 0,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                background: selected ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
+                                padding: "0 8px",
+                              }}>
+                                <img
+                                  src="https://static.placetopay.com/placetopay-logo.svg"
+                                  alt="PlaceToPay"
+                                  style={{ height: 18, width: "auto", display: "block" }}
+                                />
+                              </div>
+                            ) : (
+                              <div style={{
+                                width: 36, height: 36, borderRadius: 999, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                                background: selected ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.06)",
+                                color: selected ? OR : MU, fontWeight: 900, fontSize: 18,
+                              }}>
+                                {meta.icon}
+                              </div>
+                            )}
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <p style={{ fontWeight: 600, color: TP, margin: 0, fontSize: 14 }}>{meta.label}</p>
                               <p style={{ fontSize: 13, color: MU, margin: 0 }}>{meta.description}</p>

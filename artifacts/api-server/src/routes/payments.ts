@@ -407,11 +407,26 @@ async function logPaymentEvent(fields: {
   }).catch(() => {});
 }
 
+// Some gateways issue a GET probe to verify the URL is reachable before sending
+// POST webhooks. Respond 200 so PlaceToPay doesn't reject the notificationUrl.
+router.get("/payments/placetopay/notify", (_req, res): void => {
+  res.json({ ok: true });
+});
+
 // Public — server-to-server webhook PlaceToPay fires when a payment session changes
 // state. Runs the same verify logic as /verify so orders go through even when the
 // customer never clicks "Back to merchant."
 // Body per PlaceToPay docs: { requestId, reference, signature, status: { status, reason, message, date } }
 router.post("/payments/placetopay/notify", async (req, res): Promise<void> => {
+  // Dump full request details for diagnostics — helps confirm delivery and catch
+  // any unexpected payload shape from PlaceToPay's test environment.
+  req.log.info({
+    ip:      req.ip,
+    ct:      req.headers["content-type"],
+    body:    req.body,
+    rawLen:  (req as Request & { rawBody?: Buffer }).rawBody?.length ?? 0,
+  }, "[PTP] notify: incoming request");
+
   // Always respond 200 immediately — PlaceToPay will retry on non-2xx
   res.json({ ok: true });
 
