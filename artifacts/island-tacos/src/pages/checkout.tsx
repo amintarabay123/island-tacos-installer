@@ -522,8 +522,8 @@ export default function Checkout() {
                               <div style={{
                                 width: 88, height: 36, borderRadius: 8, flexShrink: 0,
                                 display: "flex", alignItems: "center", justifyContent: "center",
-                                background: selected ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
-                                padding: "0 8px",
+                                background: "rgba(255,255,255,0.92)",
+                                padding: "0 10px",
                               }}>
                                 <img
                                   src="https://static.placetopay.com/placetopay-logo.svg"
