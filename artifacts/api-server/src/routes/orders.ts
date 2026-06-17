@@ -692,7 +692,10 @@ router.get("/orders/online-sync", async (req, res): Promise<void> => {
   const orders = await db
     .select()
     .from(ordersTable)
-    .where(and(eq(ordersTable.source, "online"), gte(ordersTable.createdAt, since)))
+    .where(and(
+      eq(ordersTable.source, "online"),
+      or(gte(ordersTable.createdAt, since), gte(ordersTable.updatedAt, since)),
+    ))
     .orderBy(ordersTable.createdAt);
 
   if (orders.length === 0) { res.json([]); return; }

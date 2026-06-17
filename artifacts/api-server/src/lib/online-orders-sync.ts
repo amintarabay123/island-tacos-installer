@@ -124,13 +124,32 @@ export function startOnlineOrdersSync(): void {
       for (const { order, items } of payload) {
         const code = order.confirmationCode as string;
 
-        // Skip orders already in local DB
+        // Check if order already exists locally
         const existing = await db
-          .select({ id: ordersTable.id })
+          .select({ id: ordersTable.id, paymentStatus: ordersTable.paymentStatus, status: ordersTable.status })
           .from(ordersTable)
           .where(eq(ordersTable.confirmationCode, code))
           .limit(1);
-        if (existing.length > 0) continue;
+
+        if (existing.length > 0) {
+          // Order exists — sync mutable fields (payment status, order status) if cloud differs.
+          // This is the critical path for PlaceToPay: the order arrives locally as paymentStatus=pending,
+          // then the cloud poller marks it paid — without this update it would stay hidden from the POS.
+          const local = existing[0];
+          const cloudStatus        = (order.status        as string) ?? "pending";
+          const cloudPaymentStatus = (order.paymentStatus as string) ?? "pending";
+          if (local.paymentStatus !== cloudPaymentStatus || local.status !== cloudStatus) {
+            await db
+              .update(ordersTable)
+              .set({
+                paymentStatus: cloudPaymentStatus as "pending" | "paid" | "failed" | "refunded",
+                status:        cloudStatus        as "pending" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled",
+              })
+              .where(eq(ordersTable.confirmationCode, code));
+            imported++; // count as a meaningful sync event
+          }
+          continue;
+        }
 
         // Insert the order (new local serial ID is auto-assigned)
         const [inserted] = await db
