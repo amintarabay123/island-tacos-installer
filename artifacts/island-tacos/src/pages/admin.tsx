@@ -85,6 +85,29 @@ const STATUS_DONUT_COLOR: Record<string, string> = {
 
 const SOURCE_LABELS: Record<string, string> = { online: "Online", phone: "Phone", pos: "Walk-in" };
 
+function sourceBadge(source: string | null | undefined): { label: string; style: React.CSSProperties } | null {
+  if (source === "online") return { label: "🌐 Online",  style: { background: "rgba(14,165,233,0.1)",  color: "#0ea5e9", border: "1px solid rgba(14,165,233,0.2)"  } };
+  if (source === "pos")    return { label: "🏪 Walk-in", style: { background: "rgba(139,92,246,0.1)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" } };
+  if (source === "phone")  return { label: "📞 Phone",   style: { background: "rgba(255,214,10,0.1)", color: "#ffd60a", border: "1px solid rgba(255,214,10,0.2)" } };
+  return null;
+}
+
+function paymentBadge(source: string | null | undefined, method: string | null | undefined): { label: string; style: React.CSSProperties } {
+  if (source === "online" && method === "card")
+    return { label: "💳 PlaceToPay",    style: { background: "rgba(16,185,129,0.12)", color: "#10b981", border: "1px solid rgba(16,185,129,0.25)" } };
+  if (method === "card")
+    return { label: "💳 Counter Card",  style: { background: "rgba(14,165,233,0.12)", color: "#0ea5e9", border: "1px solid rgba(14,165,233,0.25)" } };
+  if (method === "cash")
+    return { label: "💵 Cash",          style: { background: "rgba(48,209,88,0.1)",   color: "#30d158", border: "1px solid rgba(48,209,88,0.25)"  } };
+  if (method === "athmovil")
+    return { label: "ATH Móvil",        style: { background: "rgba(255,107,0,0.12)",  color: OR,        border: "1px solid rgba(255,107,0,0.25)"  } };
+  if (method === "split")
+    return { label: "Split",            style: { background: "rgba(255,214,10,0.12)", color: "#ffd60a", border: "1px solid rgba(255,214,10,0.25)" } };
+  if (method === "complimentary")
+    return { label: "🎁 Comp",          style: { background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.25)" } };
+  return { label: method ?? "—",        style: { background: "rgba(255,255,255,0.05)", color: TM,       border: `1px solid ${BORD}`               } };
+}
+
 type RejectState = { orderId: number; reason: string } | null;
 type NavItem = {
   label: string; icon: React.ElementType; href?: string;
@@ -1034,6 +1057,8 @@ export default function Admin() {
                           <span style={{ background: "rgba(255,255,255,0.06)", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>
                             {order.orderType}
                           </span>
+                          {(() => { const s = sourceBadge(order.source); return s ? <span style={{ ...s.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px" }}>{s.label}</span> : null; })()}
+                          {order.paymentMethod && (() => { const p = paymentBadge(order.source, order.paymentMethod); return <span style={{ ...p.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px" }}>{p.label}</span>; })()}
                         </div>
                         <p style={{ fontWeight: 700, fontSize: 14, color: TP }}>{order.customerName}</p>
                         {order.customerPhone ? (
@@ -1158,6 +1183,7 @@ export default function Admin() {
                       <th className="text-left p-3" style={{ fontWeight: 700, color: TM, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Customer</th>
                       <th className="text-left p-3 hidden md:table-cell" style={{ fontWeight: 700, color: TM, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Items</th>
                       <th className="text-right p-3" style={{ fontWeight: 700, color: TM, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Total</th>
+                      <th className="text-left p-3 hidden sm:table-cell" style={{ fontWeight: 700, color: TM, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Via / Paid</th>
                       <th className="text-left p-3" style={{ fontWeight: 700, color: TM, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Status</th>
                     </tr>
                   </thead>
@@ -1173,6 +1199,12 @@ export default function Admin() {
                           {order.items?.map((i) => <div key={i.id}>{i.quantity}× {i.menuItemName}{i.notes && <span style={{ fontStyle: "italic", fontSize: 11 }}> — {i.notes}</span>}</div>)}
                         </td>
                         <td className="p-3 text-right" style={{ fontWeight: 800, color: TP }}>${order.total.toFixed(2)}</td>
+                        <td className="p-3 hidden sm:table-cell">
+                          <div className="flex flex-col gap-1">
+                            {(() => { const s = sourceBadge(order.source); return s ? <span style={{ ...s.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "2px 8px", display: "inline-block", width: "fit-content" }}>{s.label}</span> : null; })()}
+                            {order.paymentMethod && (() => { const p = paymentBadge(order.source, order.paymentMethod); return <span style={{ ...p.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "2px 8px", display: "inline-block", width: "fit-content" }}>{p.label}</span>; })()}
+                          </div>
+                        </td>
                         <td className="p-3">
                           <span style={{ ...STATUS_STYLE[order.status], fontSize: 10, fontWeight: 800, borderRadius: 8, padding: "3px 9px", letterSpacing: "0.04em", display: "inline-block" }}>
                             {STATUS_LABELS[order.status]}
