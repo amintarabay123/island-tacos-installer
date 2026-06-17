@@ -76,7 +76,7 @@ export function startPlacetopayPoller(): void {
           if (status === "APPROVED") {
             await db
               .update(ordersTable)
-              .set({ paymentStatus: "paid", status: "pending", paymentMethod: "card" })
+              .set({ paymentStatus: "paid", status: "confirmed", paymentMethod: "card" })
               .where(eq(ordersTable.id, order.id));
             logEvent(order.placetopayRequestId!, order, "APPROVED", status, "via-poller");
             notifyOrderPaid(order.id).catch(() => {});
@@ -139,7 +139,7 @@ export function startPlacetopayReconciler(): void {
           if (status === "APPROVED") {
             await db
               .update(ordersTable)
-              .set({ paymentStatus: "paid", status: "pending", paymentMethod: "card" })
+              .set({ paymentStatus: "paid", status: "confirmed", paymentMethod: "card" })
               .where(eq(ordersTable.id, order.id));
             logEvent(order.placetopayRequestId!, order, "APPROVED", status, "via-reconciler");
             notifyOrderPaid(order.id).catch(() => {});
