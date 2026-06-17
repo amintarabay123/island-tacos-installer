@@ -9,6 +9,7 @@ import {
   getGetAdminStatsQueryKey,
   getGetRecentOrdersQueryKey,
   type UpdateOrderStatusBodyStatus,
+  type Order,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -362,6 +363,7 @@ export default function Admin() {
   const [, navigate] = useLocation();
   const [waReceiptState, setWaReceiptState] = useState<Record<number, "idle" | "sending" | "ok" | "error">>({});
   const [rejectState, setRejectState] = useState<RejectState>(null);
+  const [historyOrder, setHistoryOrder] = useState<Order | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [calOpen, setCalOpen] = useState(false);
   const [preset, setPreset] = useState<DatePreset>("today");
@@ -656,7 +658,7 @@ export default function Admin() {
     return { background: `rgba(${idleColor === OR ? "255,107,0" : "124,106,247"},0.1)`, color: idleColor, border: `1px solid rgba(${idleColor === OR ? "255,107,0" : "124,106,247"},0.3)`, borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1 };
   }
 
-  return (
+  return (<>
     <div className="flex overflow-hidden" style={{ height: "100dvh", background: BG, color: TP, fontFamily: "'Inter', system-ui, sans-serif" }}>
 
       {/* Desktop Sidebar — transparent, blends into bg */}
@@ -1189,7 +1191,7 @@ export default function Admin() {
                   </thead>
                   <tbody>
                     {pastOrders.slice(0, 20).map((order, idx) => (
-                      <tr key={order.id} style={{ borderTop: `1px solid rgba(255,255,255,0.03)`, background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)" }}>
+                      <tr key={order.id} onClick={() => setHistoryOrder(order)} style={{ borderTop: `1px solid rgba(255,255,255,0.03)`, background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)", cursor: "pointer", transition: "background 0.12s" }} onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")} onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)")}>
                         <td className="p-3" style={{ fontFamily: "monospace", fontWeight: 900, color: "#30d158" }}>{order.confirmationCode}</td>
                         <td className="p-3">
                           <div style={{ fontWeight: 600, color: TP }}>{order.customerName}</div>
@@ -1220,5 +1222,143 @@ export default function Admin() {
         </main>
       </div>
     </div>
-  );
+
+    {/* ── Order detail modal ──────────────────────────────────────────────── */}
+    {historyOrder && (() => {
+      const o = historyOrder;
+      const subtotal = (o.items ?? []).reduce((s, i) => s + i.menuItemPrice * i.quantity, 0);
+      const discount = o.discountAmount ?? 0;
+      const dt = new Date(o.createdAt);
+      return (
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 60, display: "flex", justifyContent: "flex-end" }}
+          onClick={() => setHistoryOrder(null)}
+        >
+          <div
+            style={{ width: "100%", maxWidth: 480, background: CARD, height: "100%", overflowY: "auto", display: "flex", flexDirection: "column", boxShadow: "-8px 0 48px rgba(0,0,0,0.6)" }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${BORD}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, position: "sticky", top: 0, background: CARD, zIndex: 1 }}>
+              <div>
+                <div style={{ fontFamily: "monospace", fontWeight: 900, fontSize: 22, color: "#30d158", letterSpacing: "0.02em" }}>{o.confirmationCode}</div>
+                <div style={{ fontSize: 12, color: TM, marginTop: 3 }}>
+                  {dt.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} · {dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                  <span style={{ ...STATUS_STYLE[o.status], fontSize: 10, fontWeight: 800, borderRadius: 8, padding: "3px 9px", letterSpacing: "0.04em" }}>{STATUS_LABELS[o.status]}</span>
+                  <span style={{ background: "rgba(255,255,255,0.06)", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>{o.orderType}</span>
+                  {(() => { const s = sourceBadge(o.source); return s ? <span style={{ ...s.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px" }}>{s.label}</span> : null; })()}
+                  {o.paymentMethod && (() => { const p = paymentBadge(o.source, o.paymentMethod); return <span style={{ ...p.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px" }}>{p.label}</span>; })()}
+                </div>
+              </div>
+              <button onClick={() => setHistoryOrder(null)} style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${BORD}`, borderRadius: 10, padding: "6px 10px", color: TM, cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✕</button>
+            </div>
+
+            <div style={{ padding: "20px 20px 32px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+              {/* Customer */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: TM, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Customer</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: TP }}>{o.customerName || "Walk-in"}</div>
+                {o.customerPhone && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                    <span style={{ fontSize: 13, color: TM }}>{o.customerPhone}</span>
+                    <a href={`tel:${o.customerPhone}`} style={{ fontSize: 11, padding: "2px 10px", borderRadius: 20, background: "rgba(14,165,233,0.12)", color: "#0ea5e9", border: "1px solid rgba(14,165,233,0.25)", fontWeight: 600, textDecoration: "none" }}>📞 Call</a>
+                  </div>
+                )}
+                {o.customerEmail && <div style={{ fontSize: 12, color: TM, marginTop: 4 }}>{o.customerEmail}</div>}
+              </div>
+
+              {/* Items */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: TM, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Items</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {(o.items ?? []).map((item) => (
+                    <div key={item.id} style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                          <span style={{ fontWeight: 800, color: OR, fontSize: 13, flexShrink: 0 }}>{item.quantity}×</span>
+                          <span style={{ fontWeight: 600, color: TP, fontSize: 14 }}>{item.menuItemName}</span>
+                        </div>
+                        {(item.modifierSelections ?? []).length > 0 && (
+                          <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                            {(item.modifierSelections ?? []).map((m, i) => (
+                              <span key={i} style={{ fontSize: 11, color: TM, paddingLeft: 20 }}>+ {m.name}</span>
+                            ))}
+                          </div>
+                        )}
+                        {item.notes && <div style={{ fontSize: 11, color: TM, fontStyle: "italic", marginTop: 2, paddingLeft: 20 }}>{item.notes}</div>}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: TP, flexShrink: 0 }}>${(item.menuItemPrice * item.quantity).toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Totals */}
+              <div style={{ borderTop: `1px solid ${BORD}`, paddingTop: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {discount > 0 && (
+                    <>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: TM }}>
+                        <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#f87171" }}>
+                        <span>Discount</span><span>−${discount.toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 17, fontWeight: 900, color: TP }}>
+                    <span>Total</span><span>${o.total.toFixed(2)}</span>
+                  </div>
+                  {o.amountTendered != null && o.amountTendered > 0 && (
+                    <>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: TM }}>
+                        <span>Tendered</span><span>${o.amountTendered.toFixed(2)}</span>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#30d158" }}>
+                        <span>Change</span><span>${(o.amountTendered - o.total).toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: TM, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>Payment</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  {o.paymentMethod && (() => { const p = paymentBadge(o.source, o.paymentMethod); return <span style={{ ...p.style, fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "4px 12px" }}>{p.label}</span>; })()}
+                  <span style={{ fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "4px 12px",
+                    ...(o.paymentStatus === "paid"     ? { background: "rgba(48,209,88,0.1)",  color: "#30d158", border: "1px solid rgba(48,209,88,0.25)"  } :
+                        o.paymentStatus === "refunded" ? { background: "rgba(239,68,68,0.1)",  color: "#f87171", border: "1px solid rgba(239,68,68,0.25)"  } :
+                                                         { background: "rgba(255,107,0,0.1)", color: OR,        border: "1px solid rgba(255,107,0,0.25)"  }) }}>
+                    {o.paymentStatus === "paid" ? "✓ Paid" : o.paymentStatus === "refunded" ? "Refunded" : "Pending"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {o.notes && (
+                <div style={{ background: "rgba(255,107,0,0.08)", border: "1px solid rgba(255,107,0,0.2)", borderRadius: 12, padding: "10px 14px" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: OR, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Order Note</div>
+                  <div style={{ fontSize: 13, color: TP }}>{o.notes}</div>
+                </div>
+              )}
+
+              {/* Cancellation reason */}
+              {o.status === "cancelled" && o.cancellationReason && (
+                <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "10px 14px" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Cancellation Reason</div>
+                  <div style={{ fontSize: 13, color: TP }}>{o.cancellationReason}</div>
+                </div>
+              )}
+
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+  </>);
 }
