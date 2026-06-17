@@ -695,6 +695,12 @@ router.get("/orders/online-sync", async (req, res): Promise<void> => {
     .where(and(
       eq(ordersTable.source, "online"),
       or(gte(ordersTable.createdAt, since), gte(ordersTable.updatedAt, since)),
+      // Exclude card/ATH Móvil orders that haven't been paid yet.
+      // This means they never enter the mini PC's local DB while pending.
+      // When payment is confirmed (paymentStatus → paid), updatedAt changes and
+      // the order appears in the next sync cycle as a brand-new record — the
+      // existing INSERT path handles it with no local code change needed.
+      or(notInArray(ordersTable.paymentMethod, ["card", "athmovil"]), ne(ordersTable.paymentStatus, "pending")),
     ))
     .orderBy(ordersTable.createdAt);
 
