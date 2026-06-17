@@ -3980,6 +3980,11 @@ export default function POS() {
                   <div style={{ textAlign:"right" }}>
                     <div style={{ color:IL.or, fontWeight:800, fontSize:18 }}>${subtotal.toFixed(2)}</div>
                     <div style={{ color:IL.mu, fontSize:12 }} className="capitalize">{order.orderType}</div>
+                    {order.paymentStatus === "paid" && (
+                      <div style={{ marginTop:4, display:"inline-flex", alignItems:"center", gap:4, background:"rgba(48,209,88,0.15)", border:"1px solid rgba(48,209,88,0.4)", borderRadius:8, padding:"2px 8px", fontSize:11, fontWeight:700, color:"#6ee7a0" }}>
+                        ✓ Pre-paid{order.paymentMethod === "card" ? " · PlaceToPay" : order.paymentMethod === "athmovil" ? " · ATH Móvil" : ""}
+                      </div>
+                    )}
                   </div>
                 </div>
 
