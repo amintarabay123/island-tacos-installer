@@ -264,19 +264,25 @@ router.post("/download/env", (req: Request, res: Response): void => {
   const port      = "3001";
   const publicUrl = `http://${ip}:${port}`;
 
+  const storeTitle = process.env.STORE_TITLE ?? "Island Tacos";
+  const dbUser  = process.env.LOCAL_DB_USER  ?? "ituser";
+  const dbName  = process.env.LOCAL_DB_NAME  ?? "islandtacos";
+  const staticPath = process.env.LOCAL_SERVE_STATIC_PATH ?? "./artifacts/island-tacos/dist/public";
+  const syncUrl = process.env.STORE_URL ?? "https://orders.islandtacosbvi.com";
+
   const env = [
-    "# Island Tacos — Local Server Configuration (pre-filled by cloud server)",
+    `# ${storeTitle} — Local Server Configuration (pre-filled by cloud server)`,
     "# Generated: " + new Date().toISOString(),
     "",
     "# ── PostgreSQL ──────────────────────────────────────────────────────────────",
     "# Replace YOUR_DB_PASSWORD with your PostgreSQL password",
-    "DATABASE_URL=postgresql://ituser:YOUR_DB_PASSWORD@localhost:5432/islandtacos",
+    `DATABASE_URL=postgresql://${dbUser}:YOUR_DB_PASSWORD@localhost:5432/${dbName}`,
     "",
     "# ── Server ───────────────────────────────────────────────────────────────────",
     `PORT=${port}`,
     "NODE_ENV=production",
     `PUBLIC_URL=${publicUrl}`,
-    "SERVE_STATIC_PATH=./artifacts/island-tacos/dist/public",
+    `SERVE_STATIC_PATH=${staticPath}`,
     "",
     "# ── Security ─────────────────────────────────────────────────────────────────",
     `SESSION_SECRET=${process.env.SESSION_SECRET ?? ""}`,
@@ -291,7 +297,7 @@ router.post("/download/env", (req: Request, res: Response): void => {
     `SMTP_PASSWORD=${process.env.SMTP_PASSWORD ?? ""}`,
     "SMTP_HOST=smtp.gmail.com",
     "SMTP_PORT=587",
-    `SMTP_USER=${process.env.SMTP_USER ?? "orders@islandtacosbvi.com"}`,
+    `SMTP_USER=${process.env.SMTP_USER ?? ""}`,
     "",
     "# ── Object Storage ───────────────────────────────────────────────────────────",
     `DEFAULT_OBJECT_STORAGE_BUCKET_ID=${process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? ""}`,
@@ -299,7 +305,7 @@ router.post("/download/env", (req: Request, res: Response): void => {
     `PUBLIC_OBJECT_SEARCH_PATHS=${process.env.PUBLIC_OBJECT_SEARCH_PATHS ?? ""}`,
     "",
     "# ── Cloud Sync ───────────────────────────────────────────────────────────────",
-    "SYNC_TARGET_URL=https://orders.islandtacosbvi.com",
+    `SYNC_TARGET_URL=${syncUrl}`,
     `SYNC_SECRET=${process.env.SYNC_SECRET ?? ""}`,
     "",
     "# ── Loyverse ─────────────────────────────────────────────────────────────────",

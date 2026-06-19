@@ -1,0 +1,41 @@
+kind = "api"
+  previewPath = "/cedar-api"
+  title = "Cedar Cafe API"
+  version = "1.0.0"
+  id = "3B4_FFSkEVBkAeYMFRJ2e"
+
+  [[services]]
+  localPort = 8181
+  name = "Cedar Cafe API"
+  paths = ["/cedar-api"]
+
+  [services.development]
+  run = "pnpm --filter @workspace/cedar-api run dev"
+
+  [services.production]
+
+  [services.production.build]
+  args = ["pnpm", "--filter", "@workspace/cedar-api", "run", "build"]
+
+  [services.production.build.env]
+  NODE_ENV = "production"
+
+  [services.production.run]
+  args = ["node", "--enable-source-maps", "artifacts/cedar-api/dist/index.mjs"]
+
+  [services.production.run.env]
+  PORT = "8181"
+  NODE_ENV = "production"
+
+  [services.production.health.startup]
+  path = "/cedar-api/healthz"
+
+  [services.env]
+  PORT = "8181"
+  DATABASE_URL = "postgresql://postgres:password@helium/cedarcafe?sslmode=disable"
+  CONFIRMATION_CODE_PREFIX = "CC"
+  STORE_TITLE = "Cedar Cafe"
+  LOCAL_DB_USER = "ccuser"
+  LOCAL_DB_NAME = "cedarcafe"
+  LOCAL_SERVE_STATIC_PATH = "./artifacts/cedar-cafe/dist/public"
+  

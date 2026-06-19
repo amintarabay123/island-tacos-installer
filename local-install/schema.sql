@@ -21,9 +21,11 @@ CREATE TABLE IF NOT EXISTS menu_categories (
   icon         TEXT,
   sort_order   INTEGER NOT NULL DEFAULT 0,
   send_to_kds  BOOLEAN NOT NULL DEFAULT true,
+  kds_station  TEXT,
   loyverse_id  TEXT UNIQUE,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE menu_categories ADD COLUMN IF NOT EXISTS kds_station TEXT;
 
 CREATE TABLE IF NOT EXISTS menu_items (
   id                    SERIAL PRIMARY KEY,

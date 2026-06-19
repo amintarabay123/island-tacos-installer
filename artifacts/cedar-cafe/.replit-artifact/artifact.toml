@@ -1,0 +1,35 @@
+kind = "web"
+  previewPath = "/cedar"
+  title = "Cedar Cafe - Online Ordering"
+  version = "1.0.0"
+  id = "artifacts/island-tacos"
+  router = "path"
+
+  [[integratedSkills]]
+  name = "react-vite"
+  version = "1.0.0"
+
+  [[services]]
+  name = "web"
+  paths = [ "/cedar" ]
+  localPort = 18185
+
+  [services.development]
+  run = "pnpm --filter @workspace/cedar-cafe run dev"
+
+  [services.production]
+  publicDir = "artifacts/cedar-cafe/dist/public"
+  serve = "static"
+
+  [services.production.build]
+  args = [ "pnpm", "--filter", "@workspace/cedar-cafe", "run", "build" ]
+
+  [[services.production.rewrites]]
+  from = "/*"
+  to = "/index.html"
+
+  [services.env]
+  PORT = "18185"
+  BASE_PATH = "/cedar"
+  VITE_ADMIN_PATH = "admin"
+  

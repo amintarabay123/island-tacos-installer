@@ -1,0 +1,32 @@
+{
+  "name": "Island Tacos — POS",
+  "short_name": "IT POS",
+  "description": "Island Tacos point-of-sale terminal",
+  "start_url": "/admin/pos",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0D0F17",
+  "theme_color": "#F59E0B",
+  "orientation": "landscape",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icon-pos-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-pos-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-pos.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

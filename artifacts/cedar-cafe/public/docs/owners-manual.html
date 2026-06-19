@@ -1,0 +1,770 @@
+cuastom tool?
+?tell me a good one and ill check
+lookwhich model of groq should i choose
+how will i know if groq is activedo i publishsince my my mini pc is here, im going to try to <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Island Tacos — System Owner's Manual</title>
+<style>
+  :root {
+    --gold: #c8860a;
+    --dark: #1a1f36;
+    --red: #b91c1c;
+    --green: #15803d;
+    --light: #f8f5ef;
+    --border: #d4c9b0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: #fff;
+    color: #1a1a1a;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ── COVER PAGE ── */
+  .cover {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--dark);
+    color: #fff;
+    text-align: center;
+    page-break-after: always;
+    padding: 60px;
+  }
+  .cover .logo { font-size: 64px; margin-bottom: 16px; }
+  .cover h1 { font-size: 38px; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; }
+  .cover h2 { font-size: 18px; color: #aaa; margin-top: 8px; font-weight: normal; letter-spacing: 1px; }
+  .cover .subtitle {
+    margin-top: 40px;
+    font-size: 15px;
+    color: #ccc;
+    border-top: 1px solid #444;
+    padding-top: 24px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .cover .meta { margin-top: 48px; color: #888; font-size: 12px; }
+
+  /* ── TOC ── */
+  .toc {
+    padding: 48px 60px;
+    page-break-after: always;
+    background: var(--light);
+    min-height: 100vh;
+  }
+  .toc h2 { font-size: 22px; color: var(--dark); border-bottom: 2px solid var(--gold); padding-bottom: 8px; margin-bottom: 24px; }
+  .toc ol { padding-left: 24px; }
+  .toc li { margin: 8px 0; font-size: 14px; }
+  .toc li a { color: var(--dark); text-decoration: none; }
+  .toc li span { float: right; color: #999; }
+
+  /* ── SECTIONS ── */
+  .section {
+    padding: 48px 60px;
+    page-break-before: always;
+  }
+  .section:first-of-type { page-break-before: avoid; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid var(--gold);
+  }
+  .section-number {
+    background: var(--dark);
+    color: var(--gold);
+    font-size: 11px;
+    font-weight: bold;
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+  }
+  .section h2 { font-size: 20px; color: var(--dark); }
+
+  h3 { font-size: 14px; color: var(--dark); margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    margin-bottom: 6px;
+  }
+  .card-value {
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
+    color: var(--dark);
+    font-weight: bold;
+    word-break: break-all;
+  }
+  .card-note { font-size: 11px; color: #888; margin-top: 4px; }
+
+  /* ── TABLES ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 12.5px;
+  }
+  th {
+    background: var(--dark);
+    color: var(--gold);
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: var(--light); }
+  td code {
+    font-family: 'Courier New', monospace;
+    background: #eee;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11.5px;
+    color: #b91c1c;
+  }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-yellow { background: #fef9c3; color: #854d0e; }
+  .badge-red { background: #fee2e2; color: #b91c1c; }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+
+  /* ── ALERTS ── */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 12px;
+  }
+  .alert-red { background: #fee2e2; border-left: 4px solid #b91c1c; color: #7f1d1d; }
+  .alert-yellow { background: #fef9c3; border-left: 4px solid #ca8a04; color: #713f12; }
+  .alert-green { background: #dcfce7; border-left: 4px solid #16a34a; color: #14532d; }
+
+  /* ── URL ROWS ── */
+  .url-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .url-label { font-size: 12px; color: #555; min-width: 160px; }
+  .url-val { font-family: 'Courier New', monospace; font-size: 12px; color: #1d4ed8; word-break: break-all; }
+
+  /* ── STEPS ── */
+  .step {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .step-num {
+    background: var(--gold);
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+  .step-text { font-size: 13px; padding-top: 2px; }
+
+  /* ── SECRET BOX ── */
+  .secret-box {
+    background: #1a1f36;
+    color: #f5a623;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin: 4px 0 8px;
+    letter-spacing: 0.5px;
+    word-break: break-all;
+  }
+
+  /* ── GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* ── PRINT ── */
+  @media print {
+    body { font-size: 12px; }
+    .cover { height: 100vh; }
+    .section { page-break-before: always; }
+    .no-break { page-break-inside: avoid; }
+    a { color: #1d4ed8; }
+  }
+
+  footer {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: #aaa;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════ COVER -->
+<div class="cover">
+  <div class="logo">🌮</div>
+  <h1>Island Tacos</h1>
+  <h2>System Owner's Manual</h2>
+  <div class="subtitle">
+    Online Ordering · Point of Sale · Kitchen Display · Admin Reports<br>
+    Wickhams Cay 1, Road Town, British Virgin Islands
+  </div>
+  <div class="meta">
+    Prepared April 2026 &nbsp;·&nbsp; CONFIDENTIAL — Keep secure
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ TOC -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+  <ol>
+    <li><a href="#urls">App URLs &amp; Access Points</a></li>
+    <li><a href="#pins">Staff PINs &amp; Authentication</a></li>
+    <li><a href="#smtp">Email (SMTP) Configuration</a></li>
+    <li><a href="#payments">Payment Integrations</a></li>
+    <li><a href="#database">Database</a></li>
+    <li><a href="#domain">Custom Domain &amp; DNS</a></li>
+    <li><a href="#printing">Receipt Printing</a></li>
+    <li><a href="#pages">Page Guide — What Each Screen Does</a></li>
+    <li><a href="#pos-workflow">POS Daily Workflow</a></li>
+    <li><a href="#replit">Replit Platform Notes</a></li>
+    <li><a href="#emergency">Emergency Reference</a></li>
+  </ol>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 1. URLS -->
+<div class="section" id="urls">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2>App URLs &amp; Access Points</h2>
+  </div>
+
+  <h3>Production (Live)</h3>
+  <div class="url-row">
+    <span class="url-label">Customer Ordering</span>
+    <span class="url-val">https://order-direct-connect.replit.app/</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Custom Domain</span>
+    <span class="url-val">https://orders.islandtacosbvi.com/ &nbsp;<span class="badge badge-yellow">DNS verification in progress</span></span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Admin Dashboard</span>
+    <span class="url-val">https://order-direct-connect.replit.app/it-dav7dwn8</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Point of Sale (POS)</span>
+    <span class="url-val">https://order-direct-connect.replit.app/it-dav7dwn8/pos</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Kitchen Display (KDS)</span>
+    <span class="url-val">https://order-direct-connect.replit.app/it-dav7dwn8/kitchen</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Customer Display</span>
+    <span class="url-val">https://order-direct-connect.replit.app/display</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Order Tracking</span>
+    <span class="url-val">https://order-direct-connect.replit.app/track</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Admin Reports</span>
+    <span class="url-val">https://order-direct-connect.replit.app/it-dav7dwn8/reports</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Menu Management</span>
+    <span class="url-val">https://order-direct-connect.replit.app/it-dav7dwn8/menu</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Customer List</span>
+    <span class="url-val">https://order-direct-connect.replit.app/it-dav7dwn8/customers</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Settings</span>
+    <span class="url-val">https://order-direct-connect.replit.app/it-dav7dwn8/settings</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Admin Login</span>
+    <span class="url-val">https://order-direct-connect.replit.app/it-dav7dwn8/login</span>
+  </div>
+
+  <div class="alert alert-yellow" style="margin-top:20px">
+    <strong>Secret Admin Path:</strong> The admin section lives at <code>/it-dav7dwn8</code> — this hidden path is your first line of defense. Do not share it publicly. It is stored as the environment variable <code>VITE_ADMIN_PATH</code> in Replit.
+  </div>
+
+  <h3>Development (Replit Preview)</h3>
+  <div class="url-row">
+    <span class="url-label">Dev Frontend</span>
+    <span class="url-val">Available in Replit preview pane while workspace is open</span>
+  </div>
+  <div class="url-row">
+    <span class="url-label">Dev API</span>
+    <span class="url-val">Runs on port 8080 internally (proxied through /api)</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 2. PINS -->
+<div class="section" id="pins">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2>Staff PINs &amp; Authentication</h2>
+  </div>
+
+  <div class="alert alert-red">
+    <strong>Keep this page secure.</strong> These PINs grant access to your POS, admin panel, and financial data.
+  </div>
+
+  <div class="grid-2">
+    <div class="card no-break">
+      <div class="card-title">Staff PIN</div>
+      <div class="card-value">Used by: Cashiers, kitchen staff</div>
+      <div class="card-note">Grants access to POS and Kitchen Display. Stored as secret <code>STAFF_PIN</code> in Replit.</div>
+      <div class="secret-box">Retrieve from: Replit → Secrets → STAFF_PIN</div>
+    </div>
+    <div class="card no-break">
+      <div class="card-title">Admin PIN</div>
+      <div class="card-value">Used by: Manager / Owner</div>
+      <div class="card-note">Grants full admin access including reports, refunds, shift management. Stored as secret <code>ADMIN_PIN</code> in Replit.</div>
+      <div class="secret-box">Retrieve from: Replit → Secrets → ADMIN_PIN</div>
+    </div>
+  </div>
+
+  <h3>Clerk Email Authentication (Admin Login)</h3>
+  <p style="margin-bottom:12px">Admin login at <code>/it-dav7dwn8/login</code> uses <strong>Clerk email OTP</strong> — a one-time code is sent to the admin's email address. No password needed.</p>
+  <table>
+    <tr><th>Key</th><th>Value / Location</th></tr>
+    <tr><td>Clerk Dashboard</td><td><a href="https://dashboard.clerk.com">dashboard.clerk.com</a></td></tr>
+    <tr><td>Publishable Key</td><td>Stored as <code>VITE_CLERK_PUBLISHABLE_KEY</code> in Replit Secrets</td></tr>
+    <tr><td>Secret Key</td><td>Stored as <code>CLERK_SECRET_KEY</code> in Replit Secrets</td></tr>
+    <tr><td>Clerk Proxy URL (prod)</td><td><code>https://order-direct-connect.replit.app/api/__clerk</code></td></tr>
+  </table>
+
+  <h3>PIN Change Procedure</h3>
+  <div class="step"><div class="step-num">1</div><div class="step-text">Open Replit workspace at <a href="https://replit.com">replit.com</a></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text">Open the Secrets panel (lock icon in the left sidebar)</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">Find <code>STAFF_PIN</code> or <code>ADMIN_PIN</code> and edit the value</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-text">Click Publish in Replit to deploy the change to production</div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 3. SMTP -->
+<div class="section" id="smtp">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2>Email (SMTP) Configuration</h2>
+  </div>
+
+  <p style="margin-bottom:16px">Used to send receipt emails to customers directly from the POS (✉ Email button in the Receipts drawer).</p>
+
+  <table class="no-break">
+    <tr><th>Setting</th><th>Value</th></tr>
+    <tr><td>Provider</td><td>Google Workspace (Gmail SMTP)</td></tr>
+    <tr><td>Sending Address</td><td><code>orders@islandtacosbvi.com</code></td></tr>
+    <tr><td>Display Name</td><td>Island Tacos &lt;orders@islandtacosbvi.com&gt;</td></tr>
+    <tr><td>SMTP Host</td><td><code>smtp.gmail.com</code></td></tr>
+    <tr><td>SMTP Port</td><td><code>587</code> (STARTTLS)</td></tr>
+    <tr><td>Auth Username</td><td><code>orders@islandtacosbvi.com</code></td></tr>
+    <tr><td>App Password</td><td><code>vhzk frfv vuhs xezn</code> (Google App Password — 16 chars, no spaces when used)</td></tr>
+    <tr><td>Replit Secret Key</td><td><code>SMTP_PASSWORD</code></td></tr>
+  </table>
+
+  <div class="alert alert-yellow">
+    <strong>Important:</strong> This is a Google App Password, not your regular Google account password. It was generated at <a href="https://myaccount.google.com/apppasswords">myaccount.google.com/apppasswords</a> for the <code>orders@islandtacosbvi.com</code> account. If 2FA is ever disabled on that Google account, App Passwords stop working and a new one must be generated.
+  </div>
+
+  <h3>If Email Stops Working</h3>
+  <div class="step"><div class="step-num">1</div><div class="step-text">Go to <a href="https://myaccount.google.com/apppasswords">myaccount.google.com/apppasswords</a> and sign in as <code>orders@islandtacosbvi.com</code></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text">Generate a new App Password for "Mail"</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">Update the <code>SMTP_PASSWORD</code> secret in Replit Secrets</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-text">Republish the app in Replit</div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 4. PAYMENTS -->
+<div class="section" id="payments">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2>Payment Integrations</h2>
+  </div>
+
+  <h3>ATH Móvil Business</h3>
+  <table class="no-break">
+    <tr><th>Item</th><th>Value / Location</th></tr>
+    <tr><td>Dashboard</td><td><a href="https://www.athmovil.com/business">athmovil.com/business</a></td></tr>
+    <tr><td>Public Token</td><td>Stored as <code>ATHMOVIL_PUBLIC_TOKEN</code> in Replit Secrets</td></tr>
+    <tr><td>Private Token</td><td>Stored as <code>ATHMOVIL_PRIVATE_TOKEN</code> in Replit Secrets</td></tr>
+    <tr><td>Webhook URL</td><td><code>https://order-direct-connect.replit.app/api/athmovil/webhook</code></td></tr>
+    <tr><td>Usage</td><td>Online ordering checkout &amp; POS — customer scans QR / pays via ATH Móvil app</td></tr>
+  </table>
+
+  <h3>Cash</h3>
+  <p style="margin-bottom:12px">Built-in change calculator. No external integration required. Managed through shift open/close flow.</p>
+
+  <h3>Card (Tap/Swipe)</h3>
+  <p style="margin-bottom:12px">Card payments are recorded in the system as "Card" method but processed through your physical card terminal separately. The system tracks the record; the terminal handles the actual charge.</p>
+
+  <h3>Payment Methods Summary</h3>
+  <table>
+    <tr><th>Method</th><th>Where</th><th>How Processed</th></tr>
+    <tr><td>Cash</td><td>POS only</td><td>In-app change calculator, tracked in shift</td></tr>
+    <tr><td>Card</td><td>POS only</td><td>Physical terminal (system records, doesn't charge)</td></tr>
+    <tr><td>ATH Móvil</td><td>Online + POS</td><td>ATH Móvil Business API, webhook confirms payment</td></tr>
+    <tr><td>Pay at Pickup</td><td>Online only</td><td>No upfront charge; customer pays on arrival</td></tr>
+  </table>
+
+  <h3>Loyverse (Legacy)</h3>
+  <table>
+    <tr><th>Item</th><th>Value</th></tr>
+    <tr><td>API Token</td><td>Stored as <code>LOYVERSE_API_TOKEN</code> in Replit Secrets</td></tr>
+    <tr><td>Sync endpoint</td><td><code>POST /api/loyverse/sync</code> — imports menu items from Loyverse</td></tr>
+    <tr><td>Status</td><td><span class="badge badge-yellow">Legacy</span> — Orders no longer push to Loyverse. Used only for initial menu import if needed.</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 5. DATABASE -->
+<div class="section" id="database">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2>Database</h2>
+  </div>
+
+  <div class="alert alert-red">
+    <strong>Never share database credentials.</strong> Anyone with access to the database URL has full read/write access to all orders, customer data, and financial records.
+  </div>
+
+  <table class="no-break">
+    <tr><th>Item</th><th>Value / Location</th></tr>
+    <tr><td>Type</td><td>PostgreSQL (managed by Replit)</td></tr>
+    <tr><td>Connection URL</td><td>Stored as <code>DATABASE_URL</code> in Replit Secrets</td></tr>
+    <tr><td>Host</td><td>Stored as <code>PGHOST</code> in Replit Secrets</td></tr>
+    <tr><td>Port</td><td>Stored as <code>PGPORT</code> in Replit Secrets</td></tr>
+    <tr><td>Database name</td><td>Stored as <code>PGDATABASE</code> in Replit Secrets</td></tr>
+    <tr><td>Username</td><td>Stored as <code>PGUSER</code> in Replit Secrets</td></tr>
+    <tr><td>Password</td><td>Stored as <code>PGPASSWORD</code> in Replit Secrets</td></tr>
+    <tr><td>ORM</td><td>Drizzle ORM</td></tr>
+    <tr><td>Backups</td><td>Managed by Replit — point-in-time recovery available on paid plans</td></tr>
+  </table>
+
+  <h3>Key Tables</h3>
+  <table>
+    <tr><th>Table</th><th>Contents</th></tr>
+    <tr><td><code>orders</code></td><td>All orders (online + POS), confirmation codes, totals, payment status</td></tr>
+    <tr><td><code>order_items</code></td><td>Line items for each order including modifiers</td></tr>
+    <tr><td><code>menu_categories</code></td><td>Menu categories (Tacos, Burritos, Drinks, etc.)</td></tr>
+    <tr><td><code>menu_items</code></td><td>Individual menu items with prices, descriptions, availability</td></tr>
+    <tr><td><code>customers</code></td><td>Customer records (name, email, phone) built from order history</td></tr>
+    <tr><td><code>shifts</code></td><td>Cash register shifts with opening/closing floats</td></tr>
+    <tr><td><code>cash_transactions</code></td><td>Pay-in / pay-out entries during shifts</td></tr>
+    <tr><td><code>refunds</code></td><td>Refund records linked to orders (amount, method, reason)</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 6. DOMAIN -->
+<div class="section" id="domain">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2>Custom Domain &amp; DNS</h2>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Custom Domain</div>
+      <div class="card-value">orders.islandtacosbvi.com</div>
+      <div class="card-note">Status: DNS verification in progress (Replit verifier polling)</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Default Replit Domain</div>
+      <div class="card-value">order-direct-connect.replit.app</div>
+      <div class="card-note">Always active — use this as fallback if custom domain has issues</div>
+    </div>
+  </div>
+
+  <h3>DNS Registrar</h3>
+  <table class="no-break">
+    <tr><th>Item</th><th>Value</th></tr>
+    <tr><td>Registrar</td><td>Namecheap</td></tr>
+    <tr><td>Nameservers</td><td><code>dns1.registrar-servers.com</code> / <code>dns2.registrar-servers.com</code></td></tr>
+    <tr><td>DNS Panel</td><td>Namecheap → Domain List → islandtacosbvi.com → Advanced DNS</td></tr>
+  </table>
+
+  <h3>Required DNS Records (orders subdomain)</h3>
+  <table>
+    <tr><th>Type</th><th>Host</th><th>Value</th><th>Purpose</th></tr>
+    <tr><td><strong>A</strong></td><td><code>orders</code></td><td><code>34.111.179.208</code></td><td>Routes traffic to Replit servers</td></tr>
+    <tr><td><strong>TXT</strong></td><td><code>orders</code></td><td><code>replit-verify-50b4aee7-3513-4eb1-9678-a72ab5d24e28</code></td><td>Proves domain ownership to Replit</td></tr>
+  </table>
+
+  <div class="alert alert-yellow">
+    <strong>Note:</strong> Both records are currently set correctly in DNS and visible to all public resolvers (Google, Cloudflare). Replit's verifier is polling — it can take up to 48 hours to complete verification after DNS changes.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 7. PRINTING -->
+<div class="section" id="printing">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2>Receipt Printing</h2>
+  </div>
+
+  <p style="margin-bottom:16px">Two printing methods are supported. Configure in <strong>Admin → Settings → Printer</strong>.</p>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Option A — Browser Print (Default)</div>
+      <div class="card-value" style="font-size:13px">Opens a print dialog in the browser</div>
+      <div class="card-note">Works on any device. Good for desktop or iPad POS setup. No extra hardware config needed.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Option B — Network Thermal Printer</div>
+      <div class="card-value" style="font-size:13px">Sends ESC/POS commands over TCP</div>
+      <div class="card-note">Requires a network-connected thermal printer. Set the printer's IP address in Settings. Printer must be on the same network as the POS device. Default port: <code>9100</code>.</div>
+    </div>
+  </div>
+
+  <h3>Network Printer Setup</h3>
+  <div class="step"><div class="step-num">1</div><div class="step-text">Connect your thermal printer to the Wi-Fi network</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text">Print a test page from the printer to find its IP address</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">In the POS app go to Admin → Settings → Printer, select "Network Printer", enter the IP address</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-text">Click "Test Print" to verify — a receipt should print immediately</div></div>
+
+  <h3>Email Receipts</h3>
+  <p>In the POS Receipts drawer, tap <strong>✉ Email</strong> on any completed order. If the customer's email is on file it pre-fills automatically; otherwise type it in and tap Send. Receipt arrives from <code>orders@islandtacosbvi.com</code>.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 8. PAGES -->
+<div class="section" id="pages">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2>Page Guide — What Each Screen Does</h2>
+  </div>
+
+  <table>
+    <tr><th>Screen</th><th>Who Uses It</th><th>What It Does</th></tr>
+    <tr>
+      <td><strong>Customer Menu</strong><br><code>/</code></td>
+      <td>Customers</td>
+      <td>Browse menu by category, add items to cart, place pickup order. Supports ATH Móvil and Pay at Pickup.</td>
+    </tr>
+    <tr>
+      <td><strong>Order Tracking</strong><br><code>/track</code></td>
+      <td>Customers</td>
+      <td>Enter confirmation code (e.g. ITXYZ123) to see live order status (New → Accepted → Cooking → Ready).</td>
+    </tr>
+    <tr>
+      <td><strong>Customer Display</strong><br><code>/display</code></td>
+      <td>Customers (facing screen)</td>
+      <td>Shows current order being rung up in real time. Mount a screen facing the customer at the counter.</td>
+    </tr>
+    <tr>
+      <td><strong>POS</strong><br><code>/it-dav7dwn8/pos</code></td>
+      <td>Cashiers</td>
+      <td>Full point-of-sale: build orders, apply discounts, accept cash/card/ATH Móvil/split payments, print receipts, manage tickets, view live online orders, open/close shifts, pay in/out cash, issue refunds.</td>
+    </tr>
+    <tr>
+      <td><strong>Kitchen Display</strong><br><code>/it-dav7dwn8/kitchen</code></td>
+      <td>Kitchen staff</td>
+      <td>Real-time order queue. Cards show items with modifiers. Mark orders as Done. History drawer for completed orders.</td>
+    </tr>
+    <tr>
+      <td><strong>Admin Dashboard</strong><br><code>/it-dav7dwn8</code></td>
+      <td>Manager / Owner</td>
+      <td>Live order overview, order status management, today's stats.</td>
+    </tr>
+    <tr>
+      <td><strong>Menu Management</strong><br><code>/it-dav7dwn8/menu</code></td>
+      <td>Manager / Owner</td>
+      <td>Add, edit, delete, and toggle availability of menu items and categories. Upload item photos.</td>
+    </tr>
+    <tr>
+      <td><strong>Reports</strong><br><code>/it-dav7dwn8/reports</code></td>
+      <td>Manager / Owner</td>
+      <td>Sales by date range, breakdown by payment method, top-selling items, export to PDF.</td>
+    </tr>
+    <tr>
+      <td><strong>Customers</strong><br><code>/it-dav7dwn8/customers</code></td>
+      <td>Manager / Owner</td>
+      <td>Browse customer history, total spent, order count, contact info.</td>
+    </tr>
+    <tr>
+      <td><strong>Settings</strong><br><code>/it-dav7dwn8/settings</code></td>
+      <td>Manager / Owner</td>
+      <td>Printer configuration (browser vs network), store settings.</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 9. POS WORKFLOW -->
+<div class="section" id="pos-workflow">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2>POS Daily Workflow</h2>
+  </div>
+
+  <h3>Opening the Register</h3>
+  <div class="step"><div class="step-num">1</div><div class="step-text">Open the POS on your device, enter your staff PIN</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text">If no shift is open, the <strong>Open Shift</strong> modal appears — count your cash drawer and enter the opening float, then click Open</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">POS is ready. Online orders appear automatically in the Orders drawer</div></div>
+
+  <h3>Taking an Order</h3>
+  <div class="step"><div class="step-num">1</div><div class="step-text">Select items from the menu grid (left side). Tap item to add to cart.</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text">Adjust quantity with +/− buttons. Apply discount if needed.</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">Tap <strong>Charge</strong> → select payment method → complete payment</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-text">Receipt prints / email sent if customer provided email</div></div>
+
+  <h3>Handling Online Orders</h3>
+  <div class="step"><div class="step-num">1</div><div class="step-text">New online orders appear in the <strong>Orders</strong> drawer (bell icon) with a "New" badge</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text">Tap <strong>Accept</strong> — customer's tracking page updates to "Accepted"</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">Tap <strong>Start Cooking</strong> when you begin preparing</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-text">Tap <strong>Mark Ready</strong> when order is at the pickup counter</div></div>
+  <div class="step"><div class="step-num">5</div><div class="step-text">Tap <strong>Charge</strong> to complete and close the order</div></div>
+
+  <h3>Closing the Register</h3>
+  <div class="step"><div class="step-num">1</div><div class="step-text">Tap the shift/register icon in the POS header → <strong>Close Shift</strong></div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text">Count your cash drawer and enter the closing amount</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">Review the Z-report (total sales, by method, pay-ins/outs, expected cash)</div></div>
+  <div class="step"><div class="step-num">4</div><div class="step-text">Print the Z-report if needed, then close the shift</div></div>
+
+  <h3>Issuing a Refund</h3>
+  <div class="step"><div class="step-num">1</div><div class="step-text">Open the <strong>Receipts</strong> drawer in POS (receipt icon)</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text">Find the order, tap <strong>↩</strong> (refund button)</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">Enter refund amount, method, and reason → confirm</div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 10. REPLIT -->
+<div class="section" id="replit">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2>Replit Platform Notes</h2>
+  </div>
+
+  <table class="no-break">
+    <tr><th>Item</th><th>Value</th></tr>
+    <tr><td>Replit workspace URL</td><td><a href="https://replit.com">replit.com</a> → Your Repls → island-tacos (or similar)</td></tr>
+    <tr><td>Production app URL</td><td><code>order-direct-connect.replit.app</code></td></tr>
+    <tr><td>To deploy changes</td><td>Click <strong>Publish</strong> in the Publishing panel inside Replit</td></tr>
+    <tr><td>To change PINs/secrets</td><td>Secrets panel in Replit sidebar → edit value → Publish</td></tr>
+    <tr><td>Session secret</td><td>Stored as <code>SESSION_SECRET</code> — do not change, it will invalidate all active sessions</td></tr>
+  </table>
+
+  <h3>How to Update the Menu</h3>
+  <div class="step"><div class="step-num">1</div><div class="step-text">Go to Admin → Menu Management in the live app</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text">Add/edit/delete items — changes are live immediately, no redeploy needed</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">Toggle item availability with the on/off switch (e.g. sold out items)</div></div>
+
+  <h3>PWA — Installing as an App</h3>
+  <p style="margin-bottom:12px">The ordering site is a Progressive Web App. Staff and customers can install it on their phone or tablet for a native app feel:</p>
+  <div class="step"><div class="step-num">1</div><div class="step-text"><strong>iOS:</strong> Open in Safari → Share → Add to Home Screen</div></div>
+  <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Android:</strong> Open in Chrome → Menu (⋮) → Add to Home Screen</div></div>
+  <div class="step"><div class="step-num">3</div><div class="step-text">Use the POS, KDS, or ordering site full-screen without browser chrome</div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ 11. EMERGENCY -->
+<div class="section" id="emergency">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2>Emergency Reference</h2>
+  </div>
+
+  <div class="alert alert-red" style="margin-bottom:24px">
+    <strong>Something broken?</strong> Use this section to quickly diagnose and recover.
+  </div>
+
+  <table class="no-break">
+    <tr><th>Problem</th><th>First thing to try</th></tr>
+    <tr>
+      <td>Orders not appearing in POS</td>
+      <td>Hard-refresh the browser (Ctrl+Shift+R / Cmd+Shift+R). Check internet connection. Check Replit deployment status.</td>
+    </tr>
+    <tr>
+      <td>Customer can't place order online</td>
+      <td>Try opening <code>order-direct-connect.replit.app</code> directly (bypasses custom domain). Check if the item is marked available in Menu Management.</td>
+    </tr>
+    <tr>
+      <td>ATH Móvil payments not confirming</td>
+      <td>Check <a href="https://www.athmovil.com/business">ATH Móvil Business dashboard</a> for payment status. Verify webhook URL is registered: <code>https://order-direct-connect.replit.app/api/athmovil/webhook</code>.</td>
+    </tr>
+    <tr>
+      <td>Email receipts not sending</td>
+      <td>Check Google Workspace <code>orders@</code> account — 2FA must be on. Regenerate App Password if needed and update <code>SMTP_PASSWORD</code> in Replit Secrets.</td>
+    </tr>
+    <tr>
+      <td>Printer not printing</td>
+      <td>Check printer is on and connected to same Wi-Fi. Confirm IP address in Admin → Settings. Try switching to Browser Print as a fallback.</td>
+    </tr>
+    <tr>
+      <td>Custom domain not loading</td>
+      <td>Use <code>order-direct-connect.replit.app</code> — it always works. Custom domain is cosmetic and DNS verification may still be pending.</td>
+    </tr>
+    <tr>
+      <td>Admin login not working</td>
+      <td>Check your email for the Clerk OTP code (check spam). If PIN prompt: confirm PIN with owner. Try incognito/private browser window.</td>
+    </tr>
+    <tr>
+      <td>App showing old version</td>
+      <td>Clear browser cache or open in incognito. The PWA service worker may be caching — unregister it in browser DevTools → Application → Service Workers.</td>
+    </tr>
+  </table>
+
+  <h3>Key Contacts</h3>
+  <table>
+    <tr><th>Service</th><th>Support</th></tr>
+    <tr><td>Replit (platform)</td><td><a href="https://replit.com/support">replit.com/support</a></td></tr>
+    <tr><td>Clerk (auth)</td><td><a href="https://clerk.com/support">clerk.com/support</a></td></tr>
+    <tr><td>ATH Móvil Business</td><td><a href="https://www.athmovil.com/business">athmovil.com/business</a></td></tr>
+    <tr><td>Namecheap (domain)</td><td><a href="https://www.namecheap.com/support">namecheap.com/support</a></td></tr>
+    <tr><td>Google Workspace</td><td><a href="https://workspace.google.com/support">workspace.google.com/support</a></td></tr>
+  </table>
+
+  <footer>
+    Island Tacos — System Owner's Manual &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; Generated April 2026<br>
+    App: order-direct-connect.replit.app &nbsp;·&nbsp; Email: orders@islandtacosbvi.com
+  </footer>
+</div>
+
+</body>
+</html>

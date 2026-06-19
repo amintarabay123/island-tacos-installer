@@ -1,3 +1,4 @@
 artifacts/island-tacos/public/island-tacos-installer.tar.gz filter=lfs diff=lfs merge=lfs -text
 island-tacos-export.tar.gz filter=lfs diff=lfs merge=lfs -text
 island-tacos-export.zip filter=lfs diff=lfs merge=lfs -text
+artifacts/cedar-cafe/public/island-tacos-installer.tar.gz filter=lfs diff=lfs merge=lfs -text

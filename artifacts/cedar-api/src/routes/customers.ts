@@ -1,0 +1,225 @@
+import { Router, type IRouter, type Request, type Response } from "express";
+import { db, customersTable, ordersTable, orderItemsTable } from "@workspace/db";
+import { eq, ilike, or, desc, sql, count, sum } from "drizzle-orm";
+
+const router: IRouter = Router();
+
+router.get("/customers/stats", async (_req: Request, res: Response): Promise<void> => {
+  // Stats cards show real business totals from the orders table
+  const [[custRow], [ordRow]] = await Promise.all([
+    db.select({ totalCustomers: count() }).from(customersTable),
+    db.select({
+      totalOrders:  count(),
+      totalRevenue: sum(sql<number>`${ordersTable.total}::numeric`),
+    }).from(ordersTable).where(sql`${ordersTable.status} != 'cancelled'`),
+  ]);
+  res.json({
+    totalCustomers: Number(custRow?.totalCustomers ?? 0),
+    totalOrders:    Number(ordRow?.totalOrders    ?? 0),
+    totalRevenue:   parseFloat(String(ordRow?.totalRevenue ?? "0")),
+  });
+});
+
+router.get("/customers", async (req: Request, res: Response): Promise<void> => {
+  const q = ((req.query as Record<string, string>).q ?? "").trim();
+  const limit  = Math.min(parseInt((req.query as Record<string, string>).limit  ?? "50",  10) || 50,  500);
+  const offset = Math.max(parseInt((req.query as Record<string, string>).offset ?? "0",   10) || 0,   0);
+
+  // Per-customer order count and spend come from the denormalized visitCount / totalSpent
+  // columns, which are updated by upsertCustomer each time an identified customer orders.
+  // This is more reliable than a JOIN because 92 % of POS orders have no contact info stored
+  // on the order record, so a JOIN would miss them entirely.
+  const customers = q
+    ? await db.select().from(customersTable)
+        .where(or(
+          ilike(customersTable.name,  `%${q}%`),
+          ilike(customersTable.email, `%${q}%`),
+          ilike(customersTable.phone, `%${q}%`),
+        ))
+        .orderBy(desc(customersTable.visitCount), desc(customersTable.totalSpent))
+        .limit(limit)
+        .offset(offset)
+    : await db.select().from(customersTable)
+        .orderBy(desc(customersTable.visitCount), desc(customersTable.totalSpent))
+        .limit(limit)
+        .offset(offset);
+
+  res.json(customers.map(c => ({
+    id:         c.id,
+    name:       c.name,
+    email:      c.email,
+    phone:      c.phone,
+    notes:      c.notes,
+    visitCount: c.visitCount ?? 0,
+    totalSpent: parseFloat(c.totalSpent ?? "0"),
+    createdAt:  c.createdAt,
+    updatedAt:  c.updatedAt,
+  })));
+});
+
+router.get("/customers/lookup", async (req: Request, res: Response): Promise<void> => {
+  const email = ((req.query as Record<string, string>).email ?? "").trim().toLowerCase();
+  const phone = ((req.query as Record<string, string>).phone ?? "").trim();
+
+  if (!email && !phone) {
+    res.status(400).json({ error: "email or phone required" });
+    return;
+  }
+
+  let customer = null;
+  if (email) {
+    const rows = await db.select().from(customersTable)
+      .where(sql`lower(${customersTable.email}) = ${email}`)
+      .limit(1);
+    customer = rows[0] ?? null;
+  }
+  if (!customer && phone) {
+    const rows = await db.select().from(customersTable)
+      .where(eq(customersTable.phone, phone))
+      .limit(1);
+    customer = rows[0] ?? null;
+  }
+
+  if (!customer) {
+    res.status(404).json({ error: "Customer not found" });
+    return;
+  }
+
+  const orders = await db.select().from(ordersTable)
+    .where(
+      email
+        ? sql`lower(${ordersTable.customerEmail}) = ${email}`
+        : eq(ordersTable.customerPhone, phone)
+    )
+    .orderBy(desc(ordersTable.createdAt))
+    .limit(50);
+
+  const ordersWithItems = await Promise.all(orders.map(async (o) => {
+    const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, o.id));
+    return {
+      ...o,
+      subtotal: parseFloat(o.subtotal),
+      discountAmount: parseFloat(o.discountAmount ?? "0"),
+      tax: parseFloat(o.tax),
+      total: parseFloat(o.total),
+      items: items.map(i => ({
+        ...i,
+        subtotal: parseFloat(i.subtotal),
+        menuItemPrice: parseFloat(i.menuItemPrice),
+      })),
+    };
+  }));
+
+  res.json({
+    id: customer.id,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    visitCount: customer.visitCount,
+    totalSpent: parseFloat(customer.totalSpent ?? "0"),
+    createdAt: customer.createdAt,
+    orders: ordersWithItems,
+  });
+});
+
+router.get("/customers/:id", async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(req.params["id"] as string, 10);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, id)).limit(1);
+  if (!customer) { res.status(404).json({ error: "Not found" }); return; }
+
+  const orders = await db.select().from(ordersTable)
+    .where(
+      customer.email
+        ? sql`lower(${ordersTable.customerEmail}) = ${customer.email!.toLowerCase()}`
+        : eq(ordersTable.customerPhone, customer.phone ?? "")
+    )
+    .orderBy(desc(ordersTable.createdAt))
+    .limit(50);
+
+  const ordersWithItems = await Promise.all(orders.map(async (o) => {
+    const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, o.id));
+    return {
+      ...o,
+      subtotal: parseFloat(o.subtotal),
+      discountAmount: parseFloat(o.discountAmount ?? "0"),
+      tax: parseFloat(o.tax),
+      total: parseFloat(o.total),
+      items: items.map(i => ({
+        ...i,
+        subtotal: parseFloat(i.subtotal),
+        menuItemPrice: parseFloat(i.menuItemPrice),
+      })),
+    };
+  }));
+
+  res.json({
+    id: customer.id,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    notes: customer.notes,
+    visitCount: customer.visitCount,
+    totalSpent: parseFloat(customer.totalSpent ?? "0"),
+    createdAt: customer.createdAt,
+    updatedAt: customer.updatedAt,
+    orders: ordersWithItems,
+  });
+});
+
+router.delete("/customers/:id", async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(req.params["id"] as string, 10);
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [existing] = await db.select({ id: customersTable.id }).from(customersTable).where(eq(customersTable.id, id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+  await db.delete(customersTable).where(eq(customersTable.id, id));
+  res.json({ ok: true });
+});
+
+router.patch("/customers/:id/notes", async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(req.params["id"] as string, 10);
+  const { notes } = req.body as { notes?: string };
+  if (!id) { res.status(400).json({ error: "Invalid id" }); return; }
+  await db.update(customersTable).set({ notes: notes ?? null, updatedAt: new Date() }).where(eq(customersTable.id, id));
+  res.json({ ok: true });
+});
+
+export default router;
+
+export async function upsertCustomer(name: string, email: string, phone: string, totalAmount: number): Promise<void> {
+  if (!email && !phone) return;
+
+  let existing = null;
+  if (email) {
+    const rows = await db.select().from(customersTable)
+      .where(sql`lower(${customersTable.email}) = ${email.toLowerCase()}`)
+      .limit(1);
+    existing = rows[0] ?? null;
+  }
+  if (!existing && phone) {
+    const rows = await db.select().from(customersTable)
+      .where(eq(customersTable.phone, phone))
+      .limit(1);
+    existing = rows[0] ?? null;
+  }
+
+  if (existing) {
+    await db.update(customersTable).set({
+      name,
+      email: email || existing.email,
+      phone: phone || existing.phone,
+      visitCount: (existing.visitCount ?? 0) + 1,
+      totalSpent: String(parseFloat(existing.totalSpent ?? "0") + totalAmount),
+      updatedAt: new Date(),
+    }).where(eq(customersTable.id, existing.id));
+  } else {
+    await db.insert(customersTable).values({
+      name,
+      email: email || null,
+      phone: phone || null,
+      visitCount: 1,
+      totalSpent: String(totalAmount),
+    });
+  }
+}

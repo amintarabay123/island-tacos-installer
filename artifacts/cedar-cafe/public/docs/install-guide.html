@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Island Tacos — Local Server Setup Guide</title>
+<style>
+  /* ── Base ── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.65; color: #1a1a1a; background: #f5f5f0; }
+
+  /* ── Layout ── */
+  .page { max-width: 860px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* ── Header ── */
+  .site-header { background: #e05a00; color: white; padding: 28px 32px; border-radius: 16px; margin-bottom: 36px; display: flex; align-items: center; gap: 20px; }
+  .site-header .logo { font-size: 42px; }
+  .site-header h1 { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; }
+  .site-header p  { font-size: 14px; opacity: 0.85; margin-top: 4px; }
+
+  /* ── Print button ── */
+  .print-btn { display: inline-flex; align-items: center; gap: 8px; background: white; color: #e05a00; font-weight: 700; font-size: 14px; border: 2px solid white; border-radius: 8px; padding: 8px 18px; cursor: pointer; margin-top: 12px; text-decoration: none; }
+  .print-btn:hover { background: #fff3ec; }
+
+  /* ── Section headers ── */
+  .section { background: white; border-radius: 14px; padding: 28px 32px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .section-title { font-size: 20px; font-weight: 800; color: #1a1a1a; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
+  .section-title .num { background: #e05a00; color: white; border-radius: 50%; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; flex-shrink: 0; }
+  .section-sub { color: #666; font-size: 13px; margin-bottom: 20px; padding-left: 42px; }
+
+  /* ── Steps ── */
+  .steps { padding-left: 0; list-style: none; }
+  .steps li { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; align-items: flex-start; }
+  .steps li:last-child { border-bottom: none; }
+  .step-cb { width: 22px; height: 22px; border: 2px solid #ccc; border-radius: 5px; flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+  .step-cb:checked { accent-color: #e05a00; }
+  .steps li .content { flex: 1; }
+  .steps li strong { display: block; font-weight: 700; margin-bottom: 2px; }
+  .steps li .note  { font-size: 13px; color: #666; margin-top: 3px; }
+
+  /* ── Info, warning, tip boxes ── */
+  .box { border-radius: 10px; padding: 14px 18px; margin: 14px 0; font-size: 14px; }
+  .box.info    { background: #eff6ff; border-left: 4px solid #3b82f6; }
+  .box.warn    { background: #fffbeb; border-left: 4px solid #f59e0b; }
+  .box.success { background: #f0fdf4; border-left: 4px solid #22c55e; }
+  .box.danger  { background: #fff1f2; border-left: 4px solid #ef4444; }
+  .box strong  { display: block; font-weight: 800; margin-bottom: 4px; }
+
+  /* ── Screen mockups ── */
+  .screen { background: #1e1e1e; color: #d4d4d4; border-radius: 10px; padding: 16px 20px; font-family: "Courier New", monospace; font-size: 13px; line-height: 1.7; margin: 14px 0; }
+  .screen .prompt { color: #e05a00; font-weight: bold; }
+  .screen .answer { color: #4ade80; }
+
+  /* ── Checklist card ── */
+  .checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .check-item { display: flex; align-items: flex-start; gap: 10px; background: #f9f9f7; border-radius: 8px; padding: 10px 14px; }
+  .check-item input[type=checkbox] { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; accent-color: #e05a00; cursor: pointer; }
+  .check-item .label { font-size: 14px; font-weight: 600; }
+  .check-item .sub   { font-size: 12px; color: #888; margin-top: 1px; }
+
+  /* ── Quick ref table ── */
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th { background: #e05a00; color: white; padding: 10px 14px; text-align: left; font-size: 13px; }
+  td { padding: 10px 14px; border-bottom: 1px solid #eee; font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #fafaf8; }
+  td.label { font-weight: 700; color: #444; white-space: nowrap; }
+
+  /* ── Tailscale section ── */
+  .ts-steps { display: grid; gap: 12px; margin-top: 14px; }
+  .ts-step { display: flex; gap: 14px; align-items: flex-start; background: #f8f8f6; border-radius: 10px; padding: 12px 16px; }
+  .ts-step .icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+  .ts-step strong { display: block; font-weight: 700; }
+  .ts-step p { font-size: 13px; color: #555; margin-top: 2px; }
+
+  /* ── Print styles ── */
+  @media print {
+    body { background: white; font-size: 12px; }
+    .page { padding: 0; max-width: 100%; }
+    .no-print { display: none !important; }
+    .site-header { border-radius: 0; margin-bottom: 20px; }
+    .section { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; margin-bottom: 16px; padding: 18px 22px; }
+    .print-btn { display: none; }
+    .screen { border: 1px solid #555; }
+    h2, h3 { page-break-after: avoid; }
+    .checklist { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 600px) {
+    .checklist { grid-template-columns: 1fr; }
+    .section { padding: 20px; }
+    .site-header { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Header ─────────────────────────────────────────────────── -->
+  <div class="site-header">
+    <div class="logo">🌮</div>
+    <div>
+      <h1>Island Tacos — Local Server Setup Guide</h1>
+      <p>Complete step-by-step installation for your Windows mini PC. No IT knowledge required.</p>
+      <a href="javascript:window.print()" class="print-btn no-print">🖨 Print This Guide</a>
+    </div>
+  </div>
+
+  <!-- ── Before You Start ───────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="num">✓</span> Before You Start — Gather These Items</div>
+    <p class="section-sub">Have everything below ready before you begin. The installer will ask for each one.</p>
+
+    <div class="checklist">
+      <div class="check-item"><input type="checkbox"><div><div class="label">Mini PC</div><div class="sub">Running Windows 10 or 11, plugged in, on the restaurant WiFi</div></div></div>
+      <div class="check-item"><input type="checkbox"><div><div class="label">Keyboard &amp; Mouse</div><div class="sub">Connected to the mini PC (just for setup — not needed after)</div></div></div>
+      <div class="check-item"><input type="checkbox"><div><div class="label">Admin PIN</div><div class="sub">The 4-digit code your staff use to access the owner dashboard</div></div></div>
+      <div class="check-item"><input type="checkbox"><div><div class="label">Staff PIN</div><div class="sub">The 4-digit code staff use for the POS and kitchen screens</div></div></div>
+      <div class="check-item"><input type="checkbox"><div><div class="label">ATH Móvil Public Token</div><div class="sub">From your ATH Móvil business account — starts with a long string of letters/numbers</div></div></div>
+      <div class="check-item"><input type="checkbox"><div><div class="label">ATH Móvil Private Token</div><div class="sub">The second token from ATH Móvil — keep this one secret</div></div></div>
+      <div class="check-item"><input type="checkbox"><div><div class="label">Clerk Keys (2)</div><div class="sub">From your Clerk dashboard at clerk.com — Publishable Key (pk_live_...) and Secret Key (sk_live_...)</div></div></div>
+      <div class="check-item"><input type="checkbox"><div><div class="label">Printer IP Address</div><div class="sub">Your receipt printer's local IP — likely 192.168.8.195 (check your router or printer settings)</div></div></div>
+      <div class="check-item"><input type="checkbox"><div><div class="label">A piece of paper &amp; pen</div><div class="sub">You'll write down two passwords you make up during setup</div></div></div>
+    </div>
+
+    <div class="box warn" style="margin-top:18px">
+      <strong>⚠️ You will make up two passwords during setup. Write them down immediately.</strong>
+      1. A <strong>Database Password</strong> — protects the local database (any word, e.g. "tacos2025")<br>
+      2. A <strong>Sync Secret</strong> — links the local server to the online store (any word, e.g. "mysynckey99")
+    </div>
+  </div>
+
+  <!-- ── Step 1: Download ───────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="num">1</span> Download &amp; Extract the Island Tacos Software</div>
+    <p class="section-sub">This single command downloads and extracts everything automatically. Copy and paste it — don't type it by hand.</p>
+
+    <ul class="steps">
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Click the Windows Start button, type "PowerShell", right-click it, and choose "Run as administrator"</strong>
+          <span class="note">A blue window will open. Click Yes if Windows asks for permission.</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Copy the line below exactly, paste it into the blue PowerShell window, and press Enter</strong>
+          <div class="screen" style="margin-top:10px;font-size:12px;word-break:break-all;">New-Item -ItemType Directory -Force C:\IslandTacos | Out-Null; $u=(Invoke-WebRequest -Uri "https://orders.islandtacosbvi.com/api/download/project-url" -UseBasicParsing | ConvertFrom-Json).url; Invoke-WebRequest -Uri $u -OutFile "$env:TEMP\it.tar.gz"; tar -xzf "$env:TEMP\it.tar.gz" -C C:\IslandTacos --strip-components=1</div>
+          <span class="note">This downloads the latest software and extracts it to <strong>C:\IslandTacos</strong>. It may take 1–2 minutes depending on your internet speed.</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>When the command finishes (the cursor returns to a new line), you can close PowerShell</strong>
+          <span class="note">You will run the actual installer in the next step.</span>
+        </div>
+      </li>
+    </ul>
+
+    <div class="box info">
+      <strong>💡 Result</strong>
+      You should now have a folder at <strong>C:\IslandTacos</strong> containing files like <em>INSTALL.bat</em>, <em>INSTALL.ps1</em>, <em>package.json</em>, and folders named <em>artifacts</em>, <em>lib</em>, etc.
+    </div>
+  </div>
+
+  <!-- ── Step 2: Run Installer ─────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="num">2</span> Run the Installer</div>
+    <p class="section-sub">This installs everything automatically — Node.js, the database, the app, and more.</p>
+
+    <ul class="steps">
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Open the folder C:\IslandTacos in File Explorer</strong>
+          <span class="note">Press the Windows key, type "File Explorer", open it, then navigate to C:\IslandTacos.</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Find the file called INSTALL.bat</strong>
+          <span class="note">It has a small gear or terminal icon. If you don't see it, make sure you're inside the <em>IslandTacos</em> folder.</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Right-click INSTALL.bat → click "Run as administrator"</strong>
+          <span class="note">Windows may ask "Do you want to allow this app to make changes?" — click <strong>Yes</strong>. This is required for installation.</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>A black window will open with a blue Island Tacos banner. Press Enter to begin.</strong>
+          <span class="note">The installer will now check your computer and begin installing required software. This may take 2–5 minutes.</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ── Step 3: Answer Questions ──────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="num">3</span> Answer the Setup Questions</div>
+    <p class="section-sub">The installer will ask you questions one by one. Here is what each one means.</p>
+
+    <div class="screen">
+<span class="prompt">[2] Setting up your configuration...</span>
+
+<span class="prompt">      This computer's local IP address [192.168.1.50]:</span>
+<span class="answer">      → Just press Enter to accept. The installer detected your IP automatically.</span>
+
+<span class="prompt">      Port number for the server [3001]:</span>
+<span class="answer">      → Just press Enter. No change needed.</span>
+
+<span class="prompt">      Database password:</span>
+<span class="answer">      → Type any word or phrase (e.g. tacos2025). WRITE THIS DOWN. You won't see it as you type.</span>
+
+<span class="prompt">      Admin PIN:</span>
+<span class="answer">      → Type the 4-digit admin PIN your staff already knows.</span>
+
+<span class="prompt">      Staff PIN:</span>
+<span class="answer">      → Type the staff PIN.</span>
+
+<span class="prompt">      ATH Movil Public Token:</span>
+<span class="answer">      → Paste or type your ATH Móvil public token.</span>
+
+<span class="prompt">      ATH Movil Private Token:</span>
+<span class="answer">      → Paste or type your ATH Móvil private token. You won't see it as you type.</span>
+
+<span class="prompt">      Clerk Publishable Key:</span>
+<span class="answer">      → Paste the key starting with pk_live_... (from your Clerk dashboard at clerk.com).</span>
+
+<span class="prompt">      Clerk Secret Key:</span>
+<span class="answer">      → Paste the key starting with sk_live_... (from Clerk dashboard). You won't see it as you type.</span>
+
+<span class="prompt">      Sync Secret (make up a password):</span>
+<span class="answer">      → Type any word or phrase (e.g. mysynckey99). WRITE THIS DOWN.</span>
+
+<span class="prompt">      Printer IP address (e.g. 192.168.8.195):</span>
+<span class="answer">      → Type your printer's IP address, or press Enter to skip and set it later.</span>
+
+<span class="prompt">      SMTP Email Password (Enter to skip):</span>
+<span class="answer">      → Press Enter to skip (you can set this later if needed).</span>
+    </div>
+
+    <div class="box warn">
+      <strong>⚠️ The installer will now build and start everything. This takes about 3–5 minutes.</strong>
+      You will see lots of text scrolling. This is normal. Wait until you see the green ✅ Island Tacos is running! message.
+    </div>
+
+    <div class="box success">
+      <strong>✅ When you see this, the installer is done:</strong>
+      The installer will display your server address (e.g. http://192.168.1.50:3001) and open it in your browser automatically.
+      Write down this address — you will need it for your tablets.
+    </div>
+  </div>
+
+  <!-- ── Step 4: Tailscale ──────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="num">4</span> Set Up Tailscale — Access from Anywhere</div>
+    <p class="section-sub">Tailscale lets you open the admin panel from your phone or laptop even when you're not at the restaurant. It's free.</p>
+
+    <div class="ts-steps">
+      <div class="ts-step">
+        <div class="icon">💻</div>
+        <div>
+          <strong>On the mini PC — go to tailscale.com/download and click "Download for Windows"</strong>
+          <p>Install it just like any other program. Double-click the installer and click through the steps.</p>
+        </div>
+      </div>
+      <div class="ts-step">
+        <div class="icon">🔑</div>
+        <div>
+          <strong>When Tailscale opens, click "Log in" and create a free account</strong>
+          <p>Use your email address. You'll need to remember this login for the next step.</p>
+        </div>
+      </div>
+      <div class="ts-step">
+        <div class="icon">📱</div>
+        <div>
+          <strong>On your phone — download the Tailscale app (iPhone: App Store / Android: Play Store)</strong>
+          <p>Search for "Tailscale". It's the blue app with a white icon. It's free.</p>
+        </div>
+      </div>
+      <div class="ts-step">
+        <div class="icon">🔗</div>
+        <div>
+          <strong>Open Tailscale on your phone and log in with the same account you used on the mini PC</strong>
+          <p>Both devices will now appear in your Tailscale network.</p>
+        </div>
+      </div>
+      <div class="ts-step">
+        <div class="icon">🌐</div>
+        <div>
+          <strong>In the Tailscale app on your phone, tap on the mini PC to see its Tailscale IP address</strong>
+          <p>It will look like <strong>100.xx.xx.xx</strong>. Write it down.</p>
+        </div>
+      </div>
+      <div class="ts-step">
+        <div class="icon">✅</div>
+        <div>
+          <strong>From anywhere with internet, open a browser and go to http://100.xx.xx.xx:3001</strong>
+          <p>Replace 100.xx.xx.xx with your actual Tailscale IP. This is your remote access address. Bookmark it.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="box info">
+      <strong>💡 You now have two addresses for the admin:</strong>
+      <strong>At the restaurant (WiFi):</strong> http://192.168.x.x:3001 &nbsp;(faster)<br>
+      <strong>From anywhere:</strong> http://100.xx.xx.xx:3001 &nbsp;(Tailscale address)
+    </div>
+  </div>
+
+  <!-- ── Step 5: Sync Secret on Replit ─────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="num">5</span> Connect the Online Store (One-Time Setup)</div>
+    <p class="section-sub">This lets your local admin push menu changes to orders.islandtacosbvi.com. You only do this once.</p>
+
+    <ul class="steps">
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>On any device, go to replit.com and open your Island Tacos project</strong>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Look for the lock icon (🔒) in the left sidebar — click it to open Secrets</strong>
+          <span class="note">This is where Replit stores passwords safely.</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Click "New Secret" and fill in the following:</strong>
+          <span class="note"><strong>Key:</strong> SYNC_SECRET &nbsp;&nbsp; <strong>Value:</strong> the Sync Secret password you wrote down in Step 3</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Click "Add Secret" to save it</strong>
+          <span class="note">Replit will automatically use this the next time the online store is restarted.</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Restart the Replit app by clicking the Stop button then the Run button</strong>
+          <span class="note">This activates the new secret on the cloud server.</span>
+        </div>
+      </li>
+    </ul>
+
+    <div class="box success">
+      <strong>✅ To test the sync:</strong>
+      Go to your local admin panel → the <strong>Sync Menu to Online Store</strong> card is at the top of the dashboard. Click <strong>Sync Now</strong>. You should see "Synced!" in green within a few seconds.
+    </div>
+  </div>
+
+  <!-- ── Step 6: Tablets ────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="num">6</span> Set Up Your Tablets and Kitchen Screen</div>
+    <p class="section-sub">Do this on every tablet and screen you use in the restaurant.</p>
+
+    <ul class="steps">
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Make sure the tablet is connected to the restaurant WiFi (same network as the mini PC)</strong>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Open Chrome (or Safari on iPad) and type the local server address in the address bar</strong>
+          <span class="note">Example: <strong>http://192.168.1.50:3001</strong> — use the address shown at the end of your installer.</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>For POS tablets: go to /it-admin in the browser and log in, then navigate to POS</strong>
+          <span class="note">Example: http://192.168.1.50:3001/it-admin</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>For the Kitchen Screen (KDS): go to /it-admin/kitchen</strong>
+          <span class="note">Tap the three dots in Chrome → "Add to Home Screen" to create a shortcut. It will open full-screen like an app.</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Repeat for each device</strong>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ── Step 7: Printer ────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="num">7</span> Set Up Receipt Printing</div>
+    <p class="section-sub">The mini PC talks directly to your receipt printer over WiFi — no extra software needed.</p>
+
+    <ul class="steps">
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>On any POS tablet, open the POS and log in</strong>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Look for the Printer Settings button (🖨) in the top-right corner of the POS</strong>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Set Print Mode to "Network ESC/POS"</strong>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Enter your printer's IP address</strong>
+          <span class="note">This is likely <strong>192.168.8.195</strong> — or whatever you entered during installation.</span>
+        </div>
+      </li>
+      <li>
+        <input type="checkbox" class="step-cb">
+        <div class="content">
+          <strong>Click Save, then try printing a test receipt</strong>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ── Quick Reference ────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="num">📋</span> Quick Reference Card</div>
+    <p class="section-sub">Fill this in and keep it somewhere safe.</p>
+
+    <table>
+      <tr><th>What</th><th>Address / Value</th></tr>
+      <tr><td class="label">Local Server (restaurant WiFi)</td><td>http://____________:3001</td></tr>
+      <tr><td class="label">Remote Access (Tailscale)</td><td>http://100.__.__.__:3001</td></tr>
+      <tr><td class="label">Online Store</td><td>https://orders.islandtacosbvi.com</td></tr>
+      <tr><td class="label">Admin Dashboard (local)</td><td>http://____________:3001/it-admin</td></tr>
+      <tr><td class="label">Kitchen Screen (local)</td><td>http://____________:3001/it-admin/kitchen</td></tr>
+      <tr><td class="label">Customer Display (local)</td><td>http://____________:3001/display</td></tr>
+      <tr><td class="label">Admin PIN</td><td>____________</td></tr>
+      <tr><td class="label">Staff PIN</td><td>____________</td></tr>
+      <tr><td class="label">Database Password</td><td>____________</td></tr>
+      <tr><td class="label">Sync Secret</td><td>____________</td></tr>
+      <tr><td class="label">Printer IP</td><td>____________</td></tr>
+    </table>
+  </div>
+
+  <!-- ── Troubleshooting ────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-title"><span class="num">🔧</span> Troubleshooting</div>
+    <p class="section-sub">If something isn't working, try these fixes first.</p>
+
+    <div class="box warn" style="margin-bottom:12px">
+      <strong>The app won't open on a tablet</strong>
+      Make sure the tablet and the mini PC are on the same WiFi network. Check that the mini PC is turned on. Try the address again — make sure you typed it exactly right including http:// at the start.
+    </div>
+
+    <div class="box warn" style="margin-bottom:12px">
+      <strong>The printer isn't printing</strong>
+      Make sure the printer is on and connected to WiFi. Double-check the printer IP address in POS → Printer Settings. Make sure you selected "Network ESC/POS" as the print mode (not Bridge or Browser).
+    </div>
+
+    <div class="box warn" style="margin-bottom:12px">
+      <strong>Sync Now shows an error</strong>
+      Make sure the SYNC_SECRET you added to Replit Secrets exactly matches the Sync Secret you entered during installation (same spelling, same capitalization). Restart the Replit app after adding the secret.
+    </div>
+
+    <div class="box warn" style="margin-bottom:12px">
+      <strong>After a power outage, the app takes a minute to come back</strong>
+      This is normal. The mini PC is rebooting and the server is starting up automatically. Wait about 60 seconds after the mini PC's screen lights up, then try again.
+    </div>
+
+    <div class="box info">
+      <strong>Still stuck?</strong>
+      Open a web browser on the mini PC and go to <strong>http://localhost:3001</strong>. If the app loads, the server is running fine — the issue is with network access on the tablet. If it doesn't load, the server may have stopped — open a Command Prompt (search "cmd" in the Start menu) and type: <strong>pm2 restart island-tacos</strong> and press Enter.
+    </div>
+  </div>
+
+  <!-- ── Footer ─────────────────────────────────────────────────── -->
+  <div style="text-align:center; color:#aaa; font-size:12px; margin-top:32px;">
+    Island Tacos — Local Server Setup Guide &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; Keep this document in a safe place
+  </div>
+
+</div>
+</body>
+</html>

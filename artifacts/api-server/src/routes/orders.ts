@@ -12,6 +12,7 @@ import { sendSms } from "../lib/sms-gateway";
 import nodemailer from "nodemailer";
 import { requireStaffAuth, isStaffAuthenticated } from "./auth";
 import { logger } from "../lib/logger";
+import { getStoreSettings } from "../lib/store-settings";
 
 /**
  * Normalise any phone number to raw E.164 digits (no + prefix) at save time
@@ -48,7 +49,8 @@ const TAX_RATE = 0;
 
 function generateConfirmationCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "IT";
+  const prefix = (process.env.CONFIRMATION_CODE_PREFIX ?? "IT").toUpperCase();
+  let code = prefix;
   for (let i = 0; i < 6; i++) {
     code += chars[Math.floor(Math.random() * chars.length)];
   }
@@ -77,27 +79,24 @@ function formatOrder(order: Record<string, unknown>, items: Record<string, unkno
 }
 
 const STORE_URL = process.env.STORE_URL ?? "https://orders.islandtacosbvi.com";
-// TODO(store-settings): replace fallback with `${(await getStoreSettings()).storeName} <${(await getStoreSettings()).email}>`
-const SMTP_FROM  = process.env.SMTP_FROM  ?? "Island Tacos <orders@islandtacosbvi.com>";
 
 function fmtMoney(n: unknown) { return `$${parseFloat(n as string).toFixed(2)}`; }
 const PAY_LABEL: Record<string, string> = { cash: "Cash", card: "Card", athmovil: "ATH Móvil", split: "Split", complimentary: "Comp" };
 
-function emailShell(bodyContent: string) {
+function emailShell(bodyContent: string, store: { storeName: string; address: string; email: string }) {
+  const footer = store.email ? `${store.storeName} · ${store.email}` : store.storeName;
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f5f5f0;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f0;padding:32px 0">
 <tr><td align="center">
 <table width="480" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
   <tr><td style="background:#1a1a1a;padding:24px 32px;text-align:center">
-    <!-- TODO(store-settings): use getStoreSettings().storeName (and .address) -->
-    <div style="color:#e05a00;font-size:24px;font-weight:800;letter-spacing:1px">🌮 ISLAND TACOS</div>
-    <div style="color:#999;font-size:12px;margin-top:4px">Wickhams Cay 1, Road Town, BVI</div>
+    <div style="color:#e05a00;font-size:24px;font-weight:800;letter-spacing:1px">${store.storeName.toUpperCase()}</div>
+    ${store.address ? `<div style="color:#999;font-size:12px;margin-top:4px">${store.address}</div>` : ""}
   </td></tr>
   ${bodyContent}
   <tr><td style="padding:20px 32px;text-align:center;background:#fafaf8;border-top:1px solid #eee">
-    <!-- TODO(store-settings): use getStoreSettings().storeName + .email -->
-    <div style="color:#aaa;font-size:12px">© Island Tacos · orders@islandtacosbvi.com</div>
+    <div style="color:#aaa;font-size:12px">© ${footer}</div>
   </td></tr>
 </table>
 </td></tr>
@@ -117,6 +116,8 @@ function buildItemRows(items: OrderItemRow[]) {
 
 async function sendConfirmationEmail(order: OrderRow, items: OrderItemRow[]) {
   if (!order.customerEmail) return;
+  const store = await getStoreSettings();
+  const smtpFrom = process.env.SMTP_FROM ?? `${store.storeName} <${store.email || "no-reply@example.com"}>`;
   const trackUrl = `${STORE_URL}/track?code=${order.confirmationCode}`;
   const estimatedTime = order.estimatedReadyAt
     ? new Date(order.estimatedReadyAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" })
@@ -150,12 +151,12 @@ async function sendConfirmationEmail(order: OrderRow, items: OrderItemRow[]) {
       <a href="${trackUrl}" style="display:inline-block;background:#e05a00;color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 28px;border-radius:8px">Track My Order →</a>
       <div style="font-size:12px;color:#aaa;margin-top:10px">We'll email you again the moment it's ready for pickup.</div>
     </td></tr>
-  `);
+  `, store);
 
   await mailer.sendMail({
-    from: SMTP_FROM,
+    from: smtpFrom,
     to: order.customerEmail,
-    subject: `Order Confirmed — #${order.confirmationCode} 🌮`,
+    subject: `Order Confirmed — #${order.confirmationCode}`,
     html,
   });
 }
@@ -188,6 +189,8 @@ export async function notifyOrderPaid(orderId: number): Promise<void> {
 async function sendReadyEmail(order: OrderRow) {
   if (!order.customerEmail) return;
 
+  const store = await getStoreSettings();
+  const smtpFrom = process.env.SMTP_FROM ?? `${store.storeName} <${store.email || "no-reply@example.com"}>`;
   const html = emailShell(`
     <tr><td style="padding:28px 32px 8px;text-align:center">
       <div style="font-size:48px">🔔</div>
@@ -198,16 +201,16 @@ async function sendReadyEmail(order: OrderRow) {
       <div style="background:#f0fdf4;border:2px solid #22c55e;border-radius:10px;padding:16px 20px;text-align:center">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#16a34a;margin-bottom:4px">Your Order Code</div>
         <div style="font-size:36px;font-weight:900;letter-spacing:4px;color:#16a34a">${order.confirmationCode}</div>
-        <div style="font-size:13px;color:#555;margin-top:8px;font-weight:600">📍 Wickhams Cay 1, Road Town, BVI</div>
+        ${store.address ? `<div style="font-size:13px;color:#555;margin-top:8px;font-weight:600">📍 ${store.address}</div>` : ""}
         <div style="font-size:12px;color:#888;margin-top:4px">Total: ${fmtMoney(order.total)} · ${PAY_LABEL[order.paymentMethod] ?? order.paymentMethod}</div>
       </div>
     </td></tr>
-  `);
+  `, store);
 
   await mailer.sendMail({
-    from: SMTP_FROM,
+    from: smtpFrom,
     to: order.customerEmail,
-    subject: `Your order is ready for pickup! 🌮 #${order.confirmationCode}`,
+    subject: `Your order is ready for pickup! #${order.confirmationCode}`,
     html,
   });
 }
@@ -225,8 +228,8 @@ async function sendReadySMS(order: OrderRow) {
   const normalizedPhone = formatBVIPhone(order.customerPhone);
   if (!isBVIMobile(normalizedPhone)) return;
 
-  // TODO(store-settings): replace literal with `${(await getStoreSettings()).storeName}: order #…`
-  const body = `Island Tacos: order #${order.confirmationCode} is ready for pickup!`;
+  const { storeName } = await getStoreSettings();
+  const body = `${storeName}: order #${order.confirmationCode} is ready for pickup!`;
   await sendSms(normalizedPhone, body);
 }
 
@@ -241,10 +244,10 @@ async function sendCancellationSMS(order: OrderRow, _reason: string | null) {
   const normalizedPhone = formatBVIPhone(order.customerPhone);
   if (!isBVIMobile(normalizedPhone)) return;
 
-  // Kept short: 1 SMS segment. Reason is intentionally NOT included to keep
-  // it under 160 chars; staff should follow up by phone for the details.
-  // TODO(store-settings): replace "Island Tacos" with .storeName and "(284) 544-8088" with .phone
-  const body = `Island Tacos: sorry, order #${order.confirmationCode} was cancelled. Call (284) 544-8088.`;
+  // Kept short: 1 SMS segment. Reason intentionally NOT included (keep ≤160 chars).
+  const { storeName, phone } = await getStoreSettings();
+  const callLine = phone ? ` Call ${phone}.` : "";
+  const body = `${storeName}: sorry, order #${order.confirmationCode} was cancelled.${callLine}`;
   await sendSms(normalizedPhone, body);
 }
 
@@ -1259,6 +1262,7 @@ router.get("/orders/receipt/:code", async (req, res): Promise<void> => {
     .from(orderItemsTable)
     .where(eq(orderItemsTable.orderId, order.id));
 
+  const store = await getStoreSettings();
   const pdfBuffer = await buildReceiptPdf({
     confirmationCode: order.confirmationCode,
     customerName:     order.customerName,
@@ -1267,6 +1271,9 @@ router.get("/orders/receipt/:code", async (req, res): Promise<void> => {
     subtotal:         String(order.subtotal),
     discountAmount:   String(order.discountAmount ?? "0"),
     total:            String(order.total),
+    storeEmail:       store.email   || undefined,
+    storeName:        store.storeName || undefined,
+    storeAddress:     store.address || undefined,
     items: items.map((item) => ({
       name:      item.menuItemName,
       quantity:  item.quantity ?? 1,
@@ -1278,7 +1285,8 @@ router.get("/orders/receipt/:code", async (req, res): Promise<void> => {
   });
 
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `inline; filename="Island-Tacos-Receipt-${order.confirmationCode}.pdf"`);
+  const safeName = (store.storeName ?? "Receipt").replace(/[^a-zA-Z0-9]/g, "-");
+  res.setHeader("Content-Disposition", `inline; filename="${safeName}-Receipt-${order.confirmationCode}.pdf"`);
   res.setHeader("Cache-Control", "private, max-age=300");
   res.send(pdfBuffer);
 });
