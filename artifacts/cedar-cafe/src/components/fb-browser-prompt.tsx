@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, Share, MoreHorizontal, Chrome } from "lucide-react";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 const FB_STORAGE_KEY = "it_fb_skip";
 
@@ -21,6 +22,7 @@ function getTargetUrl(): string {
 }
 
 export default function FbBrowserPrompt() {
+  const { storeName } = useStoreSettings();
   const [show, setShow] = useState(false);
   const [ios, setIos] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -61,10 +63,9 @@ export default function FbBrowserPrompt() {
     <div className="fixed inset-0 z-[9999] flex flex-col" style={{ backgroundColor: "#1A0C00" }}>
       {/* Top section — logo + message */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
-        {/* TODO(store-settings): alt should be useStoreSettings().storeName */}
         <img
           src="/logo-wordmark.png"
-          alt="Island Tacos"
+          alt={storeName}
           className="h-16 w-auto mb-8 invert"
         />
 

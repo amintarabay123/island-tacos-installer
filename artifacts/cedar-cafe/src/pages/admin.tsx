@@ -30,14 +30,17 @@ import {
 } from "lucide-react";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 // ── Palette ────────────────────────────────────────────────────────────────────
-const BG    = "#16172b";
-const CARD  = "#1e1f38";
-const BORD  = "rgba(255,255,255,0.06)";
-const TP    = "#e8eaf6";
-const TM    = "#7077a1";
-const OR    = "#ff6b00";
+const BG    = "#0c0805";
+const CARD  = "#171009";
+const BORD  = "#4a3020";
+const TP    = "#F5ECD7";
+const TM    = "#9e8570";
+const OR    = "#C8A882";
+const HUNTER  = "#2d6a4f";
+const HUNTER_LT = "#3d8f6a";
 
 const CHART_TOOLTIP_STYLE = {
   background: CARD,
@@ -66,12 +69,12 @@ const STATUS_LABELS: Record<string, string> = {
 
 // Inline style objects so Tailwind arbitrary-value JIT doesn't need to compile them
 const STATUS_STYLE: Record<string, React.CSSProperties> = {
-  pending:   { background: "rgba(255,107,0,0.12)",  color: OR,        border: "1px solid rgba(255,107,0,0.3)"  },
-  confirmed: { background: "rgba(14,165,233,0.12)", color: "#0ea5e9", border: "1px solid rgba(14,165,233,0.3)" },
-  preparing: { background: "rgba(255,214,10,0.12)", color: "#ffd60a", border: "1px solid rgba(255,214,10,0.3)" },
-  ready:     { background: "rgba(48,209,88,0.12)",  color: "#30d158", border: "1px solid rgba(48,209,88,0.3)"  },
-  completed: { background: "rgba(255,255,255,0.05)", color: TM,       border: `1px solid ${BORD}`              },
-  cancelled: { background: "rgba(239,68,68,0.1)",   color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" },
+  pending:   { background: "rgba(200,168,130,0.12)", color: OR,          border: "1px solid rgba(200,168,130,0.3)" },
+  confirmed: { background: "rgba(45,106,79,0.12)",   color: HUNTER_LT,   border: "1px solid rgba(45,106,79,0.3)"  },
+  preparing: { background: "rgba(232,160,48,0.12)",  color: "#e8a030",   border: "1px solid rgba(232,160,48,0.3)" },
+  ready:     { background: "rgba(61,143,106,0.12)",  color: HUNTER_LT,   border: "1px solid rgba(61,143,106,0.3)" },
+  completed: { background: "rgba(255,255,255,0.04)", color: TM,          border: `1px solid ${BORD}`              },
+  cancelled: { background: "rgba(212,97,74,0.1)",    color: "#d4614a",   border: "1px solid rgba(212,97,74,0.25)" },
 };
 
 const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
@@ -79,17 +82,17 @@ const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
 };
 
 const STATUS_DONUT_COLOR: Record<string, string> = {
-  pending: "#ff6b00", confirmed: "#0ea5e9", preparing: "#ffd60a",
-  ready: "#30d158", cancelled: "#ef4444",
-  "completed-online": "#10b981", "completed-phone": "#ec4899", "completed-pos": "#7c6af7",
+  pending: "#C8A882", confirmed: "#2d6a4f", preparing: "#e8a030",
+  ready: "#3d8f6a", cancelled: "#d4614a",
+  "completed-online": "#3d8f6a", "completed-phone": "#C8A882", "completed-pos": "#8b6840",
 };
 
 const SOURCE_LABELS: Record<string, string> = { online: "Online", phone: "Phone", pos: "Walk-in" };
 
 function sourceBadge(source: string | null | undefined): { label: string; style: React.CSSProperties } | null {
-  if (source === "online") return { label: "🌐 Online",  style: { background: "rgba(14,165,233,0.1)",  color: "#0ea5e9", border: "1px solid rgba(14,165,233,0.2)"  } };
-  if (source === "pos")    return { label: "🏪 Walk-in", style: { background: "rgba(139,92,246,0.1)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.2)" } };
-  if (source === "phone")  return { label: "📞 Phone",   style: { background: "rgba(255,214,10,0.1)", color: "#ffd60a", border: "1px solid rgba(255,214,10,0.2)" } };
+  if (source === "online") return { label: "🌐 Online",  style: { background: "rgba(45,106,79,0.12)",   color: "#3d8f6a", border: "1px solid rgba(45,106,79,0.3)"    } };
+  if (source === "pos")    return { label: "🏪 Walk-in", style: { background: "rgba(200,168,130,0.1)", color: "#C8A882", border: "1px solid rgba(200,168,130,0.2)" } };
+  if (source === "phone")  return { label: "📞 Phone",   style: { background: "rgba(232,160,48,0.1)",  color: "#e8a030", border: "1px solid rgba(232,160,48,0.2)"  } };
   return null;
 }
 
@@ -99,11 +102,11 @@ function paymentBadge(source: string | null | undefined, method: string | null |
   if (method === "card")
     return { label: "💳 Counter Card",  style: { background: "rgba(14,165,233,0.12)", color: "#0ea5e9", border: "1px solid rgba(14,165,233,0.25)" } };
   if (method === "cash")
-    return { label: "💵 Cash",          style: { background: "rgba(48,209,88,0.1)",   color: "#30d158", border: "1px solid rgba(48,209,88,0.25)"  } };
+    return { label: "💵 Cash",          style: { background: "rgba(61,143,106,0.1)",   color: "#3d8f6a", border: "1px solid rgba(61,143,106,0.25)"  } };
   if (method === "athmovil")
-    return { label: "ATH Móvil",        style: { background: "rgba(255,107,0,0.12)",  color: OR,        border: "1px solid rgba(255,107,0,0.25)"  } };
+    return { label: "ATH Móvil",        style: { background: "rgba(200,168,130,0.12)",  color: OR,        border: "1px solid rgba(200,168,130,0.25)"  } };
   if (method === "split")
-    return { label: "Split",            style: { background: "rgba(255,214,10,0.12)", color: "#ffd60a", border: "1px solid rgba(255,214,10,0.25)" } };
+    return { label: "Split",            style: { background: "rgba(232,160,48,0.12)", color: "#e8a030", border: "1px solid rgba(232,160,48,0.25)" } };
   if (method === "complimentary")
     return { label: "🎁 Comp",          style: { background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.25)" } };
   return { label: method ?? "—",        style: { background: "rgba(255,255,255,0.05)", color: TM,       border: `1px solid ${BORD}`               } };
@@ -118,9 +121,9 @@ type NavSection = { title: string; items: NavItem[] };
 
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 // Sidebar bg is intentionally darker than the main content bg so the active-tab
-// "bleed" effect is visible — the active item matches BG (#16172b) and appears
+// "bleed" effect is visible — the active item matches BG (#0c0805) and appears
 // to merge seamlessly with the main area while the sidebar reads as separate.
-const SB_BG = "#0e1020";
+const SB_BG = "#100c06";
 const CORNER_R = 14;
 const SIDEBAR_CSS = `
 .nav-tab-active {
@@ -210,10 +213,10 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 18px 16px", borderBottom: `1px solid ${BORD}` }}>
             <div style={{
               width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-              background: "linear-gradient(135deg,#ff6b00,#ff9500)",
+              background: "linear-gradient(135deg,#C8A882,#a8845e)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 17,
-              boxShadow: "0 0 0 1px rgba(255,107,0,0.3),0 4px 14px rgba(255,107,0,0.4)",
+              boxShadow: "0 0 0 1px rgba(200,168,130,0.3),0 4px 14px rgba(200,168,130,0.4)",
             }}>🌮</div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: "-0.01em", color: TP }}>ISLAND TACOS</div>
@@ -251,10 +254,10 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
             <button onClick={onLogout} style={{
               display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
               background: "none", border: "none", borderLeft: "3px solid transparent",
-              borderRadius: 10, cursor: "pointer", color: "#f87171", width: "100%", transition: "all 0.15s",
+              borderRadius: 10, cursor: "pointer", color: "#d4614a", width: "100%", transition: "all 0.15s",
             }}
               onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; e.currentTarget.style.color = "#fca5a5"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#f87171"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#d4614a"; }}
             ><LogOut style={{ width: 16, height: 16, flexShrink: 0 }} /><span style={{ fontSize: 13, fontWeight: 500 }}>Sign Out</span></button>
           </div>
         </div>
@@ -270,10 +273,10 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
         <div className="flex items-center gap-3">
           <div style={{
             width: 36, height: 36, borderRadius: 11, flexShrink: 0,
-            background: "linear-gradient(135deg,#ff6b00,#ff9500)",
+            background: "linear-gradient(135deg,#C8A882,#a8845e)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 18,
-            boxShadow: "0 0 0 1px rgba(255,107,0,0.3),0 4px 16px rgba(255,107,0,0.4)",
+            boxShadow: "0 0 0 1px rgba(200,168,130,0.3),0 4px 16px rgba(200,168,130,0.4)",
           }}>🌮</div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-0.02em", color: TP }}>ISLAND TACOS</div>
@@ -282,7 +285,7 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
         </div>
         <button onClick={onClose}
           style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", color: TM }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+          onMouseEnter={e => { e.currentTarget.style.background = "#4a3020"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
         ><X className="h-5 w-5" /></button>
       </div>
@@ -297,7 +300,7 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = item.href ? location === item.href : false;
-                const activeStyle: React.CSSProperties = { background: "rgba(255,107,0,0.12)", color: OR, border: "1px solid rgba(255,107,0,0.3)", borderRadius: 10 };
+                const activeStyle: React.CSSProperties = { background: "rgba(200,168,130,0.12)", color: OR, border: "1px solid rgba(200,168,130,0.3)", borderRadius: 10 };
                 const inactiveStyle: React.CSSProperties = { background: "transparent", color: TM, border: "1px solid transparent", borderRadius: 10 };
                 const content = (
                   <>
@@ -343,9 +346,9 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
         </Link>
         <button onClick={() => { onLogout(); onClose?.(); }}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-[10px] text-sm font-medium transition-all"
-          style={{ color: "#f87171", border: "1px solid transparent" }}
+          style={{ color: "#d4614a", border: "1px solid transparent" }}
           onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "#fca5a5"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#f87171"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#d4614a"; }}
         ><LogOut className="h-4 w-4" /> Sign Out</button>
       </div>
     </div>
@@ -354,9 +357,10 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function Admin() {
+  const { storeName } = useStoreSettings();
   useEffect(() => {
-    setPageMeta("Admin — Island Tacos", "⚙️", { iconUrl: "/icon-admin-192.png", manifestUrl: "/manifest-admin.json" });
-  }, []);
+    setPageMeta(`Admin — ${storeName}`, "⚙️", { iconUrl: "/icon-admin-192.png", manifestUrl: "/manifest-admin.json" });
+  }, [storeName]);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -642,8 +646,8 @@ export default function Admin() {
   // ── Stat card config ───────────────────────────────────────────────────────
   const avgOrder = stats?.todayOrders ? (stats.todayRevenue ?? 0) / stats.todayOrders : 0;
   const popCards = [
-    { art: "💰", grad: "linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow: "rgba(255,107,0,0.55)", label: "Revenue",   value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, sub: "today's total" },
-    { art: "🧾", grad: "linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow: "rgba(124,106,247,0.55)", label: "Orders",    value: String(stats?.todayOrders ?? 0),            sub: `${stats?.pendingOrders ?? 0} still active` },
+    { art: "💰", grad: "linear-gradient(145deg,#C8A882,#8b6840)", glow: "rgba(200,168,130,0.55)", label: "Revenue",   value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, sub: "today's total" },
+    { art: "🧾", grad: "linear-gradient(145deg,#C8A882,#2d6a4f,#1d4d38)", glow: "rgba(200,168,130,0.55)", label: "Orders",    value: String(stats?.todayOrders ?? 0),            sub: `${stats?.pendingOrders ?? 0} still active` },
     { art: "⭐", grad: "linear-gradient(145deg,#10b981,#059669,#064e3b)", glow: "rgba(16,185,129,0.5)", label: "Completed", value: String(stats?.completedOrders ?? 0),        sub: "served today" },
     { art: "📈", grad: "linear-gradient(145deg,#0ea5e9,#0284c7,#1e3a8a)", glow: "rgba(14,165,233,0.5)", label: "Avg Order", value: avgOrder ? `$${avgOrder.toFixed(2)}` : "—",  sub: "per order" },
     { art: "🚫", grad: "linear-gradient(145deg,#ef4444,#dc2626,#7f1d1d)", glow: "rgba(239,68,68,0.4)", label: "Cancelled", value: String(stats?.cancelledOrders ?? 0),         sub: "rejected" },
@@ -652,8 +656,8 @@ export default function Admin() {
   // ── Tool button helper ─────────────────────────────────────────────────────
   type ToolState = "idle" | "syncing" | "success" | "error" | "importing" | "pulling" | "uploading";
   function toolBtnStyle(state: ToolState, idleColor = OR): React.CSSProperties {
-    if (state === "success") return { background: "rgba(48,209,88,0.1)", color: "#30d158", border: "1px solid rgba(48,209,88,0.3)", borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
-    if (state === "error")   return { background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+    if (state === "success") return { background: "rgba(61,143,106,0.1)", color: "#3d8f6a", border: "1px solid rgba(61,143,106,0.3)", borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
+    if (state === "error")   return { background: "rgba(239,68,68,0.1)", color: "#d4614a", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" };
     const busy = state !== "idle";
     return { background: `rgba(${idleColor === OR ? "255,107,0" : "124,106,247"},0.1)`, color: idleColor, border: `1px solid rgba(${idleColor === OR ? "255,107,0" : "124,106,247"},0.3)`, borderRadius: 10, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: busy ? "default" : "pointer", opacity: busy ? 0.7 : 1 };
   }
@@ -684,15 +688,14 @@ export default function Admin() {
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg transition-colors"
               style={{ color: TM }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+              onMouseEnter={e => e.currentTarget.style.background = "#4a3020"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
               <Menu className="h-5 w-5" />
             </button>
             <div>
               <h1 style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.04em", color: TP, lineHeight: 1 }}>Dashboard</h1>
               <p style={{ fontSize: 11, color: TM, marginTop: 2 }}>
-                {/* TODO(store-settings): replace with useStoreSettings().storeName */}
-                Island Tacos — Admin
+                {storeName} — Admin
               </p>
             </div>
           </div>
@@ -705,12 +708,12 @@ export default function Admin() {
                 style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 20, padding: "6px 12px", cursor: "pointer" }}
               >
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#ef4444", boxShadow: "0 0 8px rgba(239,68,68,0.8)", display: "inline-block" }} />
-                <span style={{ fontSize: 11, color: "#f87171", fontWeight: 700 }}>PAUSED</span>
+                <span style={{ fontSize: 11, color: "#d4614a", fontWeight: 700 }}>PAUSED</span>
               </button>
             ) : (
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(48,209,88,0.1)", border: "1px solid rgba(48,209,88,0.25)", borderRadius: 20, padding: "6px 12px" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#30d158", boxShadow: "0 0 8px rgba(48,209,88,0.8)", display: "inline-block" }} />
-                <span style={{ fontSize: 11, color: "#30d158", fontWeight: 700 }}>Live</span>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(61,143,106,0.1)", border: "1px solid rgba(61,143,106,0.25)", borderRadius: 20, padding: "6px 12px" }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#3d8f6a", boxShadow: "0 0 8px rgba(61,143,106,0.8)", display: "inline-block" }} />
+                <span style={{ fontSize: 11, color: "#3d8f6a", fontWeight: 700 }}>Live</span>
               </div>
             )}
             {/* Pause button */}
@@ -719,9 +722,9 @@ export default function Admin() {
               disabled={pauseLoading}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 6,
-                background: pausedUntil ? "rgba(48,209,88,0.1)" : "rgba(239,68,68,0.1)",
-                color: pausedUntil ? "#30d158" : "#f87171",
-                border: `1px solid ${pausedUntil ? "rgba(48,209,88,0.3)" : "rgba(239,68,68,0.3)"}`,
+                background: pausedUntil ? "rgba(61,143,106,0.1)" : "rgba(239,68,68,0.1)",
+                color: pausedUntil ? "#3d8f6a" : "#d4614a",
+                border: `1px solid ${pausedUntil ? "rgba(61,143,106,0.3)" : "rgba(239,68,68,0.3)"}`,
                 borderRadius: 20, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: pauseLoading ? "default" : "pointer", opacity: pauseLoading ? 0.6 : 1,
               }}
             >
@@ -731,7 +734,7 @@ export default function Admin() {
             {/* POS button */}
             <button
               onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`)}
-              style={{ background: "linear-gradient(135deg,#ff6b00,#ff9500)", color: "#fff", border: "none", borderRadius: 20, padding: "8px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 18px rgba(255,107,0,0.4)" }}
+              style={{ background: "linear-gradient(135deg,#C8A882,#a8845e)", color: "#fff", border: "none", borderRadius: 20, padding: "8px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 18px rgba(200,168,130,0.4)" }}
             >🧾 POS</button>
           </div>
         </header>
@@ -740,8 +743,8 @@ export default function Admin() {
         {pausedUntil && (
           <div style={{ margin: "0 28px 0", padding: "10px 18px", borderRadius: 14, background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <PauseCircle style={{ color: "#f87171", flexShrink: 0 }} className="h-4 w-4" />
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#f87171" }}>
+              <PauseCircle style={{ color: "#d4614a", flexShrink: 0 }} className="h-4 w-4" />
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#d4614a" }}>
                 Online ordering is paused
               </span>
               <span style={{ fontSize: 12, color: "#fca5a5" }}>
@@ -751,7 +754,7 @@ export default function Admin() {
             <button
               onClick={handleResume}
               disabled={pauseLoading}
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(48,209,88,0.12)", color: "#30d158", border: "1px solid rgba(48,209,88,0.3)", borderRadius: 10, padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: pauseLoading ? "default" : "pointer" }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "rgba(61,143,106,0.12)", color: "#3d8f6a", border: "1px solid rgba(61,143,106,0.3)", borderRadius: 10, padding: "5px 14px", fontSize: 12, fontWeight: 700, cursor: pauseLoading ? "default" : "pointer" }}
             >
               <PlayCircle className="h-3.5 w-3.5" /> Resume Now
             </button>
@@ -762,13 +765,13 @@ export default function Admin() {
         {showPauseDialog && (
           <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
             onClick={() => setShowPauseDialog(false)}>
-            <div style={{ background: "#1e1f38", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 22, padding: "28px 28px 24px", width: "min(92vw, 360px)", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}
+            <div style={{ background: "#171009", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 22, padding: "28px 28px 24px", width: "min(92vw, 360px)", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}
               onClick={e => e.stopPropagation()}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                <PauseCircle style={{ color: "#f87171" }} className="h-5 w-5" />
-                <span style={{ fontSize: 17, fontWeight: 900, color: "#e8eaf6", letterSpacing: "-0.03em" }}>Pause Online Ordering</span>
+                <PauseCircle style={{ color: "#d4614a" }} className="h-5 w-5" />
+                <span style={{ fontSize: 17, fontWeight: 900, color: "#F5ECD7", letterSpacing: "-0.03em" }}>Pause Online Ordering</span>
               </div>
-              <p style={{ fontSize: 13, color: "#7077a1", marginBottom: 20, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: "#9e8570", marginBottom: 20, lineHeight: 1.5 }}>
                 Customers won't be able to place new online orders during the pause. Walk-in POS is unaffected.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -782,7 +785,7 @@ export default function Admin() {
                     key={opt.hours}
                     onClick={() => handlePause(opt.hours)}
                     disabled={pauseLoading}
-                    style={{ padding: "11px 16px", borderRadius: 12, background: "rgba(239,68,68,0.08)", color: "#f87171", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, fontWeight: 700, cursor: pauseLoading ? "default" : "pointer", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                    style={{ padding: "11px 16px", borderRadius: 12, background: "rgba(239,68,68,0.08)", color: "#d4614a", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, fontWeight: 700, cursor: pauseLoading ? "default" : "pointer", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between" }}
                     onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.16)"; }}
                     onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
                   >
@@ -795,7 +798,7 @@ export default function Admin() {
               </div>
               <button
                 onClick={() => setShowPauseDialog(false)}
-                style={{ marginTop: 16, width: "100%", padding: "9px", borderRadius: 10, background: "transparent", color: "#7077a1", border: "1px solid rgba(255,255,255,0.07)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                style={{ marginTop: 16, width: "100%", padding: "9px", borderRadius: 10, background: "transparent", color: "#9e8570", border: "1px solid rgba(74,48,32,0.4)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
               >Cancel</button>
             </div>
           </div>
@@ -813,9 +816,9 @@ export default function Admin() {
                   onClick={() => { setPreset(p); if (p !== "custom") setCalOpen(false); else setCalOpen(true); }}
                   style={{
                     padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
-                    background: isActive ? "rgba(255,107,0,0.15)" : "rgba(255,255,255,0.04)",
+                    background: isActive ? "rgba(200,168,130,0.15)" : "rgba(255,255,255,0.04)",
                     color: isActive ? OR : TM,
-                    border: isActive ? "1px solid rgba(255,107,0,0.4)" : `1px solid ${BORD}`,
+                    border: isActive ? "1px solid rgba(200,168,130,0.4)" : `1px solid ${BORD}`,
                   }}
                 >
                   {p === "today" ? "Today" : p === "yesterday" ? "Yesterday" : p === "last7" ? "Last 7 Days" : "Custom"}
@@ -944,7 +947,7 @@ export default function Admin() {
                   <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.03em", color: TP }}>Top Items</div>
                   <div style={{ fontSize: 11, color: TM, marginTop: 2 }}>Units sold</div>
                 </div>
-                <TrendingUp className="h-5 w-5" style={{ color: "#7c6af7" }} />
+                <TrendingUp className="h-5 w-5" style={{ color: "#C8A882" }} />
               </div>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={topItemsData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
@@ -952,7 +955,7 @@ export default function Admin() {
                   <XAxis type="number" tick={{ fontSize: 11, fill: TM }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: TM }} axisLine={false} tickLine={false} width={90} />
                   <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-                  <Bar dataKey="count" fill="#7c6af7" radius={[0,4,4,0]} barSize={14} />
+                  <Bar dataKey="count" fill="#C8A882" radius={[0,4,4,0]} barSize={14} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -969,7 +972,7 @@ export default function Admin() {
                 <div>
                   <p style={{ fontWeight: 600, fontSize: 13, color: TP }}>Sync Menu to Online Store</p>
                   <p style={{ fontSize: 11, color: TM }}>{lastSync ? `Last synced: ${lastSync}` : "Pushes your menu to the ordering site"}</p>
-                  {syncMessage && <p style={{ fontSize: 11, marginTop: 2, color: syncState === "error" ? "#f87171" : "#30d158" }}>{syncMessage}</p>}
+                  {syncMessage && <p style={{ fontSize: 11, marginTop: 2, color: syncState === "error" ? "#d4614a" : "#3d8f6a" }}>{syncMessage}</p>}
                 </div>
               </div>
               <button onClick={handleSync} disabled={syncState === "syncing"} style={toolBtnStyle(syncState as ToolState, "#0ea5e9")}>
@@ -985,7 +988,7 @@ export default function Admin() {
                 <div>
                   <p style={{ fontWeight: 600, fontSize: 13, color: TP }}>Pull Menu from Cloud</p>
                   <p style={{ fontSize: 11, color: TM }}>Resyncs all items &amp; modifiers from the online store to this device</p>
-                  {pullMenuMessage && <p style={{ fontSize: 11, marginTop: 2, color: pullMenuState === "error" ? "#f87171" : "#30d158" }}>{pullMenuMessage}</p>}
+                  {pullMenuMessage && <p style={{ fontSize: 11, marginTop: 2, color: pullMenuState === "error" ? "#d4614a" : "#3d8f6a" }}>{pullMenuMessage}</p>}
                 </div>
               </div>
               <button onClick={handlePullMenuFromCloud} disabled={pullMenuState === "pulling"} style={toolBtnStyle(pullMenuState as ToolState, "#10b981")}>
@@ -997,14 +1000,14 @@ export default function Admin() {
             {/* Loyverse import */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 pt-4" style={{ borderBottom: `1px solid ${BORD}` }}>
               <div className="flex items-center gap-3">
-                <div style={{ background: "rgba(124,106,247,0.12)", borderRadius: 10, padding: 8 }}><History className="h-4 w-4" style={{ color: "#7c6af7" }} /></div>
+                <div style={{ background: "rgba(200,168,130,0.12)", borderRadius: 10, padding: 8 }}><History className="h-4 w-4" style={{ color: "#C8A882" }} /></div>
                 <div>
                   <p style={{ fontWeight: 600, fontSize: 13, color: TP }}>Import from Loyverse API</p>
                   <p style={{ fontSize: 11, color: TM }}>{importState === "importing" ? "Fetching from Loyverse…" : "Imports customers + last 30 days of receipts"}</p>
-                  {importMessage && <p style={{ fontSize: 11, marginTop: 2, color: importState === "error" ? "#f87171" : "#30d158" }}>{importMessage}</p>}
+                  {importMessage && <p style={{ fontSize: 11, marginTop: 2, color: importState === "error" ? "#d4614a" : "#3d8f6a" }}>{importMessage}</p>}
                 </div>
               </div>
-              <button onClick={handleLoyverseImport} disabled={importState === "importing" || importState === "success"} style={toolBtnStyle(importState as ToolState, "#7c6af7")}>
+              <button onClick={handleLoyverseImport} disabled={importState === "importing" || importState === "success"} style={toolBtnStyle(importState as ToolState, "#C8A882")}>
                 <History className={`h-3.5 w-3.5 inline mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
                 {importState === "importing" ? "Importing…" : importState === "success" ? "Imported!" : importState === "error" ? "Retry" : "Import Now"}
               </button>
@@ -1017,7 +1020,7 @@ export default function Admin() {
                 <div>
                   <p style={{ fontWeight: 600, fontSize: 13, color: TP }}>Upload Loyverse CSV</p>
                   <p style={{ fontSize: 11, color: TM }}>Import full order history from exported CSV</p>
-                  {csvMessage && <p style={{ fontSize: 11, marginTop: 2, color: csvState === "error" ? "#f87171" : "#30d158" }}>{csvMessage}</p>}
+                  {csvMessage && <p style={{ fontSize: 11, marginTop: 2, color: csvState === "error" ? "#d4614a" : "#3d8f6a" }}>{csvMessage}</p>}
                 </div>
               </div>
               <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCSVUpload} />
@@ -1033,7 +1036,7 @@ export default function Admin() {
             <div className="flex items-center gap-3 mb-4">
               <h2 style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.04em", color: TP }}>Active Orders</h2>
               {activeOrders.length > 0 && (
-                <span style={{ fontSize: 11, fontWeight: 800, background: "rgba(255,107,0,0.15)", color: OR, border: "1px solid rgba(255,107,0,0.3)", borderRadius: 20, padding: "2px 10px" }}>
+                <span style={{ fontSize: 11, fontWeight: 800, background: "rgba(200,168,130,0.15)", color: OR, border: "1px solid rgba(200,168,130,0.3)", borderRadius: 20, padding: "2px 10px" }}>
                   {activeOrders.length}
                 </span>
               )}
@@ -1052,11 +1055,11 @@ export default function Admin() {
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <div>
                         <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                          <span style={{ fontFamily: "monospace", fontWeight: 900, fontSize: 16, color: "#30d158", letterSpacing: "0.02em" }}>{order.confirmationCode}</span>
+                          <span style={{ fontFamily: "monospace", fontWeight: 900, fontSize: 16, color: "#3d8f6a", letterSpacing: "0.02em" }}>{order.confirmationCode}</span>
                           <span style={{ ...STATUS_STYLE[order.status], fontSize: 10, fontWeight: 800, borderRadius: 8, padding: "3px 9px", letterSpacing: "0.04em" }}>
                             {STATUS_LABELS[order.status]}
                           </span>
-                          <span style={{ background: "rgba(255,255,255,0.06)", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>
+                          <span style={{ background: "#4a3020", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>
                             {order.orderType}
                           </span>
                           {(() => { const s = sourceBadge(order.source); return s ? <span style={{ ...s.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px" }}>{s.label}</span> : null; })()}
@@ -1085,7 +1088,7 @@ export default function Admin() {
                                   setTimeout(() => setWaReceiptState(prev => ({ ...prev, [order.id]: "idle" })), 3000);
                                 }
                               }}
-                              style={{ fontSize: 11, padding: "2px 10px", borderRadius: 20, background: waReceiptState[order.id] === "ok" ? "rgba(48,209,88,0.25)" : waReceiptState[order.id] === "error" ? "rgba(255,59,48,0.15)" : "rgba(48,209,88,0.12)", color: waReceiptState[order.id] === "error" ? "#ff6961" : "#30d158", border: `1px solid ${waReceiptState[order.id] === "error" ? "rgba(255,59,48,0.35)" : "rgba(48,209,88,0.25)"}`, fontWeight: 600, cursor: waReceiptState[order.id] === "sending" ? "wait" : "pointer" }}>
+                              style={{ fontSize: 11, padding: "2px 10px", borderRadius: 20, background: waReceiptState[order.id] === "ok" ? "rgba(61,143,106,0.25)" : waReceiptState[order.id] === "error" ? "rgba(255,59,48,0.15)" : "rgba(61,143,106,0.12)", color: waReceiptState[order.id] === "error" ? "#ff6961" : "#3d8f6a", border: `1px solid ${waReceiptState[order.id] === "error" ? "rgba(255,59,48,0.35)" : "rgba(61,143,106,0.25)"}`, fontWeight: 600, cursor: waReceiptState[order.id] === "sending" ? "wait" : "pointer" }}>
                               {waReceiptState[order.id] === "sending" ? "Sending…" : waReceiptState[order.id] === "ok" ? "✅ Sent!" : waReceiptState[order.id] === "error" ? "❌ Failed" : "💬 WhatsApp"}
                             </button>
                           </div>
@@ -1117,7 +1120,7 @@ export default function Admin() {
                         <button
                           onClick={() => handleStatusChange(order.id, NEXT_STATUS[order.status])}
                           disabled={updateStatus.isPending}
-                          style={{ background: "linear-gradient(135deg,#ff6b00,#ff9500)", color: "#fff", border: "none", borderRadius: 20, padding: "7px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 14px rgba(255,107,0,0.35)", opacity: updateStatus.isPending ? 0.7 : 1 }}
+                          style={{ background: "linear-gradient(135deg,#C8A882,#a8845e)", color: "#fff", border: "none", borderRadius: 20, padding: "7px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 14px rgba(200,168,130,0.35)", opacity: updateStatus.isPending ? 0.7 : 1 }}
                         >
                           Mark as {STATUS_LABELS[NEXT_STATUS[order.status]]}
                         </button>
@@ -1127,7 +1130,7 @@ export default function Admin() {
                         disabled={updateStatus.isPending}
                         style={{
                           background: rejectState?.orderId === order.id ? "rgba(239,68,68,0.05)" : "rgba(239,68,68,0.1)",
-                          color: "#f87171", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 20,
+                          color: "#d4614a", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 20,
                           padding: "7px 18px", fontSize: 12, fontWeight: 700, cursor: "pointer",
                         }}
                       >
@@ -1139,7 +1142,7 @@ export default function Admin() {
                     {/* Cancel confirm */}
                     {rejectState?.orderId === order.id && (
                       <div style={{ marginTop: 12, borderRadius: 14, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.05)", padding: "14px 16px" }} className="space-y-3">
-                        <p style={{ fontSize: 13, fontWeight: 600, color: "#f87171" }}>What's the reason?</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "#d4614a" }}>What's the reason?</p>
                         <div className="flex flex-wrap gap-2">
                           {["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].map((opt) => (
                             <button key={opt} type="button"
@@ -1147,7 +1150,7 @@ export default function Admin() {
                               style={{
                                 borderRadius: 20, padding: "4px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer",
                                 background: rejectState.reason === opt ? "rgba(239,68,68,0.2)" : "transparent",
-                                color: "#f87171", border: "1px solid rgba(239,68,68,0.3)",
+                                color: "#d4614a", border: "1px solid rgba(239,68,68,0.3)",
                               }}
                             >{opt}</button>
                           ))}
@@ -1156,12 +1159,12 @@ export default function Admin() {
                           placeholder="Other reason (optional)"
                           value={["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].includes(rejectState.reason) ? "" : rejectState.reason}
                           onChange={(e) => setRejectState({ ...rejectState, reason: e.target.value })}
-                          rows={1} className="text-sm resize-none bg-transparent border-white/10 text-[#e8eaf6] placeholder:text-[#7077a1]"
+                          rows={1} className="text-sm resize-none bg-transparent border-white/10 text-[#F5ECD7] placeholder:text-[#9e8570]"
                         />
                         <button
                           onClick={() => handleStatusChange(order.id, "cancelled", rejectState?.reason || undefined)}
                           disabled={updateStatus.isPending}
-                          style={{ background: "rgba(239,68,68,0.2)", color: "#f87171", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 20, padding: "7px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
+                          style={{ background: "rgba(239,68,68,0.2)", color: "#d4614a", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 20, padding: "7px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
                         >
                           {updateStatus.isPending ? "Cancelling..." : "Confirm Cancellation"}
                         </button>
@@ -1192,7 +1195,7 @@ export default function Admin() {
                   <tbody>
                     {pastOrders.slice(0, 20).map((order, idx) => (
                       <tr key={order.id} onClick={() => setHistoryOrder(order)} style={{ borderTop: `1px solid rgba(255,255,255,0.03)`, background: idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)", cursor: "pointer", transition: "background 0.12s" }} onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")} onMouseLeave={e => (e.currentTarget.style.background = idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)")}>
-                        <td className="p-3" style={{ fontFamily: "monospace", fontWeight: 900, color: "#30d158" }}>{order.confirmationCode}</td>
+                        <td className="p-3" style={{ fontFamily: "monospace", fontWeight: 900, color: "#3d8f6a" }}>{order.confirmationCode}</td>
                         <td className="p-3">
                           <div style={{ fontWeight: 600, color: TP }}>{order.customerName}</div>
                           <div style={{ color: TM, fontSize: 11 }}>{new Date(order.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
@@ -1241,18 +1244,18 @@ export default function Admin() {
             {/* Header */}
             <div style={{ padding: "20px 20px 16px", borderBottom: `1px solid ${BORD}`, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, position: "sticky", top: 0, background: CARD, zIndex: 1 }}>
               <div>
-                <div style={{ fontFamily: "monospace", fontWeight: 900, fontSize: 22, color: "#30d158", letterSpacing: "0.02em" }}>{o.confirmationCode}</div>
+                <div style={{ fontFamily: "monospace", fontWeight: 900, fontSize: 22, color: "#3d8f6a", letterSpacing: "0.02em" }}>{o.confirmationCode}</div>
                 <div style={{ fontSize: 12, color: TM, marginTop: 3 }}>
                   {dt.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })} · {dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                   <span style={{ ...STATUS_STYLE[o.status], fontSize: 10, fontWeight: 800, borderRadius: 8, padding: "3px 9px", letterSpacing: "0.04em" }}>{STATUS_LABELS[o.status]}</span>
-                  <span style={{ background: "rgba(255,255,255,0.06)", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>{o.orderType}</span>
+                  <span style={{ background: "#4a3020", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>{o.orderType}</span>
                   {(() => { const s = sourceBadge(o.source); return s ? <span style={{ ...s.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px" }}>{s.label}</span> : null; })()}
                   {o.paymentMethod && (() => { const p = paymentBadge(o.source, o.paymentMethod); return <span style={{ ...p.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px" }}>{p.label}</span>; })()}
                 </div>
               </div>
-              <button onClick={() => setHistoryOrder(null)} style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${BORD}`, borderRadius: 10, padding: "6px 10px", color: TM, cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✕</button>
+              <button onClick={() => setHistoryOrder(null)} style={{ background: "rgba(74,48,32,0.4)", border: `1px solid ${BORD}`, borderRadius: 10, padding: "6px 10px", color: TM, cursor: "pointer", fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✕</button>
             </div>
 
             <div style={{ padding: "20px 20px 32px", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1304,7 +1307,7 @@ export default function Admin() {
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: TM }}>
                         <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
                       </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#f87171" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#d4614a" }}>
                         <span>Discount</span><span>−${discount.toFixed(2)}</span>
                       </div>
                     </>
@@ -1317,7 +1320,7 @@ export default function Admin() {
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: TM }}>
                         <span>Tendered</span><span>${o.amountTendered.toFixed(2)}</span>
                       </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#30d158" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#3d8f6a" }}>
                         <span>Change</span><span>${(o.amountTendered - o.total).toFixed(2)}</span>
                       </div>
                     </>
@@ -1331,9 +1334,9 @@ export default function Admin() {
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                   {o.paymentMethod && (() => { const p = paymentBadge(o.source, o.paymentMethod); return <span style={{ ...p.style, fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "4px 12px" }}>{p.label}</span>; })()}
                   <span style={{ fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "4px 12px",
-                    ...(o.paymentStatus === "paid"     ? { background: "rgba(48,209,88,0.1)",  color: "#30d158", border: "1px solid rgba(48,209,88,0.25)"  } :
-                        o.paymentStatus === "refunded" ? { background: "rgba(239,68,68,0.1)",  color: "#f87171", border: "1px solid rgba(239,68,68,0.25)"  } :
-                                                         { background: "rgba(255,107,0,0.1)", color: OR,        border: "1px solid rgba(255,107,0,0.25)"  }) }}>
+                    ...(o.paymentStatus === "paid"     ? { background: "rgba(61,143,106,0.1)",  color: "#3d8f6a", border: "1px solid rgba(61,143,106,0.25)"  } :
+                        o.paymentStatus === "refunded" ? { background: "rgba(239,68,68,0.1)",  color: "#d4614a", border: "1px solid rgba(239,68,68,0.25)"  } :
+                                                         { background: "rgba(200,168,130,0.1)", color: OR,        border: "1px solid rgba(200,168,130,0.25)"  }) }}>
                     {o.paymentStatus === "paid" ? "✓ Paid" : o.paymentStatus === "refunded" ? "Refunded" : "Pending"}
                   </span>
                 </div>
@@ -1341,7 +1344,7 @@ export default function Admin() {
 
               {/* Notes */}
               {o.notes && (
-                <div style={{ background: "rgba(255,107,0,0.08)", border: "1px solid rgba(255,107,0,0.2)", borderRadius: 12, padding: "10px 14px" }}>
+                <div style={{ background: "rgba(200,168,130,0.08)", border: "1px solid rgba(200,168,130,0.2)", borderRadius: 12, padding: "10px 14px" }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: OR, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Order Note</div>
                   <div style={{ fontSize: 13, color: TP }}>{o.notes}</div>
                 </div>
@@ -1350,7 +1353,7 @@ export default function Admin() {
               {/* Cancellation reason */}
               {o.status === "cancelled" && o.cancellationReason && (
                 <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: "10px 14px" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#f87171", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Cancellation Reason</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#d4614a", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Cancellation Reason</div>
                   <div style={{ fontSize: 13, color: TP }}>{o.cancellationReason}</div>
                 </div>
               )}

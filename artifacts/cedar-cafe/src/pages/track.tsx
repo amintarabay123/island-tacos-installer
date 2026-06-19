@@ -4,6 +4,7 @@ import { useTrackOrder, getTrackOrderQueryKey } from "@workspace/api-client-reac
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, ChefHat, Package, XCircle, ArrowRight, Loader2, UserCircle, History, LogOut, Pencil, Check } from "lucide-react";
 import { getCustomer, saveCustomer, clearCustomer, getLastOrder, type CustomerProfile } from "@/lib/customer-account";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 // ── IL Palette ────────────────────────────────────────────────────────────────
 const BG   = "#16172b";
@@ -33,6 +34,7 @@ function hasPtpReturn(): boolean {
 }
 
 export default function TrackOrder() {
+  const { storeName } = useStoreSettings();
   const code = getCode().toUpperCase();
   const queryClient = useQueryClient();
 
@@ -146,7 +148,7 @@ export default function TrackOrder() {
     return (
       <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
         <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: -8 }}>Island Tacos</div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: -8 }}>{storeName}</div>
           <div style={{ width: 96, height: 96, borderRadius: 999, background: "rgba(255,69,58,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <XCircle style={{ width: 56, height: 56, color: "#ff453a" }} />
           </div>
@@ -216,7 +218,7 @@ export default function TrackOrder() {
       <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: -8 }}>Island Tacos</div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: -8 }}>{storeName}</div>
 
           <div style={{ width: 96, height: 96, borderRadius: 999, background: "rgba(255,69,58,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <XCircle style={{ width: 56, height: 56, color: "#ff453a" }} />
@@ -396,6 +398,7 @@ function FullScreenState({
   orderSummary?: { items: Item[]; total: number }; progress?: string;
   action?: React.ReactNode; pickupTime?: string | null;
 }) {
+  const { storeName } = useStoreSettings();
   return (
     <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
       <style>{`
@@ -405,7 +408,7 @@ function FullScreenState({
       <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
 
         {/* Brand */}
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: -8 }}>Island Tacos</div>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: -8 }}>{storeName}</div>
 
         {/* Icon */}
         <div style={{ width: 96, height: 96, borderRadius: 999, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -692,6 +695,7 @@ function EditAccountForm({ profile, onSave, onCancel }: { profile: CustomerProfi
 // ─── No-code view (track page without a code in URL) ─────────────────────────
 
 function NoCodeView() {
+  const { storeName } = useStoreSettings();
   const inputRef = useRef<HTMLInputElement>(null);
   const [customer, setCustomer] = useState<CustomerProfile | null>(() => getCustomer());
   const [editing, setEditing] = useState(false);
@@ -718,7 +722,7 @@ function NoCodeView() {
           <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: MU, textDecoration: "none", marginBottom: 12 }}>
             ← Back to Menu
           </Link>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: 8 }}>Island Tacos</div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.12em", color: MU, textTransform: "uppercase", marginBottom: 8 }}>{storeName}</div>
           <h1 style={{ fontSize: 26, fontWeight: 900, color: TP, margin: 0 }}>Track Your Order</h1>
         </div>
 

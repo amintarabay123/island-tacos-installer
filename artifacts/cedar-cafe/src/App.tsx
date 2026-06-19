@@ -119,6 +119,12 @@ function Router() {
       <Route path={adminRoutes.customers}>
         <ProtectedRoute><AdminCustomers /></ProtectedRoute>
       </Route>
+      {/* /kitchen/:station — food or drinks station filter */}
+      <Route path={`${adminRoutes.kitchen}/:station`}>
+        {(params: { station?: string }) => (
+          <ProtectedRoute><Kitchen station={params.station} /></ProtectedRoute>
+        )}
+      </Route>
       <Route path={adminRoutes.kitchen}>
         <ProtectedRoute><Kitchen /></ProtectedRoute>
       </Route>

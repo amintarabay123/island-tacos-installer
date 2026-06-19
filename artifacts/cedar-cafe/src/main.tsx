@@ -12,7 +12,7 @@ setAuthTokenGetter(() => getAuthToken());
 
 // Rewrite raw fetch() calls so they also go to cedar-api.
 // Problem: every raw fetch uses BASE_URL (/cedar/) as prefix → /cedar/api/...
-// or a bare /api/... — both route to Island Tacos api-server via the shared proxy.
+// or a bare /api/... — both route to cedar-api via the shared proxy.
 // This interceptor rewrites them all to /cedar-api/api/... before they leave the browser.
 const _origFetch = globalThis.fetch.bind(globalThis);
 globalThis.fetch = function cedarFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { setPageMeta } from "@/lib/page-meta";
 import { authHeaders } from "@/lib/auth";
 import { adminRoutes } from "@/lib/admin-path";
+import { useStoreSettings } from "@/lib/use-store-settings";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, RefreshCw, CheckCircle2, XCircle, AlertTriangle,
@@ -107,7 +108,8 @@ function relativeTime(isoStr: string): string {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function AdminSystem() {
-  useEffect(() => { setPageMeta("🖥️ System Monitor — Island Tacos", "🖥️"); }, []);
+  const { storeName } = useStoreSettings();
+  useEffect(() => { setPageMeta(`🖥️ System Monitor — ${storeName}`, "🖥️"); }, [storeName]);
   const { toast } = useToast();
 
   const [data, setData]         = useState<HealthPayload | null>(null);

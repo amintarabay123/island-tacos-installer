@@ -5,6 +5,7 @@ import { authHeaders } from "@/lib/auth";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Store, Users, Plus, Pencil, Trash2, Shield, User, Check, X, CreditCard, RefreshCw } from "lucide-react";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -61,7 +62,8 @@ const INP: React.CSSProperties = {
 const LBL: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: TM, display: "block", marginBottom: 6 };
 
 export default function AdminSettings() {
-  useEffect(() => { setPageMeta("⚙️ Settings — Island Tacos", "⚙️"); }, []);
+  const { storeName } = useStoreSettings();
+  useEffect(() => { setPageMeta(`⚙️ Settings — ${storeName}`, "⚙️"); }, [storeName]);
   const { toast } = useToast();
 
   const [form, setForm] = useState<Settings>(DEFAULTS);

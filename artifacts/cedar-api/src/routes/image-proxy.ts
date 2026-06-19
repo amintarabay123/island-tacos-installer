@@ -181,7 +181,9 @@ router.get("/image-proxy", async (req: Request, res: Response): Promise<void> =>
   }
 });
 
-const OWN_STORAGE_HOST = "orders.islandtacosbvi.com";
+const OWN_STORAGE_HOST = (() => {
+  try { return new URL(process.env.STORE_URL ?? "https://orders.islandtacosbvi.com").hostname; } catch { return "orders.islandtacosbvi.com"; }
+})();
 
 /** Convert an image URL to a server-routed URL.
  *  - Loyverse CDN → /api/image-proxy?url=… (cached proxy)

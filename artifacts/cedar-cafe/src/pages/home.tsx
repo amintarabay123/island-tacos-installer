@@ -330,18 +330,17 @@ export default function Home() {
               </div>
 
               {/* Name */}
-              <p style={{
-                fontWeight: 800, fontSize: 14, letterSpacing: "-0.02em",
-                color: soldOut ? "rgba(255,255,255,0.45)" : "#fff",
-                lineHeight: 1.25,
+              <p className="chalk-font" style={{
+                fontSize: 15, lineHeight: 1.25,
+                color: soldOut ? CC_MUTED : CC_CHALK,
                 textDecoration: soldOut ? "line-through" : "none",
               }}>{item.name}</p>
 
               {/* Description — always reserves 2-line height so cards without desc stay aligned */}
               <div style={{ minHeight: 36 }}>
                 {item.description && (
-                  <p style={{
-                    fontSize: 11, color: "rgba(255,255,255,0.68)",
+                  <p className="body-font" style={{
+                    fontSize: 11, color: CC_MUTED,
                     lineHeight: 1.5, margin: 0,
                     overflow: "hidden",
                     display: "-webkit-box",
@@ -354,30 +353,32 @@ export default function Home() {
 
             {/* Price + button — always pinned to bottom */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
-              <span style={{
-                fontSize: 22, fontWeight: 900,
-                color: soldOut ? "rgba(255,255,255,0.35)" : "#fff",
-                letterSpacing: "-0.05em",
+              <span className="chalk-font" style={{
+                fontSize: 20,
+                color: soldOut ? CC_MUTED : CC_ACCENT,
+                textShadow: soldOut ? "none" : "0 0 12px rgba(200,168,130,0.4)",
                 textDecoration: soldOut ? "line-through" : "none",
               }}>
                 ${item.price.toFixed(2)}
               </span>
               {!soldOut && (
                 <button
+                  className="body-font"
                   style={{
-                    background: "rgba(255,255,255,0.22)",
-                    backdropFilter: "blur(4px)",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    borderRadius: 10,
-                    width: 34, height: 34,
+                    background: "transparent",
+                    border: `1px solid #a07850`,
+                    borderRadius: 20,
+                    padding: "6px 14px",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     cursor: "pointer",
-                    color: "#fff",
+                    color: CC_ACCENT,
+                    fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
                     flexShrink: 0,
+                    transition: "all 0.18s",
                   }}
                   onClick={(e) => { e.stopPropagation(); openItemModal(item); }}
                 >
-                  <Plus className="w-4 h-4" />
+                  Add
                 </button>
               )}
             </div>
@@ -408,74 +409,63 @@ export default function Home() {
         <div className="absolute inset-0" style={{ boxShadow: "inset 0 -1px 0 rgba(200,168,130,0.1)" }} />
 
         <div className="relative flex flex-col max-w-6xl mx-auto px-6" style={{ paddingTop: 80, paddingBottom: 56 }}>
-          {/* Open now badge */}
-          {storeOpen && (
+          {/* Open / closed badge */}
+          {storeOpen ? (
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 8,
-              background: "rgba(22,23,43,0.85)", backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20,
-              padding: "5px 14px", marginBottom: 18, alignSelf: "flex-start",
+              background: `${CC_HUNTER}22`, border: `1px solid ${CC_HUNTER}`,
+              borderRadius: 20, padding: "5px 14px", marginBottom: 18, alignSelf: "flex-start",
             }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#30d158", boxShadow: "0 0 8px rgba(48,209,88,0.9)", display: "inline-block" }} />
-              <span style={{ fontSize: 11, color: "#9095c0", fontWeight: 700, letterSpacing: "0.06em" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: CC_HUNT_L, boxShadow: `0 0 8px ${CC_HUNT_L}`, display: "inline-block" }} />
+              <span className="body-font" style={{ fontSize: 11, color: CC_HUNT_L, fontWeight: 700, letterSpacing: "0.08em" }}>
                 OPEN NOW · CLOSES {storeCloseOrdersAt}
               </span>
             </div>
+          ) : (
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "rgba(200,168,130,0.08)", border: `1px solid ${CC_BORD}`,
+              borderRadius: 20, padding: "5px 14px", marginBottom: 18, alignSelf: "flex-start",
+            }}>
+              <span className="body-font" style={{ fontSize: 11, color: CC_MUTED, fontWeight: 700, letterSpacing: "0.08em" }}>CLOSED</span>
+            </div>
           )}
 
-          <p className="flex items-center gap-1.5 mb-3" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
-            <MapPin className="w-3 h-3" /> Café · Road Town, BVI
+          <p className="body-font flex items-center gap-1.5 mb-3" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: CC_MUTED, textTransform: "uppercase" }}>
+            <MapPin className="w-3 h-3" /> Road Town, BVI · Pickup Only
           </p>
 
-          <h1 style={{ fontSize: "clamp(36px,5vw,60px)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1.05, margin: "0 0 20px", color: "#e8eaf6" }}>
-            Great food,<br />
-            <span style={{ background: "linear-gradient(135deg,#ff6b00 0%,#ffaa00 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              every visit.
-            </span>
+          <h1 className="chalk-font" style={{ fontSize: "clamp(36px,5vw,60px)", fontStyle: "italic", fontWeight: 700, lineHeight: 1.05, margin: "0 0 20px", color: CC_CHALK, textShadow: "0 2px 20px rgba(200,168,130,0.25)" }}>
+            Good coffee,<br />
+            <span style={{ color: CC_ACCENT }}>every visit.</span>
           </h1>
 
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 36 }}>
             <button
+              className="body-font"
               style={{
-                background: "linear-gradient(135deg,#ff6b00,#ff9500)",
-                color: "#fff", border: "none", borderRadius: 24,
-                padding: "13px 32px", fontSize: 15, fontWeight: 900, cursor: "pointer",
-                boxShadow: "0 6px 28px rgba(255,107,0,0.45)",
+                background: `linear-gradient(135deg, ${CC_HUNTER} 0%, #1f4d38 100%)`,
+                color: "#d4f5e2", border: `1px solid ${CC_HUNT_L}`, borderRadius: 6,
+                padding: "13px 32px", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                boxShadow: `0 6px 20px rgba(45,106,79,0.45)`,
                 display: "flex", alignItems: "center", gap: 8,
+                letterSpacing: 1.5, textTransform: "uppercase",
               }}
               onClick={() => document.getElementById("menu")?.scrollIntoView({ behavior: "smooth" })}
             >
-              Order Now <ArrowRight className="w-4 h-4" />
+              View Menu <ArrowRight className="w-4 h-4" />
             </button>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.6)", fontSize: 14 }}>
-              <Clock className="w-4 h-4" />
-              Ready in 20–30 min
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div style={{ display: "flex", gap: 40 }}>
-            {[
-              ["4.9 ★", "Customer Rating", "#ff6b00"],
-              ["2,400+", "Orders Served", "#7c6af7"],
-              ["~12 min", "Avg. Wait", "#30d158"],
-            ].map(([v, l, c]) => (
-              <div key={String(l)}>
-                <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: "-0.04em", color: c as string }}>{v}</div>
-                <div style={{ fontSize: 10, color: "#4a4d6a", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const, marginTop: 2 }}>{l}</div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
 
       {/* ── Closed banner ─────────────────────────────────────────────────────── */}
       {!storeOpen && (
-        <div style={{ background: "rgba(120,53,15,0.4)", borderBottom: "1px solid rgba(217,119,6,0.35)" }} className="px-6 py-3 text-center">
-          <p className="text-sm font-semibold" style={{ color: "#fcd34d" }}>
+        <div style={{ background: "rgba(200,168,130,0.06)", borderBottom: `1px solid ${CC_BORD}` }} className="px-6 py-3 text-center">
+          <p className="body-font text-sm font-semibold" style={{ color: CC_ACCENT }}>
             {!openToday ? (closedTodayReason ?? "We're closed today") : "Online ordering is currently closed"}
           </p>
-          <p className="text-xs mt-0.5" style={{ color: "rgba(252,211,77,0.65)" }}>
+          <p className="body-font text-xs mt-0.5" style={{ color: CC_MUTED }}>
             {!openToday
               ? "You can still browse the menu and order on an open day"
               : `We're open ${storeOpenTime} – ${storeCloseOrdersAt} · You can still browse the menu`}
@@ -490,9 +480,9 @@ export default function Home() {
         <div style={{ overflow: "hidden", paddingTop: 48 }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: "#e8eaf6" }}>Best Sellers</h2>
+              <h2 className="chalk-font" style={{ fontSize: 20, fontStyle: "italic", color: CC_CHALK }}>Popular Items</h2>
               {topSellers && topSellers.length > 0 && (
-                <span style={{ fontSize: 11, color: "#7077a1" }}>Based on your orders</span>
+                <span className="body-font" style={{ fontSize: 11, color: CC_MUTED }}>Based on your orders</span>
               )}
             </div>
           </div>
@@ -520,38 +510,40 @@ export default function Home() {
       )}
 
       {/* ── Full Menu ─────────────────────────────────────────────────────────── */}
-      <section id="menu" style={{ flex: 1, borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 32 }}>
-        {/* Category pill bar */}
+      <section id="menu" style={{ flex: 1, borderTop: `1px solid ${CC_BORD}`, marginTop: 32 }}>
+        {/* Category tab bar — only shown when there are actual categories */}
+        {(loadingCategories || visibleCategories.length > 0) && (
         <div style={{
-          position: "sticky", top: 64, zIndex: 10,
-          background: "#16172b",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          position: "sticky", top: 72, zIndex: 10,
+          background: "#1a1109",
+          borderBottom: `1px solid ${CC_BORD}`,
+          boxShadow: "0 2px 12px rgba(0,0,0,0.4)",
         }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-            <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 0", scrollbarWidth: "none" }}>
+            <div style={{ display: "flex", gap: 0, overflowX: "auto", scrollbarWidth: "none" }}>
               {loadingCategories ? (
-                <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ display: "flex", gap: 8, padding: "12px 0" }}>
                   {[1,2,3,4].map(i => <Skeleton key={i} className="h-8 w-20 rounded-full" />)}
                 </div>
               ) : (
                 allCategories.map((cat) => (
                   <button
                     key={cat.id ?? "all"}
+                    className="body-font"
                     style={{
-                      background: activeCategory === cat.id
-                        ? "linear-gradient(135deg,#ff6b00,#ff9500)"
-                        : "rgba(30,31,56,0.9)",
-                      color: activeCategory === cat.id ? "#fff" : "#7077a1",
-                      border: activeCategory === cat.id ? "none" : "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 20,
-                      padding: "8px 18px",
-                      fontSize: 13,
-                      fontWeight: activeCategory === cat.id ? 800 : 500,
+                      background: "transparent",
+                      color: activeCategory === cat.id ? CC_ACCENT : CC_MUTED,
+                      border: "none",
+                      borderBottom: activeCategory === cat.id ? `2px solid ${CC_ACCENT}` : "2px solid transparent",
+                      padding: "14px 20px",
+                      fontSize: 12,
+                      fontWeight: 700,
                       cursor: "pointer",
-                      boxShadow: activeCategory === cat.id ? "0 4px 18px rgba(255,107,0,0.4)" : "none",
+                      letterSpacing: 1,
+                      textTransform: "uppercase",
                       whiteSpace: "nowrap",
-                      transition: "all 0.15s",
                       flexShrink: 0,
+                      transition: "all 0.15s",
                     }}
                     onClick={() => setActiveCategory(cat.id ?? null)}
                   >
@@ -562,6 +554,7 @@ export default function Home() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Grid */}
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 64px" }}>
@@ -574,8 +567,9 @@ export default function Home() {
               ))}
             </div>
           ) : filteredItems.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "80px 0", color: "#7077a1" }}>
-              <p style={{ fontWeight: 600 }}>No items in this category right now.</p>
+            <div style={{ textAlign: "center", padding: "80px 0" }}>
+              <p className="chalk-font" style={{ fontSize: 20, fontStyle: "italic", color: CC_CHALK, marginBottom: 8 }}>Menu coming soon</p>
+              <p className="body-font" style={{ fontSize: 13, color: CC_MUTED }}>Check back shortly — we're getting the menu ready.</p>
             </div>
           ) : activeCategory === null ? (
             /* ── "All" view: grouped by category ─────────────────────────────── */
@@ -593,25 +587,23 @@ export default function Home() {
                         display: "flex", alignItems: "center", gap: 12,
                         marginBottom: 24, paddingTop: 4,
                       }}>
-                        {/* Orange accent bar */}
+                        {/* Gold accent bar */}
                         <div style={{
-                          width: 4, height: 24, borderRadius: 3,
-                          background: "linear-gradient(180deg,#ff6b00,#ff9500)",
+                          width: 3, height: 22, borderRadius: 2,
+                          background: `linear-gradient(180deg,${CC_ACCENT},#a07850)`,
                           flexShrink: 0,
                         }} />
-                        <h3 style={{
-                          fontSize: 17, fontWeight: 800,
-                          color: "#e8eaf6", letterSpacing: "-0.025em",
-                          margin: 0,
+                        <h3 className="chalk-font" style={{
+                          fontSize: 18, fontStyle: "italic",
+                          color: CC_CHALK, margin: 0,
                         }}>{cat.name}</h3>
-                        <span style={{
-                          fontSize: 11, fontWeight: 500,
-                          color: "#7077a1", marginLeft: 2,
+                        <span className="body-font" style={{
+                          fontSize: 11, color: CC_MUTED, marginLeft: 2,
                         }}>{catItems.length} item{catItems.length !== 1 ? "s" : ""}</span>
-                        {/* Fade-out divider */}
+                        {/* Dashed divider */}
                         <div style={{
                           flex: 1, height: 1,
-                          background: "linear-gradient(90deg, rgba(255,255,255,0.1) 0%, transparent 100%)",
+                          background: `linear-gradient(90deg, ${CC_BORD} 0%, transparent 100%)`,
                         }} />
                       </div>
                       {/* Cards */}

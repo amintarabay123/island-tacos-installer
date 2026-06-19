@@ -4,28 +4,29 @@ import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
 import { setPageMeta } from "@/lib/page-meta";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
-// ── Indigo Luxe Design System ─────────────────────────────────────────────────
-const IL = { bg:"#16172b", card:"#1e1f38", hdr:"#0e1020", bord:"rgba(255,255,255,0.06)", tp:"#e8eaf6", tm:"#b0b8d8", mu:"#7077a1", or:"#ff6b00", pur:"#7c6af7", grn:"#30d158", red:"#ff453a" };
+// ── Chalkboard Design System ──────────────────────────────────────────────────
+const IL = { bg:"#0c0805", card:"#171009", hdr:"#100c06", bord:"#4a3020", tp:"#F5ECD7", tm:"#C8A882", mu:"#9e8570", or:"#C8A882", pur:"#C8A882", grn:"#3d8f6a", red:"#d4614a" };
 const ITEM_GRADS: { grad: string; glow: string }[] = [
-  { grad:"linear-gradient(135deg,#ff6b00,#ff9500)",   glow:"rgba(255,107,0,0.45)" },
-  { grad:"linear-gradient(135deg,#7c6af7,#5b4cf5)",   glow:"rgba(124,106,247,0.45)" },
-  { grad:"linear-gradient(135deg,#10b981,#059669)",   glow:"rgba(16,185,129,0.45)" },
-  { grad:"linear-gradient(135deg,#e91e9c,#c2185b)",   glow:"rgba(233,30,156,0.45)" },
-  { grad:"linear-gradient(135deg,#0ea5e9,#0284c7)",   glow:"rgba(14,165,233,0.45)" },
-  { grad:"linear-gradient(135deg,#f59e0b,#d97706)",   glow:"rgba(245,158,11,0.45)" },
-  { grad:"linear-gradient(135deg,#ef4444,#dc2626)",   glow:"rgba(239,68,68,0.45)" },
-  { grad:"linear-gradient(135deg,#8b5cf6,#7c3aed)",   glow:"rgba(139,92,246,0.45)" },
+  { grad:"linear-gradient(135deg,#C8A882,#a8845e)",   glow:"rgba(200,168,130,0.4)" },
+  { grad:"linear-gradient(135deg,#2d6a4f,#1d4d38)",   glow:"rgba(45,106,79,0.4)" },
+  { grad:"linear-gradient(135deg,#e8a030,#b87820)",   glow:"rgba(232,160,48,0.4)" },
+  { grad:"linear-gradient(135deg,#3d8f6a,#2d6a4f)",   glow:"rgba(61,143,106,0.4)" },
+  { grad:"linear-gradient(135deg,#8b6840,#5c3d20)",   glow:"rgba(139,104,64,0.4)" },
+  { grad:"linear-gradient(135deg,#d4614a,#a03d2a)",   glow:"rgba(212,97,74,0.4)" },
+  { grad:"linear-gradient(135deg,#9e7850,#6b4c2a)",   glow:"rgba(158,120,80,0.4)" },
+  { grad:"linear-gradient(135deg,#6b4c2a,#4a3020)",   glow:"rgba(107,76,42,0.4)" },
 ];
 const STATUS_GRAD: Record<string, string> = {
-  confirmed: "linear-gradient(135deg,#0ea5e9,#0284c7)",
-  preparing: "linear-gradient(135deg,#ff6b00,#ff9500)",
-  ready:     "linear-gradient(135deg,#10b981,#059669)",
+  confirmed: "linear-gradient(135deg,#2d6a4f,#1d4d38)",
+  preparing: "linear-gradient(135deg,#e8a030,#b87820)",
+  ready:     "linear-gradient(135deg,#3d8f6a,#2d6a4f)",
 };
 const STATUS_GLOW: Record<string, string> = {
-  confirmed: "rgba(14,165,233,0.5)",
-  preparing: "rgba(255,107,0,0.5)",
-  ready:     "rgba(16,185,129,0.5)",
+  confirmed: "rgba(45,106,79,0.5)",
+  preparing: "rgba(232,160,48,0.5)",
+  ready:     "rgba(61,143,106,0.5)",
 };
 
 type OrderItem = {
@@ -39,7 +40,7 @@ type OrderItem = {
   alreadyMade?: boolean | null;
 };
 
-type KitchenCategory = { id: number; name: string; sendToKds: boolean };
+type KitchenCategory = { id: number; name: string; sendToKds: boolean; kdsStation?: string | null };
 type KitchenMenuItem = { id: number; categoryId: number };
 
 type Order = {
@@ -184,9 +185,12 @@ function isOverdue(createdAt: string, now: number): boolean {
   return now - new Date(createdAt).getTime() > OVERDUE_MS;
 }
 
-export default function Kitchen() {
-  // TODO(store-settings): use `Kitchen — ${useStoreSettings().storeName}` once page-meta accepts a getter
-  useEffect(() => { setPageMeta("Kitchen — Island Tacos", "🍳", { iconUrl: "/icon-kds-192.png", manifestUrl: "/manifest-kds.json" }); }, []);
+export default function Kitchen({ station }: { station?: string } = {}) {
+  const { storeName } = useStoreSettings();
+  useEffect(() => {
+    const label = station ? `Kitchen — ${station.charAt(0).toUpperCase() + station.slice(1)}` : "Kitchen Display";
+    setPageMeta(label, "🍳", { iconUrl: "/icon-kds-192.png", manifestUrl: "/manifest-kds.json" });
+  }, [station]);
 
   // Sync printer config from server on load — ensures all devices use the same settings
   // configured once from Admin → Reports → Printer Settings.
@@ -287,16 +291,21 @@ export default function Kitchen() {
     return () => clearInterval(id);
   }, [fetchCategoryData]);
 
-  // Returns true if an item should appear on the KDS (based on its category's sendToKds flag).
-  // Wrapped in useCallback so fetchOrders can list it as a dependency without triggering
-  // the polling loop on every render — this only recreates when category data actually changes.
+  // Returns true if an item should appear on this KDS station.
+  // Rules:
+  //   1. Category must have sendToKds=true
+  //   2. If a station param is set: category.kds_station must match it
+  //      (null/undefined kds_station means "all stations" — always show)
   const isKdsItem = useCallback((item: OrderItem): boolean => {
-    if (!item.menuItemId) return true; // unknown item — show it to be safe
+    if (!item.menuItemId) return true;
     const categoryId = menuItemCategoryMap.get(item.menuItemId);
-    if (categoryId === undefined) return true; // no category info — show it
+    if (categoryId === undefined) return true;
     const cat = kdsCategories.find(c => c.id === categoryId);
-    return cat ? cat.sendToKds : true; // default to showing
-  }, [kdsCategories, menuItemCategoryMap]);
+    if (!cat) return true;
+    if (!cat.sendToKds) return false;
+    if (station && cat.kdsStation && cat.kdsStation !== station) return false;
+    return true;
+  }, [kdsCategories, menuItemCategoryMap, station]);
 
   // Uncollected order tracking: orderId → timestamp when we first saw it as "ready"
   const readyTimestampsRef = useRef<Map<number, number>>(new Map());
@@ -802,8 +811,7 @@ export default function Kitchen() {
     <div className="flex flex-col select-none overflow-hidden" style={{ minHeight:"100dvh", background:IL.bg, color:IL.tp }}>
       <header style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 16px", background:IL.hdr, borderBottom:`1px solid ${IL.bord}`, flexShrink:0, gap:8 }}>
         <div className="flex items-center gap-2 min-w-0">
-          {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
-          <span style={{ fontSize:17, fontWeight:900, color:IL.tp }} className="truncate">Island Tacos</span>
+          <span style={{ fontSize:17, fontWeight:900, color:IL.tp }} className="truncate">{storeName}</span>
           <span style={{ color:IL.mu, fontSize:13 }} className="hidden sm:inline">· Kitchen Display</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -837,7 +845,7 @@ export default function Kitchen() {
           <button
             onClick={openHistory}
             style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
-              background:"linear-gradient(135deg,#7c6af7,#5b4cf5)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(124,106,247,0.45)" }}
+              background:"linear-gradient(135deg,#2d6a4f,#1d4d38)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(45,106,79,0.45)" }}
           >
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
             🕐 <span className="hidden sm:inline" style={{ position:"relative" }}>History</span>
@@ -864,12 +872,12 @@ export default function Kitchen() {
           {/* Desktop column headers */}
           <div className="hidden sm:grid grid-cols-3 gap-3 px-4 pt-4 pb-2 shrink-0">
             {COL_CONFIG.map(({ key, label }) => {
-              const colGrad = key === "new" ? "linear-gradient(135deg,#0ea5e9,#0284c7)"
-                : key === "preparing" ? "linear-gradient(135deg,#ff6b00,#ff9500)"
-                : "linear-gradient(135deg,#10b981,#059669)";
-              const colGlow = key === "new" ? "rgba(14,165,233,0.5)"
-                : key === "preparing" ? "rgba(255,107,0,0.5)"
-                : "rgba(16,185,129,0.5)";
+              const colGrad = key === "new" ? "linear-gradient(135deg,#2d6a4f,#0284c7)"
+                : key === "preparing" ? "linear-gradient(135deg,#C8A882,#a8845e)"
+                : "linear-gradient(135deg,#3d8f6a,#059669)";
+              const colGlow = key === "new" ? "rgba(45,106,79,0.5)"
+                : key === "preparing" ? "rgba(200,168,130,0.5)"
+                : "rgba(61,143,106,0.5)";
               return (
                 <div key={key} className="flex items-center gap-2">
                   <span style={{ position:"relative", overflow:"hidden", padding:"3px 12px", borderRadius:20, fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:".08em", background:colGrad, color:"#fff", boxShadow:`0 2px 10px ${colGlow}`, display:"inline-block" }}>
@@ -888,10 +896,10 @@ export default function Kitchen() {
           <div style={{ display:"flex", borderBottom:`1px solid ${IL.bord}`, flexShrink:0, background:IL.hdr }} className="sm:hidden">
             {COL_CONFIG.map(({ key, label }) => {
               const isActive = mobileTab === key;
-              const colGrad = key === "new" ? "linear-gradient(135deg,#0ea5e9,#0284c7)"
-                : key === "preparing" ? "linear-gradient(135deg,#ff6b00,#ff9500)"
-                : "linear-gradient(135deg,#10b981,#059669)";
-              const dotColor = key === "new" ? "#0ea5e9" : key === "preparing" ? "#ff6b00" : "#10b981";
+              const colGrad = key === "new" ? "linear-gradient(135deg,#2d6a4f,#0284c7)"
+                : key === "preparing" ? "linear-gradient(135deg,#C8A882,#a8845e)"
+                : "linear-gradient(135deg,#3d8f6a,#059669)";
+              const dotColor = key === "new" ? "#2d6a4f" : key === "preparing" ? "#C8A882" : "#3d8f6a";
               return (
                 <button
                   key={key}
@@ -1024,8 +1032,8 @@ export default function Kitchen() {
                   const uncollectedMins = readySince ? Math.floor((now - readySince) / 60000) : 0;
 
                   const isAlert = isUncollected || overdue;
-                  const hdrGrad = isAlert ? "linear-gradient(135deg,#ff453a,#c0392b)" : (STATUS_GRAD[order.status] ?? STATUS_GRAD.confirmed);
-                  const cardGlow = isAlert ? "0 0 0 2px #ff453a,0 4px 24px rgba(255,69,58,0.35)"
+                  const hdrGrad = isAlert ? "linear-gradient(135deg,#d4614a,#a03d2a)" : (STATUS_GRAD[order.status] ?? STATUS_GRAD.confirmed);
+                  const cardGlow = isAlert ? "0 0 0 2px #d4614a,0 4px 24px rgba(212,97,74,0.35)"
                     : `0 4px 24px rgba(0,0,0,0.4),0 0 0 1px ${IL.bord}`;
 
                   // ── Collapsed view ───────────────────────────────────
@@ -1152,7 +1160,7 @@ export default function Kitchen() {
                           .map((item, itemIdx) => {
                           if (item.alreadyMade) {
                             return (
-                              <div key={item.id} style={{ background:"rgba(14,165,233,0.12)", border:"1px solid rgba(14,165,233,0.25)", borderRadius:10, padding:"10px 14px" }}>
+                              <div key={item.id} style={{ background:"rgba(45,106,79,0.12)", border:"1px solid rgba(45,106,79,0.25)", borderRadius:10, padding:"10px 14px" }}>
                                 <div className="flex items-baseline gap-2">
                                   <span style={{ color:"#38bdf8", fontSize:15, fontWeight:700, flexShrink:0 }}>↻</span>
                                   <div className="flex items-baseline gap-2 flex-1">
@@ -1254,8 +1262,8 @@ export default function Kitchen() {
                               onClick={() => printTicket(order)}
                               disabled={printing.has(order.id)}
                               style={{ flex:1, height:40, borderRadius:12, border:"none", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"inherit",
-                                background:"linear-gradient(135deg,#0ea5e9,#0284c7)",
-                                opacity:printing.has(order.id)?0.5:1, boxShadow:"0 3px 12px rgba(14,165,233,0.4)", position:"relative", overflow:"hidden" }}
+                                background:"linear-gradient(135deg,#2d6a4f,#0284c7)",
+                                opacity:printing.has(order.id)?0.5:1, boxShadow:"0 3px 12px rgba(45,106,79,0.4)", position:"relative", overflow:"hidden" }}
                             >
                               <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
                               <span style={{ position:"relative" }}>{printing.has(order.id) ? "Printing…" : "🖨 Print Ticket"}</span>
@@ -1263,8 +1271,8 @@ export default function Kitchen() {
                             <button
                               onClick={() => clearFromKds(order)}
                               disabled={isAdvancing}
-                              style={{ flex:1, height:40, borderRadius:12, background:"linear-gradient(135deg,#10b981,#059669)", border:"none", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"inherit",
-                                opacity:isAdvancing?0.5:1, boxShadow:"0 3px 12px rgba(16,185,129,0.4)", position:"relative", overflow:"hidden" }}
+                              style={{ flex:1, height:40, borderRadius:12, background:"linear-gradient(135deg,#3d8f6a,#059669)", border:"none", color:"#fff", fontWeight:700, fontSize:13, cursor:"pointer", fontFamily:"inherit",
+                                opacity:isAdvancing?0.5:1, boxShadow:"0 3px 12px rgba(61,143,106,0.4)", position:"relative", overflow:"hidden" }}
                             >
                               <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
                               <span style={{ position:"relative" }}>{isAdvancing ? "Clearing…" : "Done ✓ — Clear"}</span>
@@ -1290,7 +1298,7 @@ export default function Kitchen() {
       {historyOpen && (
         <div className="fixed inset-0 bg-black/70 z-50 flex justify-end" onClick={() => setHistoryOpen(false)}>
           <div style={{ background:IL.hdr, width:"100%", maxWidth:384, height:"100%", display:"flex", flexDirection:"column", boxShadow:"0 0 60px rgba(0,0,0,0.7)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"linear-gradient(135deg,#7c6af7,#5b4cf5)", flexShrink:0 }}>
+            <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"linear-gradient(135deg,#2d6a4f,#1d4d38)", flexShrink:0 }}>
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
               <h2 style={{ color:"#fff", fontSize:18, fontWeight:800, position:"relative" }}>🕐 Order History</h2>
               <button onClick={() => setHistoryOpen(false)} style={{ color:"rgba(255,255,255,0.75)", fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit", position:"relative" }}>×</button>
@@ -1316,8 +1324,8 @@ export default function Kitchen() {
                     disabled={recalling.has(o.id)}
                     onClick={() => recallOrder(o)}
                     style={{ width:"100%", height:36, borderRadius:10, border:"none", color:"#fff", fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"inherit",
-                      background:"linear-gradient(135deg,#10b981,#059669)",
-                      opacity:recalling.has(o.id)?0.5:1, boxShadow:"0 2px 10px rgba(16,185,129,0.4)", position:"relative", overflow:"hidden" }}
+                      background:"linear-gradient(135deg,#3d8f6a,#059669)",
+                      opacity:recalling.has(o.id)?0.5:1, boxShadow:"0 2px 10px rgba(61,143,106,0.4)", position:"relative", overflow:"hidden" }}
                   >
                     <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
                     <span style={{ position:"relative" }}>{recalling.has(o.id) ? "Recalling…" : "↩ Recall to Ready"}</span>

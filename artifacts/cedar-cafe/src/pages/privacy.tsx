@@ -6,7 +6,7 @@ export default function PrivacyPolicy() {
 
       <section className="mb-8">
         <h2 className="text-xl font-semibold mb-3">1. Who we are</h2>
-        <p>Island Tacos ("we", "us", "our") operates an online ordering and in-store point-of-sale system for our restaurant located at Wickhams Cay 1, Road Town, British Virgin Islands. This privacy policy explains how we collect, use, and protect your personal information.</p>
+        <p>Cedar Cafe ("we", "us", "our") operates an online ordering and in-store point-of-sale system for our restaurant located at Road Town, British Virgin Islands. This privacy policy explains how we collect, use, and protect your personal information.</p>
       </section>
 
       <section className="mb-8">
@@ -48,9 +48,9 @@ export default function PrivacyPolicy() {
         <h2 className="text-xl font-semibold mb-3">7. Your rights</h2>
         <p>You have the right to access, correct, or request deletion of your personal information. To exercise these rights, contact us at:</p>
         <div className="mt-3 pl-4 border-l-2 border-gray-200">
-          <p><strong>Island Tacos</strong></p>
-          <p>Wickhams Cay 1, Road Town, British Virgin Islands</p>
-          <p>Phone: (284) 544-8088</p>
+          <p><strong>Cedar Cafe</strong></p>
+          <p>Road Town, British Virgin Islands</p>
+          <p>Phone: (284) 344-9808</p>
         </div>
       </section>
 

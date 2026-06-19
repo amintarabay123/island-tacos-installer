@@ -4,6 +4,7 @@ import { setPageMeta } from "@/lib/page-meta";
 import { authHeaders } from "@/lib/auth";
 import { adminRoutes } from "@/lib/admin-path";
 import { ArrowLeft, RefreshCw } from "lucide-react";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -94,7 +95,8 @@ function SigBadge({ present, valid }: { present: boolean; valid: boolean | null 
 }
 
 export default function AdminPaymentEvents() {
-  useEffect(() => { setPageMeta("💳 Payment Events — Island Tacos", "💳"); }, []);
+  const { storeName } = useStoreSettings();
+  useEffect(() => { setPageMeta(`💳 Payment Events — ${storeName}`, "💳"); }, [storeName]);
 
   const [rows, setRows]       = useState<PaymentEvent[]>([]);
   const [loading, setLoading] = useState(true);

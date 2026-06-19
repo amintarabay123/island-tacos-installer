@@ -61,8 +61,7 @@ const DEFAULT_EXPENSES: ExpenseRow[] = [
 ];
 
 const EMPTY_DRAFT: DraftData = {
-  // TODO(store-settings): seed businessName + address from useStoreSettings() instead of hardcoding
-  businessName: "Island Tacos", registrationNumber: "", address: "Wickhams Cay 1, Road Town, Tortola, BVI",
+  businessName: "Cedar Cafe", registrationNumber: "", address: "Road Town, Tortola, BVI",
   directors: "", currencyCode: "USD",
   grossSales: 0, refunds: 0, otherIncome: 0, otherIncomeDesc: "", posDataFetched: false,
   beginningInventory: 0, purchases: 0, endingInventory: 0,
@@ -613,8 +612,7 @@ export default function AdminFinancials() {
                 <div key={d.id} style={{ background:"#1e1f38", border:"1px solid rgba(255,255,255,0.06)", borderRadius:14, padding:"16px 20px", display:"flex", alignItems:"center", gap:16 }}>
                   <FileText style={{ width:22, height:22, color:"#30d158", flexShrink:0 }} />
                   <div style={{ flex:1, minWidth:0 }}>
-                    {/* TODO(store-settings): fallback should be useStoreSettings().storeName */}
-                    <div style={{ fontWeight:600, color:"#e8eaf6", fontSize:15 }}>{d.business_name || "Island Tacos"}</div>
+                    <div style={{ fontWeight:600, color:"#e8eaf6", fontSize:15 }}>{d.business_name || "Cedar Cafe"}</div>
                     <div style={{ fontSize:13, color:"#7077a1", marginTop:2 }}>{d.period_start} → {d.period_end}</div>
                     <div style={{ fontSize:11, color:"#7077a1", marginTop:2, opacity:0.7 }}>Last saved {new Date(d.updated_at).toLocaleString()}</div>
                   </div>

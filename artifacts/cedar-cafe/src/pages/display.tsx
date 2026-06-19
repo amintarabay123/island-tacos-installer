@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { RefreshCw } from "lucide-react";
 import { setPageMeta } from "@/lib/page-meta";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 type DisplayItem = {
   name: string;
@@ -93,6 +94,7 @@ function PromoPanel({ shade = "orange" }: { shade?: "orange" | "green" }) {
 }
 
 export default function CustomerDisplay() {
+  const { storeName } = useStoreSettings();
   const [state, setState] = useState<DisplayState>({
     status: "idle",
     items: [],
@@ -104,8 +106,7 @@ export default function CustomerDisplay() {
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // TODO(store-settings): use `Customer Display — ${useStoreSettings().storeName}` once page-meta accepts a getter
-    setPageMeta("Customer Display — Island Tacos", "🖥️", { iconUrl: "/icon-display-192.png", manifestUrl: "/manifest-display.json" });
+    setPageMeta(`Customer Display — ${storeName}`, "🖥️", { iconUrl: "/icon-display-192.png", manifestUrl: "/manifest-display.json" });
   }, []);
 
   useEffect(() => {
@@ -156,14 +157,14 @@ export default function CustomerDisplay() {
 // ─── Idle Screen ─────────────────────────────────────────────────────────────
 
 function IdleScreen() {
+  const { storeName } = useStoreSettings();
   return (
     <div style={{ height: "100vh", display: "flex", overflow: "hidden", userSelect: "none", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* LEFT: Branding */}
       <div style={{ flex: 1, background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24, padding: "0 64px" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 80, lineHeight: 1, marginBottom: 20 }}>🌮</div>
-          {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
-          <h1 style={{ fontSize: 52, fontWeight: 900, color: "#111827", margin: 0, lineHeight: 1.1, letterSpacing: "-0.02em" }}>Island Tacos</h1>
+          <h1 style={{ fontSize: 52, fontWeight: 900, color: "#111827", margin: 0, lineHeight: 1.1, letterSpacing: "-0.02em" }}>{storeName}</h1>
           <p style={{ fontSize: 18, color: "#9ca3af", margin: "10px 0 0", fontWeight: 500 }}>Road Town, Tortola · BVI</p>
         </div>
         <LiveClock />
@@ -208,6 +209,7 @@ function AthMovilQr({ total, orderCode }: { publicToken: string; total: number; 
 // ─── Active Screen ────────────────────────────────────────────────────────────
 
 function ActiveScreen({ state }: { state: DisplayState }) {
+  const { storeName } = useStoreSettings();
   const n = (v: unknown) => parseFloat(String(v)) || 0;
   const subtotal = n(state.subtotal);
   const tax = n(state.tax);
@@ -228,8 +230,7 @@ function ActiveScreen({ state }: { state: DisplayState }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 40px", borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 22 }}>🌮</span>
-            {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
-            <span style={{ fontWeight: 900, fontSize: 20, color: "#111827", letterSpacing: "-0.01em" }}>Island Tacos</span>
+            <span style={{ fontWeight: 900, fontSize: 20, color: "#111827", letterSpacing: "-0.01em" }}>{storeName}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <span style={{ fontSize: 18, fontWeight: 700, color: "#374151" }}>Your Order</span>

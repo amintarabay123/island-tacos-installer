@@ -78,7 +78,7 @@ router.get("/storage/objects/*objectPath", async (req: Request, res: Response): 
       res.status(404).json({ error: "Not found" });
     } else {
       // GCS sidecar not available (local server) — redirect to production
-      const productionUrl = `https://orders.islandtacosbvi.com/api${req.path}`;
+      const productionUrl = `${(process.env.STORE_URL ?? "https://orders.islandtacosbvi.com").replace(/\/$/, "")}/api${req.path}`;
       res.redirect(302, productionUrl);
     }
   }
