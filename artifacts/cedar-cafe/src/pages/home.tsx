@@ -30,16 +30,26 @@ interface ModifierGroup {
   maxSelections: number | null;
 }
 
-// ─── Per-item colour palette (cycles by item.id) ──────────────────────────────
+// ─── Chalkboard palette (warm dark coffee-shop) ────────────────────────────────
+const CC_BG     = "#0f0a06";
+const CC_CARD   = "linear-gradient(145deg, #2a1c12 0%, #1c1108 100%)";
+const CC_BORD   = "#4a3020";
+const CC_CHALK  = "#F5ECD7";
+const CC_MUTED  = "#9e8570";
+const CC_ACCENT = "#C8A882";
+const CC_HUNTER = "#2d6a4f";
+const CC_HUNT_L = "#3d8f6a";
+
+// Per-item accent colours (warm brown tones cycling)
 const CARD_COLORS = [
-  { accent: "#ff6b00", glow: "rgba(255,107,0,0.32)",   border: "rgba(255,107,0,0.3)",   grad: "linear-gradient(145deg,#ff6b00,#c0392b)" },
-  { accent: "#38bdf8", glow: "rgba(56,189,248,0.32)",  border: "rgba(56,189,248,0.3)",  grad: "linear-gradient(145deg,#0ea5e9,#1e3a8a)" },
-  { accent: "#a78bfa", glow: "rgba(167,139,250,0.32)", border: "rgba(167,139,250,0.3)", grad: "linear-gradient(145deg,#7c6af7,#3730a3)" },
-  { accent: "#fbbf24", glow: "rgba(251,191,36,0.32)",  border: "rgba(251,191,36,0.3)",  grad: "linear-gradient(145deg,#f59e0b,#92400e)" },
-  { accent: "#34d399", glow: "rgba(52,211,153,0.32)",  border: "rgba(52,211,153,0.3)",  grad: "linear-gradient(145deg,#10b981,#064e3b)" },
-  { accent: "#f87171", glow: "rgba(248,113,113,0.32)", border: "rgba(248,113,113,0.3)", grad: "linear-gradient(145deg,#ef4444,#7f1d1d)" },
-  { accent: "#e879f9", glow: "rgba(232,121,249,0.32)", border: "rgba(232,121,249,0.3)", grad: "linear-gradient(145deg,#e879f9,#7e22ce)" },
-  { accent: "#4ade80", glow: "rgba(74,222,128,0.32)",  border: "rgba(74,222,128,0.3)",  grad: "linear-gradient(145deg,#22c55e,#065f46)" },
+  { accent: CC_ACCENT, glow: "rgba(200,168,130,0.25)", border: CC_BORD, grad: "linear-gradient(145deg,#3a2414,#1c1008)" },
+  { accent: CC_HUNT_L, glow: "rgba(61,143,106,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#1f4d38,#0f2a1e)" },
+  { accent: "#a07850", glow: "rgba(160,120,80,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#2e1a0e,#1a0e06)" },
+  { accent: CC_HUNT_L, glow: "rgba(61,143,106,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#1f4d38,#0f2a1e)" },
+  { accent: CC_ACCENT, glow: "rgba(200,168,130,0.25)", border: CC_BORD, grad: "linear-gradient(145deg,#3a2414,#1c1008)" },
+  { accent: "#a07850", glow: "rgba(160,120,80,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#2e1a0e,#1a0e06)" },
+  { accent: CC_HUNT_L, glow: "rgba(61,143,106,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#1f4d38,#0f2a1e)" },
+  { accent: CC_ACCENT, glow: "rgba(200,168,130,0.25)", border: CC_BORD, grad: "linear-gradient(145deg,#3a2414,#1c1008)" },
 ];
 
 function extractEmoji(name: string): string {
@@ -393,9 +403,9 @@ export default function Home() {
         }
       `}</style>
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-neutral-900" style={{ minHeight: 500 }}>
-        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%)" }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(22,23,43,0.95) 0%, rgba(22,23,43,0.5) 100%)" }} />
+      <section className="relative overflow-hidden" style={{ minHeight: 460, background: CC_BG }}>
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1c1008 0%, #2a1a0c 40%, #1c1008 100%)" }} />
+        <div className="absolute inset-0" style={{ boxShadow: "inset 0 -1px 0 rgba(200,168,130,0.1)" }} />
 
         <div className="relative flex flex-col max-w-6xl mx-auto px-6" style={{ paddingTop: 80, paddingBottom: 56 }}>
           {/* Open now badge */}
