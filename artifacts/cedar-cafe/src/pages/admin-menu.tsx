@@ -856,7 +856,7 @@ export default function AdminMenu() {
               <input
                 value={catForm.name}
                 onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="e.g. Tacos"
+                placeholder="e.g. Coffee"
                 style={{ ...INP, padding: "8px 12px" }}
               />
             </div>

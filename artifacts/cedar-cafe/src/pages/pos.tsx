@@ -125,7 +125,7 @@ async function printReceiptLines(
   return { ok: true };
 }
 
-function buildReceiptLines(order: Order, tendered?: number, storeName = "Cedar Cafe"): { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean }[] {
+function buildReceiptLines(order: Order, tendered?: number, storeName = "Cedar Cafe", address = "Road Town, Tortola, BVI", phone = "(284) 344-9808"): { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean }[] {
   const W = 32; // Munbyn 58mm paper = 32 chars
   // Right-aligns `right` against `left`, truncating left if needed
   const padLine = (left: string, right: string): string => {
@@ -140,8 +140,8 @@ function buildReceiptLines(order: Order, tendered?: number, storeName = "Cedar C
   lines.push({ text: "================================", center: true });
   lines.push({ text: storeName.toUpperCase(), bold: true, center: true, size: "large" });
   lines.push({ text: "================================", center: true });
-  lines.push({ text: "Wickhams Cay 1, Road Town, BVI", center: true });
-  lines.push({ text: "Tel: (284) 544-8088", center: true });
+  lines.push({ text: address, center: true });
+  lines.push({ text: `Tel: ${phone}`, center: true });
   lines.push({ divider: true, text: "" });
 
   // ── Order info ──────────────────────────────────────────────────────────────
@@ -1394,7 +1394,7 @@ const ItemCard = memo(function ItemCard({ item, onClick }: { item: MenuItem; onC
 // ─── Receipts Drawer ─────────────────────────────────────────────────────────
 
 function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
-  const { storeName, address } = useStoreSettings();
+  const { storeName, address, phone } = useStoreSettings();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"today" | "all">("today");
@@ -1561,7 +1561,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
               <button
                 onClick={async () => {
                   setPrinting(true); setPrintError(null);
-                  const result = await printReceiptLines(buildReceiptLines(selected, selected.amountTendered ?? undefined));
+                  const result = await printReceiptLines(buildReceiptLines(selected, selected.amountTendered ?? undefined, storeName, address, phone));
                   if (!result.ok) setPrintError(result.error ?? "Print failed");
                   setPrinting(false);
                 }}

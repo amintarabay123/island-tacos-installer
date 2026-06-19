@@ -403,7 +403,7 @@ export default function AdminReports() {
       doc.text("SALES SUMMARY REPORT", ML, 21);
       doc.setFontSize(8);
       doc.setTextColor(255, 230, 200);
-      doc.text("Wickhams Cay 1, Road Town, Tortola \u00B7 BVI", ML, 32);
+      doc.text(address, ML, 32);
       // Period + generated (right side)
       const periodLabel = from === to ? from : `${from}  \u2192  ${to}`;
       doc.setFont("helvetica", "bold");
