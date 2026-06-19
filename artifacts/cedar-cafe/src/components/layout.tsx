@@ -5,6 +5,7 @@ import { ShoppingBag, Menu, X, Plus, Minus, Trash2, RefreshCw } from "lucide-rea
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useEffect } from "react";
 import { useStoreSettings } from "@/lib/use-store-settings";
+import cedarLogo from "@/assets/cedar-logo.png";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -100,7 +101,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Brand */}
           <Link href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none", userSelect: "none" }}>
-            <img src={`${import.meta.env.BASE_URL}cedar-logo.png`} alt={profile.storeName} style={{ height: 64, width: "auto" }} />
+            <img src={cedarLogo} alt={profile.storeName} style={{ height: 64, width: "auto" }} />
           </Link>
 
           {/* Desktop nav links */}
@@ -304,7 +305,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent side="left" style={{ width: 288, padding: 0, background: "#1a1008", borderRight: `1px solid ${BORD}` }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: `1px solid ${BORD}` }}>
-                  <img src={`${import.meta.env.BASE_URL}cedar-logo.png`} alt={profile.storeName} style={{ height: 48, width: "auto" }} />
+                  <img src={cedarLogo} alt={profile.storeName} style={{ height: 48, width: "auto" }} />
                   <button
                     onClick={() => setMobileOpen(false)}
                     style={{ background: "none", border: "none", cursor: "pointer", color: MUTED, display: "flex", padding: 4 }}

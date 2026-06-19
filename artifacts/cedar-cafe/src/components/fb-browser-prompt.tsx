@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, Share, MoreHorizontal, Chrome } from "lucide-react";
 import { useStoreSettings } from "@/lib/use-store-settings";
+import cedarLogo from "@/assets/cedar-logo.png";
 
 const FB_STORAGE_KEY = "cc_fb_skip";
 
@@ -64,7 +65,7 @@ export default function FbBrowserPrompt() {
       {/* Top section — logo + message */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
         <img
-          src={`${import.meta.env.BASE_URL}cedar-logo.png`}
+          src={cedarLogo}
           alt={storeName}
           className="h-16 w-auto mb-8 invert"
         />

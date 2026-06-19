@@ -1,11 +1,12 @@
 import { SignIn } from "@clerk/react";
 import { useStoreSettings } from "@/lib/use-store-settings";
+import cedarLogo from "@/assets/cedar-logo.png";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const appearance = {
   options: {
-    logoImageUrl: `${window.location.origin}${basePath}/cedar-logo.png`,
+    logoImageUrl: `${window.location.origin}${cedarLogo}`,
     logoPlacement: "inside" as const,
     logoLinkUrl: basePath || "/",
   },
