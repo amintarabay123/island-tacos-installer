@@ -395,7 +395,7 @@ export async function sendOrderReceiptWhatsApp(
     templateName,
     "en_US",
     [name, order.confirmationCode],
-    { link: pdfUrl, filename: `Island-Tacos-Receipt-${order.confirmationCode}.pdf` },
+    { link: pdfUrl, filename: `Receipt-${order.confirmationCode}.pdf` },
   );
 }
 
