@@ -103,7 +103,7 @@ async function printLines(lines: PrintLine[]): Promise<{ ok: boolean; error?: st
   if (cfg.type === "network" && cfg.ip) {
     try {
       // localApiUrl routes the request to the shop's local API server even when the
-      // KDS browser tab is open on the cloud URL (e.g. orders.islandtacosbvi.com).
+      // KDS browser tab is open on the cloud URL (e.g. the shop's cloud domain).
       const apiBase = cfg.localApiUrl ? cfg.localApiUrl.replace(/\/$/, "") : "";
       const r = await fetch(`${apiBase}/api/print/network`, {
         method: "POST", credentials: "include",

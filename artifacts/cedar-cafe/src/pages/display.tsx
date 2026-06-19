@@ -77,7 +77,7 @@ function PromoPanel({ shade = "orange" }: { shade?: "orange" | "green" }) {
       <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 340, height: 340, borderRadius: "50%", background: "rgba(255,255,255,0.04)" }} />
 
       <div style={{ position: "relative", textAlign: "center", padding: "0 40px", color: "#fff" }}>
-        <div style={{ fontSize: 72, lineHeight: 1, marginBottom: 20 }}>🌮</div>
+        <div style={{ fontSize: 72, lineHeight: 1, marginBottom: 20 }}>☕</div>
         <div style={{ fontSize: 15, fontWeight: 500, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 10 }}>
           {shade === "green" ? "Come back soon!" : "Fresh & Authentic"}
         </div>
@@ -157,15 +157,15 @@ export default function CustomerDisplay() {
 // ─── Idle Screen ─────────────────────────────────────────────────────────────
 
 function IdleScreen() {
-  const { storeName } = useStoreSettings();
+  const { storeName, address } = useStoreSettings();
   return (
     <div style={{ height: "100vh", display: "flex", overflow: "hidden", userSelect: "none", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* LEFT: Branding */}
       <div style={{ flex: 1, background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 24, padding: "0 64px" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 80, lineHeight: 1, marginBottom: 20 }}>🌮</div>
+          <div style={{ fontSize: 80, lineHeight: 1, marginBottom: 20 }}>☕</div>
           <h1 style={{ fontSize: 52, fontWeight: 900, color: "#111827", margin: 0, lineHeight: 1.1, letterSpacing: "-0.02em" }}>{storeName}</h1>
-          <p style={{ fontSize: 18, color: "#9ca3af", margin: "10px 0 0", fontWeight: 500 }}>Road Town, Tortola · BVI</p>
+          <p style={{ fontSize: 18, color: "#9ca3af", margin: "10px 0 0", fontWeight: 500 }}>{address}</p>
         </div>
         <LiveClock />
         <p style={{ fontSize: 12, color: "#d1d5db", letterSpacing: "0.2em", textTransform: "uppercase", fontWeight: 600, margin: 0 }}>
@@ -189,7 +189,7 @@ function AthMovilQr({ total, orderCode }: { publicToken: string; total: number; 
       </div>
       <img
         src="/athmovil-path-qr.jpg"
-        alt="ATH Móvil QR — /islandtaco"
+        alt="ATH Móvil QR"
         style={{ width: 200, borderRadius: 20, boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}
       />
       <div style={{ textAlign: "center" }}>
@@ -229,7 +229,7 @@ function ActiveScreen({ state }: { state: DisplayState }) {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 40px", borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 22 }}>🌮</span>
+            <span style={{ fontSize: 22 }}>☕</span>
             <span style={{ fontWeight: 900, fontSize: 20, color: "#111827", letterSpacing: "-0.01em" }}>{storeName}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>

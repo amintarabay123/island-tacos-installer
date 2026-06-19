@@ -391,7 +391,7 @@ export default function AdminMenu() {
         {/* Stat cards */}
         <div style={{ display: "flex", gap: 14, marginBottom: 24, overflowX: "auto" }}>
           {[
-            { art: "🌮", grad: "linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow: "rgba(255,107,0,0.55)",   label: "Total Items",  value: String(items?.length ?? 0),                            sub: "on the menu" },
+            { art: "☕", grad: "linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow: "rgba(255,107,0,0.55)",   label: "Total Items",  value: String(items?.length ?? 0),                            sub: "on the menu" },
             { art: "✅", grad: "linear-gradient(145deg,#10b981,#059669,#064e3b)", glow: "rgba(16,185,129,0.5)",   label: "Available",    value: String(items?.filter(i => i.available).length ?? 0),   sub: "active today" },
             { art: "📂", grad: "linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow: "rgba(124,106,247,0.55)", label: "Categories",   value: String(categories?.length ?? 0),                      sub: "sections" },
             { art: "⚠️", grad: "linear-gradient(145deg,#ef4444,#dc2626,#7f1d1d)", glow: "rgba(239,68,68,0.45)",  label: "Unavailable",  value: String(items?.filter(i => !i.available).length ?? 0),  sub: "hidden from menu" },
@@ -869,7 +869,7 @@ export default function AdminMenu() {
                 <input
                   value={catForm.icon}
                   onChange={(e) => setCatForm((f) => ({ ...f, icon: e.target.value }))}
-                  placeholder="🌮"
+                  placeholder="☕"
                   maxLength={4}
                   style={{ ...INP, flex: 1, padding: "8px 12px" }}
                 />

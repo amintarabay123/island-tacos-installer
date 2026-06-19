@@ -95,7 +95,7 @@ async function printReceiptLines(
   if (cfg.type === "network" && cfg.ip) {
     try {
       // localApiUrl lets the request reach the shop's local API even when the
-      // browser is open on the cloud URL (e.g. a kitchen tablet on orders.islandtacosbvi.com).
+      // browser is open on the cloud URL (e.g. a kitchen tablet at the shop's cloud domain).
       const apiBase = cfg.localApiUrl ? cfg.localApiUrl.replace(/\/$/, "") : "";
       const r = await fetch(`${apiBase}/api/print/network`, {
         method: "POST", credentials: "include",
@@ -179,8 +179,7 @@ function buildReceiptLines(order: Order, tendered?: number, storeName = "Cedar C
   // ── Footer ──────────────────────────────────────────────────────────────────
   lines.push({ text: "================================", center: true });
   lines.push({ text: "** THANK YOU! **", bold: true, center: true });
-  lines.push({ text: "orders.islandtacosbvi.com", center: true });
-  lines.push({ text: "Hasta luego!", center: true });
+  lines.push({ text: "Come back soon!", center: true });
   lines.push({ text: "", center: true });
   return lines;
 }
@@ -263,7 +262,7 @@ function RetryImg({ src, alt, className }: { src: string; alt: string; className
   if (failed) {
     return (
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-2xl opacity-30">🌮</span>
+        <span className="text-2xl opacity-30">☕</span>
       </div>
     );
   }
@@ -678,6 +677,7 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHol
 // ─── Receipt Modal ────────────────────────────────────────────────────────────
 
 function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: number; onClose: () => void }) {
+  const { storeName, phone, address } = useStoreSettings();
   const change = tendered != null ? Math.max(0, tendered - order.total) : null;
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -703,9 +703,9 @@ function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: n
         <div style={{ padding:20, maxHeight:384, overflowY:"auto" }}>
           <div ref={printRef} style={{ fontFamily:"monospace", fontSize:13, color:IL.tp }}>
             <div style={{ textAlign:"center", marginBottom:12 }}>
-              <div style={{ fontWeight:700, fontSize:14 }}>ISLAND TACOS</div>
-              <div style={{ color:IL.mu, fontSize:11 }}>Wickhams Cay 1, Road Town, BVI</div>
-              <div style={{ color:IL.mu, fontSize:11 }}>(284) 000-0000</div>
+              <div style={{ fontWeight:700, fontSize:14 }}>{storeName.toUpperCase()}</div>
+              <div style={{ color:IL.mu, fontSize:11 }}>{address}</div>
+              <div style={{ color:IL.mu, fontSize:11 }}>{phone}</div>
             </div>
             <div style={{ borderTop:`1px dashed ${IL.bord}`, margin:"8px 0" }}/>
             <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:IL.mu, marginBottom:4 }}>
@@ -746,8 +746,8 @@ function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: n
             </div>
             <div style={{ borderTop:`1px dashed ${IL.bord}`, margin:"12px 0" }}/>
             <div style={{ textAlign:"center", color:IL.mu, fontSize:11 }}>
-              <div>Gracias · Thank you!</div>
-              <div style={{ marginTop:4 }}>Order online at islandtacos.com</div>
+              <div>Thank you!</div>
+              <div style={{ marginTop:4 }}>{phone}</div>
             </div>
           </div>
         </div>
@@ -1364,7 +1364,7 @@ const ItemCard = memo(function ItemCard({ item, onClick }: { item: MenuItem; onC
   return (
     <button onClick={onClick} style={{ position:"relative", display:"block", cursor:"pointer", background:"none", border:"none", padding:0, paddingTop: hasImg ? 0 : 30, textAlign:"left", width:"100%" }}>
       {!hasImg && (
-        <div style={{ position:"absolute", top:-24, left:"50%", transform:"translateX(-50%)", zIndex:5, pointerEvents:"none", filter:`drop-shadow(0 6px 14px ${glow})`, fontSize:46, lineHeight:1 }}>🌮</div>
+        <div style={{ position:"absolute", top:-24, left:"50%", transform:"translateX(-50%)", zIndex:5, pointerEvents:"none", filter:`drop-shadow(0 6px 14px ${glow})`, fontSize:46, lineHeight:1 }}>☕</div>
       )}
       <div style={{ background: grad, borderRadius:18, position:"relative", overflow:"hidden", boxShadow:`0 6px 22px ${glow}`, width:"100%" }}>
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.08) 0%,transparent 50%)", pointerEvents:"none", zIndex:1 }} />
@@ -1394,6 +1394,7 @@ const ItemCard = memo(function ItemCard({ item, onClick }: { item: MenuItem; onC
 // ─── Receipts Drawer ─────────────────────────────────────────────────────────
 
 function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
+  const { storeName, address } = useStoreSettings();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"today" | "all">("today");
@@ -1466,8 +1467,8 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
           </div>
           <div style={{ padding:20, maxHeight:"70vh", overflowY:"auto", fontFamily:"monospace", fontSize:13 }}>
             <div style={{ textAlign:"center", marginBottom:12 }}>
-              <div style={{ fontWeight:800, fontSize:14, color:IL.tp }}>ISLAND TACOS</div>
-              <div style={{ color:IL.mu, fontSize:11 }}>Wickhams Cay 1, Road Town, BVI</div>
+              <div style={{ fontWeight:800, fontSize:14, color:IL.tp }}>{storeName.toUpperCase()}</div>
+              <div style={{ color:IL.mu, fontSize:11 }}>{address}</div>
             </div>
             <div style={{ borderTop:`1px dashed rgba(255,255,255,0.12)`, margin:"8px 0" }}/>
             <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:IL.mu, marginBottom:4 }}>
@@ -2054,6 +2055,7 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
 // ─── Close Shift Modal ────────────────────────────────────────────────────────
 
 function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void }) {
+  const { storeName, address } = useStoreSettings();
   type Summary = { totalOrders: number; totalSales: number; byMethod: { cash: number; card: number; athmovil: number }; refundTotal: number; netSales: number; payIns: number; payOuts: number; expectedCash: number; cashTransactions: CashTxn[] };
   const [summary, setSummary] = useState<Summary | null>(null);
   const [closingFloat, setClosingFloat] = useState("");
@@ -2081,8 +2083,8 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
     if (!summary) return;
     setPrintingZ(true);
     const lines: Parameters<typeof printReceiptLines>[0] = [
-      { text: "ISLAND TACOS", bold: true, center: true, size: "large" },
-      { text: "Wickhams Cay 1, Road Town, BVI", center: true },
+      { text: storeName.toUpperCase(), bold: true, center: true, size: "large" },
+      { text: address, center: true },
       { divider: true, text: "" },
       { text: "Z-REPORT — END OF SHIFT", bold: true, center: true },
       { text: new Date().toLocaleString(), center: true },
@@ -3747,7 +3749,7 @@ export default function POS() {
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32" style={{ color:IL.mu }}>
-                <span className="text-3xl mb-2">🌮</span>
+                <span className="text-3xl mb-2">☕</span>
                 <span className="text-sm">Tap items to add</span>
               </div>
             ) : (

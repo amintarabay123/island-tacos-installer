@@ -68,7 +68,7 @@ export default function AccountPage() {
     return (
       <Layout>
         <div className="max-w-sm mx-auto px-4 py-20 text-center space-y-6">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-3xl">🌮</div>
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-3xl">☕</div>
           <div className="space-y-2">
             <h1 className="text-2xl font-bold">My Account</h1>
             <p className="text-muted-foreground text-sm">Sign in to see your order history and saved info.</p>

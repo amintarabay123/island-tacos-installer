@@ -160,6 +160,7 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
   sections: NavSection[]; onClose?: () => void; onLogout: () => void; isMobile?: boolean;
 }) {
   const [location] = useLocation();
+  const { storeName } = useStoreSettings();
 
   // ── Desktop: full labels, scalloped active-tab bleed effect ─────────────────
   if (!isMobile) {
@@ -217,9 +218,9 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 17,
               boxShadow: "0 0 0 1px rgba(200,168,130,0.3),0 4px 14px rgba(200,168,130,0.4)",
-            }}>🌮</div>
+            }}>☕</div>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: "-0.01em", color: TP }}>ISLAND TACOS</div>
+              <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: "-0.01em", color: TP }}>{storeName.toUpperCase()}</div>
               <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: TM, marginTop: 1 }}>Admin Panel</div>
             </div>
           </div>
@@ -277,9 +278,9 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 18,
             boxShadow: "0 0 0 1px rgba(200,168,130,0.3),0 4px 16px rgba(200,168,130,0.4)",
-          }}>🌮</div>
+          }}>☕</div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-0.02em", color: TP }}>ISLAND TACOS</div>
+            <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-0.02em", color: TP }}>{storeName.toUpperCase()}</div>
             <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: TM, marginTop: 2 }}>Admin Panel</div>
           </div>
         </div>
