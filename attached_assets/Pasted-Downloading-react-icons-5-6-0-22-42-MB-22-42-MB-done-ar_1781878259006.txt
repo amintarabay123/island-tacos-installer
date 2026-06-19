@@ -1,0 +1,33 @@
+Downloading react-icons@5.6.0: 22.42 MB/22.42 MB, done
+artifacts/api-server                     |  WARN  deprecated @types/bcryptjs@3.0.0
+Downloading tesseract.js-core@7.0.0: 16.94 MB/16.94 MB, done
+ WARN  3 deprecated subdependencies found: node-domexception@1.0.0, uuid@8.3.2, uuid@9.0.1
+Packages: +672
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 674, reused 0, downloaded 672, added 672, done
+node_modules/.pnpm/core-js@3.49.0/node_modules/core-js: Running postinstall script, done in 552ms
+node_modules/.pnpm/@clerk+shared@4.10.2_react-dom@19.1.0_react@19.1.0__react@19.1.0/node_modules/@clerk/shared: Running postinstall script, done in 581msodules/.pnpm/esbuild@0.27.3/node_modules/esbuild: Running postinstall script...
+node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild: Running postinstall script, done in 550ms
+. preinstall$ node -e "if(process.env.npm_config_user_agent&&!process.env.npm_config_user_agent.startsWith('pnpm')){console.error('Use pnpm inst…
+└─ Done in 73ms
+ WARN  Issues with peer dependencies found
+artifacts/island-tacos
+└─┬ @clerk/react 6.6.2
+  ├── ✕ unmet peer react@"^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0": found 19.1.0
+  ├── ✕ unmet peer react-dom@"^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0": found 19.1.0
+  └─┬ @clerk/shared 4.10.2
+    ├── ✕ unmet peer react@"^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0": found 19.1.0
+    └── ✕ unmet peer react-dom@"^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0": found 19.1.0
+
+devDependencies:
++ @esbuild/darwin-arm64 0.27.3 (0.28.1 is available)
++ prettier 3.8.1 (3.8.4 is available)
++ typescript 5.9.3 (6.0.3 is available)
+
+╭ Warning ───────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                            │
+│   Ignored build scripts: tesseract.js@7.0.0.                                               │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed to run scripts.   │
+│                                                                                            │
+╰────────────────────────────────────────────────────────────────────────────────────────────╯
+Done in 23.4s using pnpm v10.26.1
