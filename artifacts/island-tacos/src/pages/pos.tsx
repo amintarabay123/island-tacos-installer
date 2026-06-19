@@ -3564,7 +3564,7 @@ export default function POS() {
         </div>
         <div style={{ color:IL.mu, fontSize:13, fontFamily:"monospace" }}>{time}</div>
         <div className="flex items-center gap-2">
-          {/* Bell / Notifications */}
+          {/* Bell / Notifications — always visible */}
           <button
             onClick={notifPerm === "granted" ? undefined : requestNotifPermission}
             title={notifPerm === "denied" ? "Enable notifications in your browser/device settings" : undefined}
@@ -3585,7 +3585,7 @@ export default function POS() {
               </span>
             )}
           </button>
-          {/* Shift */}
+          {/* Shift — always visible */}
           <button
             onClick={() => currentShift && currentShift.id !== 0 ? setCloseShiftModal(true) : setOpenShiftModal(true)}
             style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
@@ -3596,33 +3596,7 @@ export default function POS() {
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
             ⏱ <span className="hidden sm:inline" style={{ position:"relative" }}>{currentShift && currentShift.id !== 0 ? "Shift Open" : "No Shift"}</span>
           </button>
-          {/* Cash */}
-          <button
-            onClick={() => setCashMgmtOpen(true)}
-            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
-              background:"linear-gradient(135deg,#10b981,#059669)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(16,185,129,0.45)" }}
-          >
-            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
-            💵 <span className="hidden sm:inline" style={{ position:"relative" }}>Cash</span>
-          </button>
-          {/* Receipts */}
-          <button onClick={() => setReceiptsOpen(true)}
-            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
-              background:"linear-gradient(135deg,#0ea5e9,#0284c7)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(14,165,233,0.45)" }}
-          >
-            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
-            🧾 <span className="hidden sm:inline" style={{ position:"relative" }}>Receipts</span>
-          </button>
-          {/* Sold Out */}
-          <button
-            onClick={() => setSoldOutOpen(true)}
-            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
-              background:"linear-gradient(135deg,#ff453a,#c0392b)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(255,69,58,0.45)" }}
-          >
-            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
-            🚫 <span className="hidden sm:inline" style={{ position:"relative" }}>Sold Out</span>
-          </button>
-          {/* Tickets / Held */}
+          {/* Tickets / Held — always visible */}
           <button
             onClick={() => setTicketsOpen(true)}
             style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
@@ -3631,29 +3605,70 @@ export default function POS() {
               boxShadow: ticketCount > 0 ? "0 2px 16px rgba(255,107,0,0.65)" : "0 2px 14px rgba(124,106,247,0.45)" }}
           >
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
-            🎫 <span className="hidden sm:inline" style={{ position:"relative" }}>{ticketCount > 0 ? `${ticketCount} Held` : "Tickets"}</span>
-            {ticketCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md" style={{ zIndex:1 }}>
-                {ticketCount}
-              </span>
+            🎫 <span style={{ position:"relative" }}>{ticketCount > 0 ? `${ticketCount} Held` : "Tickets"}</span>
+          </button>
+          {/* Desktop: Cash, Receipts, Sold Out, Admin, Reload */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button onClick={() => setCashMgmtOpen(true)}
+              style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+                background:"linear-gradient(135deg,#10b981,#059669)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(16,185,129,0.45)" }}
+            >
+              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+              💵 <span style={{ position:"relative" }}>Cash</span>
+            </button>
+            <button onClick={() => setReceiptsOpen(true)}
+              style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+                background:"linear-gradient(135deg,#0ea5e9,#0284c7)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(14,165,233,0.45)" }}
+            >
+              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+              🧾 <span style={{ position:"relative" }}>Receipts</span>
+            </button>
+            <button onClick={() => setSoldOutOpen(true)}
+              style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+                background:"linear-gradient(135deg,#ff453a,#c0392b)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(255,69,58,0.45)" }}
+            >
+              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+              🚫 <span style={{ position:"relative" }}>Sold Out</span>
+            </button>
+            <button onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.dashboard)}`)}
+              style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+                background:"linear-gradient(135deg,#7c6af7,#5b4cf5)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(124,106,247,0.45)" }}
+            >
+              <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
+              ← <span style={{ position:"relative" }}>Admin</span>
+            </button>
+            <button onClick={() => window.location.reload()} title="Reload POS"
+              style={{ padding:"6px 10px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:`1px solid ${IL.bord}`, color:IL.mu, cursor:"pointer" }}
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+          {/* Mobile: ⋯ overflow menu */}
+          <div className="relative sm:hidden">
+            <button
+              onClick={() => setMoreMenuOpen(m => !m)}
+              style={{ padding:"6px 12px", borderRadius:12, background:moreMenuOpen ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.08)", border:`1px solid ${IL.bord}`, color:IL.tp, cursor:"pointer", fontSize:18, fontWeight:700, lineHeight:1 }}
+            >⋯</button>
+            {moreMenuOpen && (
+              <div style={{ position:"absolute", right:0, top:"calc(100% + 8px)", background:"#111827", borderRadius:16, padding:10, display:"flex", flexDirection:"column", gap:8, zIndex:50, boxShadow:"0 8px 32px rgba(0,0,0,0.7)", border:`1px solid ${IL.bord}`, minWidth:170 }}>
+                <button onClick={() => { setCashMgmtOpen(true); setMoreMenuOpen(false); }}
+                  style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:"linear-gradient(135deg,#10b981,#059669)", border:"none", color:"#fff", width:"100%", textAlign:"left" }}
+                ><div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />💵 <span style={{ position:"relative" }}>Cash</span></button>
+                <button onClick={() => { setReceiptsOpen(true); setMoreMenuOpen(false); }}
+                  style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:"linear-gradient(135deg,#0ea5e9,#0284c7)", border:"none", color:"#fff", width:"100%", textAlign:"left" }}
+                ><div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />🧾 <span style={{ position:"relative" }}>Receipts</span></button>
+                <button onClick={() => { setSoldOutOpen(true); setMoreMenuOpen(false); }}
+                  style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:"linear-gradient(135deg,#ff453a,#c0392b)", border:"none", color:"#fff", width:"100%", textAlign:"left" }}
+                ><div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />🚫 <span style={{ position:"relative" }}>Sold Out</span></button>
+                <button onClick={() => { navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.dashboard)}`); setMoreMenuOpen(false); }}
+                  style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:"linear-gradient(135deg,#7c6af7,#5b4cf5)", border:"none", color:"#fff", width:"100%", textAlign:"left" }}
+                ><div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />← <span style={{ position:"relative" }}>Admin</span></button>
+                <button onClick={() => window.location.reload()}
+                  style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"10px 14px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:`1px solid ${IL.bord}`, color:IL.mu, cursor:"pointer", width:"100%", fontSize:13, fontWeight:600, fontFamily:"inherit" }}
+                ><RefreshCw className="w-4 h-4" /> Reload</button>
+              </div>
             )}
-          </button>
-          {/* Admin */}
-          <button onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.dashboard)}`)}
-            style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
-              background:"linear-gradient(135deg,#7c6af7,#5b4cf5)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(124,106,247,0.45)" }}
-          >
-            <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
-            ← <span className="hidden sm:inline" style={{ position:"relative" }}>Admin</span>
-          </button>
-          {/* Reload */}
-          <button
-            onClick={() => window.location.reload()}
-            title="Reload POS"
-            style={{ padding:"6px 10px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:`1px solid ${IL.bord}`, color:IL.mu, cursor:"pointer" }}
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
+          </div>
         </div>
       </header>
 

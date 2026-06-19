@@ -114,6 +114,13 @@ export default function StaffLogin() {
       >
         {loading ? "Verifying…" : "Enter"}
       </button>
+
+      <button
+        onClick={() => navigate("/")}
+        className="text-zinc-600 text-sm hover:text-zinc-400 transition-colors"
+      >
+        ← Back to menu
+      </button>
     </div>
   );
 }
