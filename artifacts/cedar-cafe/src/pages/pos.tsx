@@ -50,18 +50,18 @@ const now = () => new Date().toLocaleTimeString("en-US", { hour: "numeric", minu
 const uid = () => Math.random().toString(36).slice(2, 9);
 const PAY_LABEL: Record<string, string> = { cash: "Cash", card: "Card", athmovil: "ATH Móvil", complimentary: "Comp", split: "Split" };
 
-// ─── Indigo Luxe design tokens ────────────────────────────────────────────────
-const IL = { bg:"#0c0805",card:"#171009",hdr:"#100c06",bord:"#4a3020",tp:"#F5ECD7",tm:"#C8A882",mu:"#9e8570",or:"#C8A882",pur:"#C8A882",grn:"#3d8f6a",red:"#d4614a" };
-const IL_GLOW = { background:"#171009",border:"1px solid #4a3020",borderRadius:16,boxShadow:"0 0 0 1px rgba(255,255,255,0.03),0 4px 24px rgba(0,0,0,0.5),0 0 20px rgba(200,168,130,0.06)" };
+// ─── Cedar Cafe design tokens ─────────────────────────────────────────────────
+const IL = { bg:"#0d1612",card:"#162518",hdr:"#0a110d",bord:"rgba(100,200,130,0.14)",tp:"#e8f5ed",tm:"#8cc4a0",mu:"#5a8a6a",or:"#10b981",pur:"#10b981",grn:"#34d399",red:"#f87171" };
+const IL_GLOW = { background:"#162518",border:"1px solid rgba(100,200,130,0.14)",borderRadius:16,boxShadow:"0 0 0 1px rgba(255,255,255,0.03),0 4px 24px rgba(0,0,0,0.5),0 0 20px rgba(16,185,129,0.06)" };
 const ITEM_GRADS = [
-  { grad:"linear-gradient(145deg,#C8A882,#a8845e)", glow:"rgba(200,168,130,0.4)" },
+  { grad:"linear-gradient(145deg,#10b981,#059669)", glow:"rgba(16,185,129,0.4)" },
   { grad:"linear-gradient(145deg,#2d6a4f,#1d4d38)", glow:"rgba(45,106,79,0.4)" },
   { grad:"linear-gradient(145deg,#e8a030,#b87820)", glow:"rgba(232,160,48,0.4)" },
   { grad:"linear-gradient(145deg,#3d8f6a,#2d6a4f)", glow:"rgba(61,143,106,0.4)" },
   { grad:"linear-gradient(145deg,#8b6840,#5c3d20)", glow:"rgba(139,104,64,0.4)" },
   { grad:"linear-gradient(145deg,#d4614a,#a03d2a)", glow:"rgba(212,97,74,0.4)" },
   { grad:"linear-gradient(145deg,#9e7850,#6b4c2a)", glow:"rgba(158,120,80,0.4)" },
-  { grad:"linear-gradient(145deg,#6b4c2a,#4a3020)", glow:"rgba(107,76,42,0.4)" },
+  { grad:"linear-gradient(145deg,#6b4c2a,rgba(100,200,130,0.12))", glow:"rgba(107,76,42,0.4)" },
 ];
 
 type PrinterConfig = { type: "browser" | "network" | "bridge"; ip?: string; port?: number; bridgeUrl?: string; localApiUrl?: string };
@@ -353,7 +353,7 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
       onClick={onClose}
     >
         <div
-          style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:672, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px #4a3020", display:"flex", flexDirection:"column", maxHeight:"92dvh" }}
+          style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:672, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(100,200,130,0.12)", display:"flex", flexDirection:"column", maxHeight:"92dvh" }}
           onClick={e => e.stopPropagation()}
         >
           {/* Header — always visible at top */}
@@ -445,14 +445,14 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
               onChange={e => setNote(e.target.value)}
               placeholder="e.g. chicken slightly burnt, extra crispy…"
               rows={2}
-              style={{ width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:12, padding:"10px 12px", color:IL.tp, fontSize:13, resize:"none", outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
+              style={{ width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:12, padding:"10px 12px", color:IL.tp, fontSize:13, resize:"none", outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
             />
           </div>
           {/* Action buttons — always visible at bottom */}
           <div className="flex-shrink-0 p-5 pt-2 flex gap-3 pb-safe">
             <button onClick={onClose} style={{ flex:1, height:48, borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>Cancel</button>
             <button onClick={handleConfirm} disabled={!!validationError}
-              style={{ flexGrow:2, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:14, opacity:validationError?0.5:1, boxShadow:validationError?"none":"0 4px 16px rgba(200,168,130,0.45)" }}>
+              style={{ flexGrow:2, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:14, opacity:validationError?0.5:1, boxShadow:validationError?"none":"0 4px 16px rgba(16,185,129,0.45)" }}>
               Add to Order · {fmt(total)}
             </button>
           </div>
@@ -525,7 +525,7 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHol
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px #4a3020", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
         <div style={{ padding:"20px 20px 16px", borderBottom:`1px solid ${IL.bord}` }}>
           <div style={{ fontSize:16, fontWeight:800, color:IL.tp, letterSpacing:"-0.03em" }}>Collect Payment</div>
           <div style={{ fontSize:34, fontWeight:900, color:IL.or, letterSpacing:"-0.05em", lineHeight:1, marginTop:4 }}>{fmt(total)}</div>
@@ -545,7 +545,7 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHol
           {tab === "cash" && (
             <div>
               <p style={{ color:IL.mu, fontSize:13, marginBottom:8 }}>Amount tendered</p>
-              <div style={{ background:"#4a3020", borderRadius:14, padding:"12px 16px", color:IL.tp, fontSize:30, fontFamily:"monospace", fontWeight:700, textAlign:"right", marginBottom:12, border:`1px solid ${IL.bord}` }}>
+              <div style={{ background:"rgba(100,200,130,0.12)", borderRadius:14, padding:"12px 16px", color:IL.tp, fontSize:30, fontFamily:"monospace", fontWeight:700, textAlign:"right", marginBottom:12, border:`1px solid ${IL.bord}` }}>
                 ${tendered}
               </div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:8 }}>
@@ -566,7 +566,7 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHol
                   <p style={{ color:IL.grn, fontSize:30, fontWeight:900 }}>{fmt(change)}</p>
                 </div>
               ) : (
-                <div style={{ marginTop:16, background:"rgba(200,168,130,0.1)", border:"1px solid rgba(200,168,130,0.25)", borderRadius:14, padding:"14px 16px", textAlign:"center" }}>
+                <div style={{ marginTop:16, background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.25)", borderRadius:14, padding:"14px 16px", textAlign:"center" }}>
                   <p style={{ color:IL.mu, fontSize:13, marginBottom:2 }}>Still owed</p>
                   <p style={{ color:IL.or, fontSize:30, fontWeight:900 }}>{fmt(total - parseFloat(tendered || "0"))}</p>
                 </div>
@@ -582,9 +582,9 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHol
             </div>
           )}
           {tab === "athmovil" && (
-            <div style={{ borderRadius:18, padding:28, textAlign:"center", background:"linear-gradient(145deg,#C8A882,#2d6a4f,#1d4d38)", boxShadow:"0 8px 28px rgba(200,168,130,0.55)", position:"relative", overflow:"hidden" }}>
+            <div style={{ borderRadius:18, padding:28, textAlign:"center", background:"linear-gradient(145deg,#10b981,#2d6a4f,#1d4d38)", boxShadow:"0 8px 28px rgba(16,185,129,0.55)", position:"relative", overflow:"hidden" }}>
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.12) 0%,transparent 55%)", pointerEvents:"none" }} />
-              <div style={{ fontSize:64, marginBottom:14, position:"relative", filter:"drop-shadow(0 6px 16px rgba(200,168,130,0.6))" }}>📱</div>
+              <div style={{ fontSize:64, marginBottom:14, position:"relative", filter:"drop-shadow(0 6px 16px rgba(16,185,129,0.6))" }}>📱</div>
               <p style={{ color:"#fff", fontWeight:700, marginBottom:6, fontSize:16, position:"relative" }}>ATH Móvil payment</p>
               <p style={{ color:"rgba(255,255,255,0.75)", fontSize:13, position:"relative" }}>Confirm receipt of <span style={{ color:"#fff", fontWeight:800 }}>{fmt(total)}</span></p>
             </div>
@@ -596,7 +596,7 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHol
                 const amt = splitParsed[k];
                 return (
                   <button key={k} onClick={() => setSplitActive(k)}
-                    style={{ display:"flex", alignItems:"center", gap:12, borderRadius:14, padding:"12px 16px", border: isActive ? `1px solid ${IL.or}` : `1px solid ${IL.bord}`, background: isActive ? "rgba(200,168,130,0.1)" : "rgba(255,255,255,0.04)", cursor:"pointer", fontFamily:"inherit" }}>
+                    style={{ display:"flex", alignItems:"center", gap:12, borderRadius:14, padding:"12px 16px", border: isActive ? `1px solid ${IL.or}` : `1px solid ${IL.bord}`, background: isActive ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.04)", cursor:"pointer", fontFamily:"inherit" }}>
                     <span style={{ fontSize:22 }}>{SPLIT_METHOD_LABELS[k].icon}</span>
                     <span style={{ fontWeight:600, flex:1, textAlign:"left", color: isActive ? IL.tp : IL.tm }}>{SPLIT_METHOD_LABELS[k].label}</span>
                     <span style={{ fontSize:18, fontWeight:900, fontFamily:"monospace", color: amt > 0 ? (isActive ? IL.or : IL.tp) : IL.mu }}>{fmt(amt)}</span>
@@ -642,7 +642,7 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHol
           <button onClick={onClose} style={{ height:48, padding:"0 20px", borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.tm, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:14 }}>Cancel</button>
           {tab === "split" && !splitCollecting && (
             <button disabled={!splitReady} onClick={() => setSplitCollecting(true)}
-              style={{ flex:1, height:48, borderRadius:14, background: splitReady ? IL.or : "rgba(200,168,130,0.2)", border:"none", color:"#fff", fontWeight:900, fontSize:14, cursor: splitReady ? "pointer" : "default", opacity: splitReady ? 1 : 0.5, fontFamily:"inherit" }}>
+              style={{ flex:1, height:48, borderRadius:14, background: splitReady ? IL.or : "rgba(16,185,129,0.2)", border:"none", color:"#fff", fontWeight:900, fontSize:14, cursor: splitReady ? "pointer" : "default", opacity: splitReady ? 1 : 0.5, fontFamily:"inherit" }}>
               ✂ Confirm Split
             </button>
           )}
@@ -695,7 +695,7 @@ function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: n
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px #4a3020", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
         <div style={{ padding:"16px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div style={{ fontSize:16, fontWeight:800, color:IL.tp }}>Receipt</div>
           <span style={{ color:IL.grn, fontWeight:700, fontSize:13 }}>✓ Order placed</span>
@@ -755,7 +755,7 @@ function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: n
           <button onClick={print} style={{ flex:1, height:48, borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.tm, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
             🖨️ Print
           </button>
-          <button onClick={onClose} style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:900, cursor:"pointer", fontFamily:"inherit", fontSize:14, boxShadow:"0 4px 18px rgba(200,168,130,0.4)" }}>
+          <button onClick={onClose} style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:900, cursor:"pointer", fontFamily:"inherit", fontSize:14, boxShadow:"0 4px 18px rgba(16,185,129,0.4)" }}>
             New Order
           </button>
         </div>
@@ -804,10 +804,10 @@ function HoldModal({ initialName, initialPhone, initialNote, onHold, onClose }: 
     setShowSuggestions(false);
   };
 
-  const ilInput: React.CSSProperties = { width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 16px", color:IL.tp, fontSize:14, outline:"none", fontFamily:"inherit" };
+  const ilInput: React.CSSProperties = { width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 16px", color:IL.tp, fontSize:14, outline:"none", fontFamily:"inherit" };
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px #4a3020", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
         <div style={{ padding:"20px 20px 16px", borderBottom:`1px solid ${IL.bord}` }}>
           <div style={{ fontSize:16, fontWeight:800, color:IL.tp }}>Hold Ticket</div>
           <p style={{ color:IL.mu, fontSize:13, marginTop:4 }}>Save this order to resume and charge later.</p>
@@ -846,7 +846,7 @@ function HoldModal({ initialName, initialPhone, initialNote, onHold, onClose }: 
         <div style={{ padding:20, borderTop:`1px solid ${IL.bord}`, display:"flex", gap:12 }}>
           <button onClick={onClose} style={{ flex:1, height:48, borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.tm, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:14 }}>Cancel</button>
           <button onClick={() => onHold(name.trim(), phone.trim(), note.trim())}
-            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:900, cursor:"pointer", fontFamily:"inherit", fontSize:14, boxShadow:"0 4px 18px rgba(200,168,130,0.4)" }}>
+            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:900, cursor:"pointer", fontFamily:"inherit", fontSize:14, boxShadow:"0 4px 18px rgba(16,185,129,0.4)" }}>
             🎫 Hold Ticket
           </button>
         </div>
@@ -865,7 +865,7 @@ function DiscountModal({ subtotal, onApply, onClose }: { subtotal: number; onApp
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:320, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px #4a3020", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:320, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
         <div style={{ padding:"20px 20px 16px", borderBottom:`1px solid ${IL.bord}` }}>
           <div style={{ fontSize:16, fontWeight:800, color:IL.tp }}>Apply Discount</div>
         </div>
@@ -874,7 +874,7 @@ function DiscountModal({ subtotal, onApply, onClose }: { subtotal: number; onApp
             <button onClick={() => setType("pct")} style={{ flex:1, height:40, borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: type==="pct" ? IL.or : "rgba(74,48,32,0.4)", border: type==="pct" ? "none" : `1px solid ${IL.bord}`, color: type==="pct" ? "#fff" : IL.tm }}>Percent %</button>
             <button onClick={() => setType("amt")} style={{ flex:1, height:40, borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: type==="amt" ? IL.or : "rgba(74,48,32,0.4)", border: type==="amt" ? "none" : `1px solid ${IL.bord}`, color: type==="amt" ? "#fff" : IL.tm }}>Amount $</button>
           </div>
-          <div style={{ background:"#4a3020", borderRadius:14, padding:"12px 16px", color:IL.tp, fontSize:30, fontFamily:"monospace", fontWeight:700, textAlign:"right", marginBottom:8, border:`1px solid ${IL.bord}` }}>
+          <div style={{ background:"rgba(100,200,130,0.12)", borderRadius:14, padding:"12px 16px", color:IL.tp, fontSize:30, fontFamily:"monospace", fontWeight:700, textAlign:"right", marginBottom:8, border:`1px solid ${IL.bord}` }}>
             {type === "pct" ? `${val}%` : `$${val}`}
           </div>
           {discAmt > 0 && (
@@ -919,13 +919,13 @@ function OpenPriceModal({ item, onConfirm, onClose, initialPrice, initialNote }:
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:320, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px #4a3020", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:320, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
         <div style={{ padding:"20px 20px 16px", borderBottom:`1px solid ${IL.bord}` }}>
           <div style={{ fontSize:16, fontWeight:800, color:IL.tp }}>{item.name}</div>
           <p style={{ color:IL.mu, fontSize:12, marginTop:4 }}>Set price and describe the item</p>
         </div>
         <div style={{ padding:20 }}>
-          <div style={{ background:"#4a3020", borderRadius:14, padding:"12px 16px", color:IL.tp, fontSize:30, fontFamily:"monospace", fontWeight:700, textAlign:"right", marginBottom:12, border:`1px solid ${IL.bord}` }}>
+          <div style={{ background:"rgba(100,200,130,0.12)", borderRadius:14, padding:"12px 16px", color:IL.tp, fontSize:30, fontFamily:"monospace", fontWeight:700, textAlign:"right", marginBottom:12, border:`1px solid ${IL.bord}` }}>
             ${val}
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:8 }}>
@@ -941,13 +941,13 @@ function OpenPriceModal({ item, onConfirm, onClose, initialPrice, initialNote }:
             <label style={{ color:IL.mu, fontSize:11, fontWeight:700, display:"block", marginBottom:6 }}>Description (required)</label>
             <textarea value={note} onChange={e => setNote(e.target.value)}
               placeholder="What is this item? Goes on the receipt + KDS." rows={2}
-              style={{ width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 14px", color:IL.tp, fontSize:13, outline:"none", resize:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
+              style={{ width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 14px", color:IL.tp, fontSize:13, outline:"none", resize:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
           </div>
         </div>
         <div style={{ padding:20, borderTop:`1px solid ${IL.bord}`, display:"flex", gap:12 }}>
           <button onClick={onClose} style={{ flex:1, height:48, borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.tm, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:14 }}>Cancel</button>
           <button onClick={() => { onConfirm(price, note.trim()); }} disabled={!valid}
-            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:900, cursor: valid?"pointer":"default", fontFamily:"inherit", fontSize:14, opacity:valid?1:0.3, boxShadow: valid?"0 4px 18px rgba(200,168,130,0.4)":"none" }}>
+            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:900, cursor: valid?"pointer":"default", fontFamily:"inherit", fontSize:14, opacity:valid?1:0.3, boxShadow: valid?"0 4px 18px rgba(16,185,129,0.4)":"none" }}>
             {isEdit ? "Save" : "Add"} {price > 0 ? fmt(price) : ""}
           </button>
         </div>
@@ -1161,7 +1161,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     <>
       <div className="fixed inset-0 bg-black/75 flex justify-end z-50" onClick={onClose}>
         <div className="w-full max-w-sm h-full flex flex-col shadow-2xl" style={{ background:IL.hdr }} onClick={e => e.stopPropagation()}>
-          <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"linear-gradient(135deg,#C8A882,#2d6a4f)", flexShrink:0 }}>
+          <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"linear-gradient(135deg,#10b981,#065f46)", flexShrink:0 }}>
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
             <h2 style={{ color:"#fff", fontSize:20, fontWeight:800, position:"relative" }}>
               Orders{orders.length > 0 ? (search.trim() ? ` (${filteredOrders.length} of ${orders.length})` : ` (${orders.length})`) : ""}
@@ -1178,7 +1178,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search name, code, item, or last 4 of phone…"
-                  style={{ width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:12, paddingLeft:36, paddingRight:36, paddingTop:10, paddingBottom:10, fontSize:13, color:IL.tp, outline:"none", fontFamily:"inherit" }}
+                  style={{ width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:12, paddingLeft:36, paddingRight:36, paddingTop:10, paddingBottom:10, fontSize:13, color:IL.tp, outline:"none", fontFamily:"inherit" }}
                 />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color:IL.mu, fontSize:14, pointerEvents:"none" }}>🔍</span>
                 {search && (
@@ -1259,7 +1259,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                     </>
                   )}
                   {o.status === "confirmed" && (
-                    <button onClick={() => updateStatus(o.id, "preparing")} style={{ flex:1, height:40, borderRadius:10, background:"rgba(200,168,130,0.35)", border:"1px solid rgba(200,168,130,0.55)", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Start Cooking</button>
+                    <button onClick={() => updateStatus(o.id, "preparing")} style={{ flex:1, height:40, borderRadius:10, background:"rgba(16,185,129,0.35)", border:"1px solid rgba(16,185,129,0.55)", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Start Cooking</button>
                   )}
                   {o.status === "preparing" && (
                     <button onClick={() => updateStatus(o.id, "ready")} style={{ flex:1, height:40, borderRadius:10, background:"rgba(61,143,106,0.3)", border:"1px solid rgba(61,143,106,0.55)", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Mark Ready</button>
@@ -1268,7 +1268,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                     <button onClick={() => resume(o)} style={{ height:40, padding:"0 12px", borderRadius:10, background:"rgba(255,255,255,0.2)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Edit</button>
                   )}
                   {o.paymentStatus === "pending" ? (
-                    <button onClick={() => chargeTicket(o)} style={{ flex:1, height:40, borderRadius:10, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 3px 14px rgba(200,168,130,0.55)" }}>
+                    <button onClick={() => chargeTicket(o)} style={{ flex:1, height:40, borderRadius:10, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 3px 14px rgba(16,185,129,0.55)" }}>
                       Charge {fmt(o.total)}
                     </button>
                   ) : o.status === "ready" ? (
@@ -1458,8 +1458,8 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   if (selected) {
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setSelected(null)}>
-        <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px #4a3020", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
-          <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:`linear-gradient(135deg,${IL.or},#a8845e)`, flexShrink:0 }}>
+        <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+          <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:`linear-gradient(135deg,${IL.or},#059669)`, flexShrink:0 }}>
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
             <button onClick={() => setSelected(null)} style={{ color:"rgba(255,255,255,0.85)", fontSize:13, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit", position:"relative" }}>← Back</button>
             <h2 style={{ color:"#fff", fontSize:16, fontWeight:800, position:"relative" }}>Receipt #{selected.confirmationCode}</h2>
@@ -1553,7 +1553,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   setRefiring(false);
                 }
               }}
-              style={{ width:"100%", height:40, borderRadius:12, background:"rgba(200,168,130,0.15)", border:"1px solid rgba(200,168,130,0.35)", color:IL.pur, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:refiring?0.5:1 }}
+              style={{ width:"100%", height:40, borderRadius:12, background:"rgba(16,185,129,0.15)", border:"1px solid rgba(16,185,129,0.35)", color:IL.pur, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:refiring?0.5:1 }}
             >
               {refiring ? "Sending…" : "🔁 Re-fire to KDS"}
             </button>
@@ -1566,7 +1566,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   setPrinting(false);
                 }}
                 disabled={printing}
-                style={{ flex:1, height:44, borderRadius:12, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, opacity:printing?0.5:1, boxShadow:"0 3px 14px rgba(200,168,130,0.4)" }}
+                style={{ flex:1, height:44, borderRadius:12, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, opacity:printing?0.5:1, boxShadow:"0 3px 14px rgba(16,185,129,0.4)" }}
               >
                 {printing ? "Printing…" : "🖨 Print"}
               </button>
@@ -1595,7 +1595,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   placeholder="customer@email.com"
                   value={emailAddress}
                   onChange={e => setEmailAddress(e.target.value)}
-                  style={{ width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:10, padding:"8px 12px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
+                  style={{ width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:10, padding:"8px 12px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
                 />
                 <button
                   disabled={emailSending || !emailAddress}
@@ -1656,7 +1656,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   <div className="flex-1">
                     <label style={{ color:IL.mu, fontSize:11, display:"block", marginBottom:4 }}>Amount</label>
                     <input type="number" step="0.01" value={refundAmount} onChange={e => setRefundAmount(e.target.value)}
-                      style={{ width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:8, padding:"8px 10px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
+                      style={{ width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:8, padding:"8px 10px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
                   </div>
                   <div className="flex-1">
                     <label style={{ color:IL.mu, fontSize:11, display:"block", marginBottom:4 }}>Method</label>
@@ -1669,7 +1669,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
                 <input type="text" placeholder="Reason (optional)" value={refundReason} onChange={e => setRefundReason(e.target.value)}
-                  style={{ width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:8, padding:"8px 10px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
+                  style={{ width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:8, padding:"8px 10px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
                 <button disabled={refundSubmitting || !refundAmount}
                   onClick={async () => {
                     setRefundSubmitting(true);
@@ -1717,10 +1717,10 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
             <button key={f} onClick={() => setFilter(f)}
               style={{ position:"relative", overflow:"hidden", flex:1, height:40, borderRadius:10, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
                 background: f === "today"
-                  ? (filter === f ? `linear-gradient(135deg,${IL.or},#a8845e)` : "linear-gradient(135deg,rgba(200,168,130,0.35),rgba(255,149,0,0.2))")
-                  : (filter === f ? "linear-gradient(135deg,#C8A882,#2d6a4f)" : "linear-gradient(135deg,rgba(200,168,130,0.35),rgba(91,76,245,0.2))"),
+                  ? (filter === f ? `linear-gradient(135deg,${IL.or},#059669)` : "linear-gradient(135deg,rgba(16,185,129,0.35),rgba(255,149,0,0.2))")
+                  : (filter === f ? "linear-gradient(135deg,#10b981,#065f46)" : "linear-gradient(135deg,rgba(16,185,129,0.35),rgba(16,185,129,0.2))"),
                 border:"none", color:"#fff",
-                boxShadow: filter === f ? (f === "today" ? "0 3px 12px rgba(200,168,130,0.45)" : "0 3px 12px rgba(200,168,130,0.45)") : "none" }}>
+                boxShadow: filter === f ? (f === "today" ? "0 3px 12px rgba(16,185,129,0.45)" : "0 3px 12px rgba(16,185,129,0.45)") : "none" }}>
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
               <span style={{ position:"relative" }}>{f === "today" ? "Today" : "All Time"}</span>
             </button>
@@ -1736,7 +1736,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Name, phone, or item…"
-              style={{ width:"100%", height:40, paddingLeft:32, paddingRight:32, background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:10, fontSize:13, color:IL.tp, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
+              style={{ width:"100%", height:40, paddingLeft:32, paddingRight:32, background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:10, fontSize:13, color:IL.tp, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }}
             />
             {search && (
               <button
@@ -1805,19 +1805,19 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
 // ─── 86 Panel ────────────────────────────────────────────────────────────────
 
 const EIGHTY_SIX = [
-  { label: "Steak",       emoji: "🥩", type: "item"     as const, keywords: ["steak"]                   },
-  { label: "Salmon",      emoji: "🐟", type: "item"     as const, keywords: ["salmon"]                  },
-  { label: "Shrimp",      emoji: "🍤", type: "item"     as const, keywords: ["shrimp"]                  },
-  { label: "Chicken",     emoji: "🍗", type: "item"     as const, keywords: ["chicken"]                 },
-  { label: "Veggie",      emoji: "🥗", type: "item"     as const, keywords: ["veggie"]                  },
-  { label: "Burger",      emoji: "🍔", type: "item"     as const, keywords: ["burger"]                  },
-  { label: "Rice",        emoji: "🍚", type: "modifier" as const, keywords: ["rice"]                    },
-  { label: "Beans",       emoji: "🫘", type: "modifier" as const, keywords: ["bean"]                    },
-  { label: "Guac",        emoji: "🥑", type: "modifier" as const, keywords: ["guac"]                    },
-  { label: "Corn",        emoji: "🌽", type: "modifier" as const, keywords: ["corn"]                    },
-  { label: "Cabbage",     emoji: "🥬", type: "modifier" as const, keywords: ["cabbage"]                 },
-  { label: "Cheese",      emoji: "🧀", type: "modifier" as const, keywords: ["cheese"]                  },
-  { label: "Pico/Tomato", emoji: "🍅", type: "modifier" as const, keywords: ["pico", "tomato", "salsa"] },
+  { label: "Espresso",      emoji: "☕", type: "item"     as const, keywords: ["espresso"]            },
+  { label: "Latte",         emoji: "🥛", type: "item"     as const, keywords: ["latte"]               },
+  { label: "Cappuccino",    emoji: "☕", type: "item"     as const, keywords: ["cappuccino"]          },
+  { label: "Cold Brew",     emoji: "🧊", type: "item"     as const, keywords: ["cold brew", "cold"]  },
+  { label: "Matcha",        emoji: "🍵", type: "item"     as const, keywords: ["matcha"]              },
+  { label: "Croissant",     emoji: "🥐", type: "item"     as const, keywords: ["croissant"]           },
+  { label: "Oat Milk",      emoji: "🌾", type: "modifier" as const, keywords: ["oat"]                 },
+  { label: "Almond Milk",   emoji: "🥜", type: "modifier" as const, keywords: ["almond"]              },
+  { label: "Soy Milk",      emoji: "🌱", type: "modifier" as const, keywords: ["soy"]                 },
+  { label: "Whipped Cream", emoji: "🍦", type: "modifier" as const, keywords: ["whip", "whipped"]    },
+  { label: "Vanilla Syrup", emoji: "🍯", type: "modifier" as const, keywords: ["vanilla"]             },
+  { label: "Caramel Syrup", emoji: "🍮", type: "modifier" as const, keywords: ["caramel"]             },
+  { label: "Hazelnut",      emoji: "🌰", type: "modifier" as const, keywords: ["hazelnut"]            },
 ];
 
 type SoldOutItem = { id: number; name: string; categoryId: number; available: boolean };
@@ -2014,7 +2014,7 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px #4a3020", overflow:"hidden" }}>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }}>
         <div style={{ position:"relative", overflow:"hidden", padding:"20px 20px 16px", textAlign:"center", background:"linear-gradient(135deg,#3d8f6a,#2d6a4f)" }}>
           <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
           <div style={{ fontSize:36, marginBottom:6, position:"relative" }}>🏪</div>
@@ -2038,7 +2038,7 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
         {error && <p style={{ color:IL.red, fontSize:13, textAlign:"center", marginBottom:12 }}>{error}</p>}
         <div className="flex gap-2">
           <button onClick={handleOpen} disabled={submitting}
-            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:15, opacity:submitting?0.5:1, boxShadow:"0 4px 16px rgba(200,168,130,0.45)" }}>
+            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:15, opacity:submitting?0.5:1, boxShadow:"0 4px 16px rgba(16,185,129,0.45)" }}>
             {submitting ? "Opening…" : "Open Shift"}
           </button>
           <button onClick={() => onOpen({ id: 0, openedAt: new Date().toISOString(), closedAt: null, openingFloat: 0, closingFloat: null, notes: null })}
@@ -2115,7 +2115,7 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={closed ? onClose : undefined}>
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px #4a3020", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
         <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background: closed ? "linear-gradient(135deg,#3d8f6a,#2d6a4f)" : "linear-gradient(135deg,#d4614a,#a03d2a)" }}>
           <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
           <h2 style={{ color:"#fff", fontSize:17, fontWeight:800, position:"relative" }}>{closed ? "✓ Shift Closed" : "Close Shift"}</h2>
@@ -2167,7 +2167,7 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
             </button>
           )}
           {closed && (
-            <button onClick={onClose} style={{ flex:1, height:44, borderRadius:12, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 16px rgba(200,168,130,0.45)" }}>
+            <button onClick={onClose} style={{ flex:1, height:44, borderRadius:12, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 16px rgba(16,185,129,0.45)" }}>
               Done
             </button>
           )}
@@ -2211,7 +2211,7 @@ function PayInOutModal({ shiftId, onClose }: { shiftId: number | null; onClose: 
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px #4a3020", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
         <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"linear-gradient(135deg,#3d8f6a,#2d6a4f)" }}>
           <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
           <h2 style={{ color:"#fff", fontSize:17, fontWeight:800, position:"relative" }}>💵 Cash Management</h2>
@@ -2458,7 +2458,7 @@ function SplitPaymentModal({
   if (confirmed) {
     return (
       <div className="fixed inset-0 bg-black/75 flex items-end sm:items-center justify-center z-50 p-4">
-        <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px #4a3020", overflow:"hidden" }}>
+        <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }}>
           <div style={{ padding:"16px 20px", background:"rgba(61,143,106,0.15)", borderBottom:"1px solid rgba(61,143,106,0.3)", display:"flex", alignItems:"center", gap:12 }}>
             <span style={{ fontSize:28 }}>✅</span>
             <div>
@@ -2503,7 +2503,7 @@ function SplitPaymentModal({
             )}
           </div>
           <div style={{ padding:"0 20px 20px" }}>
-            <button onClick={onClose} style={{ width:"100%", height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:900, fontSize:15, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 4px 16px rgba(200,168,130,0.45)" }}>
+            <button onClick={onClose} style={{ width:"100%", height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:900, fontSize:15, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 4px 16px rgba(16,185,129,0.45)" }}>
               Done
             </button>
           </div>
@@ -2515,7 +2515,7 @@ function SplitPaymentModal({
   // ─── Main assign-items screen (with optional cash overlay on top) ────────
   return (
     <div className="fixed inset-0 bg-black/75 flex items-end sm:items-center justify-center z-50 p-4">
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:672, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px #4a3020", display:"flex", flexDirection:"column", maxHeight:"90vh" }}>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:672, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(100,200,130,0.12)", display:"flex", flexDirection:"column", maxHeight:"90vh" }}>
 
         {/* Header */}
         <div style={{ padding:"16px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexShrink:0 }}>
@@ -2549,7 +2549,7 @@ function SplitPaymentModal({
             const itemAmt = scaledItemAmount(item);
             const r = method === "cash" ? cashReceipts[item.key] : undefined;
             return (
-              <div key={item.key} style={{ borderRadius:14, border: isPaid ? "1px solid rgba(61,143,106,0.4)" : isCashPending ? "1px solid rgba(245,158,11,0.45)" : isSelected ? "1px solid rgba(200,168,130,0.4)" : `1px solid ${IL.bord}`, background: isPaid ? "rgba(61,143,106,0.1)" : isCashPending ? "rgba(245,158,11,0.1)" : isSelected ? "rgba(200,168,130,0.1)" : "rgba(255,255,255,0.04)" }}>
+              <div key={item.key} style={{ borderRadius:14, border: isPaid ? "1px solid rgba(61,143,106,0.4)" : isCashPending ? "1px solid rgba(245,158,11,0.45)" : isSelected ? "1px solid rgba(16,185,129,0.4)" : `1px solid ${IL.bord}`, background: isPaid ? "rgba(61,143,106,0.1)" : isCashPending ? "rgba(245,158,11,0.1)" : isSelected ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.04)" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 12px" }}>
                   <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.key)}
                     className="w-5 h-5 rounded accent-orange-400 cursor-pointer flex-shrink-0" />
@@ -2598,7 +2598,7 @@ function SplitPaymentModal({
         {/* Bulk assign bar */}
         {selected.size > 0 && (
           <div style={{ padding:"0 16px 8px", flexShrink:0 }}>
-            <div style={{ background:"rgba(200,168,130,0.1)", border:"1px solid rgba(200,168,130,0.3)", borderRadius:14, padding:12, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+            <div style={{ background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.3)", borderRadius:14, padding:12, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
               <span style={{ color:IL.or, fontSize:13, fontWeight:900, flexShrink:0 }}>{selected.size} item{selected.size > 1 ? "s" : ""}</span>
               <span style={{ color:IL.mu, fontSize:11, flexShrink:0 }}>pay with:</span>
               {SPLIT_METHODS.map(sm => (
@@ -2650,7 +2650,7 @@ function SplitPaymentModal({
             </button>
           )}
           <button onClick={finalizeOrder} disabled={!allPaid || submitting}
-            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit", opacity:(!allPaid||submitting)?0.4:1, boxShadow:(!allPaid||submitting)?"none":"0 4px 16px rgba(200,168,130,0.45)" }}>
+            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit", opacity:(!allPaid||submitting)?0.4:1, boxShadow:(!allPaid||submitting)?"none":"0 4px 16px rgba(16,185,129,0.45)" }}>
             {submitting ? "Placing order…" : allPaid ? "✓ Place Order" : !allAssigned ? "Assign all items first" : "Collect remaining cash first"}
           </button>
         </div>
@@ -2659,7 +2659,7 @@ function SplitPaymentModal({
       {/* Per-item cash overlay — opens when user picks Cash for an item */}
       {cashItem && (
         <div className="fixed inset-0 bg-black/85 z-[60] flex items-end sm:items-center justify-center p-4" onClick={cancelCashCollection}>
-          <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.7),0 0 0 1px #4a3020", display:"flex", flexDirection:"column", maxHeight:"90vh" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.7),0 0 0 1px rgba(100,200,130,0.12)", display:"flex", flexDirection:"column", maxHeight:"90vh" }} onClick={e => e.stopPropagation()}>
             <div style={{ padding:"16px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
               <div style={{ minWidth:0 }}>
                 <p style={{ color:IL.tp, fontWeight:900, fontSize:15, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>💵 Cash for {cashItem.quantity > 1 ? `${cashItem.quantity}× ` : ""}{cashItem.name}</p>
@@ -2676,7 +2676,7 @@ function SplitPaymentModal({
               <div className="flex flex-wrap gap-2 mb-2">
                 {cashQuick.map(q => (
                   <button key={q} onClick={() => setCashTendered(String(q))}
-                    style={{ flex:1, minWidth:56, height:40, borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background: parseFloat(cashTendered) === q ? `linear-gradient(135deg,${IL.or},#a8845e)` : "rgba(74,48,32,0.4)", border: parseFloat(cashTendered) === q ? "none" : `1px solid ${IL.bord}`, color: parseFloat(cashTendered) === q ? "#fff" : IL.tm, boxShadow: parseFloat(cashTendered) === q ? "0 3px 10px rgba(200,168,130,0.4)" : "none" }}>
+                    style={{ flex:1, minWidth:56, height:40, borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background: parseFloat(cashTendered) === q ? `linear-gradient(135deg,${IL.or},#059669)` : "rgba(74,48,32,0.4)", border: parseFloat(cashTendered) === q ? "none" : `1px solid ${IL.bord}`, color: parseFloat(cashTendered) === q ? "#fff" : IL.tm, boxShadow: parseFloat(cashTendered) === q ? "0 3px 10px rgba(16,185,129,0.4)" : "none" }}>
                     {fmt(q)}
                   </button>
                 ))}
@@ -2697,7 +2697,7 @@ function SplitPaymentModal({
             <div style={{ padding:"16px 20px", borderTop:`1px solid ${IL.bord}`, display:"flex", gap:12, flexShrink:0 }}>
               <button onClick={cancelCashCollection} style={{ height:48, padding:"0 20px", borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>Cancel</button>
               <button onClick={saveCashReceipt} disabled={!cashTenderedEnough}
-                style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:900, fontSize:15, cursor:"pointer", fontFamily:"inherit", opacity:cashTenderedEnough?1:0.4, boxShadow:cashTenderedEnough?"0 4px 16px rgba(200,168,130,0.45)":"none" }}>
+                style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:900, fontSize:15, cursor:"pointer", fontFamily:"inherit", opacity:cashTenderedEnough?1:0.4, boxShadow:cashTenderedEnough?"0 4px 16px rgba(16,185,129,0.45)":"none" }}>
                 ✓ Save & Next
               </button>
             </div>
@@ -3569,9 +3569,9 @@ export default function POS() {
             onClick={notifPerm === "granted" ? undefined : requestNotifPermission}
             title={notifPerm === "denied" ? "Enable notifications in your browser/device settings" : undefined}
             style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:notifPerm==="denied"?"not-allowed":"pointer", fontFamily:"inherit",
-              background: incomingOrders.length > 0 ? `linear-gradient(135deg,${IL.or},#a8845e)` : notifPerm === "granted" ? "linear-gradient(135deg,rgba(61,143,106,0.55),rgba(16,185,129,0.35))" : notifPerm === "denied" ? "linear-gradient(135deg,rgba(255,69,58,0.55),rgba(192,57,43,0.35))" : "linear-gradient(135deg,rgba(251,191,36,0.55),rgba(245,158,11,0.35))",
+              background: incomingOrders.length > 0 ? `linear-gradient(135deg,${IL.or},#059669)` : notifPerm === "granted" ? "linear-gradient(135deg,rgba(61,143,106,0.55),rgba(16,185,129,0.35))" : notifPerm === "denied" ? "linear-gradient(135deg,rgba(255,69,58,0.55),rgba(192,57,43,0.35))" : "linear-gradient(135deg,rgba(251,191,36,0.55),rgba(245,158,11,0.35))",
               border:"none", color:"#fff",
-              boxShadow: incomingOrders.length > 0 ? "0 2px 16px rgba(200,168,130,0.65)" : "none" }}
+              boxShadow: incomingOrders.length > 0 ? "0 2px 16px rgba(16,185,129,0.65)" : "none" }}
             className={incomingOrders.length > 0 ? "animate-pulse" : ""}
           >
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
@@ -3600,9 +3600,9 @@ export default function POS() {
           <button
             onClick={() => setTicketsOpen(true)}
             style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
-              background: ticketCount > 0 ? `linear-gradient(135deg,${IL.or},#a8845e)` : "linear-gradient(135deg,#C8A882,#2d6a4f)",
+              background: ticketCount > 0 ? `linear-gradient(135deg,${IL.or},#059669)` : "linear-gradient(135deg,#10b981,#065f46)",
               border:"none", color:"#fff",
-              boxShadow: ticketCount > 0 ? "0 2px 16px rgba(200,168,130,0.65)" : "0 2px 14px rgba(200,168,130,0.45)" }}
+              boxShadow: ticketCount > 0 ? "0 2px 16px rgba(16,185,129,0.65)" : "0 2px 14px rgba(16,185,129,0.45)" }}
           >
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
             🎫 <span style={{ position:"relative" }}>{ticketCount > 0 ? `${ticketCount} Held` : "Tickets"}</span>
@@ -3632,7 +3632,7 @@ export default function POS() {
             </button>
             <button onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.dashboard)}`)}
               style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
-                background:"linear-gradient(135deg,#C8A882,#2d6a4f)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(200,168,130,0.45)" }}
+                background:"linear-gradient(135deg,#10b981,#065f46)", border:"none", color:"#fff", boxShadow:"0 2px 14px rgba(16,185,129,0.45)" }}
             >
               <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
               ← <span style={{ position:"relative" }}>Admin</span>
@@ -3661,7 +3661,7 @@ export default function POS() {
                   style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:"linear-gradient(135deg,#d4614a,#a03d2a)", border:"none", color:"#fff", width:"100%", textAlign:"left" }}
                 ><div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />🚫 <span style={{ position:"relative" }}>Sold Out</span></button>
                 <button onClick={() => { navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.dashboard)}`); setMoreMenuOpen(false); }}
-                  style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:"linear-gradient(135deg,#C8A882,#2d6a4f)", border:"none", color:"#fff", width:"100%", textAlign:"left" }}
+                  style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background:"linear-gradient(135deg,#10b981,#065f46)", border:"none", color:"#fff", width:"100%", textAlign:"left" }}
                 ><div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />← <span style={{ position:"relative" }}>Admin</span></button>
                 <button onClick={() => window.location.reload()}
                   style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"10px 14px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:`1px solid ${IL.bord}`, color:IL.mu, cursor:"pointer", width:"100%", fontSize:13, fontWeight:600, fontFamily:"inherit" }}
@@ -3683,19 +3683,19 @@ export default function POS() {
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color:IL.mu }}>🔍</span>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search items…"
-                style={{ width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 16px 10px 36px", color:IL.tp, fontSize:14, outline:"none", fontFamily:"inherit" }}/>
+                style={{ width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 16px 10px 36px", color:IL.tp, fontSize:14, outline:"none", fontFamily:"inherit" }}/>
             </div>
           </div>
 
           {/* Category tabs */}
           <div className="flex gap-2 px-3 pb-2 overflow-x-auto flex-shrink-0 scrollbar-none">
             <button onClick={() => setSelectedCat(null)}
-              style={{ flexShrink:0, padding:"6px 16px", borderRadius:999, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s", background: selectedCat === null ? `linear-gradient(135deg,${IL.or},#a8845e)` : "rgba(74,48,32,0.4)", border: selectedCat === null ? "none" : `1px solid ${IL.bord}`, color: selectedCat === null ? "#fff" : IL.mu, boxShadow: selectedCat === null ? "0 3px 14px rgba(200,168,130,0.4)" : "none" }}>
+              style={{ flexShrink:0, padding:"6px 16px", borderRadius:999, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s", background: selectedCat === null ? `linear-gradient(135deg,${IL.or},#059669)` : "rgba(74,48,32,0.4)", border: selectedCat === null ? "none" : `1px solid ${IL.bord}`, color: selectedCat === null ? "#fff" : IL.mu, boxShadow: selectedCat === null ? "0 3px 14px rgba(16,185,129,0.4)" : "none" }}>
               All
             </button>
             {categories.map(cat => (
               <button key={cat.id} onClick={() => setSelectedCat(cat.id)}
-                style={{ flexShrink:0, padding:"6px 16px", borderRadius:999, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s", background: selectedCat === cat.id ? `linear-gradient(135deg,${IL.or},#a8845e)` : "rgba(74,48,32,0.4)", border: selectedCat === cat.id ? "none" : `1px solid ${IL.bord}`, color: selectedCat === cat.id ? "#fff" : IL.mu, boxShadow: selectedCat === cat.id ? "0 3px 14px rgba(200,168,130,0.4)" : "none" }}>
+                style={{ flexShrink:0, padding:"6px 16px", borderRadius:999, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s", background: selectedCat === cat.id ? `linear-gradient(135deg,${IL.or},#059669)` : "rgba(74,48,32,0.4)", border: selectedCat === cat.id ? "none" : `1px solid ${IL.bord}`, color: selectedCat === cat.id ? "#fff" : IL.mu, boxShadow: selectedCat === cat.id ? "0 3px 14px rgba(16,185,129,0.4)" : "none" }}>
                 {cat.name}
               </button>
             ))}
@@ -3735,7 +3735,7 @@ export default function POS() {
               )}
             </div>
             {resumedOrderId && (customerName || customerPhone) && (
-              <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background:"rgba(200,168,130,0.1)", border:"1px solid rgba(200,168,130,0.25)" }}>
+              <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.25)" }}>
                 <span className="text-base">👤</span>
                 <div className="min-w-0">
                   {customerName && <p style={{ color:IL.tp, fontSize:13, fontWeight:600 }} className="leading-tight truncate">{customerName}</p>}
@@ -3799,13 +3799,13 @@ export default function POS() {
             <div className="px-4 py-4 flex-shrink-0 space-y-3" style={{ borderTop:`1px solid ${IL.bord}` }}>
               {/* Discount + note row */}
               <div className="flex gap-2">
-                <button onClick={() => setDiscountModal(true)} style={{ flex:1, height:44, borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: discount > 0 ? "rgba(61,143,106,0.1)" : "#4a3020", border: discount > 0 ? "1px solid rgba(61,143,106,0.3)" : `1px solid ${IL.bord}`, color: discount > 0 ? IL.grn : IL.mu }}>
+                <button onClick={() => setDiscountModal(true)} style={{ flex:1, height:44, borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: discount > 0 ? "rgba(61,143,106,0.1)" : "rgba(100,200,130,0.12)", border: discount > 0 ? "1px solid rgba(61,143,106,0.3)" : `1px solid ${IL.bord}`, color: discount > 0 ? IL.grn : IL.mu }}>
                   {discount > 0 ? `Discount -${fmt(discount)}` : "% Discount"}
                 </button>
                 {discount > 0 && (
-                  <button onClick={() => setDiscount(0)} style={{ height:44, width:44, borderRadius:12, background:"#4a3020", border:`1px solid ${IL.bord}`, color:IL.mu, fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontFamily:"inherit" }}>×</button>
+                  <button onClick={() => setDiscount(0)} style={{ height:44, width:44, borderRadius:12, background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, color:IL.mu, fontSize:20, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontFamily:"inherit" }}>×</button>
                 )}
-                <button onClick={() => setOrderNoteModal(true)} style={{ flex:1, height:44, borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: orderNotes ? "rgba(200,168,130,0.1)" : "#4a3020", border: orderNotes ? `1px solid ${IL.pur}` : `1px solid ${IL.bord}`, color: orderNotes ? IL.pur : IL.mu }}>
+                <button onClick={() => setOrderNoteModal(true)} style={{ flex:1, height:44, borderRadius:12, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", background: orderNotes ? "rgba(16,185,129,0.1)" : "rgba(100,200,130,0.12)", border: orderNotes ? `1px solid ${IL.pur}` : `1px solid ${IL.bord}`, color: orderNotes ? IL.pur : IL.mu }}>
                   {orderNotes ? "📝 Note" : "Add Note"}
                 </button>
               </div>
@@ -3825,12 +3825,12 @@ export default function POS() {
                     🎫 Hold
                   </button>
                   <button onClick={() => setSplitModal(true)} disabled={submitting || cart.length < 2}
-                    style={{ height:56, borderRadius:14, background:"#4a3020", border:`1px solid ${IL.bord}`, color:IL.tm, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:(submitting||cart.length<2)?0.4:1 }}>
+                    style={{ height:56, borderRadius:14, background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, color:IL.tm, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:(submitting||cart.length<2)?0.4:1 }}>
                     ✂ Split
                   </button>
                 </div>
                 <button onClick={() => setPaymentModal(true)} disabled={submitting}
-                  style={{ width:"100%", height:64, borderRadius:16, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:900, fontSize:20, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 6px 24px rgba(200,168,130,0.45)", opacity:submitting?0.5:1 }}>
+                  style={{ width:"100%", height:64, borderRadius:16, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:900, fontSize:20, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 6px 24px rgba(16,185,129,0.45)", opacity:submitting?0.5:1 }}>
                   {submitting ? "Processing…" : `Charge ${fmt(total)}`}
                 </button>
               </div>
@@ -3975,7 +3975,7 @@ export default function POS() {
         return (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:448, boxShadow:"0 24px 80px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.08)", overflow:"hidden" }}>
-              <div style={{ padding:"12px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background: order.source === "phone" ? "linear-gradient(135deg,#3d8f6a,#2d6a4f)" : `linear-gradient(135deg,${IL.or},#a8845e)` }}>
+              <div style={{ padding:"12px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background: order.source === "phone" ? "linear-gradient(135deg,#3d8f6a,#2d6a4f)" : `linear-gradient(135deg,${IL.or},#059669)` }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <span style={{ fontSize:20 }}>{order.source === "phone" ? "📞" : "🔔"}</span>
                   <span style={{ color:"#fff", fontWeight:800, fontSize:16 }}>{order.source === "phone" ? "New Phone Order" : "New Online Order"}</span>
@@ -4022,7 +4022,7 @@ export default function POS() {
                 </div>
 
                 {order.notes && (
-                  <div style={{ background:"rgba(200,168,130,0.1)", border:"1px solid rgba(200,168,130,0.25)", borderRadius:12, padding:"8px 14px", color:IL.or, fontSize:13 }}>
+                  <div style={{ background:"rgba(16,185,129,0.1)", border:"1px solid rgba(16,185,129,0.25)", borderRadius:12, padding:"8px 14px", color:IL.or, fontSize:13 }}>
                     {order.notes}
                   </div>
                 )}
@@ -4042,14 +4042,14 @@ export default function POS() {
                       value={["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].includes(rejectReason) ? "" : rejectReason}
                       onChange={e => setRejectReason(e.target.value)}
                       placeholder="Other reason (optional)"
-                      style={{ width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 14px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
+                      style={{ width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 14px", color:IL.tp, fontSize:13, outline:"none", fontFamily:"inherit", boxSizing:"border-box" }} />
                     <div style={{ display:"flex", gap:8 }}>
                       <button onClick={() => rejectOnline(order.id)}
                         style={{ flex:1, height:44, borderRadius:14, background:IL.red, border:"none", color:"#fff", fontWeight:800, cursor:"pointer", fontFamily:"inherit", fontSize:14 }}>
                         Confirm Reject
                       </button>
                       <button onClick={() => { setShowRejectInput(false); setRejectReason(""); }}
-                        style={{ padding:"0 16px", height:44, borderRadius:14, background:"#4a3020", border:`1px solid ${IL.bord}`, color:IL.tm, fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:14 }}>
+                        style={{ padding:"0 16px", height:44, borderRadius:14, background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, color:IL.tm, fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:14 }}>
                         Back
                       </button>
                     </div>
@@ -4100,12 +4100,12 @@ export default function POS() {
         if (!item) return null;
         return (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setItemNoteModal(null)}>
-            <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, padding:20, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px #4a3020" }} onClick={e => e.stopPropagation()}>
+            <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, padding:20, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(100,200,130,0.12)" }} onClick={e => e.stopPropagation()}>
               <h3 style={{ color:IL.tp, fontWeight:800, fontSize:15, marginBottom:12 }}>Note for {item.name}</h3>
               <textarea value={item.notes} onChange={e => setItemNote(itemNoteModal, e.target.value)}
                 placeholder="E.g. no onions, extra sauce…"
-                style={{ width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 14px", color:IL.tp, fontSize:14, outline:"none", resize:"none", height:96, fontFamily:"inherit", boxSizing:"border-box" }}/>
-              <button onClick={() => setItemNoteModal(null)} style={{ marginTop:12, width:"100%", height:44, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#a8845e)`, border:"none", color:"#fff", fontWeight:900, cursor:"pointer", fontFamily:"inherit", fontSize:14, boxShadow:"0 4px 18px rgba(200,168,130,0.4)" }}>Done</button>
+                style={{ width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 14px", color:IL.tp, fontSize:14, outline:"none", resize:"none", height:96, fontFamily:"inherit", boxSizing:"border-box" }}/>
+              <button onClick={() => setItemNoteModal(null)} style={{ marginTop:12, width:"100%", height:44, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:900, cursor:"pointer", fontFamily:"inherit", fontSize:14, boxShadow:"0 4px 18px rgba(16,185,129,0.4)" }}>Done</button>
             </div>
           </div>
         );
@@ -4114,12 +4114,12 @@ export default function POS() {
       {/* Order note modal */}
       {orderNoteModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setOrderNoteModal(false)}>
-          <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, padding:20, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px #4a3020" }} onClick={e => e.stopPropagation()}>
+          <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, padding:20, boxShadow:"0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(100,200,130,0.12)" }} onClick={e => e.stopPropagation()}>
             <h3 style={{ color:IL.tp, fontWeight:800, fontSize:15, marginBottom:12 }}>Order Note</h3>
             <textarea value={orderNotes} onChange={e => setOrderNotes(e.target.value)}
               placeholder="Special instructions for this order…"
-              style={{ width:"100%", background:"#4a3020", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 14px", color:IL.tp, fontSize:14, outline:"none", resize:"none", height:112, fontFamily:"inherit", boxSizing:"border-box" }}/>
-            <button onClick={() => setOrderNoteModal(false)} style={{ marginTop:12, width:"100%", height:44, borderRadius:14, background:`linear-gradient(135deg,${IL.pur},#2d6a4f)`, border:"none", color:"#fff", fontWeight:900, cursor:"pointer", fontFamily:"inherit", fontSize:14, boxShadow:"0 4px 18px rgba(200,168,130,0.4)" }}>Done</button>
+              style={{ width:"100%", background:"rgba(100,200,130,0.12)", border:`1px solid ${IL.bord}`, borderRadius:14, padding:"10px 14px", color:IL.tp, fontSize:14, outline:"none", resize:"none", height:112, fontFamily:"inherit", boxSizing:"border-box" }}/>
+            <button onClick={() => setOrderNoteModal(false)} style={{ marginTop:12, width:"100%", height:44, borderRadius:14, background:`linear-gradient(135deg,${IL.pur},#2d6a4f)`, border:"none", color:"#fff", fontWeight:900, cursor:"pointer", fontFamily:"inherit", fontSize:14, boxShadow:"0 4px 18px rgba(16,185,129,0.4)" }}>Done</button>
           </div>
         </div>
       )}

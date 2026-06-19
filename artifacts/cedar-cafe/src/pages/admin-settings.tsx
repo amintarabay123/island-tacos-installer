@@ -45,13 +45,13 @@ type Employee = { id: number; name: string; role: "owner" | "staff"; active: boo
 type EmployeeForm = { name: string; role: "owner" | "staff"; pin: string; confirmPin: string; };
 const EMPTY_FORM: EmployeeForm = { name: "", role: "staff", pin: "", confirmPin: "" };
 
-const BG = "#16172b", CARD = "#1e1f38", BORD = "rgba(255,255,255,0.06)";
-const TP = "#e8eaf6", TM = "#b0b8d8", TMUTED = "#7077a1";
-const PUR = "#7c6af7", GREEN = "#30d158", OR = "#ff6b00", RED_C = "#ff453a";
-const HDR = "#0e1020";
+const BG = "#0d1612", CARD = "#162518", BORD = "rgba(100,200,130,0.12)";
+const TP = "#e8f5ed", TM = "#8cc4a0", TMUTED = "#5a8a6a";
+const PUR = "#10b981", GREEN = "#34d399", OR = "#f59e0b", RED_C = "#f87171";
+const HDR = "#09100d";
 const GLOW: React.CSSProperties = {
   background: CARD, border: `1px solid ${BORD}`, borderRadius: 16,
-  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)",
+  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(16,185,129,0.06)",
 };
 
 const INP: React.CSSProperties = {
@@ -400,8 +400,8 @@ export default function AdminSettings() {
         <div style={{ display: "flex", gap: 14, overflowX: "auto" }}>
           {[
             { art: "🕐", grad: "linear-gradient(145deg,#10b981,#059669,#064e3b)", glow: "rgba(16,185,129,0.5)",   label: "Opens",     value: form.open_time  || "—",                                                         sub: "opening time" },
-            { art: "🕗", grad: "linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow: "rgba(255,107,0,0.55)",   label: "Closes",    value: form.close_time || "—",                                                         sub: "closing time" },
-            { art: "📅", grad: "linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow: "rgba(124,106,247,0.55)", label: "Open Days", value: `${form.open_days.split(",").filter(Boolean).length}/7`,                        sub: "days per week" },
+            { art: "🕗", grad: "linear-gradient(145deg,#f59e0b,#f59e0b,#f87171)", glow: "rgba(255,107,0,0.55)",   label: "Closes",    value: form.close_time || "—",                                                         sub: "closing time" },
+            { art: "📅", grad: "linear-gradient(145deg,#10b981,#0d9e72,#065f46)", glow: "rgba(16,185,129,0.55)", label: "Open Days", value: `${form.open_days.split(",").filter(Boolean).length}/7`,                        sub: "days per week" },
             { art: "👥", grad: "linear-gradient(145deg,#0ea5e9,#0284c7,#1e3a8a)", glow: "rgba(14,165,233,0.5)",   label: "Staff",     value: empLoading ? "…" : String(employees.filter(e => e.active).length),             sub: "active accounts" },
           ].map((fc) => (
             <div key={fc.label} style={{ width: 168, flexShrink: 0 }}>
@@ -600,7 +600,7 @@ export default function AdminSettings() {
                       border: "1px solid", padding: "14px 16px", textAlign: "left", cursor: isLast ? "not-allowed" : "pointer",
                       transition: "all 0.15s", opacity: isLast ? 0.6 : 1,
                       ...(enabled
-                        ? { borderColor: PUR, background: "rgba(124,106,247,0.07)" }
+                        ? { borderColor: PUR, background: "rgba(16,185,129,0.07)" }
                         : { borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }),
                     }}
                   >

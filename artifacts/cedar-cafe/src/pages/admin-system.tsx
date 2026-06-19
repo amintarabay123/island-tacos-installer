@@ -13,25 +13,25 @@ import {
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-// ── IL Palette ────────────────────────────────────────────────────────────────
-const BG    = "#16172b";
-const CARD  = "#1e1f38";
-const HDR   = "#0e1020";
-const BORD  = "rgba(255,255,255,0.06)";
-const TP    = "#e8eaf6";
-const TM    = "#b0b8d8";
-const MU    = "#7077a1";
-const PUR   = "#7c6af7";
-const OR    = "#ff6b00";
-const GRN   = "#30d158";
-const RED   = "#ff453a";
+// ── Cedar Cafe Palette ────────────────────────────────────────────────────────
+const BG    = "#0d1612";
+const CARD  = "#162518";
+const HDR   = "#09100d";
+const BORD  = "rgba(100,200,130,0.12)";
+const TP    = "#e8f5ed";
+const TM    = "#8cc4a0";
+const MU    = "#5a8a6a";
+const PUR   = "#10b981";
+const OR    = "#f59e0b";
+const GRN   = "#34d399";
+const RED   = "#f87171";
 const YLW   = "#ffd60a";
 
 const GLOW: React.CSSProperties = {
   background: CARD,
   border: `1px solid ${BORD}`,
   borderRadius: 16,
-  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)",
+  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(16,185,129,0.06)",
 };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -259,7 +259,7 @@ export default function AdminSystem() {
           {updateState === "idle" && (
             <button
               onClick={() => setUpdateState("confirm")}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "rgba(124,106,247,0.15)", border: `1px solid rgba(124,106,247,0.35)`, color: PUR, cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "rgba(16,185,129,0.15)", border: `1px solid rgba(16,185,129,0.35)`, color: PUR, cursor: "pointer", fontSize: 13, fontWeight: 600 }}
             >
               <Download style={{ width: 13, height: 13 }} /> Update
             </button>
@@ -420,7 +420,7 @@ export default function AdminSystem() {
                         style={{
                           display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                           height: 32, borderRadius: 8, border: "none",
-                          background: isRepairing ? "rgba(124,106,247,0.2)" : PUR,
+                          background: isRepairing ? "rgba(16,185,129,0.2)" : PUR,
                           color: "#fff", cursor: repairing ? "not-allowed" : "pointer",
                           fontSize: 12, fontWeight: 700, opacity: repairing && !isRepairing ? 0.5 : 1,
                           transition: "opacity 0.15s",
@@ -484,7 +484,7 @@ export default function AdminSystem() {
                           </p>
                         )}
                         {ev.diagnosis && (
-                          <div style={{ background: "rgba(124,106,247,0.08)", border: "1px solid rgba(124,106,247,0.2)", borderRadius: 8, padding: "8px 10px", marginTop: 4 }}>
+                          <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 8, padding: "8px 10px", marginTop: 4 }}>
                             <p style={{ fontSize: 11, fontWeight: 700, color: PUR, marginBottom: 3 }}>🤖 AI Diagnosis</p>
                             <p style={{ fontSize: 12, color: TM, lineHeight: 1.5 }}>{ev.diagnosis}</p>
                           </div>

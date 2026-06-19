@@ -33,55 +33,55 @@ const emptyForm: MenuItemForm = {
   spicy: false, vegetarian: false, openPrice: false, selectedModifierIds: [],
 };
 
-const BG = "#16172b", CARD = "#1e1f38", BORD = "rgba(255,255,255,0.06)";
-const TP = "#e8eaf6", TM = "#b0b8d8", TMUTED = "#7077a1";
-const PUR = "#7c6af7", OR = "#ff6b00", RED_C = "#ff453a", GREEN = "#30d158";
-const HDR = "#0e1020";
+const BG = "#0d1612", CARD = "#162518", BORD = "rgba(100,200,130,0.12)";
+const TP = "#e8f5ed", TM = "#8cc4a0", TMUTED = "#5a8a6a";
+const PUR = "#10b981", OR = "#f59e0b", RED_C = "#f87171", GREEN = "#34d399";
+const HDR = "#09100d";
 const GLOW: React.CSSProperties = {
   background: CARD, border: `1px solid ${BORD}`, borderRadius: 16,
-  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)",
+  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(16,185,129,0.06)",
 };
 
 const DIALOG_CSS = `
   /* Switch */
   [role="switch"] { background: rgba(255,255,255,0.18) !important; border: none !important; }
-  [role="switch"][data-state="checked"] { background: #7c6af7 !important; }
+  [role="switch"][data-state="checked"] { background: #10b981 !important; }
   /* Dialog dark */
-  [role="dialog"] { background: #1e1f38 !important; color: #e8eaf6 !important; border: 1px solid rgba(255,255,255,0.08) !important; }
-  [role="dialog"] h2 { color: #e8eaf6 !important; }
+  [role="dialog"] { background: #162518 !important; color: #e8f5ed !important; border: 1px solid rgba(100,200,130,0.15) !important; }
+  [role="dialog"] h2 { color: #e8f5ed !important; }
   [role="dialog"] input:not([type="checkbox"]),
-  [role="dialog"] textarea { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: #e8eaf6 !important; }
+  [role="dialog"] textarea { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: #e8f5ed !important; }
   [role="dialog"] input::placeholder,
-  [role="dialog"] textarea::placeholder { color: #7077a1 !important; }
-  [role="dialog"] label { color: #b0b8d8 !important; }
-  [role="dialog"] .text-muted-foreground { color: #7077a1 !important; }
-  [role="dialog"] .text-xs { color: #7077a1 !important; }
-  [role="dialog"] .text-\\[10px\\] { color: #7077a1 !important; }
-  [role="dialog"] .border { border-color: rgba(255,255,255,0.09) !important; }
-  [role="dialog"] .border-border { border-color: rgba(255,255,255,0.09) !important; }
+  [role="dialog"] textarea::placeholder { color: #5a8a6a !important; }
+  [role="dialog"] label { color: #8cc4a0 !important; }
+  [role="dialog"] .text-muted-foreground { color: #5a8a6a !important; }
+  [role="dialog"] .text-xs { color: #5a8a6a !important; }
+  [role="dialog"] .text-\\[10px\\] { color: #5a8a6a !important; }
+  [role="dialog"] .border { border-color: rgba(100,200,130,0.12) !important; }
+  [role="dialog"] .border-border { border-color: rgba(100,200,130,0.12) !important; }
   [role="dialog"] .bg-muted { background: rgba(255,255,255,0.05) !important; }
   [role="dialog"] .bg-muted\\/30 { background: rgba(255,255,255,0.04) !important; }
   [role="dialog"] .bg-muted\\/40 { background: rgba(255,255,255,0.05) !important; }
   [role="dialog"] .bg-muted\\/20 { background: rgba(255,255,255,0.03) !important; }
-  [role="dialog"] .bg-background { background: #16172b !important; }
-  [role="dialog"] .border-primary { border-color: #7c6af7 !important; }
-  [role="dialog"] .bg-primary\\/5 { background: rgba(124,106,247,0.08) !important; }
-  [role="dialog"] .text-primary { color: #7c6af7 !important; }
-  [role="dialog"] p { color: #b0b8d8; }
-  [role="dialog"] button[class*="outline"] { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.12) !important; color: #b0b8d8 !important; }
-  [role="dialog"] button[class*="ghost"] { color: #b0b8d8 !important; }
+  [role="dialog"] .bg-background { background: #0d1612 !important; }
+  [role="dialog"] .border-primary { border-color: #10b981 !important; }
+  [role="dialog"] .bg-primary\\/5 { background: rgba(16,185,129,0.08) !important; }
+  [role="dialog"] .text-primary { color: #10b981 !important; }
+  [role="dialog"] p { color: #8cc4a0; }
+  [role="dialog"] button[class*="outline"] { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.12) !important; color: #8cc4a0 !important; }
+  [role="dialog"] button[class*="ghost"] { color: #8cc4a0 !important; }
   [role="dialog"] button[class*="ghost"]:hover { background: rgba(255,255,255,0.07) !important; }
   [role="dialog"] button[class*="destructive"] { color: #ff453a !important; background: transparent !important; }
   [role="dialog"] button[class*="destructive"]:hover { background: rgba(255,69,58,0.1) !important; }
   /* Select trigger inside dialog */
-  [role="dialog"] [role="combobox"] { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: #e8eaf6 !important; }
+  [role="dialog"] [role="combobox"] { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: #e8f5ed !important; }
   /* Select dropdown (portal) */
-  [role="listbox"] { background: #1e1f38 !important; border: 1px solid rgba(255,255,255,0.1) !important; color: #e8eaf6 !important; }
-  [role="option"] { color: #e8eaf6 !important; }
-  [role="option"][data-highlighted] { background: rgba(124,106,247,0.15) !important; }
+  [role="listbox"] { background: #162518 !important; border: 1px solid rgba(100,200,130,0.15) !important; color: #e8f5ed !important; }
+  [role="option"] { color: #e8f5ed !important; }
+  [role="option"][data-highlighted] { background: rgba(16,185,129,0.15) !important; }
   /* Gallery image grid */
   [role="dialog"] button[class*="border-border"] { border-color: rgba(255,255,255,0.12) !important; }
-  [role="dialog"] button[class*="border-primary"] { border-color: #7c6af7 !important; }
+  [role="dialog"] button[class*="border-primary"] { border-color: #10b981 !important; }
 `;
 
 export default function AdminMenu() {
@@ -391,9 +391,9 @@ export default function AdminMenu() {
         {/* Stat cards */}
         <div style={{ display: "flex", gap: 14, marginBottom: 24, overflowX: "auto" }}>
           {[
-            { art: "☕", grad: "linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow: "rgba(255,107,0,0.55)",   label: "Total Items",  value: String(items?.length ?? 0),                            sub: "on the menu" },
+            { art: "☕", grad: "linear-gradient(145deg,#f59e0b,#f59e0b,#f87171)", glow: "rgba(255,107,0,0.55)",   label: "Total Items",  value: String(items?.length ?? 0),                            sub: "on the menu" },
             { art: "✅", grad: "linear-gradient(145deg,#10b981,#059669,#064e3b)", glow: "rgba(16,185,129,0.5)",   label: "Available",    value: String(items?.filter(i => i.available).length ?? 0),   sub: "active today" },
-            { art: "📂", grad: "linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow: "rgba(124,106,247,0.55)", label: "Categories",   value: String(categories?.length ?? 0),                      sub: "sections" },
+            { art: "📂", grad: "linear-gradient(145deg,#10b981,#0d9e72,#065f46)", glow: "rgba(16,185,129,0.55)", label: "Categories",   value: String(categories?.length ?? 0),                      sub: "sections" },
             { art: "⚠️", grad: "linear-gradient(145deg,#ef4444,#dc2626,#7f1d1d)", glow: "rgba(239,68,68,0.45)",  label: "Unavailable",  value: String(items?.filter(i => !i.available).length ?? 0),  sub: "hidden from menu" },
           ].map((fc) => (
             <div key={fc.label} style={{ width: 168, flexShrink: 0 }}>
@@ -442,7 +442,7 @@ export default function AdminMenu() {
                       border: "1px solid", transition: "all 0.15s",
                       opacity: isCatDragging ? 0.4 : 1,
                       borderColor: isCatDragOver ? PUR : "transparent",
-                      background: isCatDragOver ? "rgba(124,106,247,0.06)" : "transparent",
+                      background: isCatDragOver ? "rgba(16,185,129,0.06)" : "transparent",
                     }}
                   >
                     <GripVertical style={{ width: 14, height: 14, color: "rgba(255,255,255,0.2)", cursor: "grab", flexShrink: 0 }} />
@@ -576,7 +576,7 @@ export default function AdminMenu() {
                         background: isSelected
                           ? "rgba(255,69,58,0.06)"
                           : isDragOver
-                          ? "rgba(124,106,247,0.08)"
+                          ? "rgba(16,185,129,0.08)"
                           : idx % 2 === 1 ? "rgba(255,255,255,0.01)" : "transparent",
                         borderTop: isDragOver ? `2px solid ${PUR}` : undefined,
                       }}
@@ -801,7 +801,7 @@ export default function AdminMenu() {
                           display: "flex", alignItems: "center", justifyContent: "space-between",
                           padding: "10px 12px", borderRadius: 10, border: "1px solid", cursor: "pointer", transition: "all 0.15s",
                           ...(isOn
-                            ? { borderColor: PUR, background: "rgba(124,106,247,0.07)" }
+                            ? { borderColor: PUR, background: "rgba(16,185,129,0.07)" }
                             : { borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }),
                         }}
                       >
@@ -924,7 +924,7 @@ export default function AdminMenu() {
                       aspectRatio: "1", borderRadius: 10, overflow: "hidden", cursor: "pointer",
                       border: `2px solid`, transition: "all 0.15s", padding: 0,
                       borderColor: form[galleryTarget] === url ? PUR : "rgba(255,255,255,0.1)",
-                      outline: form[galleryTarget] === url ? `2px solid rgba(124,106,247,0.3)` : "none",
+                      outline: form[galleryTarget] === url ? `2px solid rgba(16,185,129,0.3)` : "none",
                     }}
                   >
                     <img

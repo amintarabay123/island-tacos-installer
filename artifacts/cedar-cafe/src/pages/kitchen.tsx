@@ -7,16 +7,16 @@ import { setPageMeta } from "@/lib/page-meta";
 import { useStoreSettings } from "@/lib/use-store-settings";
 
 // ── Chalkboard Design System ──────────────────────────────────────────────────
-const IL = { bg:"#0c0805", card:"#171009", hdr:"#100c06", bord:"#4a3020", tp:"#F5ECD7", tm:"#C8A882", mu:"#9e8570", or:"#C8A882", pur:"#C8A882", grn:"#3d8f6a", red:"#d4614a" };
+const IL = { bg:"#0d1612", card:"#162518", hdr:"#0a110d", bord:"rgba(100,200,130,0.14)", tp:"#e8f5ed", tm:"#8cc4a0", mu:"#5a8a6a", or:"#10b981", pur:"#10b981", grn:"#34d399", red:"#f87171" };
 const ITEM_GRADS: { grad: string; glow: string }[] = [
-  { grad:"linear-gradient(135deg,#C8A882,#a8845e)",   glow:"rgba(200,168,130,0.4)" },
+  { grad:"linear-gradient(135deg,#10b981,#059669)",   glow:"rgba(16,185,129,0.4)" },
   { grad:"linear-gradient(135deg,#2d6a4f,#1d4d38)",   glow:"rgba(45,106,79,0.4)" },
   { grad:"linear-gradient(135deg,#e8a030,#b87820)",   glow:"rgba(232,160,48,0.4)" },
   { grad:"linear-gradient(135deg,#3d8f6a,#2d6a4f)",   glow:"rgba(61,143,106,0.4)" },
   { grad:"linear-gradient(135deg,#8b6840,#5c3d20)",   glow:"rgba(139,104,64,0.4)" },
   { grad:"linear-gradient(135deg,#d4614a,#a03d2a)",   glow:"rgba(212,97,74,0.4)" },
   { grad:"linear-gradient(135deg,#9e7850,#6b4c2a)",   glow:"rgba(158,120,80,0.4)" },
-  { grad:"linear-gradient(135deg,#6b4c2a,#4a3020)",   glow:"rgba(107,76,42,0.4)" },
+  { grad:"linear-gradient(135deg,#6b4c2a,rgba(100,200,130,0.12))",   glow:"rgba(107,76,42,0.4)" },
 ];
 const STATUS_GRAD: Record<string, string> = {
   confirmed: "linear-gradient(135deg,#2d6a4f,#1d4d38)",
@@ -873,10 +873,10 @@ export default function Kitchen({ station }: { station?: string } = {}) {
           <div className="hidden sm:grid grid-cols-3 gap-3 px-4 pt-4 pb-2 shrink-0">
             {COL_CONFIG.map(({ key, label }) => {
               const colGrad = key === "new" ? "linear-gradient(135deg,#2d6a4f,#0284c7)"
-                : key === "preparing" ? "linear-gradient(135deg,#C8A882,#a8845e)"
+                : key === "preparing" ? "linear-gradient(135deg,#10b981,#059669)"
                 : "linear-gradient(135deg,#3d8f6a,#059669)";
               const colGlow = key === "new" ? "rgba(45,106,79,0.5)"
-                : key === "preparing" ? "rgba(200,168,130,0.5)"
+                : key === "preparing" ? "rgba(16,185,129,0.5)"
                 : "rgba(61,143,106,0.5)";
               return (
                 <div key={key} className="flex items-center gap-2">
@@ -897,9 +897,9 @@ export default function Kitchen({ station }: { station?: string } = {}) {
             {COL_CONFIG.map(({ key, label }) => {
               const isActive = mobileTab === key;
               const colGrad = key === "new" ? "linear-gradient(135deg,#2d6a4f,#0284c7)"
-                : key === "preparing" ? "linear-gradient(135deg,#C8A882,#a8845e)"
+                : key === "preparing" ? "linear-gradient(135deg,#10b981,#059669)"
                 : "linear-gradient(135deg,#3d8f6a,#059669)";
-              const dotColor = key === "new" ? "#2d6a4f" : key === "preparing" ? "#C8A882" : "#3d8f6a";
+              const dotColor = key === "new" ? "#2d6a4f" : key === "preparing" ? "#10b981" : "#3d8f6a";
               return (
                 <button
                   key={key}

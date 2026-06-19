@@ -11,14 +11,14 @@ import { AthMovilDirectButton } from "@/components/athmovil-button";
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 // ── IL Palette ────────────────────────────────────────────────────────────────
-const BG   = "#16172b";
-const CARD = "#1e1f38";
-const BORD = "rgba(255,255,255,0.06)";
-const TP   = "#e8eaf6";
-const TM   = "#b0b8d8";
-const MU   = "#7077a1";
-const OR   = "#ff6b00";
-const PUR  = "#7c6af7";
+const BG   = "#0d1612";
+const CARD = "#162518";
+const BORD = "rgba(100,200,130,0.12)";
+const TP   = "#e8f5ed";
+const TM   = "#8cc4a0";
+const MU   = "#5a8a6a";
+const OR   = "#f59e0b";
+const PUR  = "#10b981";
 
 const INP: React.CSSProperties = {
   background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
@@ -198,8 +198,8 @@ export default function Checkout() {
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 16px" }}>
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 20, alignItems: "center", maxWidth: 360, width: "100%" }}>
             <div style={{
-              background: "linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", borderRadius: 20,
-              boxShadow: "0 8px 32px rgba(124,106,247,0.5)", padding: 28, width: "100%",
+              background: "linear-gradient(145deg,#10b981,#0d9e72,#065f46)", borderRadius: 20,
+              boxShadow: "0 8px 32px rgba(16,185,129,0.5)", padding: 28, width: "100%",
               position: "relative", overflow: "hidden",
             }}>
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents: "none" }} />
@@ -349,7 +349,7 @@ export default function Checkout() {
                         id="name" type="text" placeholder="First name is fine"
                         value={customerName} onChange={e => setCustomerName(e.target.value)}
                         autoComplete="given-name" required style={INP}
-                        onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(124,106,247,0.15)`; }}
+                        onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(16,185,129,0.15)`; }}
                         onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
                       />
                     </div>
@@ -359,7 +359,7 @@ export default function Checkout() {
                         id="email" type="email" placeholder="you@example.com"
                         value={customerEmail} onChange={e => setCustomerEmail(e.target.value)}
                         autoComplete="email" style={INP}
-                        onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(124,106,247,0.15)`; }}
+                        onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(16,185,129,0.15)`; }}
                         onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
                       />
                     </div>
@@ -369,7 +369,7 @@ export default function Checkout() {
                         id="phone" type="tel" placeholder="284-000-0000"
                         value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
                         autoComplete="tel" required style={INP}
-                        onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(124,106,247,0.15)`; }}
+                        onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(16,185,129,0.15)`; }}
                         onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
                       />
                       <p style={{ fontSize: 12, color: MU, margin: 0 }}>Use a WhatsApp number to get order updates &amp; track your order via chat.</p>
@@ -396,13 +396,13 @@ export default function Checkout() {
                             width: "100%", display: "flex", alignItems: "center", gap: 16,
                             borderRadius: 14, border: selected ? `2px solid ${PUR}` : "2px solid rgba(255,255,255,0.08)",
                             padding: 16, textAlign: "left",
-                            background: selected ? "rgba(124,106,247,0.08)" : "rgba(255,255,255,0.02)",
+                            background: selected ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)",
                             cursor: "pointer", transition: "all 0.15s",
                           }}
                         >
                           <div style={{
                             width: 36, height: 36, borderRadius: 999, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                            background: selected ? "rgba(124,106,247,0.15)" : "rgba(255,255,255,0.06)",
+                            background: selected ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.06)",
                             color: selected ? PUR : MU,
                           }}>
                             {opt.icon}
@@ -510,7 +510,7 @@ export default function Checkout() {
                     placeholder="Any special instructions for your order..."
                     value={notes} onChange={e => setNotes(e.target.value)}
                     style={{ ...INP, resize: "vertical", minHeight: 80 }}
-                    onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(124,106,247,0.15)`; }}
+                    onFocus={e => { e.currentTarget.style.borderColor = PUR; e.currentTarget.style.boxShadow = `0 0 0 3px rgba(16,185,129,0.15)`; }}
                     onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.boxShadow = "none"; }}
                   />
                 </section>

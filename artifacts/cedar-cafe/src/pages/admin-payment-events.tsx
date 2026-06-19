@@ -8,18 +8,18 @@ import { useStoreSettings } from "@/lib/use-store-settings";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const BG   = "#16172b";
-const CARD = "#1e1f38";
-const HDR  = "#0e1020";
+const BG   = "#0d1612";
+const CARD = "#162518";
+const HDR  = "#09100d";
 const BORD = "rgba(255,255,255,0.06)";
-const TP   = "#e8eaf6";
-const TM   = "#b0b8d8";
-const MU   = "#7077a1";
-const PUR  = "#7c6af7";
-const GRN  = "#30d158";
+const TP   = "#e8f5ed";
+const TM   = "#8cc4a0";
+const MU   = "#5a8a6a";
+const PUR  = "#10b981";
+const GRN  = "#34d399";
 const RED  = "#ff453a";
 const YLW  = "#ffd60a";
-const OR   = "#ff6b00";
+const OR   = "#f59e0b";
 const BLU  = "#60a5fa";
 
 const EVENT_META: Record<string, { label: string; color: string }> = {

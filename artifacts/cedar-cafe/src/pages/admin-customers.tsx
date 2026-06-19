@@ -6,13 +6,13 @@ import { ArrowLeft, Search, Users, Phone, Mail, ShoppingBag, DollarSign, Chevron
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const BG = "#16172b", CARD = "#1e1f38", BORD = "rgba(255,255,255,0.06)";
-const TP = "#e8eaf6", TM = "#b0b8d8", TMUTED = "#7077a1";
-const PUR = "#7c6af7", GREEN = "#30d158", RED_C = "#ff453a";
-const HDR = "#0e1020";
+const BG = "#0d1612", CARD = "#162518", BORD = "rgba(255,255,255,0.06)";
+const TP = "#e8f5ed", TM = "#8cc4a0", TMUTED = "#5a8a6a";
+const PUR = "#10b981", GREEN = "#34d399", RED_C = "#ff453a";
+const HDR = "#09100d";
 const GLOW: React.CSSProperties = {
   background: CARD, border: `1px solid ${BORD}`, borderRadius: 16,
-  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)",
+  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(16,185,129,0.06)",
 };
 
 interface CustomerSummary {
@@ -33,7 +33,7 @@ function statusBadgeStyle(status: string): React.CSSProperties {
   switch (status) {
     case "completed": return { background: "rgba(48,209,88,0.15)", color: GREEN };
     case "cancelled": return { background: "rgba(255,69,58,0.15)", color: RED_C };
-    case "confirmed": return { background: "rgba(124,106,247,0.15)", color: PUR };
+    case "confirmed": return { background: "rgba(16,185,129,0.15)", color: PUR };
     default: return { background: "rgba(255,214,0,0.12)", color: "#ffd60a" };
   }
 }
@@ -45,11 +45,11 @@ function CustomerRow({ c, checked, onToggle, onSelect }: {
     <div style={{
       display: "flex", alignItems: "center", gap: 12, padding: "14px 20px",
       borderBottom: `1px solid ${BORD}`, transition: "background 0.15s",
-      background: checked ? "rgba(124,106,247,0.08)" : "transparent",
+      background: checked ? "rgba(16,185,129,0.08)" : "transparent",
       cursor: "default",
     }}
       onMouseEnter={e => { if (!checked) e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}
-      onMouseLeave={e => { e.currentTarget.style.background = checked ? "rgba(124,106,247,0.08)" : "transparent"; }}
+      onMouseLeave={e => { e.currentTarget.style.background = checked ? "rgba(16,185,129,0.08)" : "transparent"; }}
     >
       <input
         type="checkbox" checked={checked} onChange={onToggle}
@@ -58,7 +58,7 @@ function CustomerRow({ c, checked, onToggle, onSelect }: {
       />
       <div onClick={onSelect} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0, cursor: "pointer" }}>
         <div style={{
-          width: 40, height: 40, borderRadius: "50%", background: "rgba(124,106,247,0.15)",
+          width: 40, height: 40, borderRadius: "50%", background: "rgba(16,185,129,0.15)",
           color: PUR, display: "flex", alignItems: "center", justifyContent: "center",
           fontWeight: 700, fontSize: 14, flexShrink: 0,
         }}>
@@ -126,7 +126,7 @@ function CustomerDrawer({ customerId, onClose, onDelete }: { customerId: number;
         background: CARD, display: "flex", flexDirection: "column", overflow: "hidden",
         borderTop: `1px solid ${BORD}`, borderLeft: `1px solid ${BORD}`,
         borderRadius: "20px 0 0 0",
-        boxShadow: "-8px 0 40px rgba(0,0,0,0.5), 0 0 60px rgba(124,106,247,0.08)",
+        boxShadow: "-8px 0 40px rgba(0,0,0,0.5), 0 0 60px rgba(16,185,129,0.08)",
       }} onClick={e => e.stopPropagation()}>
 
         {/* Drawer header */}
@@ -148,7 +148,7 @@ function CustomerDrawer({ customerId, onClose, onDelete }: { customerId: number;
             {/* Profile header */}
             <div style={{ padding: "20px 24px", borderBottom: `1px solid ${BORD}` }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
-                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(124,106,247,0.15)", color: PUR, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, flexShrink: 0 }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(16,185,129,0.15)", color: PUR, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, flexShrink: 0 }}>
                   {customer.name.charAt(0).toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -382,7 +382,7 @@ export default function AdminCustomers() {
 
   const statCards = [
     { label: "Total Customers", value: stats ? stats.totalCustomers.toLocaleString() : "—", Icon: Users, accent: "#60a5fa" },
-    { label: "Orders Placed", value: stats ? stats.totalOrders.toLocaleString() : "—", Icon: ShoppingBag, accent: "#ff6b00" },
+    { label: "Orders Placed", value: stats ? stats.totalOrders.toLocaleString() : "—", Icon: ShoppingBag, accent: "#f59e0b" },
     { label: "Total Revenue", value: stats ? `$${stats.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—", Icon: DollarSign, accent: GREEN },
   ];
 
@@ -502,7 +502,7 @@ export default function AdminCustomers() {
           position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 40,
           display: "flex", alignItems: "center", gap: 12,
           background: "#1a1b35", border: `1px solid rgba(255,255,255,0.12)`, borderRadius: 20,
-          padding: "10px 20px", boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 24px rgba(124,106,247,0.15)",
+          padding: "10px 20px", boxShadow: "0 8px 32px rgba(0,0,0,0.6), 0 0 24px rgba(16,185,129,0.15)",
         }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: TP }}>{checkedIds.size} selected</span>
           <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.15)" }} />

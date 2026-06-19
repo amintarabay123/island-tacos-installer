@@ -47,38 +47,38 @@ function selectionRuleLabel(mod: Modifier) {
   return parts.join(" · ");
 }
 
-const BG = "#16172b", CARD = "#1e1f38", BORD = "rgba(255,255,255,0.06)";
-const TP = "#e8eaf6", TM = "#b0b8d8", TMUTED = "#7077a1";
-const PUR = "#7c6af7", RED_C = "#ff453a", OR = "#ff6b00", GREEN = "#30d158";
-const HDR = "#0e1020";
+const BG = "#0d1612", CARD = "#162518", BORD = "rgba(100,200,130,0.12)";
+const TP = "#e8f5ed", TM = "#8cc4a0", TMUTED = "#5a8a6a";
+const PUR = "#10b981", RED_C = "#f87171", OR = "#f59e0b", GREEN = "#34d399";
+const HDR = "#09100d";
 const GLOW: React.CSSProperties = {
   background: CARD, border: `1px solid ${BORD}`, borderRadius: 16,
-  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(124,106,247,0.06)",
+  boxShadow: "0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.35), 0 0 20px rgba(16,185,129,0.06)",
 };
 const INP_STYLE = `
   background: rgba(255,255,255,0.05) !important;
   border-color: rgba(255,255,255,0.1) !important;
-  color: #e8eaf6 !important;
+  color: #e8f5ed !important;
 `;
 
 const DIALOG_CSS = `
   [role="switch"] { background: rgba(255,255,255,0.18) !important; border: none !important; }
-  [role="switch"][data-state="checked"] { background: #7c6af7 !important; }
-  [role="dialog"] { background: #1e1f38 !important; color: #e8eaf6 !important; border: 1px solid rgba(255,255,255,0.08) !important; }
-  [role="dialog"] h2 { color: #e8eaf6 !important; }
-  [role="dialog"] input:not([type="checkbox"]), [role="dialog"] textarea { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: #e8eaf6 !important; }
-  [role="dialog"] input::placeholder, [role="dialog"] textarea::placeholder { color: #7077a1 !important; }
-  [role="dialog"] label { color: #b0b8d8 !important; }
-  [role="dialog"] .text-muted-foreground, [role="dialog"] [class*="muted-foreground"] { color: #7077a1 !important; }
+  [role="switch"][data-state="checked"] { background: #10b981 !important; }
+  [role="dialog"] { background: #162518 !important; color: #e8f5ed !important; border: 1px solid rgba(100,200,130,0.15) !important; }
+  [role="dialog"] h2 { color: #e8f5ed !important; }
+  [role="dialog"] input:not([type="checkbox"]), [role="dialog"] textarea { background: rgba(255,255,255,0.05) !important; border-color: rgba(255,255,255,0.1) !important; color: #e8f5ed !important; }
+  [role="dialog"] input::placeholder, [role="dialog"] textarea::placeholder { color: #5a8a6a !important; }
+  [role="dialog"] label { color: #8cc4a0 !important; }
+  [role="dialog"] .text-muted-foreground, [role="dialog"] [class*="muted-foreground"] { color: #5a8a6a !important; }
   [role="dialog"] .bg-muted\\/30, [role="dialog"] [class*="bg-muted"] { background: rgba(255,255,255,0.04) !important; }
-  [role="dialog"] .border, [role="dialog"] [class*="border-border"] { border-color: rgba(255,255,255,0.09) !important; }
-  [role="dialog"] .bg-background { background: #16172b !important; }
+  [role="dialog"] .border, [role="dialog"] [class*="border-border"] { border-color: rgba(100,200,130,0.12) !important; }
+  [role="dialog"] .bg-background { background: #0d1612 !important; }
   [role="dialog"] .rounded { border-radius: 8px; }
-  [role="dialog"] p { color: #b0b8d8; }
-  [role="dialog"] .text-xs { color: #7077a1 !important; }
-  [role="dialog"] [class*="text-\\[11px\\]"] { color: #7077a1 !important; }
-  [role="dialog"] button[class*="outline"] { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.12) !important; color: #b0b8d8 !important; }
-  [role="dialog"] button[class*="bg-primary"], [role="dialog"] button[class*="default"] { background: #7c6af7 !important; }
+  [role="dialog"] p { color: #8cc4a0; }
+  [role="dialog"] .text-xs { color: #5a8a6a !important; }
+  [role="dialog"] [class*="text-\\[11px\\]"] { color: #5a8a6a !important; }
+  [role="dialog"] button[class*="outline"] { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.12) !important; color: #8cc4a0 !important; }
+  [role="dialog"] button[class*="bg-primary"], [role="dialog"] button[class*="default"] { background: #10b981 !important; }
   [role="dialog"] button[class*="ghost"]:hover { background: rgba(255,255,255,0.06) !important; }
   [role="dialog"] button[class*="destructive"] { color: #ff453a !important; }
   [role="dialog"] span[class*="text-red"] { color: #ff453a !important; background: rgba(255,69,58,0.12) !important; }
@@ -205,9 +205,9 @@ export default function AdminModifiers() {
         {/* Stat cards */}
         <div style={{ display: "flex", gap: 14, marginBottom: 24, overflowX: "auto" }}>
           {[
-            { art: "🎛️", grad: "linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow: "rgba(255,107,0,0.55)",   label: "Total Modifiers", value: String(modifiers.length),                                                 sub: "configured" },
+            { art: "🎛️", grad: "linear-gradient(145deg,#f59e0b,#f59e0b,#f87171)", glow: "rgba(255,107,0,0.55)",   label: "Total Modifiers", value: String(modifiers.length),                                                 sub: "configured" },
             { art: "⚡",  grad: "linear-gradient(145deg,#ef4444,#dc2626,#7f1d1d)", glow: "rgba(239,68,68,0.45)",  label: "Required",        value: String(modifiers.filter(m => m.required).length),                        sub: "must choose" },
-            { art: "✨",  grad: "linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow: "rgba(124,106,247,0.55)", label: "Optional",        value: String(modifiers.filter(m => !m.required).length),                       sub: "customer's choice" },
+            { art: "✨",  grad: "linear-gradient(145deg,#10b981,#0d9e72,#065f46)", glow: "rgba(16,185,129,0.55)", label: "Optional",        value: String(modifiers.filter(m => !m.required).length),                       sub: "customer's choice" },
             { art: "📋",  grad: "linear-gradient(145deg,#10b981,#059669,#064e3b)", glow: "rgba(16,185,129,0.5)",   label: "Total Options",   value: String(modifiers.reduce((s, m) => s + (m.options?.length ?? 0), 0)),    sub: "across all mods" },
           ].map((fc) => (
             <div key={fc.label} style={{ width: 168, flexShrink: 0 }}>
@@ -401,7 +401,7 @@ export default function AdminModifiers() {
                 <label className="text-sm font-semibold" style={{ color: TM }}>Options</label>
                 <button
                   onClick={addOption}
-                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, background: "rgba(124,106,247,0.12)", border: `1px solid rgba(124,106,247,0.3)`, color: PUR, cursor: "pointer", fontSize: 12, fontWeight: 700 }}
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 6, background: "rgba(16,185,129,0.12)", border: `1px solid rgba(16,185,129,0.3)`, color: PUR, cursor: "pointer", fontSize: 12, fontWeight: 700 }}
                 >
                   <Plus style={{ width: 12, height: 12 }} /> Add Option
                 </button>

@@ -33,12 +33,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useStoreSettings } from "@/lib/use-store-settings";
 
 // ── Palette ────────────────────────────────────────────────────────────────────
-const BG    = "#0c0805";
-const CARD  = "#171009";
-const BORD  = "#4a3020";
-const TP    = "#F5ECD7";
-const TM    = "#9e8570";
-const OR    = "#C8A882";
+const BG    = "#0d1612";
+const CARD  = "#162518";
+const BORD  = "rgba(100,200,130,0.14)";
+const TP    = "#e8f5ed";
+const TM    = "#8cc4a0";
+const OR    = "#10b981";
 const HUNTER  = "#2d6a4f";
 const HUNTER_LT = "#3d8f6a";
 
@@ -69,7 +69,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 // Inline style objects so Tailwind arbitrary-value JIT doesn't need to compile them
 const STATUS_STYLE: Record<string, React.CSSProperties> = {
-  pending:   { background: "rgba(200,168,130,0.12)", color: OR,          border: "1px solid rgba(200,168,130,0.3)" },
+  pending:   { background: "rgba(16,185,129,0.12)", color: "#d97706",   border: "1px solid rgba(16,185,129,0.3)" },
   confirmed: { background: "rgba(45,106,79,0.12)",   color: HUNTER_LT,   border: "1px solid rgba(45,106,79,0.3)"  },
   preparing: { background: "rgba(232,160,48,0.12)",  color: "#e8a030",   border: "1px solid rgba(232,160,48,0.3)" },
   ready:     { background: "rgba(61,143,106,0.12)",  color: HUNTER_LT,   border: "1px solid rgba(61,143,106,0.3)" },
@@ -82,16 +82,16 @@ const NEXT_STATUS: Record<string, UpdateOrderStatusBodyStatus> = {
 };
 
 const STATUS_DONUT_COLOR: Record<string, string> = {
-  pending: "#C8A882", confirmed: "#2d6a4f", preparing: "#e8a030",
+  pending: "#d97706", confirmed: "#2d6a4f", preparing: "#e8a030",
   ready: "#3d8f6a", cancelled: "#d4614a",
-  "completed-online": "#3d8f6a", "completed-phone": "#C8A882", "completed-pos": "#8b6840",
+  "completed-online": "#3d8f6a", "completed-phone": "#d97706", "completed-pos": "#8b6840",
 };
 
 const SOURCE_LABELS: Record<string, string> = { online: "Online", phone: "Phone", pos: "Walk-in" };
 
 function sourceBadge(source: string | null | undefined): { label: string; style: React.CSSProperties } | null {
   if (source === "online") return { label: "🌐 Online",  style: { background: "rgba(45,106,79,0.12)",   color: "#3d8f6a", border: "1px solid rgba(45,106,79,0.3)"    } };
-  if (source === "pos")    return { label: "🏪 Walk-in", style: { background: "rgba(200,168,130,0.1)", color: "#C8A882", border: "1px solid rgba(200,168,130,0.2)" } };
+  if (source === "pos")    return { label: "🏪 Walk-in", style: { background: "rgba(16,185,129,0.1)", color: "#d97706", border: "1px solid rgba(16,185,129,0.2)" } };
   if (source === "phone")  return { label: "📞 Phone",   style: { background: "rgba(232,160,48,0.1)",  color: "#e8a030", border: "1px solid rgba(232,160,48,0.2)"  } };
   return null;
 }
@@ -104,7 +104,7 @@ function paymentBadge(source: string | null | undefined, method: string | null |
   if (method === "cash")
     return { label: "💵 Cash",          style: { background: "rgba(61,143,106,0.1)",   color: "#3d8f6a", border: "1px solid rgba(61,143,106,0.25)"  } };
   if (method === "athmovil")
-    return { label: "ATH Móvil",        style: { background: "rgba(200,168,130,0.12)",  color: OR,        border: "1px solid rgba(200,168,130,0.25)"  } };
+    return { label: "ATH Móvil",        style: { background: "rgba(16,185,129,0.12)",  color: "#d97706", border: "1px solid rgba(16,185,129,0.25)"  } };
   if (method === "split")
     return { label: "Split",            style: { background: "rgba(232,160,48,0.12)", color: "#e8a030", border: "1px solid rgba(232,160,48,0.25)" } };
   if (method === "complimentary")
@@ -121,9 +121,9 @@ type NavSection = { title: string; items: NavItem[] };
 
 // ── Sidebar ────────────────────────────────────────────────────────────────────
 // Sidebar bg is intentionally darker than the main content bg so the active-tab
-// "bleed" effect is visible — the active item matches BG (#0c0805) and appears
+// "bleed" effect is visible — the active item matches BG (#0d1612) and appears
 // to merge seamlessly with the main area while the sidebar reads as separate.
-const SB_BG = "#100c06";
+const SB_BG = "#0a110d";
 const CORNER_R = 14;
 const SIDEBAR_CSS = `
 .nav-tab-active {
@@ -214,10 +214,10 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
           <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "18px 18px 16px", borderBottom: `1px solid ${BORD}` }}>
             <div style={{
               width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-              background: "linear-gradient(135deg,#C8A882,#a8845e)",
+              background: "linear-gradient(135deg,#10b981,#059669)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 17,
-              boxShadow: "0 0 0 1px rgba(200,168,130,0.3),0 4px 14px rgba(200,168,130,0.4)",
+              boxShadow: "0 0 0 1px rgba(16,185,129,0.3),0 4px 14px rgba(16,185,129,0.4)",
             }}>☕</div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: "-0.01em", color: TP }}>{storeName.toUpperCase()}</div>
@@ -274,10 +274,10 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
         <div className="flex items-center gap-3">
           <div style={{
             width: 36, height: 36, borderRadius: 11, flexShrink: 0,
-            background: "linear-gradient(135deg,#C8A882,#a8845e)",
+            background: "linear-gradient(135deg,#10b981,#059669)",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 18,
-            boxShadow: "0 0 0 1px rgba(200,168,130,0.3),0 4px 16px rgba(200,168,130,0.4)",
+            boxShadow: "0 0 0 1px rgba(16,185,129,0.3),0 4px 16px rgba(16,185,129,0.4)",
           }}>☕</div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "-0.02em", color: TP }}>{storeName.toUpperCase()}</div>
@@ -286,7 +286,7 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
         </div>
         <button onClick={onClose}
           style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, background: "transparent", border: "none", cursor: "pointer", color: TM }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#4a3020"; }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(100,200,130,0.12)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
         ><X className="h-5 w-5" /></button>
       </div>
@@ -301,7 +301,7 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = item.href ? location === item.href : false;
-                const activeStyle: React.CSSProperties = { background: "rgba(200,168,130,0.12)", color: OR, border: "1px solid rgba(200,168,130,0.3)", borderRadius: 10 };
+                const activeStyle: React.CSSProperties = { background: "rgba(16,185,129,0.12)", color: OR, border: "1px solid rgba(16,185,129,0.3)", borderRadius: 10 };
                 const inactiveStyle: React.CSSProperties = { background: "transparent", color: TM, border: "1px solid transparent", borderRadius: 10 };
                 const content = (
                   <>
@@ -647,8 +647,8 @@ export default function Admin() {
   // ── Stat card config ───────────────────────────────────────────────────────
   const avgOrder = stats?.todayOrders ? (stats.todayRevenue ?? 0) / stats.todayOrders : 0;
   const popCards = [
-    { art: "💰", grad: "linear-gradient(145deg,#C8A882,#8b6840)", glow: "rgba(200,168,130,0.55)", label: "Revenue",   value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, sub: "today's total" },
-    { art: "🧾", grad: "linear-gradient(145deg,#C8A882,#2d6a4f,#1d4d38)", glow: "rgba(200,168,130,0.55)", label: "Orders",    value: String(stats?.todayOrders ?? 0),            sub: `${stats?.pendingOrders ?? 0} still active` },
+    { art: "💰", grad: "linear-gradient(145deg,#10b981,#8b6840)", glow: "rgba(16,185,129,0.55)", label: "Revenue",   value: `$${(stats?.todayRevenue ?? 0).toFixed(2)}`, sub: "today's total" },
+    { art: "🧾", grad: "linear-gradient(145deg,#10b981,#2d6a4f,#1d4d38)", glow: "rgba(16,185,129,0.55)", label: "Orders",    value: String(stats?.todayOrders ?? 0),            sub: `${stats?.pendingOrders ?? 0} still active` },
     { art: "⭐", grad: "linear-gradient(145deg,#10b981,#059669,#064e3b)", glow: "rgba(16,185,129,0.5)", label: "Completed", value: String(stats?.completedOrders ?? 0),        sub: "served today" },
     { art: "📈", grad: "linear-gradient(145deg,#0ea5e9,#0284c7,#1e3a8a)", glow: "rgba(14,165,233,0.5)", label: "Avg Order", value: avgOrder ? `$${avgOrder.toFixed(2)}` : "—",  sub: "per order" },
     { art: "🚫", grad: "linear-gradient(145deg,#ef4444,#dc2626,#7f1d1d)", glow: "rgba(239,68,68,0.4)", label: "Cancelled", value: String(stats?.cancelledOrders ?? 0),         sub: "rejected" },
@@ -689,7 +689,7 @@ export default function Admin() {
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg transition-colors"
               style={{ color: TM }}
-              onMouseEnter={e => e.currentTarget.style.background = "#4a3020"}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(100,200,130,0.12)"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
               <Menu className="h-5 w-5" />
             </button>
@@ -735,7 +735,7 @@ export default function Admin() {
             {/* POS button */}
             <button
               onClick={() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`)}
-              style={{ background: "linear-gradient(135deg,#C8A882,#a8845e)", color: "#fff", border: "none", borderRadius: 20, padding: "8px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 18px rgba(200,168,130,0.4)" }}
+              style={{ background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", border: "none", borderRadius: 20, padding: "8px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 18px rgba(16,185,129,0.4)" }}
             >🧾 POS</button>
           </div>
         </header>
@@ -766,13 +766,13 @@ export default function Admin() {
         {showPauseDialog && (
           <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
             onClick={() => setShowPauseDialog(false)}>
-            <div style={{ background: "#171009", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 22, padding: "28px 28px 24px", width: "min(92vw, 360px)", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}
+            <div style={{ background: "#162518", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 22, padding: "28px 28px 24px", width: "min(92vw, 360px)", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}
               onClick={e => e.stopPropagation()}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                 <PauseCircle style={{ color: "#d4614a" }} className="h-5 w-5" />
-                <span style={{ fontSize: 17, fontWeight: 900, color: "#F5ECD7", letterSpacing: "-0.03em" }}>Pause Online Ordering</span>
+                <span style={{ fontSize: 17, fontWeight: 900, color: "#e8f5ed", letterSpacing: "-0.03em" }}>Pause Online Ordering</span>
               </div>
-              <p style={{ fontSize: 13, color: "#9e8570", marginBottom: 20, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: "#5a8a6a", marginBottom: 20, lineHeight: 1.5 }}>
                 Customers won't be able to place new online orders during the pause. Walk-in POS is unaffected.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -799,7 +799,7 @@ export default function Admin() {
               </div>
               <button
                 onClick={() => setShowPauseDialog(false)}
-                style={{ marginTop: 16, width: "100%", padding: "9px", borderRadius: 10, background: "transparent", color: "#9e8570", border: "1px solid rgba(74,48,32,0.4)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                style={{ marginTop: 16, width: "100%", padding: "9px", borderRadius: 10, background: "transparent", color: "#5a8a6a", border: "1px solid rgba(74,48,32,0.4)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
               >Cancel</button>
             </div>
           </div>
@@ -817,9 +817,9 @@ export default function Admin() {
                   onClick={() => { setPreset(p); if (p !== "custom") setCalOpen(false); else setCalOpen(true); }}
                   style={{
                     padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
-                    background: isActive ? "rgba(200,168,130,0.15)" : "rgba(255,255,255,0.04)",
+                    background: isActive ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.04)",
                     color: isActive ? OR : TM,
-                    border: isActive ? "1px solid rgba(200,168,130,0.4)" : `1px solid ${BORD}`,
+                    border: isActive ? "1px solid rgba(16,185,129,0.4)" : `1px solid ${BORD}`,
                   }}
                 >
                   {p === "today" ? "Today" : p === "yesterday" ? "Yesterday" : p === "last7" ? "Last 7 Days" : "Custom"}
@@ -948,7 +948,7 @@ export default function Admin() {
                   <div style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-0.03em", color: TP }}>Top Items</div>
                   <div style={{ fontSize: 11, color: TM, marginTop: 2 }}>Units sold</div>
                 </div>
-                <TrendingUp className="h-5 w-5" style={{ color: "#C8A882" }} />
+                <TrendingUp className="h-5 w-5" style={{ color: "#10b981" }} />
               </div>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={topItemsData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
@@ -956,7 +956,7 @@ export default function Admin() {
                   <XAxis type="number" tick={{ fontSize: 11, fill: TM }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: TM }} axisLine={false} tickLine={false} width={90} />
                   <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
-                  <Bar dataKey="count" fill="#C8A882" radius={[0,4,4,0]} barSize={14} />
+                  <Bar dataKey="count" fill="#10b981" radius={[0,4,4,0]} barSize={14} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -1001,14 +1001,14 @@ export default function Admin() {
             {/* Loyverse import */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-4 pt-4" style={{ borderBottom: `1px solid ${BORD}` }}>
               <div className="flex items-center gap-3">
-                <div style={{ background: "rgba(200,168,130,0.12)", borderRadius: 10, padding: 8 }}><History className="h-4 w-4" style={{ color: "#C8A882" }} /></div>
+                <div style={{ background: "rgba(16,185,129,0.12)", borderRadius: 10, padding: 8 }}><History className="h-4 w-4" style={{ color: "#10b981" }} /></div>
                 <div>
                   <p style={{ fontWeight: 600, fontSize: 13, color: TP }}>Import from Loyverse API</p>
                   <p style={{ fontSize: 11, color: TM }}>{importState === "importing" ? "Fetching from Loyverse…" : "Imports customers + last 30 days of receipts"}</p>
                   {importMessage && <p style={{ fontSize: 11, marginTop: 2, color: importState === "error" ? "#d4614a" : "#3d8f6a" }}>{importMessage}</p>}
                 </div>
               </div>
-              <button onClick={handleLoyverseImport} disabled={importState === "importing" || importState === "success"} style={toolBtnStyle(importState as ToolState, "#C8A882")}>
+              <button onClick={handleLoyverseImport} disabled={importState === "importing" || importState === "success"} style={toolBtnStyle(importState as ToolState, "#10b981")}>
                 <History className={`h-3.5 w-3.5 inline mr-1.5 ${importState === "importing" ? "animate-spin" : ""}`} />
                 {importState === "importing" ? "Importing…" : importState === "success" ? "Imported!" : importState === "error" ? "Retry" : "Import Now"}
               </button>
@@ -1037,7 +1037,7 @@ export default function Admin() {
             <div className="flex items-center gap-3 mb-4">
               <h2 style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.04em", color: TP }}>Active Orders</h2>
               {activeOrders.length > 0 && (
-                <span style={{ fontSize: 11, fontWeight: 800, background: "rgba(200,168,130,0.15)", color: OR, border: "1px solid rgba(200,168,130,0.3)", borderRadius: 20, padding: "2px 10px" }}>
+                <span style={{ fontSize: 11, fontWeight: 800, background: "rgba(16,185,129,0.15)", color: OR, border: "1px solid rgba(16,185,129,0.3)", borderRadius: 20, padding: "2px 10px" }}>
                   {activeOrders.length}
                 </span>
               )}
@@ -1060,7 +1060,7 @@ export default function Admin() {
                           <span style={{ ...STATUS_STYLE[order.status], fontSize: 10, fontWeight: 800, borderRadius: 8, padding: "3px 9px", letterSpacing: "0.04em" }}>
                             {STATUS_LABELS[order.status]}
                           </span>
-                          <span style={{ background: "#4a3020", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>
+                          <span style={{ background: "rgba(100,200,130,0.12)", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>
                             {order.orderType}
                           </span>
                           {(() => { const s = sourceBadge(order.source); return s ? <span style={{ ...s.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px" }}>{s.label}</span> : null; })()}
@@ -1121,7 +1121,7 @@ export default function Admin() {
                         <button
                           onClick={() => handleStatusChange(order.id, NEXT_STATUS[order.status])}
                           disabled={updateStatus.isPending}
-                          style={{ background: "linear-gradient(135deg,#C8A882,#a8845e)", color: "#fff", border: "none", borderRadius: 20, padding: "7px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 14px rgba(200,168,130,0.35)", opacity: updateStatus.isPending ? 0.7 : 1 }}
+                          style={{ background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", border: "none", borderRadius: 20, padding: "7px 18px", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 4px 14px rgba(16,185,129,0.35)", opacity: updateStatus.isPending ? 0.7 : 1 }}
                         >
                           Mark as {STATUS_LABELS[NEXT_STATUS[order.status]]}
                         </button>
@@ -1160,7 +1160,7 @@ export default function Admin() {
                           placeholder="Other reason (optional)"
                           value={["Out of chicken","Out of steak","Out of shrimp","Out of salmon","Out of burger"].includes(rejectState.reason) ? "" : rejectState.reason}
                           onChange={(e) => setRejectState({ ...rejectState, reason: e.target.value })}
-                          rows={1} className="text-sm resize-none bg-transparent border-white/10 text-[#F5ECD7] placeholder:text-[#9e8570]"
+                          rows={1} className="text-sm resize-none bg-transparent border-white/10 text-[#e8f5ed] placeholder:text-[#5a8a6a]"
                         />
                         <button
                           onClick={() => handleStatusChange(order.id, "cancelled", rejectState?.reason || undefined)}
@@ -1251,7 +1251,7 @@ export default function Admin() {
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                   <span style={{ ...STATUS_STYLE[o.status], fontSize: 10, fontWeight: 800, borderRadius: 8, padding: "3px 9px", letterSpacing: "0.04em" }}>{STATUS_LABELS[o.status]}</span>
-                  <span style={{ background: "#4a3020", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>{o.orderType}</span>
+                  <span style={{ background: "rgba(100,200,130,0.12)", color: TM, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px", textTransform: "capitalize" }}>{o.orderType}</span>
                   {(() => { const s = sourceBadge(o.source); return s ? <span style={{ ...s.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px" }}>{s.label}</span> : null; })()}
                   {o.paymentMethod && (() => { const p = paymentBadge(o.source, o.paymentMethod); return <span style={{ ...p.style, fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "3px 9px" }}>{p.label}</span>; })()}
                 </div>
@@ -1337,7 +1337,7 @@ export default function Admin() {
                   <span style={{ fontSize: 12, fontWeight: 600, borderRadius: 8, padding: "4px 12px",
                     ...(o.paymentStatus === "paid"     ? { background: "rgba(61,143,106,0.1)",  color: "#3d8f6a", border: "1px solid rgba(61,143,106,0.25)"  } :
                         o.paymentStatus === "refunded" ? { background: "rgba(239,68,68,0.1)",  color: "#d4614a", border: "1px solid rgba(239,68,68,0.25)"  } :
-                                                         { background: "rgba(200,168,130,0.1)", color: OR,        border: "1px solid rgba(200,168,130,0.25)"  }) }}>
+                                                         { background: "rgba(16,185,129,0.1)", color: OR,        border: "1px solid rgba(16,185,129,0.25)"  }) }}>
                     {o.paymentStatus === "paid" ? "✓ Paid" : o.paymentStatus === "refunded" ? "Refunded" : "Pending"}
                   </span>
                 </div>
@@ -1345,7 +1345,7 @@ export default function Admin() {
 
               {/* Notes */}
               {o.notes && (
-                <div style={{ background: "rgba(200,168,130,0.08)", border: "1px solid rgba(200,168,130,0.2)", borderRadius: 12, padding: "10px 14px" }}>
+                <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 12, padding: "10px 14px" }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: OR, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Order Note</div>
                   <div style={{ fontSize: 13, color: TP }}>{o.notes}</div>
                 </div>

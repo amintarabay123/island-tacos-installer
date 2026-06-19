@@ -622,14 +622,14 @@ export default function AdminReports() {
   const maxSales = report?.daily.reduce((m, d) => Math.max(m, d.sales), 0) ?? 1;
 
   const S = {
-    card: { background:"#1e1f38", borderRadius:14, border:"1px solid rgba(255,255,255,0.06)" } as React.CSSProperties,
-    label: { display:"block", fontSize:11, fontWeight:600, color:"#7077a1", marginBottom:4, textTransform:"uppercase", letterSpacing:"0.06em" } as React.CSSProperties,
-    input: { padding:"8px 12px", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, fontSize:14, background:"#16172b", color:"#e8eaf6", outline:"none" } as React.CSSProperties,
-    h2: { fontWeight:700, color:"#e8eaf6", fontSize:15, margin:0, marginBottom:16 } as React.CSSProperties,
+    card: { background:"#162518", borderRadius:14, border:"1px solid rgba(255,255,255,0.06)" } as React.CSSProperties,
+    label: { display:"block", fontSize:11, fontWeight:600, color:"#5a8a6a", marginBottom:4, textTransform:"uppercase", letterSpacing:"0.06em" } as React.CSSProperties,
+    input: { padding:"8px 12px", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, fontSize:14, background:"#0d1612", color:"#e8f5ed", outline:"none" } as React.CSSProperties,
+    h2: { fontWeight:700, color:"#e8f5ed", fontSize:15, margin:0, marginBottom:16 } as React.CSSProperties,
   };
 
   return (
-    <div style={{ minHeight:"100dvh", background:"#16172b", color:"#e8eaf6" }}>
+    <div style={{ minHeight:"100dvh", background:"#0d1612", color:"#e8f5ed" }}>
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -641,28 +641,28 @@ export default function AdminReports() {
       `}</style>
 
       {/* ── Header ── */}
-      <div className="no-print" style={{ background:"#0e1020", borderBottom:"1px solid rgba(255,255,255,0.06)", position:"sticky", top:0, zIndex:10 }}>
+      <div className="no-print" style={{ background:"#09100d", borderBottom:"1px solid rgba(255,255,255,0.06)", position:"sticky", top:0, zIndex:10 }}>
         <div style={{ maxWidth:1152, margin:"0 auto", padding:"10px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
             <button onClick={() => navigate(adminRoutes.dashboard)}
-              style={{ padding:8, borderRadius:8, background:"transparent", border:"none", cursor:"pointer", color:"#7077a1", display:"flex" }}>
+              style={{ padding:8, borderRadius:8, background:"transparent", border:"none", cursor:"pointer", color:"#5a8a6a", display:"flex" }}>
               <ArrowLeft style={{ width:20, height:20 }} />
             </button>
-            <h1 style={{ fontSize:18, fontWeight:700, color:"#e8eaf6", margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Sales Reports</h1>
+            <h1 style={{ fontSize:18, fontWeight:700, color:"#e8f5ed", margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Sales Reports</h1>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
             <button onClick={() => setShowPrinterSettings(s => !s)}
-              style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 12px", fontSize:13, fontWeight:500, color:"#7077a1", background:"transparent", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, cursor:"pointer" }}>
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 12px", fontSize:13, fontWeight:500, color:"#5a8a6a", background:"transparent", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, cursor:"pointer" }}>
               <Printer style={{ width:15, height:15 }} />
               <span className="hidden sm:inline">Printer</span>
             </button>
             <button onClick={handlePrint} disabled={!report}
-              style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:13, fontWeight:500, background:"rgba(255,255,255,0.07)", color:"#e8eaf6", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, cursor:!report?"not-allowed":"pointer", opacity:!report?0.4:1 }}>
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:13, fontWeight:500, background:"rgba(255,255,255,0.07)", color:"#e8f5ed", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, cursor:!report?"not-allowed":"pointer", opacity:!report?0.4:1 }}>
               <Printer style={{ width:15, height:15 }} />
               <span className="hidden sm:inline">Print</span>
             </button>
             <button onClick={handleDownloadPDF} disabled={!report || pdfGenerating}
-              style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:13, fontWeight:600, background:"#ff6b00", color:"#fff", border:"none", borderRadius:8, cursor:(!report||pdfGenerating)?"not-allowed":"pointer", opacity:(!report||pdfGenerating)?0.5:1 }}>
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:13, fontWeight:600, background:"#f59e0b", color:"#fff", border:"none", borderRadius:8, cursor:(!report||pdfGenerating)?"not-allowed":"pointer", opacity:(!report||pdfGenerating)?0.5:1 }}>
               <Download style={{ width:15, height:15 }} className={pdfGenerating ? "animate-bounce" : ""} />
               <span className="hidden sm:inline">{pdfGenerating ? "Generating…" : "Download PDF"}</span>
             </button>
@@ -672,10 +672,10 @@ export default function AdminReports() {
 
       {/* ── Printer Settings Panel ── */}
       {showPrinterSettings && (
-        <div className="no-print" style={{ background:"#1a1b30", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+        <div className="no-print" style={{ background:"#112018", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
           <div style={{ maxWidth:1152, margin:"0 auto", padding:"16px" }}>
-            <h3 style={{ fontWeight:600, color:"#e8eaf6", display:"flex", alignItems:"center", gap:8, fontSize:14, margin:"0 0 12px" }}>
-              <Printer style={{ width:15, height:15, color:"#7077a1" }} /> Receipt Printer Settings
+            <h3 style={{ fontWeight:600, color:"#e8f5ed", display:"flex", alignItems:"center", gap:8, fontSize:14, margin:"0 0 12px" }}>
+              <Printer style={{ width:15, height:15, color:"#5a8a6a" }} /> Receipt Printer Settings
             </h3>
             <div style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-end", gap:16, marginBottom:8 }}>
               <div>
@@ -723,30 +723,30 @@ export default function AdminReports() {
                 </>
               )}
               <button onClick={savePrinterConfig}
-                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer" }}>
+                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", background:"#10b981", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer" }}>
                 <Save style={{ width:15, height:15 }} /> {printerSaved ? "Saved!" : "Save"}
               </button>
             </div>
             {printerConfig.type === "bridge" && (
-              <div style={{ marginTop:10, padding:12, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:8, fontSize:12, color:"#7077a1", lineHeight:1.7 }}>
-                <p style={{ fontWeight:600, color:"#e8eaf6", marginBottom:6 }}>Setup (one-time, ~2 minutes):</p>
-                <p>1. Install <strong style={{ color:"#e8eaf6" }}>Node.js</strong> on any Windows/Mac computer on your restaurant WiFi.</p>
-                <p>2. <a href="/api/print/bridge.js" download style={{ color:"#7c6af7", fontWeight:600 }}>Download the bridge script</a> — open in a text editor and set PRINTER_IP to your printer's local IP.</p>
-                <p>3. Run: <code style={{ background:"rgba(255,255,255,0.08)", padding:"1px 6px", borderRadius:4, color:"#e8eaf6" }}>node cedar-cafe-bridge.js</code></p>
-                <p>4. Leave that window open. Bridge URL = <strong style={{ color:"#e8eaf6" }}>http://localhost:8765</strong></p>
+              <div style={{ marginTop:10, padding:12, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:8, fontSize:12, color:"#5a8a6a", lineHeight:1.7 }}>
+                <p style={{ fontWeight:600, color:"#e8f5ed", marginBottom:6 }}>Setup (one-time, ~2 minutes):</p>
+                <p>1. Install <strong style={{ color:"#e8f5ed" }}>Node.js</strong> on any Windows/Mac computer on your restaurant WiFi.</p>
+                <p>2. <a href="/api/print/bridge.js" download style={{ color:"#10b981", fontWeight:600 }}>Download the bridge script</a> — open in a text editor and set PRINTER_IP to your printer's local IP.</p>
+                <p>3. Run: <code style={{ background:"rgba(255,255,255,0.08)", padding:"1px 6px", borderRadius:4, color:"#e8f5ed" }}>node cedar-cafe-bridge.js</code></p>
+                <p>4. Leave that window open. Bridge URL = <strong style={{ color:"#e8f5ed" }}>http://localhost:8765</strong></p>
               </div>
             )}
-            {printerConfig.type === "browser" && <p style={{ fontSize:12, color:"#7077a1", marginTop:6 }}>Opens the OS print dialog. Set your receipt printer as default to skip the dialog.</p>}
-            {printerConfig.type === "network" && <p style={{ fontSize:12, color:"#7077a1", marginTop:6 }}>Sends print jobs directly to the Munbyn over WiFi. Make sure the printer is on and connected.</p>}
+            {printerConfig.type === "browser" && <p style={{ fontSize:12, color:"#5a8a6a", marginTop:6 }}>Opens the OS print dialog. Set your receipt printer as default to skip the dialog.</p>}
+            {printerConfig.type === "network" && <p style={{ fontSize:12, color:"#5a8a6a", marginTop:6 }}>Sends print jobs directly to the Munbyn over WiFi. Make sure the printer is on and connected.</p>}
           </div>
         </div>
       )}
 
       {/* ── KDS Printer Settings sub-panel ── */}
       {showPrinterSettings && (
-        <div className="no-print" style={{ background:"#16172b", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
+        <div className="no-print" style={{ background:"#0d1612", borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
           <div style={{ maxWidth:1152, margin:"0 auto", padding:"12px 16px" }}>
-            <h3 style={{ fontWeight:600, color:"#7077a1", display:"flex", alignItems:"center", gap:8, fontSize:13, margin:"0 0 10px" }}>
+            <h3 style={{ fontWeight:600, color:"#5a8a6a", display:"flex", alignItems:"center", gap:8, fontSize:13, margin:"0 0 10px" }}>
               <Printer style={{ width:14, height:14 }} /> KDS Printer Settings
             </h3>
             <div style={{ display:"flex", flexWrap:"wrap", alignItems:"flex-end", gap:16 }}>
@@ -785,7 +785,7 @@ export default function AdminReports() {
                 </div>
               )}
               <button onClick={saveKdsPrinterConfig}
-                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer" }}>
+                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", background:"#10b981", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer" }}>
                 <Save style={{ width:15, height:15 }} /> {kdsConfigSaved ? "Saved!" : "Save KDS"}
               </button>
             </div>
@@ -799,8 +799,8 @@ export default function AdminReports() {
         <div className="no-print" style={{ display:"flex", gap:14, marginBottom:24, overflowX:"auto" }}>
           {[
             { art:"💰", grad:"linear-gradient(145deg,#10b981,#059669,#064e3b)", glow:"rgba(16,185,129,0.5)",   label:"Gross Sales",  value: report ? `$${report.totalSales.toFixed(2)}`    : "—", sub:"total revenue" },
-            { art:"📈", grad:"linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow:"rgba(124,106,247,0.55)", label:"Net Sales",    value: report ? `$${report.netSales.toFixed(2)}`     : "—", sub:"after refunds" },
-            { art:"🧾", grad:"linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow:"rgba(255,107,0,0.55)",   label:"Paid Orders",  value: report ? String(report.paidOrders)             : "—", sub:"completed" },
+            { art:"📈", grad:"linear-gradient(145deg,#10b981,#5b4cf5,#3730a3)", glow:"rgba(16,185,129,0.55)", label:"Net Sales",    value: report ? `$${report.netSales.toFixed(2)}`     : "—", sub:"after refunds" },
+            { art:"🧾", grad:"linear-gradient(145deg,#f59e0b,#ff3d00,#c0392b)", glow:"rgba(255,107,0,0.55)",   label:"Paid Orders",  value: report ? String(report.paidOrders)             : "—", sub:"completed" },
             { art:"⚡", grad:"linear-gradient(145deg,#0ea5e9,#0284c7,#1e3a8a)", glow:"rgba(14,165,233,0.5)",   label:"Avg Order",    value: report ? `$${report.avgOrderValue.toFixed(2)}` : "—", sub:"per paid order" },
           ].map((fc) => (
             <div key={fc.label} style={{ width:168, flexShrink:0 }}>
@@ -823,8 +823,8 @@ export default function AdminReports() {
             {PRESETS.map(p => (
               <button key={p.label} onClick={() => applyPreset(p.label, p.get)}
                 style={{ padding:"6px 14px", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer", border:"none", transition:"background 0.15s",
-                  background: activePreset === p.label ? "#ff6b00" : "rgba(255,255,255,0.06)",
-                  color: activePreset === p.label ? "#fff" : "#7077a1" }}>
+                  background: activePreset === p.label ? "#f59e0b" : "rgba(255,255,255,0.06)",
+                  color: activePreset === p.label ? "#fff" : "#5a8a6a" }}>
                 {p.label}
               </button>
             ))}
@@ -839,7 +839,7 @@ export default function AdminReports() {
               <input type="date" value={to} onChange={e => { setTo(e.target.value); setActivePreset("Custom"); }} style={S.input} />
             </div>
             <button onClick={() => loadReport(from, to)} disabled={loading}
-              style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 18px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:loading?"not-allowed":"pointer", opacity:loading?0.6:1 }}>
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 18px", background:"#10b981", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:loading?"not-allowed":"pointer", opacity:loading?0.6:1 }}>
               <RefreshCw style={{ width:15, height:15 }} className={loading ? "animate-spin" : ""} />
               {loading ? "Loading…" : "Apply"}
             </button>
@@ -865,15 +865,15 @@ export default function AdminReports() {
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:16, marginBottom:24 }}>
               {[
                 { icon: DollarSign, label: "Gross Sales",   value: fmt(report.totalSales),    sub: `Net: ${fmt(report.netSales)}`,    accent:"#30d158" },
-                { icon: ShoppingBag,label: "Orders",        value: String(report.paidOrders), sub: `${report.cancelledOrders} cancelled`, accent:"#7c6af7" },
-                { icon: TrendingUp,  label: "Avg Order",    value: fmt(report.avgOrderValue), sub: "per paid order",                  accent:"#ff6b00" },
+                { icon: ShoppingBag,label: "Orders",        value: String(report.paidOrders), sub: `${report.cancelledOrders} cancelled`, accent:"#10b981" },
+                { icon: TrendingUp,  label: "Avg Order",    value: fmt(report.avgOrderValue), sub: "per paid order",                  accent:"#f59e0b" },
                 { icon: Percent,     label: "Refunds",      value: fmt(report.refundTotal),   sub: `${report.totalSales > 0 ? ((report.refundTotal/report.totalSales)*100).toFixed(1):0}% of sales`, accent:"#ff453a" },
               ].map(c => (
                 <div key={c.label} style={{ ...S.card, padding:20, borderLeft:`3px solid ${c.accent}` }}>
                   <c.icon style={{ width:18, height:18, marginBottom:10, color:c.accent }} />
-                  <div style={{ fontSize:26, fontWeight:800, color:"#e8eaf6", letterSpacing:"-0.5px" }}>{c.value}</div>
-                  <div style={{ fontSize:11, fontWeight:600, color:"#7077a1", textTransform:"uppercase", letterSpacing:"0.06em", marginTop:2 }}>{c.label}</div>
-                  <div style={{ fontSize:12, color:"#7077a1", marginTop:4 }}>{c.sub}</div>
+                  <div style={{ fontSize:26, fontWeight:800, color:"#e8f5ed", letterSpacing:"-0.5px" }}>{c.value}</div>
+                  <div style={{ fontSize:11, fontWeight:600, color:"#5a8a6a", textTransform:"uppercase", letterSpacing:"0.06em", marginTop:2 }}>{c.label}</div>
+                  <div style={{ fontSize:12, color:"#5a8a6a", marginTop:4 }}>{c.sub}</div>
                 </div>
               ))}
             </div>
@@ -886,20 +886,20 @@ export default function AdminReports() {
                   {[
                     { label:"Cash",          value:report.byMethod.cash,              color:"#30d158" },
                     { label:"Card",          value:report.byMethod.card,              color:"#007aff" },
-                    { label:"ATH Móvil",     value:report.byMethod.athmovil,          color:"#7c6af7" },
-                    { label:"Split",         value:report.byMethod.split ?? 0,        color:"#ff6b00" },
-                    { label:"Complimentary", value:report.byMethod.complimentary ?? 0,color:"#7077a1" },
+                    { label:"ATH Móvil",     value:report.byMethod.athmovil,          color:"#10b981" },
+                    { label:"Split",         value:report.byMethod.split ?? 0,        color:"#f59e0b" },
+                    { label:"Complimentary", value:report.byMethod.complimentary ?? 0,color:"#5a8a6a" },
                   ].filter(m => m.value > 0).map(m => (
                     <div key={m.label}>
                       <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, marginBottom:5 }}>
-                        <span style={{ fontWeight:500, color:"#b0b8d8" }}>{m.label}</span>
-                        <span style={{ fontWeight:700, color:"#e8eaf6" }}>{fmt(m.value)}</span>
+                        <span style={{ fontWeight:500, color:"#8cc4a0" }}>{m.label}</span>
+                        <span style={{ fontWeight:700, color:"#e8f5ed" }}>{fmt(m.value)}</span>
                       </div>
                       <div style={{ width:"100%", background:"rgba(255,255,255,0.06)", borderRadius:4, height:6, overflow:"hidden" }}>
                         <div style={{ background:m.color, height:6, borderRadius:4, transition:"width 0.6s ease",
                           width: report.totalSales > 0 ? `${(m.value/report.totalSales)*100}%` : "0%" }} />
                       </div>
-                      <div style={{ fontSize:11, color:"#7077a1", marginTop:2 }}>
+                      <div style={{ fontSize:11, color:"#5a8a6a", marginTop:2 }}>
                         {report.totalSales > 0 ? `${((m.value/report.totalSales)*100).toFixed(1)}%` : "0%"}
                       </div>
                     </div>
@@ -916,13 +916,13 @@ export default function AdminReports() {
                         const showLabel = report.daily.length <= 31;
                         return (
                           <div key={d.date} className="rpt-bar-item" style={{ flex:1, minWidth:0, display:"flex", flexDirection:"column", alignItems:"center", gap:2, position:"relative" }}>
-                            <div className="rpt-bar-tip" style={{ fontSize:9, color:"#7077a1", opacity:0, transition:"opacity 0.15s", whiteSpace:"nowrap", position:"absolute", top:-14 }}>{fmt(d.sales)}</div>
-                            <div style={{ width:"100%", background:"#ff6b00", borderRadius:"2px 2px 0 0", cursor:"default", opacity:0.85,
+                            <div className="rpt-bar-tip" style={{ fontSize:9, color:"#5a8a6a", opacity:0, transition:"opacity 0.15s", whiteSpace:"nowrap", position:"absolute", top:-14 }}>{fmt(d.sales)}</div>
+                            <div style={{ width:"100%", background:"#f59e0b", borderRadius:"2px 2px 0 0", cursor:"default", opacity:0.85,
                               height:`${maxSales>0?(d.sales/maxSales)*110:0}px`,
                               minHeight: d.sales>0?3:0 }}
                               title={`${d.date}: ${fmt(d.sales)}`} />
                             {showLabel && (
-                              <div style={{ fontSize:9, color:"#7077a1", lineHeight:1.2, textAlign:"center", overflow:"hidden", width:"100%" }}>
+                              <div style={{ fontSize:9, color:"#5a8a6a", lineHeight:1.2, textAlign:"center", overflow:"hidden", width:"100%" }}>
                                 {d.date.slice(5)}
                               </div>
                             )}
@@ -934,7 +934,7 @@ export default function AdminReports() {
                 </div>
               ) : (
                 <div style={{ ...S.card, padding:20, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <p style={{ color:"#7077a1", fontSize:13 }}>Select a multi-day range to see daily breakdown</p>
+                  <p style={{ color:"#5a8a6a", fontSize:13 }}>Select a multi-day range to see daily breakdown</p>
                 </div>
               )}
             </div>
@@ -948,18 +948,18 @@ export default function AdminReports() {
                     <thead>
                       <tr style={{ borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
                         {["#","Item","Qty","Revenue","% of Sales"].map((h,i) => (
-                          <th key={h} style={{ padding:"6px 8px", fontWeight:600, color:"#7077a1", fontSize:11, textTransform:"uppercase", letterSpacing:"0.05em", textAlign: i<2?"left":"right" }}>{h}</th>
+                          <th key={h} style={{ padding:"6px 8px", fontWeight:600, color:"#5a8a6a", fontSize:11, textTransform:"uppercase", letterSpacing:"0.05em", textAlign: i<2?"left":"right" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {report.topItems.map((item, i) => (
                         <tr key={item.name} style={{ borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
-                          <td style={{ padding:"8px 8px", color:"#7077a1" }}>{i+1}</td>
-                          <td style={{ padding:"8px 8px", fontWeight:500, color:"#e8eaf6" }}>{item.name}</td>
-                          <td style={{ padding:"8px 8px", color:"#7077a1", textAlign:"right" }}>{item.quantity.toLocaleString()}</td>
-                          <td style={{ padding:"8px 8px", fontWeight:600, color:"#e8eaf6", textAlign:"right" }}>{fmt(item.revenue)}</td>
-                          <td style={{ padding:"8px 8px", color:"#7077a1", textAlign:"right" }}>
+                          <td style={{ padding:"8px 8px", color:"#5a8a6a" }}>{i+1}</td>
+                          <td style={{ padding:"8px 8px", fontWeight:500, color:"#e8f5ed" }}>{item.name}</td>
+                          <td style={{ padding:"8px 8px", color:"#5a8a6a", textAlign:"right" }}>{item.quantity.toLocaleString()}</td>
+                          <td style={{ padding:"8px 8px", fontWeight:600, color:"#e8f5ed", textAlign:"right" }}>{fmt(item.revenue)}</td>
+                          <td style={{ padding:"8px 8px", color:"#5a8a6a", textAlign:"right" }}>
                             {report.totalSales>0 ? `${((item.revenue/report.totalSales)*100).toFixed(1)}%` : "0%"}
                           </td>
                         </tr>
@@ -995,8 +995,8 @@ export default function AdminReports() {
                       fontWeight: isNet ? 700 : 400,
                       fontSize: isNet ? 15 : 13,
                     }}>
-                      <span style={{ color: isNet ? "#30d158" : "#b0b8d8" }}>{label}</span>
-                      <span style={{ color: isNet ? "#30d158" : "#e8eaf6" }}>{val}</span>
+                      <span style={{ color: isNet ? "#30d158" : "#8cc4a0" }}>{label}</span>
+                      <span style={{ color: isNet ? "#30d158" : "#e8f5ed" }}>{val}</span>
                     </div>
                   );
                 })}
@@ -1006,7 +1006,7 @@ export default function AdminReports() {
         )}
 
         {!report && !loading && !error && (
-          <div style={{ textAlign:"center", paddingTop:64, paddingBottom:64, color:"#7077a1", fontSize:14 }}>
+          <div style={{ textAlign:"center", paddingTop:64, paddingBottom:64, color:"#5a8a6a", fontSize:14 }}>
             Select a date range and click Apply
           </div>
         )}

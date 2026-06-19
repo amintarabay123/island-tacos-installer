@@ -5,12 +5,12 @@ import { saveAuthToken } from "@/lib/auth";
 import { useStoreSettings } from "@/lib/use-store-settings";
 
 const CC = {
-  bg:     "#0c0805",
-  surface:"#171009",
-  bord:   "#4a3020",
-  chalk:  "#F5ECD7",
-  muted:  "#9e8570",
-  accent: "#C8A882",
+  bg:     "#0d1612",
+  surface:"#162518",
+  bord:   "rgba(100,200,130,0.2)",
+  chalk:  "#e8f5ed",
+  muted:  "#5a8a6a",
+  accent: "#10b981",
   hunter: "#2d6a4f",
   hunterLt:"#3d8f6a",
   red:    "#d4614a",

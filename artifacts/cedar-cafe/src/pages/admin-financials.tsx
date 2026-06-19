@@ -372,16 +372,16 @@ const STEPS = [
 
 const FIN_INPUT: React.CSSProperties = {
   flex:1, padding:"8px 10px", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8,
-  fontSize:13, background:"#16172b", color:"#e8eaf6", outline:"none",
+  fontSize:13, background:"#0d1612", color:"#e8f5ed", outline:"none",
 };
 const FIN_PREFIX: React.CSSProperties = {
   padding:"8px 10px", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)",
-  borderRight:"none", borderRadius:"8px 0 0 8px", fontSize:12, color:"#7077a1",
+  borderRight:"none", borderRadius:"8px 0 0 8px", fontSize:12, color:"#5a8a6a",
 };
 const FIN_LABEL: React.CSSProperties = {
-  display:"block", fontSize:12, fontWeight:600, color:"#7077a1", marginBottom:4,
+  display:"block", fontSize:12, fontWeight:600, color:"#5a8a6a", marginBottom:4,
 };
-const FIN_HINT: React.CSSProperties = { display:"block", fontSize:11, color:"#7077a1", marginBottom:4, opacity:0.7 };
+const FIN_HINT: React.CSSProperties = { display:"block", fontSize:11, color:"#5a8a6a", marginBottom:4, opacity:0.7 };
 
 function numInput(
   label: string, value: number,
@@ -570,16 +570,16 @@ export default function AdminFinancials() {
   // ── If no draft is open, show list ───────────────────────────────────────
   if (!inWizard) {
     return (
-      <div style={{ minHeight:"100dvh", background:"#16172b", color:"#e8eaf6" }}>
-        <div style={{ background:"#0e1020", borderBottom:"1px solid rgba(255,255,255,0.06)", position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ minHeight:"100dvh", background:"#0d1612", color:"#e8f5ed" }}>
+        <div style={{ background:"#09100d", borderBottom:"1px solid rgba(255,255,255,0.06)", position:"sticky", top:0, zIndex:10 }}>
           <div style={{ maxWidth:896, margin:"0 auto", padding:"10px 16px", display:"flex", alignItems:"center", gap:12 }}>
             <button onClick={() => navigate(adminRoutes.dashboard)}
-              style={{ padding:8, borderRadius:8, background:"transparent", border:"none", cursor:"pointer", color:"#7077a1", display:"flex" }}>
+              style={{ padding:8, borderRadius:8, background:"transparent", border:"none", cursor:"pointer", color:"#5a8a6a", display:"flex" }}>
               <ArrowLeft style={{ width:20, height:20 }} />
             </button>
-            <h1 style={{ fontSize:17, fontWeight:700, color:"#e8eaf6", flex:1, margin:0 }}>Financial Statements</h1>
+            <h1 style={{ fontSize:17, fontWeight:700, color:"#e8f5ed", flex:1, margin:0 }}>Financial Statements</h1>
             <button onClick={newDraft}
-              style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer" }}>
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", background:"#10b981", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer" }}>
               <FilePlus style={{ width:16, height:16 }} /> New Statement
             </button>
           </div>
@@ -587,9 +587,9 @@ export default function AdminFinancials() {
 
         <div style={{ maxWidth:896, margin:"0 auto", padding:"32px 16px" }}>
           <div style={{ background:"rgba(48,209,88,0.08)", border:"1px solid rgba(48,209,88,0.2)", borderRadius:12, padding:16, marginBottom:24, display:"flex", gap:12 }}>
-            <FileText style={{ width:18, height:18, color:"#30d158", flexShrink:0, marginTop:2 }} />
-            <div style={{ fontSize:13, color:"#b0b8d8", lineHeight:1.6 }}>
-              <strong style={{ color:"#e8eaf6" }}>BVI-Compliant Financial Statements</strong> — This wizard generates a
+            <FileText style={{ width:18, height:18, color:"#34d399", flexShrink:0, marginTop:2 }} />
+            <div style={{ fontSize:13, color:"#8cc4a0", lineHeight:1.6 }}>
+              <strong style={{ color:"#e8f5ed" }}>BVI-Compliant Financial Statements</strong> — This wizard generates a
               Statement of Comprehensive Income and Statement of Financial Position following
               IFRS standards, as required under the BVI Business Companies Act. Revenue is
               automatically pulled from your POS. You provide expenses, assets, and liabilities.
@@ -598,30 +598,30 @@ export default function AdminFinancials() {
           </div>
 
           {loadingDrafts ? (
-            <div style={{ textAlign:"center", paddingTop:64, color:"#7077a1" }}>Loading…</div>
+            <div style={{ textAlign:"center", paddingTop:64, color:"#5a8a6a" }}>Loading…</div>
           ) : drafts.length === 0 ? (
-            <div style={{ textAlign:"center", paddingTop:80, paddingBottom:80, color:"#7077a1" }}>
+            <div style={{ textAlign:"center", paddingTop:80, paddingBottom:80, color:"#5a8a6a" }}>
               <FileText style={{ width:48, height:48, margin:"0 auto 12px", opacity:0.3 }} />
-              <p style={{ fontWeight:600, color:"#b0b8d8", marginBottom:6 }}>No financial statements yet</p>
+              <p style={{ fontWeight:600, color:"#8cc4a0", marginBottom:6 }}>No financial statements yet</p>
               <p style={{ fontSize:13 }}>Click "New Statement" to start your first one</p>
             </div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <h2 style={{ fontWeight:600, color:"#7077a1", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 8px" }}>Saved Drafts</h2>
+              <h2 style={{ fontWeight:600, color:"#5a8a6a", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 8px" }}>Saved Drafts</h2>
               {drafts.map(d => (
-                <div key={d.id} style={{ background:"#1e1f38", border:"1px solid rgba(255,255,255,0.06)", borderRadius:14, padding:"16px 20px", display:"flex", alignItems:"center", gap:16 }}>
-                  <FileText style={{ width:22, height:22, color:"#30d158", flexShrink:0 }} />
+                <div key={d.id} style={{ background:"#162518", border:"1px solid rgba(255,255,255,0.06)", borderRadius:14, padding:"16px 20px", display:"flex", alignItems:"center", gap:16 }}>
+                  <FileText style={{ width:22, height:22, color:"#34d399", flexShrink:0 }} />
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:600, color:"#e8eaf6", fontSize:15 }}>{d.business_name || "Cedar Cafe"}</div>
-                    <div style={{ fontSize:13, color:"#7077a1", marginTop:2 }}>{d.period_start} → {d.period_end}</div>
-                    <div style={{ fontSize:11, color:"#7077a1", marginTop:2, opacity:0.7 }}>Last saved {new Date(d.updated_at).toLocaleString()}</div>
+                    <div style={{ fontWeight:600, color:"#e8f5ed", fontSize:15 }}>{d.business_name || "Cedar Cafe"}</div>
+                    <div style={{ fontSize:13, color:"#5a8a6a", marginTop:2 }}>{d.period_start} → {d.period_end}</div>
+                    <div style={{ fontSize:11, color:"#5a8a6a", marginTop:2, opacity:0.7 }}>Last saved {new Date(d.updated_at).toLocaleString()}</div>
                   </div>
                   <button onClick={() => openDraft(d)}
-                    style={{ padding:"8px 16px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer" }}>
+                    style={{ padding:"8px 16px", background:"#10b981", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:"pointer" }}>
                     Open
                   </button>
                   <button onClick={() => deleteDraft(d.id)}
-                    style={{ padding:8, background:"transparent", border:"none", borderRadius:8, cursor:"pointer", color:"#7077a1", display:"flex" }}>
+                    style={{ padding:8, background:"transparent", border:"none", borderRadius:8, cursor:"pointer", color:"#5a8a6a", display:"flex" }}>
                     <Trash2 style={{ width:16, height:16 }} />
                   </button>
                 </div>
@@ -635,22 +635,22 @@ export default function AdminFinancials() {
 
   // ── Wizard ────────────────────────────────────────────────────────────────
   const FC = {
-    card: { background:"#1e1f38", borderRadius:14, border:"1px solid rgba(255,255,255,0.06)", padding:24 } as React.CSSProperties,
-    h2: { fontWeight:700, color:"#e8eaf6", fontSize:17, margin:"0 0 16px" } as React.CSSProperties,
-    desc: { fontSize:13, color:"#7077a1", margin:"0 0 16px", marginTop:-8 } as React.CSSProperties,
-    subLabel: { fontSize:13, fontWeight:500, color:"#b0b8d8", margin:"0 0 8px" } as React.CSSProperties,
-    inlineInput: { flex:1, padding:"7px 10px", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, fontSize:13, background:"#16172b", color:"#e8eaf6", outline:"none" } as React.CSSProperties,
-    inlinePrefix: { padding:"7px 10px", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRight:"none", borderRadius:"8px 0 0 8px", fontSize:11, color:"#7077a1" } as React.CSSProperties,
-    inlinePrefixR: { padding:"7px 10px", border:"1px solid rgba(255,255,255,0.1)", borderLeft:"none", borderRadius:"0 8px 8px 0", fontSize:13, background:"#16172b", color:"#e8eaf6", outline:"none", flex:1, minWidth:0 } as React.CSSProperties,
-    delBtn: { padding:6, background:"transparent", border:"none", cursor:"pointer", color:"#7077a1", display:"flex", borderRadius:6 } as React.CSSProperties,
-    addBtn: { display:"flex", alignItems:"center", gap:4, fontSize:13, fontWeight:500, color:"#7c6af7", background:"transparent", border:"none", cursor:"pointer", padding:"4px 0" } as React.CSSProperties,
+    card: { background:"#162518", borderRadius:14, border:"1px solid rgba(255,255,255,0.06)", padding:24 } as React.CSSProperties,
+    h2: { fontWeight:700, color:"#e8f5ed", fontSize:17, margin:"0 0 16px" } as React.CSSProperties,
+    desc: { fontSize:13, color:"#5a8a6a", margin:"0 0 16px", marginTop:-8 } as React.CSSProperties,
+    subLabel: { fontSize:13, fontWeight:500, color:"#8cc4a0", margin:"0 0 8px" } as React.CSSProperties,
+    inlineInput: { flex:1, padding:"7px 10px", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, fontSize:13, background:"#0d1612", color:"#e8f5ed", outline:"none" } as React.CSSProperties,
+    inlinePrefix: { padding:"7px 10px", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", borderRight:"none", borderRadius:"8px 0 0 8px", fontSize:11, color:"#5a8a6a" } as React.CSSProperties,
+    inlinePrefixR: { padding:"7px 10px", border:"1px solid rgba(255,255,255,0.1)", borderLeft:"none", borderRadius:"0 8px 8px 0", fontSize:13, background:"#0d1612", color:"#e8f5ed", outline:"none", flex:1, minWidth:0 } as React.CSSProperties,
+    delBtn: { padding:6, background:"transparent", border:"none", cursor:"pointer", color:"#5a8a6a", display:"flex", borderRadius:6 } as React.CSSProperties,
+    addBtn: { display:"flex", alignItems:"center", gap:4, fontSize:13, fontWeight:500, color:"#10b981", background:"transparent", border:"none", cursor:"pointer", padding:"4px 0" } as React.CSSProperties,
     sumRow: { display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:"1px solid rgba(255,255,255,0.04)", fontSize:13 } as React.CSSProperties,
     sumCard: { background:"rgba(255,255,255,0.04)", borderRadius:10, padding:14, marginTop:4 } as React.CSSProperties,
     gridRow: { display:"flex", gap:8, alignItems:"center", marginBottom:8 } as React.CSSProperties,
   };
 
   return (
-    <div style={{ minHeight:"100dvh", background:"#16172b", color:"#e8eaf6" }}>
+    <div style={{ minHeight:"100dvh", background:"#0d1612", color:"#e8f5ed" }}>
       <style>{`
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
         .fin-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -659,18 +659,18 @@ export default function AdminFinancials() {
       `}</style>
 
       {/* ── Header ── */}
-      <div style={{ background:"#0e1020", borderBottom:"1px solid rgba(255,255,255,0.06)", position:"sticky", top:0, zIndex:10 }}>
+      <div style={{ background:"#09100d", borderBottom:"1px solid rgba(255,255,255,0.06)", position:"sticky", top:0, zIndex:10 }}>
         <div style={{ maxWidth:896, margin:"0 auto", padding:"10px 16px", display:"flex", alignItems:"center", gap:12 }}>
           <button onClick={() => { setInWizard(false); setDraftId(null); setStep(0); loadDrafts(); }}
-            style={{ padding:8, borderRadius:8, background:"transparent", border:"none", cursor:"pointer", color:"#7077a1", display:"flex" }}>
+            style={{ padding:8, borderRadius:8, background:"transparent", border:"none", cursor:"pointer", color:"#5a8a6a", display:"flex" }}>
             <ArrowLeft style={{ width:20, height:20 }} />
           </button>
           <div style={{ flex:1, minWidth:0 }}>
-            <h1 style={{ fontSize:15, fontWeight:700, color:"#e8eaf6", margin:0 }}>Financial Statement Wizard</h1>
-            <p style={{ fontSize:11, color:"#7077a1", margin:0 }}>{periodStart} → {periodEnd}{draftId ? ` · Draft #${draftId}` : " · Unsaved"}</p>
+            <h1 style={{ fontSize:15, fontWeight:700, color:"#e8f5ed", margin:0 }}>Financial Statement Wizard</h1>
+            <p style={{ fontSize:11, color:"#5a8a6a", margin:0 }}>{periodStart} → {periodEnd}{draftId ? ` · Draft #${draftId}` : " · Unsaved"}</p>
           </div>
           <button onClick={() => save()} disabled={saving}
-            style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:13, fontWeight:500, color:"#b0b8d8", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, cursor:saving?"not-allowed":"pointer", opacity:saving?0.6:1 }}>
+            style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:13, fontWeight:500, color:"#8cc4a0", background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, cursor:saving?"not-allowed":"pointer", opacity:saving?0.6:1 }}>
             {saving ? <RefreshCw style={{ width:14, height:14 }} className="animate-spin" /> : null}
             {saving ? "Saving…" : "Save"}
           </button>
@@ -682,8 +682,8 @@ export default function AdminFinancials() {
             {STEPS.map((s, i) => (
               <button key={i} onClick={() => { save(); setStep(i); }}
                 style={{ padding:"5px 12px", borderRadius:20, fontSize:11, fontWeight:600, whiteSpace:"nowrap", cursor:"pointer", border:"none",
-                  background: i === step ? "#7c6af7" : i < step ? "rgba(124,106,247,0.2)" : "rgba(255,255,255,0.06)",
-                  color: i === step ? "#fff" : i < step ? "#a89ef7" : "#7077a1" }}>
+                  background: i === step ? "#10b981" : i < step ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.06)",
+                  color: i === step ? "#fff" : i < step ? "#6ee7b7" : "#5a8a6a" }}>
                 {i + 1}. {s}
               </button>
             ))}
@@ -702,8 +702,8 @@ export default function AdminFinancials() {
           const netProfit = grossPro - totalExp;
           const cards = [
             { art:"💰", grad:"linear-gradient(145deg,#10b981,#059669,#064e3b)", glow:"rgba(16,185,129,0.5)",   label:"Gross Sales",   value:`$${data.grossSales.toFixed(2)}`, sub:"total revenue" },
-            { art:"📊", grad:"linear-gradient(145deg,#7c6af7,#5b4cf5,#3730a3)", glow:"rgba(124,106,247,0.55)", label:"Net Revenue",   value:`$${netRev.toFixed(2)}`,          sub:"after refunds" },
-            { art:"📉", grad:"linear-gradient(145deg,#ff6b00,#ff3d00,#c0392b)", glow:"rgba(255,107,0,0.55)",   label:"Expenses",      value:`$${totalExp.toFixed(2)}`,        sub:"operating costs" },
+            { art:"📊", grad:"linear-gradient(145deg,#10b981,#0d9e72,#065f46)", glow:"rgba(16,185,129,0.55)", label:"Net Revenue",   value:`$${netRev.toFixed(2)}`,          sub:"after refunds" },
+            { art:"📉", grad:"linear-gradient(145deg,#f59e0b,#f59e0b,#f87171)", glow:"rgba(255,107,0,0.55)",   label:"Expenses",      value:`$${totalExp.toFixed(2)}`,        sub:"operating costs" },
             { art: netProfit >= 0 ? "📈" : "📉", grad: netProfit >= 0 ? "linear-gradient(145deg,#10b981,#059669,#064e3b)" : "linear-gradient(145deg,#ef4444,#dc2626,#7f1d1d)", glow: netProfit >= 0 ? "rgba(16,185,129,0.5)" : "rgba(239,68,68,0.45)", label: netProfit >= 0 ? "Net Profit" : "Net Loss", value:`$${Math.abs(netProfit).toFixed(2)}`, sub: netProfit >= 0 ? "period earnings" : "period loss" },
           ];
           return (
@@ -734,7 +734,7 @@ export default function AdminFinancials() {
                 <label style={FIN_LABEL}>Financial Period</label>
                 <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                   <input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} style={{ ...FIN_INPUT, flex:1 }} />
-                  <span style={{ color:"#7077a1", fontSize:13 }}>to</span>
+                  <span style={{ color:"#5a8a6a", fontSize:13 }}>to</span>
                   <input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} style={{ ...FIN_INPUT, flex:1 }} />
                 </div>
               </div>
@@ -755,16 +755,16 @@ export default function AdminFinancials() {
             <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, marginBottom:16 }}>
               <div>
                 <h2 style={{ ...FC.h2, margin:0 }}>Revenue</h2>
-                <p style={{ fontSize:13, color:"#7077a1", margin:"4px 0 0" }}>Sales data can be pulled automatically from your POS for the selected period.</p>
+                <p style={{ fontSize:13, color:"#5a8a6a", margin:"4px 0 0" }}>Sales data can be pulled automatically from your POS for the selected period.</p>
               </div>
               <button onClick={fetchPOSData} disabled={fetchingPOS}
-                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:fetchingPOS?"not-allowed":"pointer", opacity:fetchingPOS?0.6:1, flexShrink:0 }}>
+                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", background:"#10b981", color:"#fff", border:"none", borderRadius:8, fontSize:13, fontWeight:500, cursor:fetchingPOS?"not-allowed":"pointer", opacity:fetchingPOS?0.6:1, flexShrink:0 }}>
                 <RefreshCw style={{ width:14, height:14 }} className={fetchingPOS?"animate-spin":""} />
                 {fetchingPOS ? "Loading…" : "Import from POS"}
               </button>
             </div>
             {data.posDataFetched && (
-              <div style={{ background:"rgba(48,209,88,0.08)", border:"1px solid rgba(48,209,88,0.2)", borderRadius:8, padding:"8px 14px", fontSize:13, color:"#30d158", display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
+              <div style={{ background:"rgba(48,209,88,0.08)", border:"1px solid rgba(48,209,88,0.2)", borderRadius:8, padding:"8px 14px", fontSize:13, color:"#34d399", display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
                 <CheckCircle2 style={{ width:14, height:14, flexShrink:0 }} /> POS data imported for {periodStart} → {periodEnd}. Adjust below if needed.
               </div>
             )}
@@ -777,8 +777,8 @@ export default function AdminFinancials() {
               <div>{textInput("Other Income Description", data.otherIncomeDesc, v => update({ otherIncomeDesc: v }), "e.g. Catering revenue")}</div>
             </div>
             <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-              <span style={{ fontWeight:600, color:"#b0b8d8" }}>Net Revenue</span>
-              <span style={{ fontSize:18, fontWeight:800, color:"#30d158" }}>${fmtUSD(totals.netRevenue)}</span>
+              <span style={{ fontWeight:600, color:"#8cc4a0" }}>Net Revenue</span>
+              <span style={{ fontSize:18, fontWeight:800, color:"#34d399" }}>${fmtUSD(totals.netRevenue)}</span>
             </div>
           </div>
         )}
@@ -794,12 +794,12 @@ export default function AdminFinancials() {
               {numInput("Ending Inventory", data.endingInventory, v => update({ endingInventory: v }), "Value of stock at period end")}
             </div>
             <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-              <span style={{ fontWeight:600, color:"#b0b8d8" }}>Total COGS</span>
-              <span style={{ fontSize:16, fontWeight:700, color:"#e8eaf6" }}>${fmtUSD(totals.cogs)}</span>
+              <span style={{ fontWeight:600, color:"#8cc4a0" }}>Total COGS</span>
+              <span style={{ fontSize:16, fontWeight:700, color:"#e8f5ed" }}>${fmtUSD(totals.cogs)}</span>
             </div>
             <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", background: totals.grossProfit >= 0 ? "rgba(48,209,88,0.08)" : "rgba(255,69,58,0.08)" }}>
-              <span style={{ fontWeight:600, color:"#b0b8d8" }}>Gross Profit</span>
-              <span style={{ fontSize:18, fontWeight:800, color: totals.grossProfit >= 0 ? "#30d158" : "#ff453a" }}>${fmtUSD(totals.grossProfit)}</span>
+              <span style={{ fontWeight:600, color:"#8cc4a0" }}>Gross Profit</span>
+              <span style={{ fontSize:18, fontWeight:800, color: totals.grossProfit >= 0 ? "#34d399" : "#ff453a" }}>${fmtUSD(totals.grossProfit)}</span>
             </div>
           </div>
         )}
@@ -831,12 +831,12 @@ export default function AdminFinancials() {
               <Plus style={{ width:15, height:15 }} /> Add expense line
             </button>
             <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:16, marginBottom:8 }}>
-              <span style={{ fontWeight:600, color:"#b0b8d8" }}>Total Expenses</span>
-              <span style={{ fontSize:16, fontWeight:700, color:"#e8eaf6" }}>${fmtUSD(totals.totalExpenses)}</span>
+              <span style={{ fontWeight:600, color:"#8cc4a0" }}>Total Expenses</span>
+              <span style={{ fontSize:16, fontWeight:700, color:"#e8f5ed" }}>${fmtUSD(totals.totalExpenses)}</span>
             </div>
             <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", background: totals.netProfit >= 0 ? "rgba(48,209,88,0.08)" : "rgba(255,69,58,0.08)" }}>
-              <span style={{ fontWeight:600, color:"#b0b8d8" }}>{totals.netProfit >= 0 ? "Net Profit" : "Net Loss"}</span>
-              <span style={{ fontSize:18, fontWeight:800, color: totals.netProfit >= 0 ? "#30d158" : "#ff453a" }}>${fmtUSD(Math.abs(totals.netProfit))}</span>
+              <span style={{ fontWeight:600, color:"#8cc4a0" }}>{totals.netProfit >= 0 ? "Net Profit" : "Net Loss"}</span>
+              <span style={{ fontSize:18, fontWeight:800, color: totals.netProfit >= 0 ? "#34d399" : "#ff453a" }}>${fmtUSD(Math.abs(totals.netProfit))}</span>
             </div>
           </div>
         )}
@@ -878,8 +878,8 @@ export default function AdminFinancials() {
                 {numInput("Other Current Assets", data.otherCurrentAssets, v => update({ otherCurrentAssets: v }))}
               </div>
               <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span style={{ fontWeight:600, color:"#b0b8d8", fontSize:13 }}>Total Current Assets</span>
-                <span style={{ fontWeight:700, color:"#e8eaf6" }}>${fmtUSD(totals.totalCurrentAssets)}</span>
+                <span style={{ fontWeight:600, color:"#8cc4a0", fontSize:13 }}>Total Current Assets</span>
+                <span style={{ fontWeight:700, color:"#e8f5ed" }}>${fmtUSD(totals.totalCurrentAssets)}</span>
               </div>
             </div>
 
@@ -917,8 +917,8 @@ export default function AdminFinancials() {
                 {numInput("Other Non-Current Assets", data.otherNonCurrentAssets, v => update({ otherNonCurrentAssets: v }))}
               </div>
               <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(48,209,88,0.08)" }}>
-                <span style={{ fontWeight:600, color:"#b0b8d8", fontSize:13 }}>Total Assets</span>
-                <span style={{ fontSize:18, fontWeight:800, color:"#30d158" }}>${fmtUSD(totals.totalAssets)}</span>
+                <span style={{ fontWeight:600, color:"#8cc4a0", fontSize:13 }}>Total Assets</span>
+                <span style={{ fontSize:18, fontWeight:800, color:"#34d399" }}>${fmtUSD(totals.totalAssets)}</span>
               </div>
             </div>
           </div>
@@ -937,8 +937,8 @@ export default function AdminFinancials() {
                 {numInput("Other Current Liabilities", data.otherCurrentLiabilities, v => update({ otherCurrentLiabilities: v }))}
               </div>
               <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span style={{ fontWeight:600, color:"#b0b8d8", fontSize:13 }}>Total Current Liabilities</span>
-                <span style={{ fontWeight:700, color:"#e8eaf6" }}>${fmtUSD(totals.totalCurrentLiab)}</span>
+                <span style={{ fontWeight:600, color:"#8cc4a0", fontSize:13 }}>Total Current Liabilities</span>
+                <span style={{ fontWeight:700, color:"#e8f5ed" }}>${fmtUSD(totals.totalCurrentLiab)}</span>
               </div>
             </div>
 
@@ -967,7 +967,7 @@ export default function AdminFinancials() {
               </button>
               <div style={{ margin:"16px 0" }}>{numInput("Other Long-Term Liabilities", data.otherLongTermLiabilities, v => update({ otherLongTermLiabilities: v }))}</div>
               <div style={{ ...FC.sumCard, display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(255,69,58,0.08)" }}>
-                <span style={{ fontWeight:600, color:"#b0b8d8", fontSize:13 }}>Total Liabilities</span>
+                <span style={{ fontWeight:600, color:"#8cc4a0", fontSize:13 }}>Total Liabilities</span>
                 <span style={{ fontSize:18, fontWeight:800, color:"#ff453a" }}>${fmtUSD(totals.totalLiabilities)}</span>
               </div>
             </div>
@@ -996,8 +996,8 @@ export default function AdminFinancials() {
                 ["Total Equity",                                      totals.totalEquity,                  true,  false],
               ].map(([label, val, bold, red]) => (
                 <div key={label as string} style={{ ...FC.sumRow, fontWeight: bold ? 700 : 400, borderTop: bold ? "1px solid rgba(255,255,255,0.08)" : "none", marginTop: bold ? 6 : 0, paddingTop: bold ? 10 : 6 }}>
-                  <span style={{ color: red ? "#ff453a" : "#b0b8d8" }}>{label as string}</span>
-                  <span style={{ color: red ? "#ff453a" : bold ? "#30d158" : "#e8eaf6" }}>${fmtUSD(val as number)}</span>
+                  <span style={{ color: red ? "#ff453a" : "#8cc4a0" }}>{label as string}</span>
+                  <span style={{ color: red ? "#ff453a" : bold ? "#34d399" : "#e8f5ed" }}>${fmtUSD(val as number)}</span>
                 </div>
               ))}
             </div>
@@ -1021,8 +1021,8 @@ export default function AdminFinancials() {
               </div>
             ) : (
               <div style={{ background:"rgba(48,209,88,0.08)", border:"1px solid rgba(48,209,88,0.2)", borderRadius:12, padding:16, display:"flex", gap:12 }}>
-                <CheckCircle2 style={{ width:18, height:18, color:"#30d158", flexShrink:0, marginTop:2 }} />
-                <div style={{ fontSize:13, color:"#30d158" }}>
+                <CheckCircle2 style={{ width:18, height:18, color:"#34d399", flexShrink:0, marginTop:2 }} />
+                <div style={{ fontSize:13, color:"#34d399" }}>
                   <strong>Balance sheet balances</strong> — Assets = Liabilities + Equity = ${fmtUSD(totals.totalAssets)}
                 </div>
               </div>
@@ -1030,7 +1030,7 @@ export default function AdminFinancials() {
 
             <div className="fin-grid-2">
               <div style={FC.card}>
-                <h3 style={{ fontWeight:700, color:"#7077a1", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 12px" }}>Profit &amp; Loss Summary</h3>
+                <h3 style={{ fontWeight:700, color:"#5a8a6a", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 12px" }}>Profit &amp; Loss Summary</h3>
                 {[
                   ["Net Revenue",    totals.netRevenue,    false],
                   ["Cost of Goods",  totals.cogs,          false],
@@ -1039,14 +1039,14 @@ export default function AdminFinancials() {
                   [totals.netProfit >= 0 ? "Net Profit" : "Net Loss", totals.netProfit, true],
                 ].map(([label, val, bold]) => (
                   <div key={label as string} style={{ ...FC.sumRow, fontWeight: bold ? 700 : 400, borderTop: bold ? "1px solid rgba(255,255,255,0.08)" : "none", marginTop: bold ? 4 : 0 }}>
-                    <span style={{ color:"#b0b8d8" }}>{label as string}</span>
-                    <span style={{ color: bold ? (totals.netProfit >= 0 ? "#30d158" : "#ff453a") : "#e8eaf6" }}>${fmtUSD(val as number)}</span>
+                    <span style={{ color:"#8cc4a0" }}>{label as string}</span>
+                    <span style={{ color: bold ? (totals.netProfit >= 0 ? "#34d399" : "#ff453a") : "#e8f5ed" }}>${fmtUSD(val as number)}</span>
                   </div>
                 ))}
               </div>
 
               <div style={FC.card}>
-                <h3 style={{ fontWeight:700, color:"#7077a1", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 12px" }}>Balance Sheet Summary</h3>
+                <h3 style={{ fontWeight:700, color:"#5a8a6a", fontSize:11, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 12px" }}>Balance Sheet Summary</h3>
                 {[
                   ["Current Assets",     totals.totalCurrentAssets, false],
                   ["Fixed Assets (net)", totals.totalFixedNet,       false],
@@ -1056,33 +1056,33 @@ export default function AdminFinancials() {
                   ["Liab. + Equity",     totals.totalLiabAndEquity,  true ],
                 ].map(([label, val, bold]) => (
                   <div key={label as string} style={{ ...FC.sumRow, fontWeight: bold ? 700 : 400, borderTop: bold ? "1px solid rgba(255,255,255,0.08)" : "none", marginTop: bold ? 4 : 0 }}>
-                    <span style={{ color:"#b0b8d8" }}>{label as string}</span>
-                    <span style={{ color: bold ? "#e8eaf6" : "#b0b8d8" }}>${fmtUSD(val as number)}</span>
+                    <span style={{ color:"#8cc4a0" }}>{label as string}</span>
+                    <span style={{ color: bold ? "#e8f5ed" : "#8cc4a0" }}>${fmtUSD(val as number)}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div style={FC.card}>
-              <h3 style={{ fontWeight:700, color:"#e8eaf6", fontSize:15, margin:"0 0 8px" }}>Generate Financial Statements</h3>
-              <p style={{ fontSize:13, color:"#7077a1", margin:"0 0 20px", lineHeight:1.6 }}>
+              <h3 style={{ fontWeight:700, color:"#e8f5ed", fontSize:15, margin:"0 0 8px" }}>Generate Financial Statements</h3>
+              <p style={{ fontSize:13, color:"#5a8a6a", margin:"0 0 20px", lineHeight:1.6 }}>
                 Opens a formatted financial statement document — Statement of Comprehensive Income,
                 Statement of Financial Position, and accountant certification page — ready to share
                 with your CPA for review and sign-off.
               </p>
               <div style={{ display:"flex", flexWrap:"wrap", gap:12 }}>
                 <button onClick={handleGenerate} disabled={generating}
-                  style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 24px", background:"#30d158", color:"#0a1a10", border:"none", borderRadius:12, fontSize:14, fontWeight:700, cursor:generating?"not-allowed":"pointer", opacity:generating?0.5:1 }}>
+                  style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 24px", background:"#34d399", color:"#0a1a10", border:"none", borderRadius:12, fontSize:14, fontWeight:700, cursor:generating?"not-allowed":"pointer", opacity:generating?0.5:1 }}>
                   <FileText style={{ width:18, height:18 }} />
                   Open Statement (Review / Save PDF)
                 </button>
                 <button onClick={handlePrint} disabled={generating}
-                  style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 24px", background:"rgba(255,255,255,0.08)", color:"#e8eaf6", border:"1px solid rgba(255,255,255,0.1)", borderRadius:12, fontSize:14, fontWeight:600, cursor:generating?"not-allowed":"pointer", opacity:generating?0.5:1 }}>
+                  style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 24px", background:"rgba(255,255,255,0.08)", color:"#e8f5ed", border:"1px solid rgba(255,255,255,0.1)", borderRadius:12, fontSize:14, fontWeight:600, cursor:generating?"not-allowed":"pointer", opacity:generating?0.5:1 }}>
                   <Printer style={{ width:18, height:18 }} />
                   Print Statement
                 </button>
               </div>
-              <p style={{ fontSize:11, color:"#7077a1", marginTop:12 }}>
+              <p style={{ fontSize:11, color:"#5a8a6a", marginTop:12 }}>
                 Tip: In the statement window, use "Save as PDF" or "Print → Save as PDF" to email to your accountant.
               </p>
             </div>
@@ -1092,17 +1092,17 @@ export default function AdminFinancials() {
         {/* ── Navigation ── */}
         <div style={{ display:"flex", justifyContent:"space-between", marginTop:24 }}>
           <button onClick={goPrev} disabled={step === 0}
-            style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", border:"1px solid rgba(255,255,255,0.08)", background:"rgba(255,255,255,0.04)", color:"#b0b8d8", borderRadius:12, fontSize:13, fontWeight:500, cursor:step===0?"not-allowed":"pointer", opacity:step===0?0.3:1 }}>
+            style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", border:"1px solid rgba(255,255,255,0.08)", background:"rgba(255,255,255,0.04)", color:"#8cc4a0", borderRadius:12, fontSize:13, fontWeight:500, cursor:step===0?"not-allowed":"pointer", opacity:step===0?0.3:1 }}>
             <ChevronLeft style={{ width:16, height:16 }} /> Previous
           </button>
           {step < STEPS.length - 1 ? (
             <button onClick={goNext}
-              style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer" }}>
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", background:"#10b981", color:"#fff", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer" }}>
               Next <ChevronRight style={{ width:16, height:16 }} />
             </button>
           ) : (
             <button onClick={() => save()}
-              style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", background:"#7c6af7", color:"#fff", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer" }}>
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", background:"#10b981", color:"#fff", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer" }}>
               {saving ? <RefreshCw style={{ width:16, height:16 }} className="animate-spin" /> : <Download style={{ width:16, height:16 }} />}
               Save Draft
             </button>

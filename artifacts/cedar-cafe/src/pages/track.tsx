@@ -7,15 +7,15 @@ import { getCustomer, saveCustomer, clearCustomer, getLastOrder, type CustomerPr
 import { useStoreSettings } from "@/lib/use-store-settings";
 
 // ── IL Palette ────────────────────────────────────────────────────────────────
-const BG   = "#16172b";
-const CARD = "#1e1f38";
+const BG   = "#0d1612";
+const CARD = "#162518";
 const BORD = "rgba(255,255,255,0.06)";
-const TP   = "#e8eaf6";
-const TM   = "#b0b8d8";
-const MU   = "#7077a1";
-const OR   = "#ff6b00";
-const PUR  = "#7c6af7";
-const GRN  = "#30d158";
+const TP   = "#e8f5ed";
+const TM   = "#8cc4a0";
+const MU   = "#5a8a6a";
+const OR   = "#f59e0b";
+const PUR  = "#10b981";
+const GRN  = "#34d399";
 
 const INP: React.CSSProperties = {
   background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
@@ -130,7 +130,7 @@ export default function TrackOrder() {
       <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
-          <div style={{ width: 80, height: 80, borderRadius: 999, background: "rgba(124,106,247,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 80, height: 80, borderRadius: 999, background: "rgba(16,185,129,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Loader2 style={{ width: 40, height: 40, color: PUR, animation: "spin 1s linear infinite" }} />
           </div>
           <div>
@@ -163,7 +163,7 @@ export default function TrackOrder() {
               href="/"
               style={{
                 width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
-                padding: "13px 24px", borderRadius: 999, background: `linear-gradient(135deg,${OR},#ff3d00)`,
+                padding: "13px 24px", borderRadius: 999, background: `linear-gradient(135deg,${OR},#f59e0b)`,
                 color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none",
                 boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
               }}
@@ -249,7 +249,7 @@ export default function TrackOrder() {
               style={{
                 width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
                 padding: "12px 24px", borderRadius: 999,
-                background: `linear-gradient(135deg,${OR},#ff3d00)`, color: "#fff",
+                background: `linear-gradient(135deg,${OR},#f59e0b)`, color: "#fff",
                 fontSize: 14, fontWeight: 700, textDecoration: "none",
                 boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
               }}
@@ -294,7 +294,7 @@ export default function TrackOrder() {
             <Link href="/" style={{
               width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
               padding: "12px 24px", borderRadius: 999,
-              background: `linear-gradient(135deg,${OR},#ff3d00)`, color: "#fff", fontSize: 14, fontWeight: 700,
+              background: `linear-gradient(135deg,${OR},#f59e0b)`, color: "#fff", fontSize: 14, fontWeight: 700,
               textDecoration: "none", boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
             }}>
               {(isReady || isDone) ? "Order Again" : "Back to Menu"} <ArrowRight style={{ width: 16, height: 16 }} />
@@ -320,7 +320,7 @@ export default function TrackOrder() {
           <Link href="/" style={{
             width: "100%", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
             padding: "12px 24px", borderRadius: 999,
-            background: `linear-gradient(135deg,${OR},#ff3d00)`, color: "#fff", fontSize: 14, fontWeight: 700,
+            background: `linear-gradient(135deg,${OR},#f59e0b)`, color: "#fff", fontSize: 14, fontWeight: 700,
             textDecoration: "none", boxShadow: "0 4px 16px rgba(255,107,0,0.4)",
           }}>
             Back to Menu <ArrowRight style={{ width: 16, height: 16 }} />
@@ -492,7 +492,7 @@ function ProgressSteps({ status }: { status: string }) {
             <div style={{
               width: 32, height: 32, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center",
               border: `2px solid ${done ? OR : "rgba(255,255,255,0.12)"}`,
-              background: done ? `linear-gradient(135deg,${OR},#ff3d00)` : CARD,
+              background: done ? `linear-gradient(135deg,${OR},#f59e0b)` : CARD,
               color: done ? "#fff" : MU,
               boxShadow: done ? `0 0 12px rgba(255,107,0,0.5)` : "none",
               transition: "all 0.3s",
@@ -645,7 +645,7 @@ function CreateAccountForm({ onSave }: { onSave: () => void }) {
             saveCustomer({ name: name.trim(), phone: phone.trim(), email: email.trim() });
             onSave();
           }}
-          style={{ flex: 1, padding: "10px 0", borderRadius: 8, background: `linear-gradient(135deg,${OR},#ff3d00)`, color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer" }}
+          style={{ flex: 1, padding: "10px 0", borderRadius: 8, background: `linear-gradient(135deg,${OR},#f59e0b)`, color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer" }}
         >
           Save
         </button>
@@ -680,7 +680,7 @@ function EditAccountForm({ profile, onSave, onCancel }: { profile: CustomerProfi
             saveCustomer(updated);
             onSave(updated);
           }}
-          style={{ flex: 1, padding: "10px 0", borderRadius: 8, background: `linear-gradient(135deg,${PUR},#5b4cf5)`, color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+          style={{ flex: 1, padding: "10px 0", borderRadius: 8, background: `linear-gradient(135deg,${PUR},#0d9e72)`, color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
         >
           <Check style={{ width: 14, height: 14 }} /> Save
         </button>
@@ -740,7 +740,7 @@ function NoCodeView() {
             <button
               onClick={handleTrack}
               style={{
-                padding: "10px 18px", borderRadius: 10, background: `linear-gradient(135deg,${OR},#ff3d00)`,
+                padding: "10px 18px", borderRadius: 10, background: `linear-gradient(135deg,${OR},#f59e0b)`,
                 color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer",
                 boxShadow: "0 4px 14px rgba(255,107,0,0.4)", flexShrink: 0,
               }}
@@ -764,7 +764,7 @@ function NoCodeView() {
         {customer ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 999, background: `rgba(124,106,247,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 999, background: `rgba(16,185,129,0.12)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <UserCircle style={{ width: 20, height: 20, color: PUR }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>

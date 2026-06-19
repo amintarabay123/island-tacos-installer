@@ -31,25 +31,25 @@ interface ModifierGroup {
 }
 
 // ─── Chalkboard palette (warm dark coffee-shop) ────────────────────────────────
-const CC_BG     = "#0f0a06";
-const CC_CARD   = "linear-gradient(145deg, #2a1c12 0%, #1c1108 100%)";
-const CC_BORD   = "#4a3020";
-const CC_CHALK  = "#F5ECD7";
-const CC_MUTED  = "#9e8570";
-const CC_ACCENT = "#C8A882";
+const CC_BG     = "#0d1612";
+const CC_CARD   = "linear-gradient(145deg, #1a2e22 0%, #0f1d15 100%)";
+const CC_BORD   = "rgba(100,200,130,0.2)";
+const CC_CHALK  = "#e8f5ed";
+const CC_MUTED  = "#5a8a6a";
+const CC_ACCENT = "#10b981";
 const CC_HUNTER = "#2d6a4f";
 const CC_HUNT_L = "#3d8f6a";
 
-// Per-item accent colours (warm brown tones cycling)
+// Per-item accent colours (cedar green tones cycling)
 const CARD_COLORS = [
-  { accent: CC_ACCENT, glow: "rgba(200,168,130,0.25)", border: CC_BORD, grad: "linear-gradient(145deg,#3a2414,#1c1008)" },
+  { accent: CC_ACCENT, glow: "rgba(16,185,129,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#1a3828,#0f2218)" },
   { accent: CC_HUNT_L, glow: "rgba(61,143,106,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#1f4d38,#0f2a1e)" },
-  { accent: "#a07850", glow: "rgba(160,120,80,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#2e1a0e,#1a0e06)" },
+  { accent: "#34d399",  glow: "rgba(52,211,153,0.25)", border: CC_BORD, grad: "linear-gradient(145deg,#163a28,#0a2018)" },
   { accent: CC_HUNT_L, glow: "rgba(61,143,106,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#1f4d38,#0f2a1e)" },
-  { accent: CC_ACCENT, glow: "rgba(200,168,130,0.25)", border: CC_BORD, grad: "linear-gradient(145deg,#3a2414,#1c1008)" },
-  { accent: "#a07850", glow: "rgba(160,120,80,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#2e1a0e,#1a0e06)" },
+  { accent: CC_ACCENT, glow: "rgba(16,185,129,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#1a3828,#0f2218)" },
+  { accent: "#34d399",  glow: "rgba(52,211,153,0.25)", border: CC_BORD, grad: "linear-gradient(145deg,#163a28,#0a2018)" },
   { accent: CC_HUNT_L, glow: "rgba(61,143,106,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#1f4d38,#0f2a1e)" },
-  { accent: CC_ACCENT, glow: "rgba(200,168,130,0.25)", border: CC_BORD, grad: "linear-gradient(145deg,#3a2414,#1c1008)" },
+  { accent: CC_ACCENT, glow: "rgba(16,185,129,0.25)",  border: CC_BORD, grad: "linear-gradient(145deg,#1a3828,#0f2218)" },
 ];
 
 function extractEmoji(name: string): string {
@@ -356,7 +356,7 @@ export default function Home() {
               <span className="chalk-font" style={{
                 fontSize: 20,
                 color: soldOut ? CC_MUTED : CC_ACCENT,
-                textShadow: soldOut ? "none" : "0 0 12px rgba(200,168,130,0.4)",
+                textShadow: soldOut ? "none" : "0 0 12px rgba(16,185,129,0.4)",
                 textDecoration: soldOut ? "line-through" : "none",
               }}>
                 ${item.price.toFixed(2)}
@@ -406,7 +406,7 @@ export default function Home() {
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden" style={{ minHeight: 460, background: CC_BG }}>
         <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1c1008 0%, #2a1a0c 40%, #1c1008 100%)" }} />
-        <div className="absolute inset-0" style={{ boxShadow: "inset 0 -1px 0 rgba(200,168,130,0.1)" }} />
+        <div className="absolute inset-0" style={{ boxShadow: "inset 0 -1px 0 rgba(16,185,129,0.1)" }} />
 
         <div className="relative flex flex-col max-w-6xl mx-auto px-6" style={{ paddingTop: 80, paddingBottom: 56 }}>
           {/* Open / closed badge */}
@@ -424,7 +424,7 @@ export default function Home() {
           ) : (
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 8,
-              background: "rgba(200,168,130,0.08)", border: `1px solid ${CC_BORD}`,
+              background: "rgba(16,185,129,0.08)", border: `1px solid ${CC_BORD}`,
               borderRadius: 20, padding: "5px 14px", marginBottom: 18, alignSelf: "flex-start",
             }}>
               <span className="body-font" style={{ fontSize: 11, color: CC_MUTED, fontWeight: 700, letterSpacing: "0.08em" }}>CLOSED</span>
@@ -435,7 +435,7 @@ export default function Home() {
             <MapPin className="w-3 h-3" /> Road Town, BVI · Pickup Only
           </p>
 
-          <h1 className="chalk-font" style={{ fontSize: "clamp(36px,5vw,60px)", fontStyle: "italic", fontWeight: 700, lineHeight: 1.05, margin: "0 0 20px", color: CC_CHALK, textShadow: "0 2px 20px rgba(200,168,130,0.25)" }}>
+          <h1 className="chalk-font" style={{ fontSize: "clamp(36px,5vw,60px)", fontStyle: "italic", fontWeight: 700, lineHeight: 1.05, margin: "0 0 20px", color: CC_CHALK, textShadow: "0 2px 20px rgba(16,185,129,0.25)" }}>
             Good coffee,<br />
             <span style={{ color: CC_ACCENT }}>every visit.</span>
           </h1>
@@ -461,7 +461,7 @@ export default function Home() {
 
       {/* ── Closed banner ─────────────────────────────────────────────────────── */}
       {!storeOpen && (
-        <div style={{ background: "rgba(200,168,130,0.06)", borderBottom: `1px solid ${CC_BORD}` }} className="px-6 py-3 text-center">
+        <div style={{ background: "rgba(16,185,129,0.06)", borderBottom: `1px solid ${CC_BORD}` }} className="px-6 py-3 text-center">
           <p className="body-font text-sm font-semibold" style={{ color: CC_ACCENT }}>
             {!openToday ? (closedTodayReason ?? "We're closed today") : "Online ordering is currently closed"}
           </p>
