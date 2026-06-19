@@ -162,34 +162,33 @@ export function ChalkPOS() {
               <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 20, color: ACCENT, textShadow: "0 0 14px rgba(200,168,130,0.5)" }}>${subtotal.toFixed(2)}</span>
             </div>
 
-            {/* Payment buttons */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+            {/* Save / Charge */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <button className="pay-btn" style={{
+                width: "100%",
                 background: "linear-gradient(135deg, #2e2010, #1e1408)",
                 border: `1px solid ${ACCENT}`,
-                color: ACCENT, borderRadius: 8, padding: "10px 0", fontSize: 12, fontWeight: 700,
+                color: ACCENT, borderRadius: 8, padding: "13px 0", fontSize: 13, fontWeight: 700,
                 boxShadow: `0 4px 16px rgba(0,0,0,0.5), 0 0 10px rgba(200,168,130,0.15), inset 0 1px 0 rgba(255,255,255,0.06)`,
-              }}>💵 Cash</button>
+                letterSpacing: 0.5,
+              }}>💾 Save / Hold</button>
               <button className="pay-btn" style={{
-                background: "linear-gradient(135deg, #1e1810, #15120a)",
-                border: `1px solid ${BORDER}`, color: CHALK, borderRadius: 8, padding: "10px 0", fontSize: 12,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)",
-              }}>💳 Card</button>
+                width: "100%",
+                background: `linear-gradient(135deg, ${HUNTER} 0%, #1f4d38 100%)`,
+                border: `1px solid ${HUNTER_LT}`,
+                color: "#d4f5e2", borderRadius: 8, padding: "13px 0", fontSize: 13, fontWeight: 700,
+                boxShadow: `0 6px 20px rgba(45,106,79,0.45), inset 0 1px 0 rgba(255,255,255,0.1)`,
+                letterSpacing: 0.5,
+              }}>⚡ Charge</button>
             </div>
-            <button className="pay-btn" style={{
-              width: "100%",
-              background: `linear-gradient(135deg, ${HUNTER} 0%, #1f4d38 100%)`,
-              border: `1px solid ${HUNTER_LT}`,
-              color: "#d4f5e2", borderRadius: 8, padding: "10px 0", fontSize: 12, fontWeight: 700,
-              boxShadow: `0 6px 20px rgba(45,106,79,0.45), inset 0 1px 0 rgba(255,255,255,0.1)`,
-              letterSpacing: 0.5,
-            }}>ATH Móvil</button>
           </div>
 
-          {/* Action buttons */}
-          <div style={{ borderTop: `1px solid ${BORDER}`, padding: "10px 16px", display: "flex", gap: 8 }}>
-            <button style={{ flex: 1, background: "transparent", border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 6, padding: "8px 0", fontSize: 11, cursor: "pointer" }}>Hold</button>
-            <button style={{ flex: 1, background: RED + "20", border: `1px solid ${RED}`, color: RED, borderRadius: 6, padding: "8px 0", fontSize: 11, cursor: "pointer" }}>Void</button>
+          {/* Void — small, intentionally hard to tap */}
+          <div style={{ padding: "8px 16px 12px", display: "flex", justifyContent: "center" }}>
+            <button style={{
+              background: "transparent", border: `1px solid ${RED}40`, color: RED + "90",
+              borderRadius: 5, padding: "5px 22px", fontSize: 10, cursor: "pointer", letterSpacing: 0.5,
+            }}>Void Order</button>
           </div>
         </div>
       </div>
