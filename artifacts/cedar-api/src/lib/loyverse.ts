@@ -341,7 +341,7 @@ export async function fetchLoyverseReceipts(): Promise<{ receipts: LoyverseRecei
     if (cursor) params.set("cursor", cursor);
 
     const res = await fetch(`${LOYVERSE_API}/receipts?${params}`, {
-      headers: { Authorization: `Bearer ${getToken()}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${await getToken()}`, "Content-Type": "application/json" },
     });
 
     if (!res.ok) {

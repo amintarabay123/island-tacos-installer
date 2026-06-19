@@ -148,7 +148,7 @@ export default function AdminSettings() {
       const res = await fetch(`${API}/api/loyverse/sync`, { method: "POST", headers: authHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Sync failed");
-      toast({ title: `Menu synced — ${data.categories ?? 0} categories, ${data.items ?? 0} items` });
+      toast({ title: `Menu synced — ${data.categoriesUpserted ?? 0} categories, ${data.itemsUpserted ?? 0} items` });
     } catch (e) {
       toast({ title: String(e instanceof Error ? e.message : e), variant: "destructive" });
     } finally { setLoyverseSyncing(false); }
