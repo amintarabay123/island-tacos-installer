@@ -3556,7 +3556,7 @@ export default function POS() {
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ background:IL.hdr, borderBottom:`1px solid ${IL.bord}` }}>
         <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt={storeName} className="h-8 w-8 object-contain rounded-lg"/>
+          <img src={`${import.meta.env.BASE_URL}cedar-logo.png`} alt={storeName} className="h-8 w-8 object-contain rounded-lg"/>
           <span style={{ color:IL.mu, fontSize:13, fontWeight:600 }} className="hidden sm:block">Point of Sale</span>
         </div>
         <div style={{ color:IL.mu, fontSize:13, fontFamily:"monospace" }}>{time}</div>

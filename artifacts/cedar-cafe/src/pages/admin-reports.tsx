@@ -612,7 +612,7 @@ export default function AdminReports() {
         doc.text(`Page ${p} of ${pages}`, MR, 291, { align: "right" });
       }
 
-      const filename = `island-tacos-summary-${from}${from !== to ? `-to-${to}` : ""}.pdf`;
+      const filename = `cedar-cafe-summary-${from}${from !== to ? `-to-${to}` : ""}.pdf`;
       doc.save(filename);
     } finally {
       setPdfGenerating(false);
@@ -732,7 +732,7 @@ export default function AdminReports() {
                 <p style={{ fontWeight:600, color:"#e8eaf6", marginBottom:6 }}>Setup (one-time, ~2 minutes):</p>
                 <p>1. Install <strong style={{ color:"#e8eaf6" }}>Node.js</strong> on any Windows/Mac computer on your restaurant WiFi.</p>
                 <p>2. <a href="/api/print/bridge.js" download style={{ color:"#7c6af7", fontWeight:600 }}>Download the bridge script</a> — open in a text editor and set PRINTER_IP to your printer's local IP.</p>
-                <p>3. Run: <code style={{ background:"rgba(255,255,255,0.08)", padding:"1px 6px", borderRadius:4, color:"#e8eaf6" }}>node island-tacos-bridge.js</code></p>
+                <p>3. Run: <code style={{ background:"rgba(255,255,255,0.08)", padding:"1px 6px", borderRadius:4, color:"#e8eaf6" }}>node cedar-cafe-bridge.js</code></p>
                 <p>4. Leave that window open. Bridge URL = <strong style={{ color:"#e8eaf6" }}>http://localhost:8765</strong></p>
               </div>
             )}

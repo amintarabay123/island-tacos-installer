@@ -1,7 +1,7 @@
 import { createHmac } from "crypto";
 
-const SECRET = process.env["SESSION_SECRET"] ?? "island-tacos-dev-secret";
-const COOKIE_NAME = "it_auth";
+const SECRET = process.env["SESSION_SECRET"] ?? "cedar-cafe-dev-secret";
+const COOKIE_NAME = "cc_auth";
 const MAX_AGE_MS = 12 * 60 * 60 * 1000; // 12 hours
 const MAX_AGE_S = 12 * 60 * 60;
 

@@ -339,7 +339,7 @@ router.post("/print/network", async (req, res): Promise<void> => {
 
 export function bridgeScriptContent(): string {
   return `#!/usr/bin/env node
-// Island Tacos - Local Print Bridge
+// Cedar Cafe - Local Print Bridge
 // ===================================
 // This script runs on any computer on your local WiFi network.
 // It receives print jobs from the POS and sends them to your receipt printer.
@@ -347,13 +347,13 @@ export function bridgeScriptContent(): string {
 // Requirements: Node.js (https://nodejs.org) — no other installs needed.
 //
 // Usage:
-//   node island-tacos-bridge.js
+//   node cedar-cafe-bridge.js
 //
 // Custom printer IP or port:
-//   PRINTER_IP=192.168.8.195 PRINTER_PORT=9100 node island-tacos-bridge.js
+//   PRINTER_IP=192.168.8.195 PRINTER_PORT=9100 node cedar-cafe-bridge.js
 //
 // On Windows (PowerShell):
-//   $env:PRINTER_IP="192.168.8.195"; node island-tacos-bridge.js
+//   $env:PRINTER_IP="192.168.8.195"; node cedar-cafe-bridge.js
 
 const http = require('http');
 const net  = require('net');
@@ -420,7 +420,7 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'GET' && req.url === '/') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Island Tacos Print Bridge OK — printer: ' + PRINTER_IP + ':' + PRINTER_PORT);
+    res.end('Cedar Cafe Print Bridge OK — printer: ' + PRINTER_IP + ':' + PRINTER_PORT);
     return;
   }
 
@@ -449,7 +449,7 @@ const server = http.createServer((req, res) => {
 server.listen(BRIDGE_PORT, () => {
   console.log('');
   console.log('  ┌─────────────────────────────────────┐');
-  console.log('  │   Island Tacos — Print Bridge       │');
+  console.log('  │   Cedar Cafe — Print Bridge         │');
   console.log('  ├─────────────────────────────────────┤');
   console.log('  │  Bridge port : http://localhost:' + BRIDGE_PORT + '  │');
   console.log('  │  Printer     : ' + PRINTER_IP + ':' + PRINTER_PORT + '       │');

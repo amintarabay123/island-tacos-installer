@@ -1,4 +1,4 @@
-const TOKEN_KEY = "it_auth_token";
+const TOKEN_KEY = "cc_auth_token";
 
 export function saveAuthToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);

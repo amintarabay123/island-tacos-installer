@@ -3,8 +3,8 @@ import { menuCategoriesTable, menuItemsTable, modifiersTable, customersTable, or
 import { eq, inArray } from "drizzle-orm";
 
 const LOYVERSE_API = "https://api.loyverse.com/v1.0";
-const STORE_ID = "fa2b85a6-711d-11ea-8d93-0603130a05b8";
-const EMPLOYEE_ID = "324dd4ee-71a9-11ea-8d93-0603130a05b8";
+const STORE_ID = process.env.LOYVERSE_STORE_ID ?? "";
+const EMPLOYEE_ID = process.env.LOYVERSE_EMPLOYEE_ID ?? "";
 
 async function getToken(): Promise<string> {
   try {

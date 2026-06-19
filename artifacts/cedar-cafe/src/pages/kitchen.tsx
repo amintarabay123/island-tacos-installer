@@ -623,7 +623,7 @@ export default function Kitchen({ station }: { station?: string } = {}) {
 
   const broadcastUpdate = () => {
     try {
-      const bc = new BroadcastChannel("island_tacos_kds");
+      const bc = new BroadcastChannel("cedar_cafe_kds");
       bc.postMessage({ type: "kds:order-updated" });
       bc.close();
     } catch {}

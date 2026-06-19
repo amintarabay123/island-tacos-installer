@@ -329,7 +329,7 @@ export default function AdminSystem() {
                 Watchdog process appears offline
               </p>
               <p style={{ fontSize: 12, color: MU, lineHeight: 1.5 }}>
-                No poll received in the last 2 minutes. The <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 4 }}>island-tacos-monitor</code> PM2 process may have crashed.
+                No poll received in the last 2 minutes. The <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 4 }}>cedar-cafe-monitor</code> PM2 process may have crashed.
                 Run <code style={{ background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 4 }}>pm2 start local-install/ecosystem.config.cjs</code> on the shop PC to restart it.
                 Service status shown below reflects the last known state.
               </p>

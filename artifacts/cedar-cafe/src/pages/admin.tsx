@@ -538,7 +538,7 @@ export default function Admin() {
     };
     window.addEventListener("kds:order-updated", refresh);
     let bc: BroadcastChannel | null = null;
-    try { bc = new BroadcastChannel("island_tacos_kds"); bc.onmessage = (e) => { if (e.data?.type === "kds:order-updated") refresh(); }; } catch {}
+    try { bc = new BroadcastChannel("cedar_cafe_kds"); bc.onmessage = (e) => { if (e.data?.type === "kds:order-updated") refresh(); }; } catch {}
     return () => { window.removeEventListener("kds:order-updated", refresh); bc?.close(); };
   }, [queryClient]);
 

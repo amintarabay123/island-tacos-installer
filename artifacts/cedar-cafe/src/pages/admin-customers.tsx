@@ -375,7 +375,7 @@ export default function AdminCustomers() {
     const a = document.createElement("a");
     a.href = url;
     const label = query ? `customers-search-${query}` : "customers-all";
-    a.download = `island-tacos-${label}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `cedar-cafe-${label}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

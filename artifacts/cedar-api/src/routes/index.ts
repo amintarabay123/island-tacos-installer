@@ -33,7 +33,7 @@ router.use(authRouter);
 // Public download — bridge script (no auth required)
 router.get("/print/bridge.js", (_req, res): void => {
   res.setHeader("Content-Type", "application/javascript");
-  res.setHeader("Content-Disposition", 'attachment; filename="island-tacos-bridge.js"');
+  res.setHeader("Content-Disposition", 'attachment; filename="cedar-cafe-bridge.js"');
   res.send(bridgeScriptContent());
 });
 

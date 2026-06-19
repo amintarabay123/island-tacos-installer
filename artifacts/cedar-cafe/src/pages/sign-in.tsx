@@ -5,7 +5,7 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const appearance = {
   options: {
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    logoImageUrl: `${window.location.origin}${basePath}/cedar-logo.png`,
     logoPlacement: "inside" as const,
     logoLinkUrl: basePath || "/",
   },
