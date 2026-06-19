@@ -394,13 +394,8 @@ export default function Home() {
       `}</style>
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-neutral-900" style={{ minHeight: 500 }}>
-        <img
-          src="/images/hero.png"
-          alt="Fresh colourful tacos"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-          style={{ opacity: 0.45 }}
-        />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(22,23,43,0.92) 0%, rgba(22,23,43,0.6) 60%, rgba(22,23,43,0.2) 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(22,23,43,0.95) 0%, rgba(22,23,43,0.5) 100%)" }} />
 
         <div className="relative flex flex-col max-w-6xl mx-auto px-6" style={{ paddingTop: 80, paddingBottom: 56 }}>
           {/* Open now badge */}
@@ -419,13 +414,13 @@ export default function Home() {
           )}
 
           <p className="flex items-center gap-1.5 mb-3" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", color: "rgba(255,255,255,0.5)", textTransform: "uppercase" }}>
-            <MapPin className="w-3 h-3" /> Mexican Food · Road Town, BVI
+            <MapPin className="w-3 h-3" /> Café · Road Town, BVI
           </p>
 
           <h1 style={{ fontSize: "clamp(36px,5vw,60px)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1.05, margin: "0 0 20px", color: "#e8eaf6" }}>
-            Fresh. Bold.<br />
+            Great food,<br />
             <span style={{ background: "linear-gradient(135deg,#ff6b00 0%,#ffaa00 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Unforgettable.
+              every visit.
             </span>
           </h1>
 

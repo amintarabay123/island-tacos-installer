@@ -1,11 +1,11 @@
 import { useGetStoreSettings, type StoreSettings } from "@workspace/api-client-react";
 
 const FALLBACK: StoreSettings = {
-  id: 0,
-  storeName: "Island Tacos",
-  phone: "284-544-8088",
-  email: "orders@islandtacosbvi.com",
-  address: "Wickhams Cay 1, Road Town, Tortola, BVI",
+  id: 2,
+  storeName: "Cedar Cafe",
+  phone: "284-344-9808",
+  email: "orders@cedarcafebvi.com",
+  address: "Road Town, Tortola, BVI",
   taxRate: "0",
   timezone: "America/Tortola",
   currency: "USD",

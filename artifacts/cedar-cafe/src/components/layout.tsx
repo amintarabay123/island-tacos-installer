@@ -104,7 +104,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* Brand */}
           <Link href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none", userSelect: "none" }}>
-            <img src="/logo-wordmark.png" alt={profile.storeName} style={{ height: 40, width: "auto", filter: "brightness(0) invert(1)" }} />
+            <span style={{ fontSize: 20, fontWeight: 900, color: "#fff", letterSpacing: "-0.03em" }}>{profile.storeName}</span>
           </Link>
 
           {/* Desktop nav links */}
@@ -301,7 +301,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </SheetTrigger>
               <SheetContent side="left" style={{ width: 288, padding: 0, background: HDR, borderRight: `1px solid ${BORD}` }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", borderBottom: `1px solid ${BORD}` }}>
-                  <img src="/logo-wordmark.png" alt={profile.storeName} style={{ height: 32, width: "auto", filter: "brightness(0) invert(1)" }} />
+                  <span style={{ fontSize: 18, fontWeight: 900, color: "#fff", letterSpacing: "-0.03em" }}>{profile.storeName}</span>
                   <button
                     onClick={() => setMobileOpen(false)}
                     style={{ background: "none", border: "none", cursor: "pointer", color: MU, display: "flex", padding: 4 }}
