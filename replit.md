@@ -2,6 +2,7 @@
 
 ## User preferences
 
+- **Be thorough — no partial execution.** When given an instruction (debrand all pages, remove all hardcoded strings, apply a fix everywhere it appears), do it completely across every file and instance. Do not stop after a few examples and assume the rest is done. If the scope is too large for one pass, say so explicitly and list what remains — never silently do a partial job.
 - **Root fixes only — no patches or temporary workarounds.** When a bug or issue is found, diagnose the underlying cause and fix it there. Do not paper over symptoms. If a quick patch is unavoidable for safety (e.g. stop the bleed during business hours), say so explicitly and schedule the real fix.
 - **Always re-verify after a change.** After any fix or new feature, re-check that:
   1. The original issue is actually resolved (not just the symptom).
