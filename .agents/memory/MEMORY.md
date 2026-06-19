@@ -12,4 +12,5 @@
 - [WhatsApp receipt PDF sizing](whatsapp-receipt-pdf.md) — logo-wordmark.png is 7680x4320 (2.3MB); use logo.png (512x512, 108KB) for PDFs.
 - [Receipt PDF logo and layout](receipt-pdf-layout.md) — logo lives in api-server/src/assets/, copied to dist/assets/ at build; layout matches approved WA sample exactly.
 - [Placetopay tranKey algorithm](placetopay-auth-algorithm.md) — secret key goes in raw (no SHA-1); all SHA-1 variants return error 102 on their test server.
-- [Cedar Cafe tenant setup](cedar-cafe-tenant.md) — routing (setBaseUrl+/cedar-api/api mount), STORE_PROFILE_ID, dual-DB topology (helium/cedarcafe dev vs shared prod Postgres), rebuild-before-restart requirement.
+- [Cedar Cafe tenant setup](cedar-cafe-tenant.md) — routing, STORE_PROFILE_ID, dual-DB topology, rebuild-before-restart, deployment arch (separate Replit project → cedarcafebvi.com), artifact removal rule for CC publish.
+- [Island Tacos cloud DB always empty](island-tacos-cloud-db.md) — menu_items/menu_categories = 0 on cloud Replit is normal; real data lives on mini PC only.
