@@ -51,7 +51,7 @@ type OperationalSettings = {
 };
 const OPERATIONAL_DEFAULTS: OperationalSettings = {
   hours: "11am – 7pm daily",
-  address: "Wickhams Cay 1, Road Town, BVI",
+  address: "Road Town, Tortola, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
   is_open: "true",
   open_today: "true",

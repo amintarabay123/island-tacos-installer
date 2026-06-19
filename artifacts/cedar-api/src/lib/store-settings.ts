@@ -1,5 +1,5 @@
 import { db, storeProfileTable, type StoreProfile } from "@workspace/db";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { logger } from "./logger";
 
 // Public-facing type the rest of the codebase consumes. We export both the
@@ -18,11 +18,14 @@ let cache: CacheEntry | null = null;
 let inflight: Promise<StoreSettings> | null = null;
 
 async function loadFromDb(): Promise<StoreSettings> {
-  const rows = await db
-    .select()
-    .from(storeProfileTable)
-    .orderBy(asc(storeProfileTable.id))
-    .limit(1);
+  // STORE_PROFILE_ID lets a single Postgres cluster host multiple tenants.
+  // cedar-api sets this to 2 (Cedar Cafe row); api-server leaves it unset
+  // and falls back to the lowest-id row (Island Tacos, id=1).
+  const profileId = process.env.STORE_PROFILE_ID ? parseInt(process.env.STORE_PROFILE_ID, 10) : null;
+
+  const rows = profileId
+    ? await db.select().from(storeProfileTable).where(eq(storeProfileTable.id, profileId)).limit(1)
+    : await db.select().from(storeProfileTable).orderBy(asc(storeProfileTable.id)).limit(1);
 
   if (rows[0]) return rows[0];
 
@@ -46,7 +49,7 @@ async function loadFromDb(): Promise<StoreSettings> {
     // ORDER BY id LIMIT 1 reader silently picks one and ignores the other.
     // Pinning id=1 turns concurrent inserts into a primary-key conflict, and
     // `.onConflictDoNothing()` on that PK makes the seed atomic & idempotent.
-    id: 1,
+    id: profileId ?? 1,
     storeName: process.env.STORE_NAME ?? "My Restaurant",
     phone: process.env.STORE_PHONE ?? "",
     email: process.env.STORE_EMAIL ?? "",
@@ -63,11 +66,9 @@ async function loadFromDb(): Promise<StoreSettings> {
   if (inserted[0]) return inserted[0];
 
   // Race: another concurrent boot inserted first. Re-read and use that row.
-  const reread = await db
-    .select()
-    .from(storeProfileTable)
-    .orderBy(asc(storeProfileTable.id))
-    .limit(1);
+  const reread = profileId
+    ? await db.select().from(storeProfileTable).where(eq(storeProfileTable.id, profileId)).limit(1)
+    : await db.select().from(storeProfileTable).orderBy(asc(storeProfileTable.id)).limit(1);
   if (reread[0]) return reread[0];
 
   throw new Error("store_profile self-seed failed — DB write returned no row");

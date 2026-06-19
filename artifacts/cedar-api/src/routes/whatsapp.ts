@@ -127,7 +127,7 @@ router.post("/whatsapp/webhook", async (req, res): Promise<void> => {
           await sendWhatsAppMessage(from, reply);
         } catch (err) {
           logger.error({ err, from }, "[whatsapp] Handler error");
-          await sendWhatsAppMessage(from, "Sorry, something went wrong. Please call us at (284) 544-8088 🌮");
+          await sendWhatsAppMessage(from, "Sorry, something went wrong. Please contact us directly ☕");
         }
       }
     }

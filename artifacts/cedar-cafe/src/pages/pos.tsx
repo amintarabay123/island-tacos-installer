@@ -677,6 +677,7 @@ function PaymentModal({ total, onPay, onClose, onSplit, onTabChange, onPayAndHol
 function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: number; onClose: () => void }) {
   const change = tendered != null ? Math.max(0, tendered - order.total) : null;
   const printRef = useRef<HTMLDivElement>(null);
+  const { storeName, address, phone } = useStoreSettings();
 
   const print = () => {
     const win = window.open("", "_blank", "width=320,height=600");
@@ -700,9 +701,9 @@ function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: n
         <div style={{ padding:20, maxHeight:384, overflowY:"auto" }}>
           <div ref={printRef} style={{ fontFamily:"monospace", fontSize:13, color:IL.tp }}>
             <div style={{ textAlign:"center", marginBottom:12 }}>
-              <div style={{ fontWeight:700, fontSize:14 }}>ISLAND TACOS</div>
-              <div style={{ color:IL.mu, fontSize:11 }}>Wickhams Cay 1, Road Town, BVI</div>
-              <div style={{ color:IL.mu, fontSize:11 }}>(284) 000-0000</div>
+              <div style={{ fontWeight:700, fontSize:14 }}>{storeName.toUpperCase()}</div>
+              {address && <div style={{ color:IL.mu, fontSize:11 }}>{address}</div>}
+              {phone && <div style={{ color:IL.mu, fontSize:11 }}>{phone}</div>}
             </div>
             <div style={{ borderTop:`1px dashed ${IL.bord}`, margin:"8px 0" }}/>
             <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:IL.mu, marginBottom:4 }}>
@@ -1391,6 +1392,7 @@ const ItemCard = memo(function ItemCard({ item, onClick }: { item: MenuItem; onC
 // ─── Receipts Drawer ─────────────────────────────────────────────────────────
 
 function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
+  const { storeName, address, phone } = useStoreSettings();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"today" | "all">("today");
@@ -1463,8 +1465,8 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
           </div>
           <div style={{ padding:20, maxHeight:"70vh", overflowY:"auto", fontFamily:"monospace", fontSize:13 }}>
             <div style={{ textAlign:"center", marginBottom:12 }}>
-              <div style={{ fontWeight:800, fontSize:14, color:IL.tp }}>ISLAND TACOS</div>
-              <div style={{ color:IL.mu, fontSize:11 }}>Wickhams Cay 1, Road Town, BVI</div>
+              <div style={{ fontWeight:800, fontSize:14, color:IL.tp }}>{storeName.toUpperCase()}</div>
+              {address && <div style={{ color:IL.mu, fontSize:11 }}>{address}</div>}
             </div>
             <div style={{ borderTop:`1px dashed rgba(255,255,255,0.12)`, margin:"8px 0" }}/>
             <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:IL.mu, marginBottom:4 }}>
@@ -2051,6 +2053,7 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
 // ─── Close Shift Modal ────────────────────────────────────────────────────────
 
 function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void }) {
+  const { storeName, address } = useStoreSettings();
   type Summary = { totalOrders: number; totalSales: number; byMethod: { cash: number; card: number; athmovil: number }; refundTotal: number; netSales: number; payIns: number; payOuts: number; expectedCash: number; cashTransactions: CashTxn[] };
   const [summary, setSummary] = useState<Summary | null>(null);
   const [closingFloat, setClosingFloat] = useState("");
@@ -2078,8 +2081,8 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
     if (!summary) return;
     setPrintingZ(true);
     const lines: Parameters<typeof printReceiptLines>[0] = [
-      { text: "ISLAND TACOS", bold: true, center: true, size: "large" },
-      { text: "Wickhams Cay 1, Road Town, BVI", center: true },
+      { text: storeName.toUpperCase(), bold: true, center: true, size: "large" },
+      { text: address || "", center: true },
       { divider: true, text: "" },
       { text: "Z-REPORT — END OF SHIFT", bold: true, center: true },
       { text: new Date().toLocaleString(), center: true },

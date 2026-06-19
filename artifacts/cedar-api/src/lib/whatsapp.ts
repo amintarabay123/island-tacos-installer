@@ -116,10 +116,11 @@ GUIDELINES:
 // ── Inbound message handler (AI) ──────────────────────────────────────────────
 
 export async function handleInboundMessage(fromPhone: string, text: string): Promise<string> {
+  const store = await getStoreSettings().catch(() => ({ phone: "", storeName: "" } as Awaited<ReturnType<typeof getStoreSettings>>));
+  const storePhone = store.phone || "284-344-9808";
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    // TODO(store-settings): replace phone literal with getStoreSettings().phone
-    return `Sorry, I can't respond right now. Please call us at (284) 544-8088 or order at ${STORE_URL} 🌮`;
+    return `Sorry, I can't respond right now. Please call us at ${storePhone} or order at ${STORE_URL} ☕`;
   }
 
   const conv = getConversation(fromPhone);
@@ -141,13 +142,13 @@ export async function handleInboundMessage(fromPhone: string, text: string): Pro
     });
 
     const reply = completion.choices[0]?.message?.content?.trim()
-      ?? "Sorry, I didn't catch that — try again or call us at (284) 544-8088 🌮";
+      ?? `Sorry, I didn't catch that — try again or call us at ${storePhone} ☕`;
 
     conv.messages.push({ role: "assistant", content: reply });
     return reply;
   } catch (err) {
     logger.error({ err }, "[whatsapp] OpenAI error");
-    return `Sorry, something went wrong on my end. Please call us at (284) 544-8088 🌮`;
+    return `Sorry, something went wrong on my end. Please call us at ${storePhone} ☕`;
   }
 }
 
@@ -376,7 +377,7 @@ export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<boole
  * Template: island_tacos_order_receipt (WABA 1725555828883850, approved utility)
  *   Header:  DOCUMENT — PDF fetched by Meta from GET /api/orders/receipt/:code
  *   Body:    {{1}} = customer name, {{2}} = confirmation code
- *   Footer:  "Wickhams Cay 1, Road Town, BVI" (static)
+ *   Footer:  store address (static text set in Meta template console)
  *   Language: en_US
  */
 export async function sendOrderReceiptWhatsApp(

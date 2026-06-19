@@ -1,8 +1,13 @@
 import { createRoot } from "react-dom/client";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import { getAuthToken } from "@/lib/auth";
 import App from "./App";
 import "./index.css";
+
+// Redirect all generated API hooks from /api/... to /cedar-api/api/... so
+// the shared Replit proxy routes them to cedar-api (port 8181) rather than
+// the Island Tacos api-server.
+setBaseUrl("/cedar-api");
 
 // Wire up localStorage token so all API hooks send Authorization: Bearer
 setAuthTokenGetter(() => getAuthToken());

@@ -398,6 +398,7 @@ function FullScreenState({
   orderSummary?: { items: Item[]; total: number }; progress?: string;
   action?: React.ReactNode; pickupTime?: string | null;
 }) {
+  const { storeName } = useStoreSettings();
   return (
     <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 16px", textAlign: "center" }}>
       <style>{`
@@ -694,6 +695,7 @@ function EditAccountForm({ profile, onSave, onCancel }: { profile: CustomerProfi
 // ─── No-code view (track page without a code in URL) ─────────────────────────
 
 function NoCodeView() {
+  const { storeName } = useStoreSettings();
   const inputRef = useRef<HTMLInputElement>(null);
   const [customer, setCustomer] = useState<CustomerProfile | null>(() => getCustomer());
   const [editing, setEditing] = useState(false);

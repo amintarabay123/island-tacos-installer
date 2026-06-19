@@ -11,8 +11,8 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   // store_profile overlay in GET /api/settings. Once all readers migrate to
   // getStoreSettings() / useStoreSettings(), drop these two keys from SETTING_DEFAULTS
   // and stop accepting them in PATCH /api/settings.
-  phone: "284-544-8088",
-  address: "Wickhams Cay 1, Road Town, BVI",
+  phone: "284-344-9808",
+  address: "Road Town, Tortola, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
   online_payment_methods: '["cash"]',
   open_time: "11:00",

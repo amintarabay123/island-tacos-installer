@@ -157,6 +157,7 @@ export default function CustomerDisplay() {
 // ─── Idle Screen ─────────────────────────────────────────────────────────────
 
 function IdleScreen() {
+  const { storeName, address } = useStoreSettings();
   return (
     <div style={{ height: "100vh", display: "flex", overflow: "hidden", userSelect: "none", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       {/* LEFT: Branding */}
@@ -208,6 +209,7 @@ function AthMovilQr({ total, orderCode }: { publicToken: string; total: number; 
 // ─── Active Screen ────────────────────────────────────────────────────────────
 
 function ActiveScreen({ state }: { state: DisplayState }) {
+  const { storeName } = useStoreSettings();
   const n = (v: unknown) => parseFloat(String(v)) || 0;
   const subtotal = n(state.subtotal);
   const tax = n(state.tax);

@@ -345,7 +345,7 @@ router.post("/orders", async (req, res): Promise<void> => {
   // with real ones. POS orders (source=pos) are always allowed.
   if (process.env.NODE_ENV === "development" && parsed.data.source !== "pos") {
     const origin = (req.headers.origin ?? req.headers.referer ?? "") as string;
-    const PROD_DOMAINS = ["islandtacosbvi.com", "orders.islandtacosbvi"];
+    const PROD_DOMAINS = (process.env.PRODUCTION_DOMAINS ?? "").split(",").map(d => d.trim()).filter(Boolean);
     const isProduction = PROD_DOMAINS.some(d => origin.includes(d));
     if (isProduction) {
       req.log.warn({ origin }, "[orders] rejected production-origin order in dev mode");
@@ -1146,6 +1146,8 @@ router.post("/orders/:id/email-receipt", requireStaffAuth, async (req, res): Pro
     return `<tr><td style="padding:4px 0;font-size:14px">${i.quantity}× ${i.menuItemName}</td><td style="text-align:right;font-size:14px;font-weight:600">${fmt(i.subtotal)}</td></tr>${modLines}`;
   }).join("");
 
+  const storeForEmail = await getStoreSettings().catch(() => ({ storeName: "Cedar Cafe", address: "", email: "" } as Awaited<ReturnType<typeof getStoreSettings>>));
+
   const html = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>Receipt #${order.confirmationCode}</title></head>
@@ -1155,8 +1157,8 @@ router.post("/orders/:id/email-receipt", requireStaffAuth, async (req, res): Pro
       <table width="480" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
         <!-- Header -->
         <tr><td style="background:#1a1f36;padding:28px 32px;text-align:center">
-          <div style="color:#f5a623;font-size:26px;font-weight:800;letter-spacing:1px">🌮 ISLAND TACOS</div>
-          <div style="color:#aaa;font-size:13px;margin-top:4px">Wickhams Cay 1, Road Town, BVI</div>
+          <div style="color:#f5a623;font-size:26px;font-weight:800;letter-spacing:1px">☕ ${storeForEmail.storeName.toUpperCase()}</div>
+          ${storeForEmail.address ? `<div style="color:#aaa;font-size:13px;margin-top:4px">${storeForEmail.address}</div>` : ""}
         </td></tr>
         <!-- Receipt info -->
         <tr><td style="padding:24px 32px 0">
@@ -1194,7 +1196,7 @@ router.post("/orders/:id/email-receipt", requireStaffAuth, async (req, res): Pro
         <!-- Footer -->
         <tr><td style="padding:24px 32px;text-align:center;background:#fafafa;border-top:1px solid #eee">
           <div style="color:#888;font-size:13px">Thank you for dining with us! 🌴</div>
-          <div style="color:#bbb;font-size:12px;margin-top:4px">orders@islandtacosbvi.com</div>
+          ${storeForEmail.email ? `<div style="color:#bbb;font-size:12px;margin-top:4px">${storeForEmail.email}</div>` : ""}
         </td></tr>
       </table>
     </td></tr>
@@ -1203,7 +1205,6 @@ router.post("/orders/:id/email-receipt", requireStaffAuth, async (req, res): Pro
 </html>`;
 
   try {
-    const storeForEmail = await getStoreSettings().catch(() => ({ storeName: "Cedar Cafe", email: "" }));
     await mailer.sendMail({
       from: process.env.SMTP_FROM ?? `${storeForEmail.storeName} <${storeForEmail.email || "no-reply@example.com"}>`,
       to: recipient,

@@ -58,6 +58,10 @@ app.use("/api", router);
 // Also mount at /cedar-api so the production cloud proxy (which routes /cedar-api → this port)
 // can reach all routes. Dev vite proxy uses /api → port 8181 directly.
 app.use("/cedar-api", router);
+// Also handle /cedar-api/api/* — the cloud proxy routes /cedar-api → this
+// server, and the Vite client calls /api/store-settings etc., which with
+// setBaseUrl("/cedar-api") becomes /cedar-api/api/store-settings.
+app.use("/cedar-api/api", router);
 // If a BASE_PATH is set (local install), also handle BASE_PATH/api/* so that
 // the Vite-built frontend (which prefixes BASE_URL to all fetch calls) can
 // reach the API without the requests falling through to the SPA fallback.

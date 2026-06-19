@@ -17,8 +17,8 @@ type Settings = {
 
 const DEFAULTS: Settings = {
   hours: "11am – 7pm daily",
-  phone: "284-544-8088",
-  address: "Wickhams Cay 1, Road Town, BVI",
+  phone: "284-344-9808",
+  address: "Road Town, Tortola, BVI",
   payment_methods: "ATH Móvil · Card · Apple Pay",
   online_payment_methods: '["cash"]',
   open_time: "11:00", close_time: "19:00",
@@ -405,8 +405,8 @@ export default function AdminSettings() {
           <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 18 }}>
             <h2 style={{ fontWeight: 700, fontSize: 15, color: TP, margin: 0 }}>Business Info</h2>
             {field("hours", "Store Hours (display text)", "e.g. 11am – 7pm daily")}
-            {field("phone", "Phone Number", "e.g. 284-544-8088")}
-            {field("address", "Address", "e.g. Wickhams Cay 1, Road Town, BVI")}
+            {field("phone", "Phone Number", "e.g. 284-344-9808")}
+            {field("address", "Address", "e.g. Road Town, Tortola, BVI")}
             {field("payment_methods", "Accepted Payment Methods", "e.g. ATH Móvil · Card · Apple Pay")}
           </div>
         </section>

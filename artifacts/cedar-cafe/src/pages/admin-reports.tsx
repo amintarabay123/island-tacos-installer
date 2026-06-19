@@ -41,7 +41,7 @@ const PRESETS = [
 ];
 
 export default function AdminReports() {
-  const { storeName } = useStoreSettings();
+  const { storeName, address } = useStoreSettings();
   const [, navigate] = useLocation();
   const [from, setFrom] = useState(() => new Date().toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
@@ -248,9 +248,9 @@ export default function AdminReports() {
   <!-- Header -->
   <div class="header">
     <div class="header-left">
-      <div class="brand">ISLAND TACOS</div>
+      <div class="brand">${storeName.toUpperCase()}</div>
       <div class="subtitle">Sales Summary Report</div>
-      <div class="address">Wickhams Cay 1, Road Town, Tortola · BVI</div>
+      <div class="address">${address}</div>
     </div>
     <div class="header-right">
       <div class="period">${period}</div>
@@ -403,7 +403,7 @@ export default function AdminReports() {
       doc.text("SALES SUMMARY REPORT", ML, 21);
       doc.setFontSize(8);
       doc.setTextColor(255, 230, 200);
-      doc.text("Wickhams Cay 1, Road Town, Tortola \u00B7 BVI", ML, 32);
+      doc.text(address || "Road Town, BVI", ML, 32);
       // Period + generated (right side)
       const periodLabel = from === to ? from : `${from}  \u2192  ${to}`;
       doc.setFont("helvetica", "bold");
@@ -848,8 +848,8 @@ export default function AdminReports() {
 
         {/* Print header */}
         <div className="hidden print:block" style={{ marginBottom:24, textAlign:"center" }}>
-          <div style={{ fontSize:24, fontWeight:700 }}>ISLAND TACOS</div>
-          <div style={{ color:"#6b7280" }}>Wickhams Cay 1, Road Town, BVI</div>
+          <div style={{ fontSize:24, fontWeight:700 }}>{storeName.toUpperCase()}</div>
+          <div style={{ color:"#6b7280" }}>{address}</div>
           <div style={{ fontSize:18, fontWeight:600, marginTop:8 }}>Sales Report</div>
           <div style={{ color:"#6b7280" }}>{from} — {to}</div>
           <div style={{ fontSize:11, color:"#9ca3af", marginTop:4 }}>Generated {new Date().toLocaleString()}</div>
