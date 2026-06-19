@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development node --enable-source-maps ./dist/index.mjs",
+    "dev": "sh -c 'DATABASE_URL=\"${DATABASE_URL%/*}/${LOCAL_DB_NAME:-cedarcafe}?sslmode=disable\" cross-env NODE_ENV=development node --enable-source-maps ./dist/index.mjs'",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
