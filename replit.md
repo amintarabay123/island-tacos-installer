@@ -2,6 +2,8 @@
 
 ## User preferences
 
+- **User is not a developer.** Speak plain English always. No jargon, no code terms without explanation. Give step-by-step instructions when the user needs to do something manually. Never assume they know what a file, route, component, or terminal command is without explaining it in plain terms.
+- **Do not describe the Replit UI by panel position (left panel, right panel, top bar, etc.)** — these are consistently wrong and confuse the user. Instead describe by label/name: "click the Secrets tab", "open the Workflows section", "look for the Publish button in the top right". When unsure of exact UI location, say so rather than guessing a position.
 - **Be thorough — no partial execution.** When given an instruction (debrand all pages, remove all hardcoded strings, apply a fix everywhere it appears), do it completely across every file and instance. Do not stop after a few examples and assume the rest is done. If the scope is too large for one pass, say so explicitly and list what remains — never silently do a partial job.
 - **Root fixes only — no patches or temporary workarounds.** When a bug or issue is found, diagnose the underlying cause and fix it there. Do not paper over symptoms. If a quick patch is unavoidable for safety (e.g. stop the bleed during business hours), say so explicitly and schedule the real fix.
 - **Always re-verify after a change.** After any fix or new feature, re-check that:
