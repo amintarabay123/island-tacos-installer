@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, MapPin, Plus, Minus, Loader2 } from "lucide-react";
+import heroCoffeeUrl from "@assets/image_1781895079381.png";
 
 interface ModifierOption {
   id: string;
@@ -404,11 +405,26 @@ export default function Home() {
         }
       `}</style>
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden" style={{ minHeight: 460, background: CC_BG }}>
-        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1c1008 0%, #2a1a0c 40%, #1c1008 100%)" }} />
-        <div className="absolute inset-0" style={{ boxShadow: "inset 0 -1px 0 rgba(16,185,129,0.1)" }} />
-
-        <div className="relative flex flex-col max-w-6xl mx-auto px-6" style={{ paddingTop: 80, paddingBottom: 56 }}>
+      <section className="relative overflow-hidden" style={{ minHeight: 480, backgroundColor: "#130e09" }}>
+        {/* Coffee cup photo */}
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `url(${heroCoffeeUrl as string})`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "65% center",
+          backgroundSize: "cover",
+        }} />
+        {/* Left fade so text is readable */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(to right, #130e09 26%, rgba(19,14,9,0.65) 42%, rgba(19,14,9,0.08) 58%, transparent 68%)",
+        }} />
+        {/* Bottom fade to page bg */}
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0, height: 64,
+          background: "linear-gradient(to top, #130e09, transparent)",
+        }} />
+        <div className="relative z-10 flex flex-col max-w-6xl mx-auto px-6" style={{ paddingTop: 80, paddingBottom: 64 }}>
           {/* Open / closed badge */}
           {storeOpen ? (
             <div style={{
