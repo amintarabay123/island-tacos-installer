@@ -1,14 +1,20 @@
 import { db } from "@workspace/db";
-import { menuCategoriesTable, menuItemsTable, modifiersTable, customersTable, ordersTable, orderItemsTable } from "@workspace/db/schema";
+import { menuCategoriesTable, menuItemsTable, modifiersTable, customersTable, ordersTable, orderItemsTable, storeSettingsTable } from "@workspace/db/schema";
 import { eq, inArray } from "drizzle-orm";
 
 const LOYVERSE_API = "https://api.loyverse.com/v1.0";
 const STORE_ID = "fa2b85a6-711d-11ea-8d93-0603130a05b8";
 const EMPLOYEE_ID = "324dd4ee-71a9-11ea-8d93-0603130a05b8";
 
-function getToken() {
+async function getToken(): Promise<string> {
+  try {
+    const rows = await db.select().from(storeSettingsTable).where(eq(storeSettingsTable.key, "loyverse_api_token"));
+    if (rows.length > 0 && rows[0].value) return rows[0].value;
+  } catch {
+    // fall through to env var
+  }
   const token = process.env.LOYVERSE_API_TOKEN;
-  if (!token) throw new Error("LOYVERSE_API_TOKEN not set");
+  if (!token) throw new Error("Loyverse API token not configured — set it in Admin → Settings → Loyverse Integration.");
   return token;
 }
 
@@ -16,7 +22,7 @@ async function loyverseFetch<T = Record<string, unknown>>(path: string, options:
   const res = await fetch(`${LOYVERSE_API}${path}`, {
     ...options,
     headers: {
-      Authorization: `Bearer ${getToken()}`,
+      Authorization: `Bearer ${await getToken()}`,
       "Content-Type": "application/json",
       ...(options.headers ?? {}),
     },

@@ -16,12 +16,12 @@ type Settings = {
 };
 
 const DEFAULTS: Settings = {
-  hours: "11am – 7pm daily",
-  phone: "284-544-8088",
-  address: "Wickhams Cay 1, Road Town, BVI",
-  payment_methods: "ATH Móvil · Card · Apple Pay",
+  hours: "10am – 8pm daily",
+  phone: "284-344-9808",
+  address: "Road Town, BVI",
+  payment_methods: "ATH Móvil · Card · Cash",
   online_payment_methods: '["cash"]',
-  open_time: "11:00", close_time: "19:00",
+  open_time: "10:00", close_time: "20:00",
   cutoff_minutes: "15", open_days: "1,2,3,4,5,6",
 };
 
@@ -73,7 +73,7 @@ export default function AdminSettings() {
   useEffect(() => {
     fetch(`${API}/api/settings`)
       .then(r => r.json())
-      .then((data: Settings) => {
+      .then((data: Settings & { loyverse_api_token?: string }) => {
         setForm({
           hours: data.hours ?? DEFAULTS.hours,
           phone: data.phone ?? DEFAULTS.phone,
@@ -85,6 +85,7 @@ export default function AdminSettings() {
           cutoff_minutes: data.cutoff_minutes ?? DEFAULTS.cutoff_minutes,
           open_days: data.open_days ?? DEFAULTS.open_days,
         });
+        setLoyverseHasToken(Boolean(data.loyverse_api_token));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -117,6 +118,42 @@ export default function AdminSettings() {
   };
 
   const [pulling, setPulling] = useState(false);
+
+  const [loyverseToken, setLoyverseToken] = useState("");
+  const [loyverseHasToken, setLoyverseHasToken] = useState(false);
+  const [loyverseSaving, setLoyverseSaving] = useState(false);
+  const [loyverseSyncing, setLoyverseSyncing] = useState(false);
+
+  const handleLoyverseSave = async () => {
+    if (!loyverseToken.trim()) return;
+    setLoyverseSaving(true);
+    try {
+      const res = await fetch(`${API}/api/settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ loyverse_api_token: loyverseToken.trim() }),
+      });
+      if (!res.ok) throw new Error();
+      setLoyverseHasToken(true);
+      setLoyverseToken("");
+      toast({ title: "Loyverse token saved" });
+    } catch {
+      toast({ title: "Failed to save token", variant: "destructive" });
+    } finally { setLoyverseSaving(false); }
+  };
+
+  const handleLoyverseSync = async () => {
+    setLoyverseSyncing(true);
+    try {
+      const res = await fetch(`${API}/api/loyverse/sync`, { method: "POST", headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Sync failed");
+      toast({ title: `Menu synced — ${data.categories ?? 0} categories, ${data.items ?? 0} items` });
+    } catch (e) {
+      toast({ title: String(e instanceof Error ? e.message : e), variant: "destructive" });
+    } finally { setLoyverseSyncing(false); }
+  };
+
   const handlePullFromCloud = async () => {
     setPulling(true);
     try {
@@ -380,6 +417,54 @@ export default function AdminSettings() {
             </div>
           ))}
         </div>
+
+        {/* Loyverse Integration */}
+        <section style={GLOW}>
+          <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 18 }}>
+            <div>
+              <h2 style={{ fontWeight: 700, fontSize: 15, color: TP, margin: "0 0 4px" }}>Loyverse Integration</h2>
+              <p style={{ fontSize: 13, color: TMUTED, margin: 0, lineHeight: 1.5 }}>
+                Import your menu from Loyverse POS. Enter your Loyverse API token (Loyverse dashboard → Integrations → API access tokens), then sync to pull all active categories and items.
+              </p>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <label style={LBL}>
+                Loyverse API Token
+                {loyverseHasToken && <span style={{ fontWeight: 400, color: GREEN, marginLeft: 8 }}>✓ configured</span>}
+              </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="password"
+                  value={loyverseToken}
+                  onChange={e => setLoyverseToken(e.target.value)}
+                  placeholder={loyverseHasToken ? "Enter new token to replace existing…" : "Paste Loyverse API token…"}
+                  style={{ ...INP, flex: 1 }}
+                  autoComplete="new-password"
+                />
+                <button
+                  onClick={handleLoyverseSave}
+                  disabled={loyverseSaving || !loyverseToken.trim()}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: PUR, border: "none", color: "#fff", cursor: loyverseToken.trim() ? "pointer" : "not-allowed", fontSize: 13, fontWeight: 700, opacity: (loyverseSaving || !loyverseToken.trim()) ? 0.5 : 1, flexShrink: 0 }}
+                >
+                  {loyverseSaving ? "Saving…" : "Save Token"}
+                </button>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 12, borderTop: `1px solid rgba(255,255,255,0.06)` }}>
+              <p style={{ fontSize: 13, color: TMUTED, margin: 0 }}>
+                {loyverseHasToken ? "Token saved. Sync to import or refresh the menu." : "Save a token above to enable sync."}
+              </p>
+              <button
+                onClick={handleLoyverseSync}
+                disabled={loyverseSyncing || !loyverseHasToken}
+                style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 16px", borderRadius: 10, background: "rgba(255,255,255,0.06)", border: `1px solid rgba(255,255,255,0.1)`, color: TM, cursor: (loyverseSyncing || !loyverseHasToken) ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600, flexShrink: 0, opacity: (loyverseSyncing || !loyverseHasToken) ? 0.5 : 1 }}
+              >
+                <RefreshCw style={{ width: 14, height: 14, animation: loyverseSyncing ? "spin 1s linear infinite" : "none" }} />
+                {loyverseSyncing ? "Syncing…" : "Sync Menu from Loyverse"}
+              </button>
+            </div>
+          </div>
+        </section>
 
         {/* Sync from Cloud */}
         <section style={GLOW}>
