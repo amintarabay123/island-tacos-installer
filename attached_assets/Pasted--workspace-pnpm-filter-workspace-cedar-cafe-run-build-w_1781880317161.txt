@@ -1,0 +1,66 @@
+~/workspace$ pnpm --filter @workspace/cedar-cafe run build
+
+> @workspace/cedar-cafe@0.0.0 build /home/runner/workspace/artifacts/cedar-cafe
+> vite build --config vite.config.ts
+
+vite v7.3.2 building client environment for production...
+src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/calendar.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+src/components/ui/sheet.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+✓ 3745 modules transformed.
+Generated an empty chunk: "vendor-react".
+dist/public/index.html                                 2.12 kB │ gzip:   0.86 kB
+dist/public/assets/index-Y52dn4zE.css                117.47 kB │ gzip:  19.58 kB
+dist/public/assets/vendor-react-l0sNRNKZ.js            0.00 kB │ gzip:   0.02 kB
+dist/public/assets/chevron-up-hrd8UKAz.js              0.13 kB │ gzip:   0.14 kB
+dist/public/assets/chevron-down-DSl_G76H.js            0.13 kB │ gzip:   0.14 kB
+dist/public/assets/arrow-left-DNm9ofXV.js              0.17 kB │ gzip:   0.16 kB
+dist/public/assets/trending-up-ghb1jlsv.js             0.18 kB │ gzip:   0.17 kB
+dist/public/assets/chevron-right-CYKGt3Gt.js           0.21 kB │ gzip:   0.18 kB
+dist/public/assets/dollar-sign-CnL_83T-.js             0.22 kB │ gzip:   0.19 kB
+dist/public/assets/download-DhB-EwXe.js                0.23 kB │ gzip:   0.19 kB
+dist/public/assets/activity-nVD0A9Du.js                0.24 kB │ gzip:   0.20 kB
+dist/public/assets/triangle-alert-BrBcPQ4K.js          0.27 kB │ gzip:   0.21 kB
+dist/public/assets/users-DDO06h5d.js                   0.31 kB │ gzip:   0.22 kB
+dist/public/assets/printer-GRz9UAse.js                 0.32 kB │ gzip:   0.24 kB
+dist/public/assets/save-BE6r32VH.js                    0.33 kB │ gzip:   0.23 kB
+dist/public/assets/store-BRW4IjFR.js                   0.66 kB │ gzip:   0.37 kB
+dist/public/assets/page-meta-Cbx0pNCX.js               1.52 kB │ gzip:   0.59 kB
+dist/public/assets/sign-in-BUncwT1P.js                 2.05 kB │ gzip:   1.02 kB
+dist/public/assets/sign-up-C2s35Y3h.js                 2.05 kB │ gzip:   1.02 kB
+dist/public/assets/staff-login-D2Yivws8.js             2.67 kB │ gzip:   1.28 kB
+dist/public/assets/switch-DhbZwgQo.js                  2.86 kB │ gzip:   1.39 kB
+dist/public/assets/account-C08CJt2T.js                 6.60 kB │ gzip:   2.25 kB
+dist/public/assets/admin-payment-events-RlsAdctu.js    7.27 kB │ gzip:   2.78 kB
+dist/public/assets/display-RxUYT9Rp.js                12.69 kB │ gzip:   3.51 kB
+dist/public/assets/admin-system-DDwdMtM3.js           16.69 kB │ gzip:   5.41 kB
+dist/public/assets/admin-modifiers-BztQTVHy.js        19.68 kB │ gzip:   5.68 kB
+dist/public/assets/admin-customers-dOT7OA4X.js        19.75 kB │ gzip:   5.52 kB
+dist/public/assets/admin-settings-BqpG37HX.js         22.19 kB │ gzip:   6.47 kB
+dist/public/assets/purify.es-OpeaODd9.js              24.10 kB │ gzip:   9.02 kB
+dist/public/assets/kitchen-B2IFNRyR.js                37.27 kB │ gzip:   9.14 kB
+dist/public/assets/admin-menu-BEwUpio2.js             38.28 kB │ gzip:   9.41 kB
+dist/public/assets/admin-financials-D8QJBaB8.js       48.18 kB │ gzip:  11.77 kB
+dist/public/assets/vendor-query-DXiNkYLP.js           49.31 kB │ gzip:  15.85 kB
+dist/public/assets/vendor-radix-CCv1Asg0.js           98.50 kB │ gzip:  33.46 kB
+dist/public/assets/pos-DaRgjjjZ.js                   153.04 kB │ gzip:  31.48 kB
+dist/public/assets/index.es-DIylZlkb.js              159.13 kB │ gzip:  53.08 kB
+dist/public/assets/index-n14MH0bn.js                 180.17 kB │ gzip:  49.00 kB
+dist/public/assets/html2canvas.esm-DXEQVQnt.js       201.04 kB │ gzip:  47.07 kB
+dist/public/assets/vendor-clerk-DUqnzIwi.js          253.83 kB │ gzip:  73.67 kB
+dist/public/assets/admin-reports-DtnrFFYc.js         424.80 kB │ gzip: 134.77 kB
+dist/public/assets/admin-DQ3vFgna.js                 556.59 kB │ gzip: 149.56 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 11.92s
+
+> @workspace/cedar-cafe@0.0.0 postbuild /home/runner/workspace/artifacts/cedar-cafe
+> echo 'No tarball upload for cedar-cafe'
+
+No tarball upload for cedar-cafe
+~/workspace$ 
