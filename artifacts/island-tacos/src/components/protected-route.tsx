@@ -17,12 +17,12 @@ export default function ProtectedRoute({ children, adminOnly }: Props) {
           setStatus("authed");
         } else {
           setStatus("unauthed");
-          navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(location)}`);
+          navigate("/");
         }
       })
       .catch(() => {
         setStatus("unauthed");
-        navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(location)}`);
+        navigate("/");
       });
   }, [navigate, location, adminOnly]);
 

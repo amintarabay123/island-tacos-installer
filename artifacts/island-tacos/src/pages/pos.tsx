@@ -2832,6 +2832,7 @@ export default function POS() {
   const [ticketsOpen, setTicketsOpen] = useState(false);
   const [receiptsOpen, setReceiptsOpen] = useState(false);
   const [soldOutOpen, setSoldOutOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [itemNoteModal, setItemNoteModal] = useState<string | null>(null); // cart item key
   const [orderNoteModal, setOrderNoteModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
