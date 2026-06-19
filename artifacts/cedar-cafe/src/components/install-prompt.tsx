@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { X, Share, Plus } from "lucide-react";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 type Platform = "android" | "ios" | null;
 
@@ -39,6 +40,7 @@ function detectPlatform(): Platform {
 }
 
 export default function InstallPrompt() {
+  const { storeName } = useStoreSettings();
   const [visible, setVisible] = useState(false);
   const [platform, setPlatform] = useState<Platform>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -151,16 +153,15 @@ export default function InstallPrompt() {
           {/* Main row */}
           <div className="flex items-center gap-3 px-4 py-4">
             {/* Icon */}
-            {/* TODO(store-settings): alt + headline should be useStoreSettings().storeName */}
             <img
               src="/icon.svg"
-              alt="Island Tacos"
+              alt={storeName}
               className="w-12 h-12 rounded-xl shrink-0"
             />
 
             {/* Text */}
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm leading-tight">Island Tacos</p>
+              <p className="font-bold text-sm leading-tight">{storeName}</p>
               <p className="text-xs text-white/60 mt-0.5">
                 Add to your home screen for quick ordering
               </p>

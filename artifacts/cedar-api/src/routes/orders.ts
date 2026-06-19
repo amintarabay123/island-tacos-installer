@@ -1203,11 +1203,11 @@ router.post("/orders/:id/email-receipt", requireStaffAuth, async (req, res): Pro
 </html>`;
 
   try {
-    // TODO(store-settings): replace fallback + subject with `${(await getStoreSettings()).storeName}` everywhere
+    const storeForEmail = await getStoreSettings().catch(() => ({ storeName: "Cedar Cafe", email: "" }));
     await mailer.sendMail({
-      from: process.env.SMTP_FROM ?? "Island Tacos <orders@islandtacosbvi.com>",
+      from: process.env.SMTP_FROM ?? `${storeForEmail.storeName} <${storeForEmail.email || "no-reply@example.com"}>`,
       to: recipient,
-      subject: `Your Island Tacos Receipt — Order #${order.confirmationCode}`,
+      subject: `Your ${storeForEmail.storeName} Receipt — Order #${order.confirmationCode}`,
       html,
     });
     // If a new email was provided and not already on the order, update the order

@@ -1,4 +1,5 @@
 import { SignIn } from "@clerk/react";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -46,16 +47,14 @@ const appearance = {
 };
 
 export default function SignInPage() {
-  // To update login providers, app branding, or OAuth settings use the Auth
-  // pane in the workspace toolbar. More information can be found in the Replit docs.
+  const { storeName, address } = useStoreSettings();
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
       style={{ background: "linear-gradient(135deg, #0c0a09 0%, #1c1917 50%, #0c0a09 100%)" }}
     >
       <div className="mb-6 text-center">
-        {/* TODO(store-settings): replace "Island Tacos" with useStoreSettings().storeName */}
-        <p className="text-stone-500 text-sm uppercase tracking-widest font-medium">Island Tacos · Road Town, BVI</p>
+        <p className="text-stone-500 text-sm uppercase tracking-widest font-medium">{storeName}{address ? ` · ${address}` : ""}</p>
       </div>
       <div className="w-full max-w-sm">
         <SignIn

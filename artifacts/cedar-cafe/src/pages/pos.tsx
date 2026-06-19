@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
 import { setPageMeta } from "@/lib/page-meta";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,7 @@ async function printReceiptLines(
   return { ok: true };
 }
 
-function buildReceiptLines(order: Order, tendered?: number): { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean }[] {
+function buildReceiptLines(order: Order, tendered?: number, store?: { storeName: string; address?: string; phone?: string }): { text: string; bold?: boolean; center?: boolean; size?: string; divider?: boolean }[] {
   const W = 32; // Munbyn 58mm paper = 32 chars
   // Right-aligns `right` against `left`, truncating left if needed
   const padLine = (left: string, right: string): string => {
@@ -136,13 +137,10 @@ function buildReceiptLines(order: Order, tendered?: number): { text: string; bol
 
   // ── Header ──────────────────────────────────────────────────────────────────
   lines.push({ text: "================================", center: true });
-  // TODO(store-settings): replace "ISLAND TACOS" / address / "(284) 544-8088" with
-  // values from useStoreSettings() — receipt text is the single most visible piece
-  // of store identity in the SaaS context.
-  lines.push({ text: "ISLAND TACOS", bold: true, center: true, size: "large" });
+  lines.push({ text: (store?.storeName ?? "Cedar Cafe").toUpperCase(), bold: true, center: true, size: "large" });
   lines.push({ text: "================================", center: true });
-  lines.push({ text: "Wickhams Cay 1, Road Town, BVI", center: true });
-  lines.push({ text: "Tel: (284) 544-8088", center: true });
+  if (store?.address) lines.push({ text: store.address, center: true });
+  if (store?.phone) lines.push({ text: `Tel: ${store.phone}`, center: true });
   lines.push({ divider: true, text: "" });
 
   // ── Order info ──────────────────────────────────────────────────────────────
@@ -180,8 +178,6 @@ function buildReceiptLines(order: Order, tendered?: number): { text: string; bol
   // ── Footer ──────────────────────────────────────────────────────────────────
   lines.push({ text: "================================", center: true });
   lines.push({ text: "** THANK YOU! **", bold: true, center: true });
-  lines.push({ text: "orders.islandtacosbvi.com", center: true });
-  lines.push({ text: "Hasta luego!", center: true });
   lines.push({ text: "", center: true });
   return lines;
 }
@@ -747,8 +743,8 @@ function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: n
             </div>
             <div style={{ borderTop:`1px dashed ${IL.bord}`, margin:"12px 0" }}/>
             <div style={{ textAlign:"center", color:IL.mu, fontSize:11 }}>
-              <div>Gracias · Thank you!</div>
-              <div style={{ marginTop:4 }}>Order online at islandtacos.com</div>
+              <div>Thank you!</div>
+              {address && <div style={{ marginTop:4 }}>{address}</div>}
             </div>
           </div>
         </div>
@@ -1561,7 +1557,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
               <button
                 onClick={async () => {
                   setPrinting(true); setPrintError(null);
-                  const result = await printReceiptLines(buildReceiptLines(selected, selected.amountTendered ?? undefined));
+                  const result = await printReceiptLines(buildReceiptLines(selected, selected.amountTendered ?? undefined, { storeName, address, phone }));
                   if (!result.ok) setPrintError(result.error ?? "Print failed");
                   setPrinting(false);
                 }}
@@ -2711,9 +2707,9 @@ function SplitPaymentModal({
 
 export default function POS() {
   const [, navigate] = useLocation();
+  const { storeName, address, phone } = useStoreSettings();
 
-  // TODO(store-settings): use `POS — ${useStoreSettings().storeName}` once page-meta accepts a getter
-  useEffect(() => { setPageMeta("POS — Island Tacos", "🖥️", { iconUrl: "/icon-pos-192.png", manifestUrl: "/manifest-pos.json" }); }, []);
+  useEffect(() => { setPageMeta(`POS — ${storeName}`, "🖥️", { iconUrl: "/icon-pos-192.png", manifestUrl: "/manifest-pos.json" }); }, [storeName]);
 
   // Sync printer config from server on load — ensures all devices share one config
   // set from Admin → Reports → Printer Settings.
@@ -3557,8 +3553,7 @@ export default function POS() {
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-2.5 flex-shrink-0" style={{ background:IL.hdr, borderBottom:`1px solid ${IL.bord}` }}>
         <div className="flex items-center gap-3">
-          {/* TODO(store-settings): use useStoreSettings().storeName for alt */}
-          <img src="/logo.svg" alt="Island Tacos" className="h-8 w-8 object-contain rounded-lg"/>
+          <img src="/logo.svg" alt={storeName} className="h-8 w-8 object-contain rounded-lg"/>
           <span style={{ color:IL.mu, fontSize:13, fontWeight:600 }} className="hidden sm:block">Point of Sale</span>
         </div>
         <div style={{ color:IL.mu, fontSize:13, fontFamily:"monospace" }}>{time}</div>

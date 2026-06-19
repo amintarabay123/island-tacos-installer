@@ -105,8 +105,8 @@ export function ChalkKDS() {
         boxShadow: "0 4px 24px rgba(0,0,0,0.8)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <img src="/__mockup/cedar-logo-transparent.png" alt="Cedar Cafe"
-            style={{ height: 48, objectFit: "contain", filter: "drop-shadow(0 2px 10px rgba(200,168,130,0.5)) brightness(1.15)" }} />
+          <img src="/__mockup/cedar-logo-bold-transparent.png" alt="Cedar Cafe"
+            style={{ height: 64, width: "auto" }} />
           <div>
             <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 16, fontStyle: "italic", color: CHALK, textShadow: "0 1px 6px rgba(200,168,130,0.2)" }}>
               Kitchen Display

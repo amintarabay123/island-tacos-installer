@@ -55,8 +55,8 @@ export function ChalkPOS() {
         display: "flex", alignItems: "center", justifyContent: "space-between",
         boxShadow: "0 4px 20px rgba(0,0,0,0.7)",
       }}>
-        <img src="/__mockup/cedar-logo-transparent.png" alt="Cedar Cafe"
-          style={{ height: 48, objectFit: "contain", filter: "drop-shadow(0 2px 8px rgba(200,168,130,0.5)) brightness(1.1)" }} />
+        <img src="/__mockup/cedar-logo-bold-transparent.png" alt="Cedar Cafe"
+          style={{ height: 64, width: "auto" }} />
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <div style={{ fontSize: 12, color: MUTED }}>Shift: 07:00 – 15:00</div>
           <div style={{

@@ -54,8 +54,8 @@ export function ChalkStore() {
         boxShadow: "0 4px 24px rgba(0,0,0,0.7)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <img src="/__mockup/cedar-logo-transparent.png" alt="Cedar Cafe"
-            style={{ height: 64, objectFit: "contain", filter: "drop-shadow(0 2px 8px rgba(200,168,130,0.4)) brightness(1.15)" }} />
+          <img src="/__mockup/cedar-logo-bold-transparent.png" alt="Cedar Cafe"
+            style={{ height: 80, width: "auto" }} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }} className="body-font">
           <div style={{ fontSize: 12, color: MUTED, letterSpacing: 0.5 }}>Road Town, Tortola · Pickup Only</div>

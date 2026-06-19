@@ -49,8 +49,8 @@ export function ChalkAdmin() {
         boxShadow: "4px 0 24px rgba(0,0,0,0.6)",
       }}>
         <div style={{ padding: "0 20px 20px", borderBottom: `1px solid ${BORDER}` }}>
-          <img src="/__mockup/cedar-logo-transparent.png" alt="Cedar Cafe"
-            style={{ height: 52, objectFit: "contain", filter: "drop-shadow(0 2px 10px rgba(200,168,130,0.5)) brightness(1.15)" }} />
+          <img src="/__mockup/cedar-logo-bold-transparent.png" alt="Cedar Cafe"
+            style={{ height: 68, width: "auto" }} />
         </div>
 
         <nav style={{ padding: "16px 10px", flex: 1 }}>

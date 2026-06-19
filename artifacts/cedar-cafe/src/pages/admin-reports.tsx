@@ -4,6 +4,7 @@ import { authHeaders, clearAuthToken } from "@/lib/auth";
 import { adminRoutes } from "@/lib/admin-path";
 import { ArrowLeft, Download, RefreshCw, Calendar, TrendingUp, DollarSign, ShoppingBag, Percent, Printer, Save } from "lucide-react";
 import jsPDF from "jspdf";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 interface SalesReport {
   from: string;
@@ -40,6 +41,7 @@ const PRESETS = [
 ];
 
 export default function AdminReports() {
+  const { storeName } = useStoreSettings();
   const [, navigate] = useLocation();
   const [from, setFrom] = useState(() => new Date().toISOString().slice(0, 10));
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
@@ -333,9 +335,8 @@ export default function AdminReports() {
   </div>` : ""}
 
   <!-- Footer -->
-  <!-- TODO(store-settings): replace "Island Tacos" with useStoreSettings().storeName -->
   <div class="footer">
-    <div class="footer-brand">Island Tacos · Confidential</div>
+    <div class="footer-brand">${storeName} · Confidential</div>
     <div class="footer-note">This report is generated from POS and online order data</div>
   </div>
 </div>
@@ -607,12 +608,11 @@ export default function AdminReports() {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         doc.setTextColor(...mid);
-        // TODO(store-settings): use useStoreSettings().storeName instead of literal "Island Tacos"
-        doc.text("Island Tacos \u00B7 Confidential \u00B7 For internal use only", ML, 291);
+        doc.text(`${storeName} \u00B7 Confidential \u00B7 For internal use only`, ML, 291);
         doc.text(`Page ${p} of ${pages}`, MR, 291, { align: "right" });
       }
 
-      const filename = `island-tacos-summary-${from}${from !== to ? `-to-${to}` : ""}.pdf`;
+      const filename = `${storeName.toLowerCase().replace(/\s+/g, '-')}-summary-${from}${from !== to ? `-to-${to}` : ""}.pdf`;
       doc.save(filename);
     } finally {
       setPdfGenerating(false);

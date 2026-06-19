@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 // ── Palette ────────────────────────────────────────────────────────────────────
 const BG    = "#16172b";
@@ -354,9 +355,10 @@ function Sidebar({ sections, onClose, onLogout, isMobile }: {
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function Admin() {
+  const { storeName } = useStoreSettings();
   useEffect(() => {
-    setPageMeta("Admin — Island Tacos", "⚙️", { iconUrl: "/icon-admin-192.png", manifestUrl: "/manifest-admin.json" });
-  }, []);
+    setPageMeta(`Admin — ${storeName}`, "⚙️", { iconUrl: "/icon-admin-192.png", manifestUrl: "/manifest-admin.json" });
+  }, [storeName]);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -691,8 +693,7 @@ export default function Admin() {
             <div>
               <h1 style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.04em", color: TP, lineHeight: 1 }}>Dashboard</h1>
               <p style={{ fontSize: 11, color: TM, marginTop: 2 }}>
-                {/* TODO(store-settings): replace with useStoreSettings().storeName */}
-                Island Tacos — Admin
+                {storeName} — Admin
               </p>
             </div>
           </div>

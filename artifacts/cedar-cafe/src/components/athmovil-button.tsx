@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { CheckCircle, Smartphone, Copy, Check, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -207,6 +208,7 @@ export function AthMovilInstructions({
   confirmationCode,
   onPaymentSent,
 }: AthMovilInstructionsProps) {
+  const { storeName } = useStoreSettings();
   const [copied, setCopied] = useState(false);
   const [waiting, setWaiting] = useState(false);
 
@@ -231,8 +233,7 @@ export function AthMovilInstructions({
           </li>
           <li className="flex gap-2">
             <span className="font-bold shrink-0">2.</span>
-            {/* TODO(store-settings): replace "Island Tacos" with useStoreSettings().storeName */}
-            <span>Tap <strong>"Pay a Business"</strong> and search for <strong>Island Tacos</strong></span>
+            <span>Tap <strong>"Pay a Business"</strong> and search for <strong>{storeName}</strong></span>
           </li>
           <li className="flex gap-2">
             <span className="font-bold shrink-0">3.</span>

@@ -9,6 +9,7 @@ import {
   Activity, Cpu, HardDrive, Wifi, WifiOff, Server, Printer,
   MessageSquare, Wrench, Info, Download,
 } from "lucide-react";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -107,7 +108,8 @@ function relativeTime(isoStr: string): string {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function AdminSystem() {
-  useEffect(() => { setPageMeta("🖥️ System Monitor — Island Tacos", "🖥️"); }, []);
+  const { storeName } = useStoreSettings();
+  useEffect(() => { setPageMeta(`🖥️ System Monitor — ${storeName}`, "🖥️"); }, [storeName]);
   const { toast } = useToast();
 
   const [data, setData]         = useState<HealthPayload | null>(null);

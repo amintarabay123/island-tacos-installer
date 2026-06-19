@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders, clearAuthToken } from "@/lib/auth";
 import { setPageMeta } from "@/lib/page-meta";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 // ── Indigo Luxe Design System ─────────────────────────────────────────────────
 const IL = { bg:"#16172b", card:"#1e1f38", hdr:"#0e1020", bord:"rgba(255,255,255,0.06)", tp:"#e8eaf6", tm:"#b0b8d8", mu:"#7077a1", or:"#ff6b00", pur:"#7c6af7", grn:"#30d158", red:"#ff453a" };
@@ -185,6 +186,7 @@ function isOverdue(createdAt: string, now: number): boolean {
 }
 
 export default function Kitchen({ station }: { station?: string } = {}) {
+  const { storeName } = useStoreSettings();
   useEffect(() => {
     const label = station ? ` — ${station.charAt(0).toUpperCase() + station.slice(1)}` : "";
     setPageMeta(`Kitchen${label} — Cedar Cafe`, "🍳", { iconUrl: "/icon-kds-192.png", manifestUrl: "/manifest-kds.json" });
@@ -809,8 +811,7 @@ export default function Kitchen({ station }: { station?: string } = {}) {
     <div className="flex flex-col select-none overflow-hidden" style={{ minHeight:"100dvh", background:IL.bg, color:IL.tp }}>
       <header style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 16px", background:IL.hdr, borderBottom:`1px solid ${IL.bord}`, flexShrink:0, gap:8 }}>
         <div className="flex items-center gap-2 min-w-0">
-          {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
-          <span style={{ fontSize:17, fontWeight:900, color:IL.tp }} className="truncate">Island Tacos</span>
+          <span style={{ fontSize:17, fontWeight:900, color:IL.tp }} className="truncate">{storeName}</span>
           <span style={{ color:IL.mu, fontSize:13 }} className="hidden sm:inline">· Kitchen Display</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">

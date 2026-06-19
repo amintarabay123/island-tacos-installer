@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders } from "@/lib/auth";
 import { ArrowLeft, Search, Users, Phone, Mail, ShoppingBag, DollarSign, ChevronDown, ChevronUp, Loader2, X, Trash2, Download } from "lucide-react";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -290,6 +291,7 @@ function CustomerDrawer({ customerId, onClose, onDelete }: { customerId: number;
 const PAGE_SIZE = 100;
 
 export default function AdminCustomers() {
+  const { storeName } = useStoreSettings();
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -375,7 +377,7 @@ export default function AdminCustomers() {
     const a = document.createElement("a");
     a.href = url;
     const label = query ? `customers-search-${query}` : "customers-all";
-    a.download = `island-tacos-${label}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${storeName.toLowerCase().replace(/\s+/g, '-')}-${label}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { adminRoutes } from "@/lib/admin-path";
 import { saveAuthToken } from "@/lib/auth";
+import { useStoreSettings } from "@/lib/use-store-settings";
 
 export default function StaffLogin() {
+  const { storeName } = useStoreSettings();
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -57,8 +59,7 @@ export default function StaffLogin() {
   return (
     <div className="min-h-[100dvh] bg-zinc-950 flex flex-col items-center justify-center gap-6 px-4 py-8 overflow-y-auto" style={{ backgroundColor: '#09090b', minHeight: '100dvh' }}>
       <div className="text-center space-y-1">
-        {/* TODO(store-settings): replace literal with useStoreSettings().storeName */}
-        <div className="text-2xl font-black text-white tracking-tight">Island Tacos</div>
+        <div className="text-2xl font-black text-white tracking-tight">{storeName}</div>
         <div className="text-zinc-500 text-sm">Staff access</div>
       </div>
 
