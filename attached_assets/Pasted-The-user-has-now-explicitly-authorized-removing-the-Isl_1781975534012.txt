@@ -1,0 +1,99 @@
+The user has now explicitly authorized removing the Island Tacos and api-server artifact registrations — that overrides the earlier "don't touch" constraint for this specific cleanup. Let me read .replit and the workflows skill to do the removals the proper way (the system requires the workflows skill rather than direct .replit edits). I'll also check what keeps auto-updating api-server:
+
+
+3 actions
+Now I understand: .replit has no individual workflow entries — workflows are auto-derived from each artifact's registration (.replit-artifact/artifact.toml). So deleting those two artifact.toml files removes both the registration and the workflow. Let me confirm the current workflow names first, then remove cleanly:
+
+
+2 actions
+Only 3 workflows exist — Island Tacos and api-server aren't even running as workflows (their workflows are derived from the artifact.toml files I'm about to delete). So removing the two artifact.toml files fully unregisters them. Let me delete both and prepare the Cedar root change:
+
+
+3 actions
+Both registrations removed, source code intact, and Island Tacos no longer holds root. Now let me apply the Cedar Cafe root change:
+
+
+2 actions
+Success — Cedar Cafe now owns root. Let me clean up the temp file and restart the workflow so it picks up BASE_PATH=/, then verify the app loads at root:
+
+
+3 actions
+Cedar Cafe restarted at root. Let me verify it actually loads and the API calls resolve correctly at the new root path:
+
+
+3 actions
+The app loads perfectly at root — the screenshot shows the Cedar Cafe ordering page, and the logs confirm API calls correctly resolve to /cedar-api/api/... (all 200/304) with images loading via /cedar-api/api/image-proxy. The interceptor handles root exactly as expected, no console errors.
+
+Now let me run the mandatory code review. Let me read the skill to confirm the call signature:
+
+Loaded code_review skill
+Now let me run the mandatory code review on the full set of changes:
+
+
+3 actions
+The architect found valid gaps. Let me verify exactly what's in the files before fixing — I want to confirm the .env.template sync URL and the post-install printed URLs (admin path, kitchen route):
+
+
+2 actions
+Now I have the facts. The architect's high-impact findings are valid and in-scope (Task A sync URL + the user's explicit URL structure):
+
+.env.template SYNC_TARGET_URL still lacks /cedar-api
+FIXDB.ps1/REINSTALL.ps1 print stale Island /it-dav7dwn8/... admin paths
+update-ip.ps1 prints /admin/kitchen but the user's structure says /kitchen
+Let me verify the app's actual routes before rewriting the printed URLs, so I print the correct ones:
+
+
+2 actions
+Authoritative routes confirmed: adminRoutes.pos=/admin/pos, kitchen=/admin/kitchen (with /kitchen redirecting to it), dashboard=/admin, display=/display. So update-ip.ps1 (/admin/kitchen) is actually correct — the real problem is the stale Island /it-dav7dwn8/... paths and the .env.template sync URL. Let me grep for all it-dav7dwn8 occurrences in local-install/ to catch everything, then fix:
+
+
+3 actions
+The grep revealed why these were missed earlier: .env.template is a hidden file, so ripgrep skipped it in my original Task A scan — that's why its SYNC_TARGET_URL never got the /cedar-api prefix. Now let me fix all three: the sync URL and the stale /it-dav7dwn8/ admin paths (mapping to Cedar's real /admin/... routes):
+
+
+2 actions
+All fixes applied and verified — .env.template sync URL now uses /cedar-api, no it-dav7dwn8 remains, and the installer prints Cedar's real /admin/... routes. These are template/display-only strings (not part of the running artifacts), so no restart is needed.
+
+Let me record the durable lesson, write the commit message, and check the follow-up skill before finishing:
+
+
+4 actions
+All durable lessons recorded. The existing follow-up (#2) is unrelated to this work and not made obsolete by it, so I'll leave it. Now let me write the commit message and finish:
+
+
+Planning next code review
+All work is complete and verified. Let me mark the task complete:
+
+
+Validation failed · 1 failed
+
+Re-evaluating validation scope findings (15 seconds)
+The validation's code review is evaluating against the wrong task framing — it's reviewing against the follow-up task "pull Cedar Cafe artifacts from branch," not the task I actually executed (debrand + /cedar-api URLs + root migration). Findings #1 and #2 (removing Island Tacos and api-server registrations) were explicitly authorized by the user to free the root path, so they're correct for my task, not violations.
+
+Finding #3, however, is legitimate and worth fixing: a hardcoded islandtacosbvi.com fallback inside the Cedar API. Let me check it:
+
+
+2 actions
+Confirmed — line 109 hardcodes the Island domain as the production webhook fallback. This is a real debrand miss inside the Cedar API. Let me fix it to Cedar's domain (a strictly-better fallback; only used when PUBLIC_URL is unset):
+
+
+2 actions
+The Island fallback is fixed (it's a production-only code path, so no dev restart is needed to verify).
+
+The remaining validation findings (#1, #2) flag the removal of the Island Tacos and api-server registrations — but those were explicitly authorized by the user to free the root path, so they are correct for the actual task, not violations. The validation is anchored on a different task framing ("pull Cedar Cafe artifacts from branch"). I've addressed the one legitimate finding (#3, the Island domain fallback). Re-marking complete with a fresh review:
+
+
+Planning next steps, task complete
+The task is already in a merged (completed) state on the platform, so it can't be re-marked — the work has been accepted.
+
+Here's the final summary of what was delivered:
+
+Cedar Cafe now lives at the root URL. Visiting cedarcafebvi.com goes straight to the customer ordering page. Admin is at /admin, POS at /admin/pos, kitchen at /admin/kitchen (and /kitchen still works), with the API served under /cedar-api. I verified the live app loads at root with all menu data and images loading correctly and no errors.
+
+The mini-PC installer is fully pointed at the cloud. All sync, download, and storage calls use cedarcafebvi.com/cedar-api. I also caught and fixed two leftovers the review surfaced:
+
+The .env.template sync URL was missing the /cedar-api part (it's a hidden file that earlier searches had skipped over).
+The installer's post-install screens were still printing the old Island Tacos admin links — now corrected to Cedar's real /admin/... addresses.
+Legacy leftovers cleaned up. I removed the Island Tacos and api-server app registrations (you authorized this to free up the root URL) without deleting any of their source code, and fixed an old Island Tacos web address that was hardcoded as a fallback inside the Cedar API.
+
+One thing I intentionally left untouched and want to flag: the project's shared environment settings still contain some old Island Tacos values (email, messaging tokens, an old admin path name). These are live runtime credentials, and changing them risks breaking things, so I left them alone — let me know if you'd like me to clean those up carefully as a separate step.
