@@ -14,3 +14,4 @@
 - [Placetopay tranKey algorithm](placetopay-auth-algorithm.md) — secret key goes in raw (no SHA-1); all SHA-1 variants return error 102 on their test server.
 - [Cedar Cafe tenant setup](cedar-cafe-tenant.md) — routing, STORE_PROFILE_ID, dual-DB topology, rebuild-before-restart, deployment arch (separate Replit project → cedarcafebvi.com), artifact removal rule for CC publish.
 - [Island Tacos cloud DB always empty](island-tacos-cloud-db.md) — menu_items/menu_categories = 0 on cloud Replit is normal; real data lives on mini PC only.
+- [Schema migration rule](schema-migration-rule.md) — every schema column addition must ALSO run ALTER TABLE against production DB immediately, or all queries on that table return 500.
