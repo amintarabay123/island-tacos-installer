@@ -1,0 +1,40 @@
+Two crucial findings:
+
+The interceptor already handles root base — main.tsx rewrites both /api/... AND /cedar/api/... → /cedar-api/api/..., and setBaseUrl("/cedar-api") covers the generated hooks. So moving to BASE_PATH=/ needs no frontend code change.
+Island Tacos claims / but is disabled = true in the workspace — so no active conflict, though I'll flag it.
+I must use the artifacts skill (not edit artifact.toml directly) to change the path. Let me read how:
+
+
+3 actions
+The skill requires editing via a validated temp file (verifyAndReplaceArtifactToml). Let me write the temp TOML with previewPath, service paths, and BASE_PATH all changed from /cedar to /:
+
+
+Created artifact.edit.toml
+Now let me apply the change via the artifacts skill's validated replacement:
+
+
+2 actions
+As I flagged might happen: the disabled Island Tacos artifact still reserves the root / path, so the workspace rejects giving it to Cedar Cafe — and I'm not allowed to modify Island Tacos. Let me check whether production deployment routing is configured independently of the workspace preview path (which could let me satisfy the production requirement without touching Island Tacos):
+
+
+2 actions
+I've hit a genuine blocker on Task B, confirmed from two angles. Let me clean up the failed temp file and explain.
+
+
+2 actions
+Task A is done — all installer sync/update/download/image URLs in local-install/ now use cedarcafebvi.com/cedar-api (customer "Online" URL and the email stay at the root, as you laid out).
+
+Task B (move Cedar to root) is blocked by a constraint you set. Here's the situation in plain terms:
+
+The root web address (/) is currently "parked" by the old Island Tacos app. Even though Island Tacos is switched off (disabled), it still holds the root spot — and you asked me not to touch anything Island Tacos. Two apps can't both sit at the root, so the system rejected moving Cedar there (Preview path "/" is already used).
+
+The good news: I confirmed the rest of Task B is safe and ready — Cedar's code already knows how to talk to the API from the root (the built-in rewriter sends /api/... → /cedar-api/api/...), so no app code needs to change. The only thing standing in the way is freeing up that root spot, which means a tiny one-line change to the switched-off Island Tacos app.
+
+
+Presenting question as-is
+I'll pause here for your decision on the question above — that's the one thing blocking Cedar's move to the root.
+
+Quick recap of where things stand:
+
+Done: the installer (local-install/) is fully debranded to Cedar Cafe, and all its sync/update/download/image URLs now point at cedarcafebvi.com/cedar-api.
+Ready but blocked: moving Cedar's frontend to the root only needs the root spot freed from the disabled Island Tacos app — no Cedar code changes required. Once you tell me how you'd like to handle that (un-park Island Tacos, have the Island side do it, or leave Cedar at /cedar), I'll finish up, run a code review, and commit.
