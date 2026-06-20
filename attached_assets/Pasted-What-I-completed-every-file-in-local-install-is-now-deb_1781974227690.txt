@@ -1,0 +1,19 @@
+What I completed — every file in local-install/ is now debranded to Cedar Cafe:
+
+Island Tacos/island-tacos/IslandTacos → Cedar Cafe/cedar-cafe/CedarCafe
+C:\IslandTacos\ → C:\CedarCafe\, domain → cedarcafebvi.com, phone → 284-344-9808, email → orders@cedarcafebvi.com
+DB islandtacos → cedarcafe, PM2 app island-tacos → cedar-cafe, admin path it-admin → admin, static path → artifacts/cedar-cafe/dist/public, schema seed store name → Cedar Cafe
+Files touched: ecosystem.config.cjs, .env.template, FIXDB.bat/.ps1, REINSTALL.ps1, schema.sql, migrate.mjs, import-sales.cjs, menu-import.sql, menu-patch.sql, modifier-links.sql, update-ip.bat/.ps1. No Island Tacos files outside local-install/ were touched.
+Three things I need to flag before finalizing:
+
+The cloud address depth (important — affects whether sync & auto-updates work). Island's online server answered at the web-address root (orders.islandtacosbvi.com/api/...). I confirmed in the code that Cedar's online server lives one level deeper: the technical/sync part is under /cedar-api and the customer page is under /cedar. Right now the installer points at the plain cedarcafebvi.com (exactly your instruction), but for sync, auto-updates, and menu image links to actually reach Cedar's server, those URLs need the /cedar-api prefix.
+
+Menu data files (menu-import.sql, menu-patch.sql): these contain Island Tacos's actual menu (tacos, burgers) as data rows. I debranded their headers/paths/domain, but I left the product rows alone — Cedar's real menu already lives in its own database, so these seed files shouldn't be run for Cedar as-is. Renaming "Island Taco Burger" would just invent fake Cedar items.
+
+Root UPDATE.bat / UPDATE.ps1 you listed are at the repo root, not in local-install/ — they're part of the Island Tacos root installer you asked me not to touch, so I left them. (api-server folder references I also left — that's a neutral bundle location, not branding.)
+
+
+Waiting for user's response
+I'll hold here for your call on the /cedar-api address question above — it's the one decision that affects whether the mini-PC's syncing and auto-updates actually reach Cedar's server.
+
+My recommendation: yes, use /cedar-api, since I confirmed in Cedar's code that the cloud only routes that path to the Cedar backend. Once you confirm, I'll update those URLs, run a code review, and commit. The rest of the debrand is done.
