@@ -5,12 +5,12 @@ export const modules: ModuleMap = {
   "./components/mockups/cedar/ChalkKDS.tsx": () => import("../components/mockups/cedar/ChalkKDS.tsx"),
   "./components/mockups/cedar/ChalkPOS.tsx": () => import("../components/mockups/cedar/ChalkPOS.tsx"),
   "./components/mockups/cedar/ChalkStore.tsx": () => import("../components/mockups/cedar/ChalkStore.tsx"),
-  "./components/mockups/direction-a/Obsidian.tsx": () => import("../components/mockups/direction-a/Obsidian.tsx"),
   "./components/mockups/direction-b/CreamCopper.tsx": () => import("../components/mockups/direction-b/CreamCopper.tsx"),
   "./components/mockups/direction-c/IslandLuxe.tsx": () => import("../components/mockups/direction-c/IslandLuxe.tsx"),
+  "./components/mockups/direction-a/Obsidian.tsx": () => import("../components/mockups/direction-a/Obsidian.tsx"),
+  "./components/mockups/wa-receipt/WhatsAppReceipt.tsx": () => import("../components/mockups/wa-receipt/WhatsAppReceipt.tsx"),
   "./components/mockups/metallic/MetallicAdmin.tsx": () => import("../components/mockups/metallic/MetallicAdmin.tsx"),
   "./components/mockups/metallic/MetallicKDS.tsx": () => import("../components/mockups/metallic/MetallicKDS.tsx"),
   "./components/mockups/metallic/MetallicPOS.tsx": () => import("../components/mockups/metallic/MetallicPOS.tsx"),
-  "./components/mockups/metallic/MetallicStore.tsx": () => import("../components/mockups/metallic/MetallicStore.tsx"),
-  "./components/mockups/wa-receipt/WhatsAppReceipt.tsx": () => import("../components/mockups/wa-receipt/WhatsAppReceipt.tsx")
+  "./components/mockups/metallic/MetallicStore.tsx": () => import("../components/mockups/metallic/MetallicStore.tsx")
 };
