@@ -460,6 +460,7 @@ export default function Kitchen() {
       const active = data.filter((o) =>
         !o.kdsCleared &&
         o.status !== "cancelled" &&
+        o.status !== "pending" &&
         (nowForFilter - new Date(o.createdAt).getTime()) < KDS_WINDOW_MS
       );
 
