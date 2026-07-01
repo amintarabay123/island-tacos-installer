@@ -291,11 +291,11 @@ export default function Kitchen() {
   // Wrapped in useCallback so fetchOrders can list it as a dependency without triggering
   // the polling loop on every render — this only recreates when category data actually changes.
   const isKdsItem = useCallback((item: OrderItem): boolean => {
-    if (!item.menuItemId) return true; // unknown item — show it to be safe
+    if (!item.menuItemId) return false; // open-price/unknown item — don't assume it needs cooking
     const categoryId = menuItemCategoryMap.get(item.menuItemId);
-    if (categoryId === undefined) return true; // no category info — show it
+    if (categoryId === undefined) return false; // category data not yet loaded — don't ghost-show items
     const cat = kdsCategories.find(c => c.id === categoryId);
-    return cat ? cat.sendToKds : true; // default to showing
+    return cat ? cat.sendToKds : false; // default to NOT showing if category is missing from list
   }, [kdsCategories, menuItemCategoryMap]);
 
   // Uncollected order tracking: orderId → timestamp when we first saw it as "ready"
