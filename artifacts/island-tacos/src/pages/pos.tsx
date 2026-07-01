@@ -2287,164 +2287,162 @@ function SplitPaymentModal({
   onConfirm: (groups: SplitGroup[], note: string) => void;
   onClose: () => void;
 }) {
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
+  // ─── Expand cart items into individual units (one row per unit) ───────────
+  type SplitUnit = {
+    unitId: string;
+    cartItemKey: string;
+    name: string;
+    modifiers: string;
+    unitPrice: number;
+    menuItemId: number;
+    showNumber: boolean;
+    unitIndex: number;
+  };
+
+  const units = useMemo<SplitUnit[]>(() => {
+    const rawTotal = cart.reduce(
+      (s, i) => s + (i.price + i.modifierSelections.reduce((ms, m) => ms + m.price, 0)) * i.quantity, 0
+    );
+    const scale = rawTotal > 0 ? total / rawTotal : 1;
+    const result: SplitUnit[] = [];
+    for (const item of cart) {
+      const lineUnitPrice = item.price + item.modifierSelections.reduce((s, m) => s + m.price, 0);
+      const scaledUnit = Math.round(lineUnitPrice * scale * 100) / 100;
+      const mods = item.modifierSelections.map(m => m.name).join(", ");
+      for (let i = 0; i < item.quantity; i++) {
+        result.push({
+          unitId: `${item.key}_${i}`,
+          cartItemKey: item.key,
+          name: item.name,
+          modifiers: mods,
+          unitPrice: scaledUnit,
+          menuItemId: item.menuItemId ?? 0,
+          showNumber: item.quantity > 1,
+          unitIndex: i + 1,
+        });
+      }
+    }
+    return result;
+  }, [cart, total]);
+
+  type UnitAssignment = { method: string; cashReceipt?: { tendered: number; change: number } };
+  const [assignments, setAssignments] = useState<Record<string, UnitAssignment>>({});
+  // Only unassigned units can be selected
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  // Per-item cash receipts: key = item.key, value = {tendered, change} once collected.
-  const [cashReceipts, setCashReceipts] = useState<Record<string, { tendered: number; change: number }>>({});
-  // Which item is currently being cash-collected (null = no cash overlay open).
-  const [cashCollectingFor, setCashCollectingFor] = useState<string | null>(null);
+  // Cash overlay: null when closed, or { unitIds, amount } for the current group
+  const [cashGroup, setCashGroup] = useState<{ unitIds: string[]; groupLabel: string; amount: number } | null>(null);
   const [cashTendered, setCashTendered] = useState("0");
 
-  const lineTotal = (item: CartItem) =>
-    (item.price + item.modifierSelections.reduce((s, m) => s + m.price, 0)) * item.quantity;
-
-  const rawTotal = cart.reduce((s, i) => s + lineTotal(i), 0);
-  const scale = rawTotal > 0 ? total / rawTotal : 1;
-
-  const scaledItemAmount = (item: CartItem) => Math.round(lineTotal(item) * scale * 100) / 100;
-
-  // ─── Per-item assignment + cash flow ─────────────────────────────────────
-  const openCashFor = (itemKey: string) => {
-    const item = cart.find(i => i.key === itemKey);
-    if (!item) return;
-    const amt = scaledItemAmount(item);
-    setCashTendered(String(Math.ceil(amt)));
-    setCashCollectingFor(itemKey);
+  const toggleSelect = (uid: string) => {
+    if (assignments[uid]) return; // already paid — not selectable
+    setSelected(prev => { const next = new Set(prev); if (next.has(uid)) next.delete(uid); else next.add(uid); return next; });
   };
 
-  // Assign one item to a method. Cash assignments immediately open the cash overlay
-  // for that item only (so each customer paying cash gets their own tendered/change).
-  const pickMethodForItem = (itemKey: string, method: string) => {
-    if (!method) {
-      // "Pay with…" / cleared
-      setAssignments(prev => { const next = { ...prev }; delete next[itemKey]; return next; });
-      setCashReceipts(prev => { const next = { ...prev }; delete next[itemKey]; return next; });
-      return;
-    }
-    setAssignments(prev => ({ ...prev, [itemKey]: method }));
-    if (method !== "cash") {
-      // Card/ATH — no collection step, drop any stale cash receipt.
-      setCashReceipts(prev => { const next = { ...prev }; delete next[itemKey]; return next; });
-    } else if (!cashReceipts[itemKey]) {
-      // Cash and not yet collected — prompt now.
-      openCashFor(itemKey);
-    }
+  const selectAll = () => {
+    const unassigned = units.filter(u => !assignments[u.unitId]).map(u => u.unitId);
+    setSelected(new Set(unassigned));
   };
 
-  // Bulk assign for multi-select. For cash, marks all selected as cash and opens
-  // the first one's collection step; subsequent ones are queued (the user will be
-  // prompted for each in turn after each Save).
-  const bulkAssign = (keys: string[], method: string) => {
-    setAssignments(prev => { const next = { ...prev }; for (const k of keys) next[k] = method; return next; });
+  const clearSelections = () => {
+    setAssignments({});
     setSelected(new Set());
-    if (method !== "cash") {
-      setCashReceipts(prev => {
-        const next = { ...prev }; for (const k of keys) delete next[k]; return next;
-      });
+  };
+
+  // Unassigned units currently checked
+  const selectedUids = Array.from(selected).filter(uid => !assignments[uid]);
+  const selectedTotal = Math.round(selectedUids.reduce((s, uid) => {
+    const u = units.find(x => x.unitId === uid);
+    return s + (u?.unitPrice ?? 0);
+  }, 0) * 100) / 100;
+
+  const assignSelected = (method: string) => {
+    if (selectedUids.length === 0) return;
+    if (method === "cash") {
+      const label = selectedUids.length === 1
+        ? (units.find(u => u.unitId === selectedUids[0])?.name ?? "item")
+        : `${selectedUids.length} items`;
+      setCashTendered(String(Math.ceil(selectedTotal)));
+      setCashGroup({ unitIds: selectedUids, groupLabel: label, amount: selectedTotal });
     } else {
-      const firstUncollected = keys.find(k => !cashReceipts[k]);
-      if (firstUncollected) openCashFor(firstUncollected);
+      setAssignments(prev => {
+        const next = { ...prev };
+        for (const uid of selectedUids) next[uid] = { method };
+        return next;
+      });
+      setSelected(new Set());
     }
   };
 
-  const assignAll = (method: string) => bulkAssign(cart.map(i => i.key), method);
-
-  const toggleSelect = (key: string) => {
-    setSelected(prev => { const next = new Set(prev); if (next.has(key)) next.delete(key); else next.add(key); return next; });
+  const saveCashGroup = () => {
+    if (!cashGroup) return;
+    const tendered = parseFloat(cashTendered || "0");
+    if (tendered + 0.005 < cashGroup.amount) return;
+    const change = Math.max(0, Math.round((tendered - cashGroup.amount) * 100) / 100);
+    setAssignments(prev => {
+      const next = { ...prev };
+      for (const uid of cashGroup.unitIds) next[uid] = { method: "cash", cashReceipt: { tendered, change } };
+      return next;
+    });
+    setSelected(new Set());
+    setCashGroup(null);
   };
 
-  const clearAll = () => { setAssignments({}); setCashReceipts({}); setSelected(new Set()); };
+  const cancelCashGroup = () => setCashGroup(null);
 
-  // An item is "ready to place" if: it has a non-cash method, OR cash + receipt collected.
-  const itemPaid = (item: CartItem): boolean => {
-    const m = assignments[item.key];
-    if (!m) return false;
-    if (m === "cash") return !!cashReceipts[item.key];
-    return true;
-  };
-
-  const allPaid = cart.length > 0 && cart.every(itemPaid);
-  const allAssigned = cart.length > 0 && cart.every(i => !!assignments[i.key]);
-
-  const methodTotals: Record<string, { amount: number; keys: string[] }> = {};
+  // ─── Derived state ────────────────────────────────────────────────────────
+  const methodTotals: Record<string, { amount: number; cartKeys: Set<string> }> = {};
   let unassignedAmt = 0;
-  for (const item of cart) {
-    const method = assignments[item.key];
-    const amt = scaledItemAmount(item);
-    if (method) {
-      if (!methodTotals[method]) methodTotals[method] = { amount: 0, keys: [] };
-      methodTotals[method].amount += amt;
-      methodTotals[method].keys.push(item.key);
+  for (const unit of units) {
+    const a = assignments[unit.unitId];
+    if (a) {
+      if (!methodTotals[a.method]) methodTotals[a.method] = { amount: 0, cartKeys: new Set() };
+      methodTotals[a.method].amount += unit.unitPrice;
+      methodTotals[a.method].cartKeys.add(unit.cartItemKey);
     } else {
-      unassignedAmt += amt;
+      unassignedAmt += unit.unitPrice;
     }
   }
 
-  const totalCashChange = Object.values(cashReceipts).reduce((s, r) => s + r.change, 0);
+  const allPaid = units.length > 0 && units.every(u => {
+    const a = assignments[u.unitId];
+    return a && (a.method !== "cash" || !!a.cashReceipt);
+  });
 
-  // ─── Cash overlay state (computed from cashCollectingFor) ────────────────
-  const cashItem = cashCollectingFor ? cart.find(i => i.key === cashCollectingFor) ?? null : null;
-  const cashItemAmount = cashItem ? scaledItemAmount(cashItem) : 0;
+  const totalCashChange = Object.values(assignments).reduce((s, a) => s + (a.cashReceipt?.change ?? 0), 0);
+
+  // ─── Cash overlay derived ─────────────────────────────────────────────────
+  const cashAmt = cashGroup?.amount ?? 0;
   const cashTenderedNum = parseFloat(cashTendered || "0");
-  const cashChangeForItem = Math.max(0, Math.round((cashTenderedNum - cashItemAmount) * 100) / 100);
-  const cashTenderedEnough = cashTenderedNum + 0.005 >= cashItemAmount;
-
+  const cashChange = Math.max(0, Math.round((cashTenderedNum - cashAmt) * 100) / 100);
+  const cashEnough = cashTenderedNum + 0.005 >= cashAmt;
   const cashQuick = (() => {
     const result: number[] = [];
-    const add = (v: number) => {
-      const r = Math.round(v * 100) / 100;
-      if (r >= cashItemAmount && !result.includes(r)) result.push(r);
-    };
-    add(cashItemAmount);
-    add(Math.ceil(cashItemAmount / 5) * 5);
-    add(Math.ceil(cashItemAmount / 10) * 10);
-    add(Math.ceil(cashItemAmount / 20) * 20);
+    const add = (v: number) => { const r = Math.round(v * 100) / 100; if (!result.includes(r)) result.push(r); };
+    add(cashAmt);
+    add(Math.ceil(cashAmt / 5) * 5);
+    add(Math.ceil(cashAmt / 10) * 10);
+    add(Math.ceil(cashAmt / 20) * 20);
     add(20); add(50); add(100);
-    return result.filter(v => v >= cashItemAmount).sort((a, b) => a - b).slice(0, 5);
+    return result.filter(v => v >= cashAmt - 0.005).sort((a, b) => a - b).slice(0, 5);
   })();
-
-  const saveCashReceipt = () => {
-    if (!cashCollectingFor || !cashTenderedEnough) return;
-    const key = cashCollectingFor;
-    setCashReceipts(prev => ({ ...prev, [key]: { tendered: cashTenderedNum, change: cashChangeForItem } }));
-    setCashCollectingFor(null);
-    // If other items are assigned to cash but not yet collected, chain to the next one.
-    const nextKey = cart.find(i => i.key !== key && assignments[i.key] === "cash" && !cashReceipts[i.key])?.key;
-    if (nextKey) setTimeout(() => openCashFor(nextKey), 0);
-  };
-
-  const cancelCashCollection = () => {
-    if (!cashCollectingFor) return;
-    const key = cashCollectingFor;
-    // If the user was RE-editing an already-collected receipt, cancel just
-    // closes the overlay — keep the prior receipt + assignment intact.
-    // If this was a first-time collection (no receipt yet), drop the cash
-    // assignment so the item doesn't get stuck in "cash pending".
-    if (!cashReceipts[key]) {
-      setAssignments(prev => { const next = { ...prev }; delete next[key]; return next; });
-    }
-    setCashCollectingFor(null);
-  };
 
   const finalizeOrder = () => {
     if (submitting || confirmed) return;
     setSubmitting(true);
-    const groups: SplitGroup[] = Object.entries(methodTotals).map(([method, { amount, keys }]) => ({
-      method, amount: Math.round(amount * 100) / 100, itemKeys: keys,
+    const groups: SplitGroup[] = Object.entries(methodTotals).map(([method, { amount, cartKeys }]) => ({
+      method, amount: Math.round(amount * 100) / 100, itemKeys: Array.from(cartKeys),
     }));
     const lines: string[] = [];
-    for (const item of cart) {
-      const m = assignments[item.key];
-      if (!m) continue;
-      const sm = SPLIT_METHODS.find(x => x.key === m);
-      const amt = scaledItemAmount(item);
-      const base = `${sm?.icon ?? ""} ${sm?.label ?? m} ${fmt(amt)} — ${item.quantity}× ${item.name}`;
-      if (m === "cash") {
-        const r = cashReceipts[item.key];
-        if (r) lines.push(`${base} (tendered ${fmt(r.tendered)}, change ${fmt(r.change)})`);
-        else lines.push(base);
+    for (const unit of units) {
+      const a = assignments[unit.unitId];
+      if (!a) continue;
+      const sm = SPLIT_METHODS.find(x => x.key === a.method);
+      const label = unit.showNumber ? `${unit.name} #${unit.unitIndex}` : unit.name;
+      const base = `${sm?.icon ?? ""} ${sm?.label ?? a.method} ${fmt(unit.unitPrice)} — ${label}`;
+      if (a.method === "cash" && a.cashReceipt) {
+        lines.push(`${base} (tendered ${fmt(a.cashReceipt.tendered)}, change ${fmt(a.cashReceipt.change)})`);
       } else {
         lines.push(base);
       }
@@ -2453,11 +2451,11 @@ function SplitPaymentModal({
     setConfirmed(true);
   };
 
-  // ─── Final confirmation screen (order placed) ────────────────────────────
+  // ─── Confirmed screen ─────────────────────────────────────────────────────
   if (confirmed) {
     return (
       <div className="fixed inset-0 bg-black/75 flex items-end sm:items-center justify-center z-50 p-4">
-        <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }}>
+        <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:400, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }}>
           <div style={{ padding:"16px 20px", background:"rgba(48,209,88,0.15)", borderBottom:"1px solid rgba(48,209,88,0.3)", display:"flex", alignItems:"center", gap:12 }}>
             <span style={{ fontSize:28 }}>✅</span>
             <div>
@@ -2465,37 +2463,31 @@ function SplitPaymentModal({
               <p style={{ color:IL.grn, fontSize:13 }}>Hand back change if any</p>
             </div>
           </div>
-          <div style={{ padding:20, display:"flex", flexDirection:"column", gap:10 }}>
-            {cart.map(item => {
-              const m = assignments[item.key];
-              if (!m) return null;
-              const sm = SPLIT_METHODS.find(x => x.key === m);
-              const amt = scaledItemAmount(item);
-              const r = m === "cash" ? cashReceipts[item.key] : undefined;
-              const { grad: ig, glow: igw } = ITEM_GRADS[item.menuItemId % ITEM_GRADS.length];
+          <div style={{ padding:20, display:"flex", flexDirection:"column", gap:8, maxHeight:"60vh", overflowY:"auto" }}>
+            {units.map(unit => {
+              const a = assignments[unit.unitId];
+              if (!a) return null;
+              const sm = SPLIT_METHODS.find(x => x.key === a.method);
+              const { grad: ig, glow: igw } = ITEM_GRADS[unit.menuItemId % ITEM_GRADS.length];
+              const label = unit.showNumber ? `${unit.name} #${unit.unitIndex}` : unit.name;
               return (
-                <div key={item.key} style={{ borderRadius:14, padding:"12px 16px", background:ig, boxShadow:`0 3px 14px ${igw}`, position:"relative", overflow:"hidden" }}>
+                <div key={unit.unitId} style={{ borderRadius:12, padding:"10px 14px", background:ig, boxShadow:`0 3px 12px ${igw}`, position:"relative", overflow:"hidden" }}>
                   <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.10) 0%,transparent 55%)", pointerEvents:"none" }} />
-                  <div style={{ position:"relative" }}>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                    <span style={{ color:"#fff", fontSize:13, fontWeight:700 }}>
-                      {item.quantity > 1 && <span style={{ color:"rgba(255,255,255,0.75)", fontWeight:900, marginRight:4 }}>{item.quantity}×</span>}
-                      {item.name}
-                    </span>
-                    <span style={{ color:"#fff", fontSize:16, fontWeight:900, flexShrink:0, marginLeft:8 }}>{sm?.icon} {fmt(amt)}</span>
+                  <div style={{ position:"relative", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <span style={{ color:"#fff", fontSize:13, fontWeight:700, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginRight:8 }}>{sm?.icon} {label}</span>
+                    <span style={{ color:"#fff", fontSize:14, fontWeight:900, flexShrink:0 }}>{fmt(unit.unitPrice)}</span>
                   </div>
-                  {r && r.change > 0.005 && (
-                    <div style={{ marginTop:4, display:"flex", alignItems:"center", justifyContent:"space-between", fontSize:11 }}>
-                      <span style={{ color:"rgba(255,255,255,0.6)" }}>Tendered {fmt(r.tendered)}</span>
-                      <span style={{ color:"#fff", fontWeight:700 }}>Change {fmt(r.change)}</span>
+                  {a.cashReceipt && a.cashReceipt.change > 0.005 && (
+                    <div style={{ position:"relative", marginTop:3, display:"flex", justifyContent:"space-between", fontSize:11 }}>
+                      <span style={{ color:"rgba(255,255,255,0.65)" }}>Tendered {fmt(a.cashReceipt.tendered)}</span>
+                      <span style={{ color:"#fff", fontWeight:700 }}>Change {fmt(a.cashReceipt.change)}</span>
                     </div>
                   )}
-                  </div>
                 </div>
               );
             })}
             {totalCashChange > 0.005 && (
-              <div style={{ background:"rgba(48,209,88,0.15)", borderRadius:14, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", border:"1px solid rgba(48,209,88,0.3)" }}>
+              <div style={{ background:"rgba(48,209,88,0.15)", borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", border:"1px solid rgba(48,209,88,0.3)" }}>
                 <span style={{ color:IL.grn, fontSize:13, fontWeight:600 }}>Total change due</span>
                 <span style={{ color:IL.grn, fontSize:22, fontWeight:900 }}>{fmt(totalCashChange)}</span>
               </div>
@@ -2511,160 +2503,156 @@ function SplitPaymentModal({
     );
   }
 
-  // ─── Main assign-items screen (with optional cash overlay on top) ────────
+  // ─── Main screen ──────────────────────────────────────────────────────────
+  const unassignedCount = units.filter(u => !assignments[u.unitId]).length;
+  const paidCount = units.filter(u => {
+    const a = assignments[u.unitId];
+    return a && (a.method !== "cash" || !!a.cashReceipt);
+  }).length;
+
   return (
     <div className="fixed inset-0 bg-black/75 flex items-end sm:items-center justify-center z-50 p-4">
-      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:672, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", display:"flex", flexDirection:"column", maxHeight:"90vh" }}>
+      <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:480, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", display:"flex", flexDirection:"column", maxHeight:"92dvh" }}>
 
         {/* Header */}
-        <div style={{ padding:"16px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexShrink:0 }}>
+        <div style={{ padding:"14px 18px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexShrink:0 }}>
           <div style={{ minWidth:0 }}>
-            <p style={{ color:IL.tp, fontWeight:900, fontSize:17 }}>✂ Split Payment</p>
-            <p style={{ color:IL.mu, fontSize:13 }}>Pick a method for each item — cash collects right away</p>
+            <p style={{ color:IL.tp, fontWeight:900, fontSize:16 }}>✂ Split Payment</p>
+            <p style={{ color:IL.mu, fontSize:12 }}>
+              {paidCount === units.length ? "All paid — ready to place" : `${paidCount} of ${units.length} paid · Check items then tap a method`}
+            </p>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
-            <select
-              value=""
-              onChange={e => { if (e.target.value) assignAll(e.target.value); }}
-              style={{ height:40, padding:"0 12px", borderRadius:12, background:IL.hdr, border:`1px solid ${IL.bord}`, color:IL.tp, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}
-              aria-label="Pay all with…"
-            >
-              <option value="">Pay all with…</option>
-              {SPLIT_METHODS.map(sm => (
-                <option key={sm.key} value={sm.key}>{sm.icon} {sm.label}</option>
-              ))}
-            </select>
-            <button onClick={onClose} style={{ color:IL.mu, fontSize:24, fontWeight:700, width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>×</button>
+          <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+            {unassignedCount > 0 && (
+              <button onClick={selectAll}
+                style={{ height:36, padding:"0 12px", borderRadius:10, border:`1px solid ${IL.bord}`, color:IL.tm, background:IL.hdr, fontWeight:600, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+                Select all
+              </button>
+            )}
+            {Object.keys(assignments).length > 0 && (
+              <button onClick={clearSelections}
+                style={{ height:36, padding:"0 12px", borderRadius:10, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+                Reset
+              </button>
+            )}
+            <button onClick={onClose} style={{ color:IL.mu, fontSize:22, fontWeight:700, width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>×</button>
           </div>
         </div>
 
-        {/* Items */}
-        <div style={{ flex:1, overflowY:"auto", padding:16, display:"flex", flexDirection:"column", gap:8 }}>
-          {cart.map(item => {
-            const isSelected = selected.has(item.key);
-            const method = assignments[item.key];
-            const isPaid = itemPaid(item);
-            const isCashPending = method === "cash" && !cashReceipts[item.key];
-            const itemAmt = scaledItemAmount(item);
-            const r = method === "cash" ? cashReceipts[item.key] : undefined;
+        {/* Unit list */}
+        <div style={{ flex:1, overflowY:"auto", padding:12, display:"flex", flexDirection:"column", gap:6 }}>
+          {units.map(unit => {
+            const a = assignments[unit.unitId];
+            const isPaid = a && (a.method !== "cash" || !!a.cashReceipt);
+            const isSelected = selected.has(unit.unitId) && !a;
+            const sm = a ? SPLIT_METHODS.find(x => x.key === a.method) : undefined;
+            const label = unit.showNumber ? `${unit.name} #${unit.unitIndex}` : unit.name;
             return (
-              <div key={item.key} style={{ borderRadius:14, border: isPaid ? "1px solid rgba(48,209,88,0.4)" : isCashPending ? "1px solid rgba(245,158,11,0.45)" : isSelected ? "1px solid rgba(255,107,0,0.4)" : `1px solid ${IL.bord}`, background: isPaid ? "rgba(48,209,88,0.1)" : isCashPending ? "rgba(245,158,11,0.1)" : isSelected ? "rgba(255,107,0,0.1)" : "rgba(255,255,255,0.04)" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 12px" }}>
-                  <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.key)}
-                    className="w-5 h-5 rounded accent-orange-400 cursor-pointer flex-shrink-0" />
+              <div key={unit.unitId}
+                onClick={() => toggleSelect(unit.unitId)}
+                style={{
+                  borderRadius:12,
+                  border: isPaid ? "1px solid rgba(48,209,88,0.4)" : isSelected ? "1px solid rgba(255,107,0,0.5)" : `1px solid ${IL.bord}`,
+                  background: isPaid ? "rgba(48,209,88,0.08)" : isSelected ? "rgba(255,107,0,0.1)" : "rgba(255,255,255,0.04)",
+                  cursor: isPaid ? "default" : "pointer",
+                  display:"flex", alignItems:"center", gap:10, padding:"10px 12px",
+                }}>
 
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <p style={{ color:IL.tp, fontSize:13, fontWeight:600, lineHeight:1.3 }}>
-                      {item.quantity > 1 && <span style={{ color:IL.or, fontWeight:900, marginRight:4 }}>{item.quantity}×</span>}
-                      {item.name}
-                    </p>
-                    {item.modifierSelections.length > 0 && (
-                      <p style={{ color:IL.mu, fontSize:11, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.modifierSelections.map(m => m.name).join(", ")}</p>
-                    )}
-                    {r && (
-                      <p style={{ color:IL.grn, fontSize:11, fontWeight:600, marginTop:2 }}>
-                        Tendered {fmt(r.tendered)}{r.change > 0.005 ? ` • Change ${fmt(r.change)}` : ""}
-                      </p>
-                    )}
-                  </div>
-
-                  <span style={{ color:IL.tp, fontSize:13, fontWeight:700, flexShrink:0, width:60, textAlign:"right" }}>{fmt(itemAmt)}</span>
-
-                  <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
-                    {isPaid && <span style={{ color:IL.grn, fontSize:16, flexShrink:0 }} title="Paid">✓</span>}
-                    {method === "cash" && r && (
-                      <button onClick={() => openCashFor(item.key)} title="Re-enter cash"
-                        style={{ height:44, padding:"0 8px", fontSize:11, color:IL.mu, background:"none", border:"none", cursor:"pointer", textDecoration:"underline", fontFamily:"inherit" }}>edit</button>
-                    )}
-                    <select
-                      value={method ?? ""}
-                      onChange={e => pickMethodForItem(item.key, e.target.value)}
-                      style={{ height:44, padding:"0 12px", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", minWidth:140, background: isPaid ? "rgba(48,209,88,0.15)" : isCashPending ? "rgba(245,158,11,0.15)" : IL.hdr, border: isPaid ? "1px solid rgba(48,209,88,0.4)" : isCashPending ? "1px solid rgba(245,158,11,0.4)" : `1px solid ${IL.bord}`, color: isPaid ? IL.grn : isCashPending ? "#fbbf24" : IL.tm }}
-                      aria-label={`Payment method for ${item.name}`}
-                    >
-                      <option value="">Pay with…</option>
-                      {SPLIT_METHODS.map(s => (
-                        <option key={s.key} value={s.key}>{s.icon} {s.label}</option>
-                      ))}
-                    </select>
-                  </div>
+                {/* Checkbox / paid indicator */}
+                <div style={{ flexShrink:0, width:22, height:22, borderRadius:6, border: isPaid ? "none" : isSelected ? "2px solid #ff6b00" : `2px solid ${IL.bord}`, background: isPaid ? "rgba(48,209,88,0.8)" : isSelected ? "#ff6b00" : "transparent", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {(isPaid || isSelected) && <span style={{ color:"#fff", fontSize:13, fontWeight:900, lineHeight:1 }}>✓</span>}
                 </div>
+
+                {/* Name + modifiers */}
+                <div style={{ flex:1, minWidth:0 }}>
+                  <p style={{ color: isPaid ? IL.mu : IL.tp, fontSize:13, fontWeight:600, lineHeight:1.3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{label}</p>
+                  {unit.modifiers && <p style={{ color:IL.mu, fontSize:11, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{unit.modifiers}</p>}
+                  {a?.cashReceipt && (
+                    <p style={{ color:IL.grn, fontSize:11, fontWeight:600, marginTop:2 }}>
+                      Tendered {fmt(a.cashReceipt.tendered)}{a.cashReceipt.change > 0.005 ? ` · Change ${fmt(a.cashReceipt.change)}` : ""}
+                    </p>
+                  )}
+                </div>
+
+                {/* Price */}
+                <span style={{ color: isPaid ? IL.mu : IL.tp, fontSize:13, fontWeight:700, flexShrink:0 }}>{fmt(unit.unitPrice)}</span>
+
+                {/* Method badge */}
+                {sm && (
+                  <span style={{ flexShrink:0, fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:8, background: isPaid ? "rgba(48,209,88,0.15)" : "rgba(255,255,255,0.08)", color: isPaid ? IL.grn : IL.tm, border: isPaid ? "1px solid rgba(48,209,88,0.3)" : `1px solid ${IL.bord}` }}>
+                    {sm.icon} {sm.label}
+                  </span>
+                )}
               </div>
             );
           })}
         </div>
 
-        {/* Bulk assign bar */}
-        {selected.size > 0 && (
-          <div style={{ padding:"0 16px 8px", flexShrink:0 }}>
-            <div style={{ background:"rgba(255,107,0,0.1)", border:"1px solid rgba(255,107,0,0.3)", borderRadius:14, padding:12, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-              <span style={{ color:IL.or, fontSize:13, fontWeight:900, flexShrink:0 }}>{selected.size} item{selected.size > 1 ? "s" : ""}</span>
-              <span style={{ color:IL.mu, fontSize:11, flexShrink:0 }}>pay with:</span>
+        {/* Action bar — always visible at bottom of list area */}
+        <div style={{ padding:"0 12px 8px", flexShrink:0 }}>
+          {selectedUids.length > 0 ? (
+            /* Items selected — show method buttons */
+            <div style={{ background:"rgba(255,107,0,0.1)", border:"1px solid rgba(255,107,0,0.35)", borderRadius:14, padding:"10px 12px", display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+              <div style={{ display:"flex", flexDirection:"column", marginRight:4, minWidth:0, flex:"0 0 auto" }}>
+                <span style={{ color:IL.or, fontSize:13, fontWeight:900, whiteSpace:"nowrap" }}>{selectedUids.length} item{selectedUids.length > 1 ? "s" : ""}</span>
+                <span style={{ color:IL.mu, fontSize:11 }}>{fmt(selectedTotal)}</span>
+              </div>
+              <span style={{ color:IL.mu, fontSize:12, flexShrink:0 }}>pay with:</span>
               {SPLIT_METHODS.map(sm => (
-                <button key={sm.key} onClick={() => bulkAssign(Array.from(selected), sm.key)}
-                  style={{ flex:1, minWidth:80, height:40, borderRadius:12, fontSize:13, fontWeight:900, background:"rgba(255,255,255,0.08)", border:`1px solid ${IL.bord}`, color:IL.tp, cursor:"pointer", fontFamily:"inherit" }}>
+                <button key={sm.key} onClick={() => assignSelected(sm.key)}
+                  style={{ flex:1, minWidth:72, height:42, borderRadius:12, fontSize:13, fontWeight:900, background:`linear-gradient(135deg,${IL.hdr},rgba(255,255,255,0.08))`, border:`1px solid ${IL.bord}`, color:IL.tp, cursor:"pointer", fontFamily:"inherit" }}>
                   {sm.icon} {sm.label}
                 </button>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Summary */}
-        <div style={{ padding:"0 16px 8px", flexShrink:0, display:"flex", flexDirection:"column", gap:6 }}>
-          {Object.entries(methodTotals).map(([method, { amount }]) => {
-            const sm = SPLIT_METHODS.find(x => x.key === method);
-            return (
-              <div key={method} style={{ display:"flex", justifyContent:"space-between", fontSize:13 }}>
-                <span style={{ color:IL.mu }}>{sm?.icon} {sm?.label ?? method}</span>
-                <span style={{ color:IL.tp, fontWeight:700 }}>{fmt(Math.round(amount * 100) / 100)}</span>
+          ) : (
+            /* Nothing selected — show summary */
+            <div style={{ display:"flex", flexDirection:"column", gap:4, padding:"6px 4px" }}>
+              {Object.entries(methodTotals).map(([method, { amount }]) => {
+                const sm = SPLIT_METHODS.find(x => x.key === method);
+                return (
+                  <div key={method} style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
+                    <span style={{ color:IL.mu }}>{sm?.icon} {sm?.label ?? method}</span>
+                    <span style={{ color:IL.tp, fontWeight:700 }}>{fmt(Math.round(amount * 100) / 100)}</span>
+                  </div>
+                );
+              })}
+              {unassignedAmt > 0.005 && (
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
+                  <span style={{ color:"#fbbf24" }}>⚠ Remaining</span>
+                  <span style={{ color:"#fbbf24", fontWeight:700 }}>{fmt(Math.round(unassignedAmt * 100) / 100)}</span>
+                </div>
+              )}
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:14, fontWeight:900, borderTop:`1px solid ${IL.bord}`, paddingTop:6 }}>
+                <span style={{ color:IL.tp }}>Total</span>
+                <span style={{ color:IL.or }}>{fmt(total)}</span>
               </div>
-            );
-          })}
-          {unassignedAmt > 0.005 && (
-            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13 }}>
-              <span style={{ color:"#fbbf24" }}>⚠ Not yet assigned</span>
-              <span style={{ color:"#fbbf24", fontWeight:700 }}>{fmt(Math.round(unassignedAmt * 100) / 100)}</span>
             </div>
           )}
-          {allAssigned && !allPaid && (
-            <div style={{ fontSize:13 }}>
-              <span style={{ color:"#fbbf24" }}>⚠ Cash still to collect for {cart.filter(i => assignments[i.key] === "cash" && !cashReceipts[i.key]).length} item(s)</span>
-            </div>
-          )}
-          <div style={{ display:"flex", justifyContent:"space-between", fontSize:15, fontWeight:900, borderTop:`1px solid ${IL.bord}`, paddingTop:8 }}>
-            <span style={{ color:IL.tp }}>Total</span>
-            <span style={{ color:IL.or }}>{fmt(total)}</span>
-          </div>
         </div>
 
-        {/* Actions */}
-        <div style={{ padding:"0 16px 16px", display:"flex", gap:12, flexShrink:0 }}>
+        {/* Place Order / Cancel */}
+        <div style={{ padding:"0 12px 14px", display:"flex", gap:10, flexShrink:0 }}>
           <button onClick={onClose} style={{ height:48, padding:"0 16px", borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
             Cancel
           </button>
-          {Object.keys(assignments).length > 0 && (
-            <button onClick={clearAll} style={{ height:48, padding:"0 16px", borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
-              Clear
-            </button>
-          )}
           <button onClick={finalizeOrder} disabled={!allPaid || submitting}
-            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit", opacity:(!allPaid||submitting)?0.4:1, boxShadow:(!allPaid||submitting)?"none":"0 4px 16px rgba(255,107,0,0.45)" }}>
-            {submitting ? "Placing order…" : allPaid ? "✓ Place Order" : !allAssigned ? "Assign all items first" : "Collect remaining cash first"}
+            style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:900, fontSize:13, cursor:"pointer", fontFamily:"inherit", opacity:(!allPaid||submitting)?0.35:1, boxShadow:(!allPaid||submitting)?"none":"0 4px 16px rgba(255,107,0,0.45)" }}>
+            {submitting ? "Placing…" : allPaid ? "✓ Place Order" : unassignedCount > 0 ? `${unassignedCount} item${unassignedCount > 1 ? "s" : ""} left` : "Collect cash first"}
           </button>
         </div>
       </div>
 
-      {/* Per-item cash overlay — opens when user picks Cash for an item */}
-      {cashItem && (
-        <div className="fixed inset-0 bg-black/85 z-[60] flex items-end sm:items-center justify-center p-4" onClick={cancelCashCollection}>
-          <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.06)", display:"flex", flexDirection:"column", maxHeight:"90vh" }} onClick={e => e.stopPropagation()}>
+      {/* Cash collection overlay */}
+      {cashGroup && (
+        <div className="fixed inset-0 bg-black/85 z-[60] flex items-end sm:items-center justify-center p-4" onClick={cancelCashGroup}>
+          <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.06)", display:"flex", flexDirection:"column", maxHeight:"92dvh" }} onClick={e => e.stopPropagation()}>
             <div style={{ padding:"16px 20px", borderBottom:`1px solid ${IL.bord}`, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
               <div style={{ minWidth:0 }}>
-                <p style={{ color:IL.tp, fontWeight:900, fontSize:15, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>💵 Cash for {cashItem.quantity > 1 ? `${cashItem.quantity}× ` : ""}{cashItem.name}</p>
-                <p style={{ color:IL.mu, fontSize:13 }}>Amount due: <span style={{ color:IL.or, fontWeight:700 }}>{fmt(cashItemAmount)}</span></p>
+                <p style={{ color:IL.tp, fontWeight:900, fontSize:15, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>💵 Cash — {cashGroup.groupLabel}</p>
+                <p style={{ color:IL.mu, fontSize:13 }}>Amount due: <span style={{ color:IL.or, fontWeight:700 }}>{fmt(cashGroup.amount)}</span></p>
               </div>
-              <button onClick={cancelCashCollection} style={{ color:IL.mu, fontSize:24, fontWeight:700, width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>×</button>
+              <button onClick={cancelCashGroup} style={{ color:IL.mu, fontSize:24, fontWeight:700, width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>×</button>
             </div>
 
             <div style={{ padding:20, overflowY:"auto" }}>
@@ -2675,29 +2663,29 @@ function SplitPaymentModal({
               <div className="flex flex-wrap gap-2 mb-2">
                 {cashQuick.map(q => (
                   <button key={q} onClick={() => setCashTendered(String(q))}
-                    style={{ flex:1, minWidth:56, height:40, borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background: parseFloat(cashTendered) === q ? `linear-gradient(135deg,${IL.or},#ff9500)` : "rgba(255,255,255,0.07)", border: parseFloat(cashTendered) === q ? "none" : `1px solid ${IL.bord}`, color: parseFloat(cashTendered) === q ? "#fff" : IL.tm, boxShadow: parseFloat(cashTendered) === q ? "0 3px 10px rgba(255,107,0,0.4)" : "none" }}>
+                    style={{ flex:1, minWidth:56, height:40, borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background: cashTenderedNum === q ? `linear-gradient(135deg,${IL.or},#ff9500)` : "rgba(255,255,255,0.07)", border: cashTenderedNum === q ? "none" : `1px solid ${IL.bord}`, color: cashTenderedNum === q ? "#fff" : IL.tm, boxShadow: cashTenderedNum === q ? "0 3px 10px rgba(255,107,0,0.4)" : "none" }}>
                     {fmt(q)}
                   </button>
                 ))}
               </div>
               <Numpad value={cashTendered} onChange={setCashTendered} />
-              {cashTenderedEnough ? (
+              {cashEnough ? (
                 <div style={{ marginTop:16, background:"rgba(48,209,88,0.12)", borderRadius:14, padding:16, textAlign:"center", border:"1px solid rgba(48,209,88,0.3)" }}>
                   <p style={{ color:IL.grn, fontSize:13, fontWeight:600 }}>Change due</p>
-                  <p style={{ color:IL.grn, fontSize:30, fontWeight:900, marginTop:4 }}>{fmt(cashChangeForItem)}</p>
+                  <p style={{ color:IL.grn, fontSize:30, fontWeight:900, marginTop:4 }}>{fmt(cashChange)}</p>
                 </div>
               ) : (
                 <div style={{ marginTop:16, background:"rgba(255,69,58,0.1)", borderRadius:14, padding:12, textAlign:"center", border:"1px solid rgba(255,69,58,0.3)" }}>
-                  <p style={{ color:"#ffa5a1", fontSize:13, fontWeight:600 }}>Short by {fmt(cashItemAmount - cashTenderedNum)}</p>
+                  <p style={{ color:"#ffa5a1", fontSize:13, fontWeight:600 }}>Short by {fmt(cashAmt - cashTenderedNum)}</p>
                 </div>
               )}
             </div>
 
             <div style={{ padding:"16px 20px", borderTop:`1px solid ${IL.bord}`, display:"flex", gap:12, flexShrink:0 }}>
-              <button onClick={cancelCashCollection} style={{ height:48, padding:"0 20px", borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>Cancel</button>
-              <button onClick={saveCashReceipt} disabled={!cashTenderedEnough}
-                style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:900, fontSize:15, cursor:"pointer", fontFamily:"inherit", opacity:cashTenderedEnough?1:0.4, boxShadow:cashTenderedEnough?"0 4px 16px rgba(255,107,0,0.45)":"none" }}>
-                ✓ Save & Next
+              <button onClick={cancelCashGroup} style={{ height:48, padding:"0 20px", borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.mu, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>Cancel</button>
+              <button onClick={saveCashGroup} disabled={!cashEnough}
+                style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:900, fontSize:15, cursor:"pointer", fontFamily:"inherit", opacity:cashEnough?1:0.4, boxShadow:cashEnough?"0 4px 16px rgba(255,107,0,0.45)":"none" }}>
+                ✓ Collected
               </button>
             </div>
           </div>
