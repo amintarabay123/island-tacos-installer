@@ -910,6 +910,9 @@ components:
         paymentStatus:
           type: string
           enum: [pending, paid]
+        status:
+          type: string
+          enum: [completed]
         source:
           type: string
           enum: [online, pos, phone]

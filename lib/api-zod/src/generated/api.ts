@@ -281,6 +281,7 @@ export const CreateOrderBody = zod.object({
     "complimentary",
   ]),
   paymentStatus: zod.enum(["pending", "paid"]).optional(),
+  status: zod.enum(["completed"]).optional(),
   source: zod.enum(["online", "pos", "phone"]).optional(),
   discountAmount: zod.number().optional(),
   amountTendered: zod.number().nullish(),

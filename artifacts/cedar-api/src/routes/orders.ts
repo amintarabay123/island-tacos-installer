@@ -522,7 +522,11 @@ router.post("/orders", async (req, res): Promise<void> => {
       deliveryAddress: parsed.data.deliveryAddress ?? null,
       // POS orders are auto-confirmed so they hit the KDS immediately.
       // Online orders stay "pending" until KDS staff accept or reject them.
-      status: (parsed.data.source === "pos") ? "confirmed" : "pending",
+      // Exception: POS orders created already-paid with no kitchen items can
+      // skip the KDS workflow by sending status:"completed" explicitly.
+      status: (parsed.data.source === "pos" && parsed.data.status === "completed" && parsed.data.paymentStatus === "paid")
+        ? "completed"
+        : (parsed.data.source === "pos") ? "confirmed" : "pending",
       paymentStatus: parsed.data.paymentStatus ?? "pending",
       paymentMethod: parsed.data.paymentMethod,
       source: parsed.data.source ?? "online",
