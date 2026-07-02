@@ -291,11 +291,13 @@ export default function Kitchen() {
   // Wrapped in useCallback so fetchOrders can list it as a dependency without triggering
   // the polling loop on every render — this only recreates when category data actually changes.
   const isKdsItem = useCallback((item: OrderItem): boolean => {
-    if (!item.menuItemId) return false; // open-price/unknown item — don't assume it needs cooking
+    // null menuItemId = synced online order item (cloud IDs don't match local DB).
+    // Server-side logic treats these as KDS items (assume cooking needed).
+    if (!item.menuItemId) return true;
     const categoryId = menuItemCategoryMap.get(item.menuItemId);
-    if (categoryId === undefined) return true; // category map not yet loaded — show by default (safe fallback)
+    if (categoryId === undefined) return true; // category map not yet loaded — show by default
     const cat = kdsCategories.find(c => c.id === categoryId);
-    return cat ? cat.sendToKds : true; // category not in list yet — show by default until data arrives
+    return cat ? cat.sendToKds : true; // unknown category — show by default
   }, [kdsCategories, menuItemCategoryMap]);
 
   // Uncollected order tracking: orderId → timestamp when we first saw it as "ready"
