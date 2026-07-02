@@ -293,9 +293,9 @@ export default function Kitchen() {
   const isKdsItem = useCallback((item: OrderItem): boolean => {
     if (!item.menuItemId) return false; // open-price/unknown item — don't assume it needs cooking
     const categoryId = menuItemCategoryMap.get(item.menuItemId);
-    if (categoryId === undefined) return false; // category data not yet loaded — don't ghost-show items
+    if (categoryId === undefined) return true; // category map not yet loaded — show by default (safe fallback)
     const cat = kdsCategories.find(c => c.id === categoryId);
-    return cat ? cat.sendToKds : false; // default to NOT showing if category is missing from list
+    return cat ? cat.sendToKds : true; // category not in list yet — show by default until data arrives
   }, [kdsCategories, menuItemCategoryMap]);
 
   // Uncollected order tracking: orderId → timestamp when we first saw it as "ready"
