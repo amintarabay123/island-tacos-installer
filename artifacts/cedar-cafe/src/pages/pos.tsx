@@ -976,6 +976,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   const [splitChargeOrder, setSplitChargeOrder] = useState<Order | null>(null);
   const [now, setNow] = useState(Date.now());
   const [search, setSearch] = useState("");
+  const [refireState, setRefireState] = useState<Record<number, "sending" | "sent" | "error">>({});
 
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1073,6 +1074,31 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
       body: JSON.stringify({ status }),
     });
     load();
+  };
+
+  // Manually re-fire an order to the KDS (for the rare case where an order
+  // disappeared from the kitchen board). The KDS only shows orders that are NOT
+  // kdsCleared and NOT "pending", so we clear the kdsCleared flag and — only if
+  // the ticket is still pending — bump it to "confirmed" so it appears. An
+  // order's cooking status (confirmed/preparing/ready) is never clobbered.
+  const refireToKds = async (o: Order) => {
+    setRefireState(s => ({ ...s, [o.id]: "sending" }));
+    try {
+      const body: Record<string, unknown> = { kdsCleared: false };
+      if (o.status === "pending") body.status = "confirmed";
+      const r = await fetch(`/api/orders/${o.id}`, {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error("refire failed");
+      setRefireState(s => ({ ...s, [o.id]: "sent" }));
+      setTimeout(() => setRefireState(s => { const n = { ...s }; delete n[o.id]; return n; }), 2500);
+      load();
+    } catch {
+      setRefireState(s => ({ ...s, [o.id]: "error" }));
+      setTimeout(() => setRefireState(s => { const n = { ...s }; delete n[o.id]; return n; }), 3000);
+    }
   };
 
   const completeWithPayment = async (method: string, tendered?: number, splitNote?: string) => {
@@ -1282,6 +1308,13 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                   )}
                   <button onClick={() => voidTicket(o.id)} style={{ height:40, padding:"0 12px", borderRadius:10, background:"rgba(255,69,58,0.25)", border:"1px solid rgba(255,69,58,0.45)", color:"#ffa5a1", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Void</button>
                 </div>
+                <button
+                  onClick={() => refireToKds(o)}
+                  disabled={refireState[o.id] === "sending"}
+                  style={{ marginTop:8, width:"100%", height:34, borderRadius:10, background:"rgba(124,106,247,0.18)", border:"1px solid rgba(124,106,247,0.4)", color:"#c4b9ff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity: refireState[o.id] === "sending" ? 0.5 : 1 }}
+                >
+                  {refireState[o.id] === "sending" ? "Sending…" : refireState[o.id] === "sent" ? "✓ Sent to KDS" : refireState[o.id] === "error" ? "Re-fire failed — try again" : "🔁 Re-fire to KDS"}
+                </button>
                 </div>
               </div>
               );

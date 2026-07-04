@@ -34,11 +34,11 @@ The Vite client calls `/api/…` by default. `setBaseUrl("/cedar-api")` in `arti
 
 ## DB layout (dev)
 
-Cedar-api uses `postgresql://postgres:password@helium/cedarcafe` (dedicated local DB, set in artifact.toml [services.env]). The shared Replit Postgres has Island Tacos at id=1 and Cedar Cafe at id=2. Helium/cedarcafe has Cedar Cafe at BOTH id=1 (old boot before STORE_PROFILE_ID was introduced) and id=2 (current active row per STORE_PROFILE_ID=2).
+Cedar-api uses a dedicated local dev DB (its `DATABASE_URL` is set in `artifact.toml [services.env]` — read the actual value from there, never hardcode credentials). The shared Replit Postgres has Island Tacos at id=1 and Cedar Cafe at id=2. The dedicated Cedar dev DB has Cedar Cafe at BOTH id=1 (old boot before STORE_PROFILE_ID was introduced) and id=2 (current active row per STORE_PROFILE_ID=2).
 
-**Why:** Because the dev environment uses a dedicated DB per tenant (`helium/cedarcafe`), but the cloud deployment shares a single Replit Postgres. STORE_PROFILE_ID allows the same code to work in both topologies.
+**Why:** Because the dev environment uses a dedicated DB per tenant, but the cloud deployment shares a single Replit Postgres. STORE_PROFILE_ID allows the same code to work in both topologies.
 
-**How to apply:** When seeding Cedar Cafe data: use `PGPASSWORD=password psql -h helium -U postgres -d cedarcafe` for the dev DB, and `executeSql()` for the shared Replit Postgres. Both need Cedar Cafe data at their respective STORE_PROFILE_ID-targeted row.
+**How to apply:** When seeding Cedar Cafe data: connect to the dev DB using the `DATABASE_URL` from cedar-api's `artifact.toml [services.env]` (via `psql "$DATABASE_URL"`), and use `executeSql()` for the shared Replit Postgres. Both need Cedar Cafe data at their respective STORE_PROFILE_ID-targeted row.
 
 ## Dev workflow rebuild requirement
 
