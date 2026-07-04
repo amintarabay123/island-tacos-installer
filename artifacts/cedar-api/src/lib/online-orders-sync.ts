@@ -132,18 +132,26 @@ export function startOnlineOrdersSync(): void {
           .limit(1);
 
         if (existing.length > 0) {
-          // Order exists — sync mutable fields (payment status, order status) if cloud differs.
-          // This is the critical path for PlaceToPay: the order arrives locally as paymentStatus=pending,
-          // then the cloud poller marks it paid — without this update it would stay hidden from the POS.
+          // Order exists — sync ONLY paymentStatus from cloud → local.
+          //
+          // This is the critical path for PlaceToPay: the order arrives locally as
+          // paymentStatus=pending, then the cloud poller marks it paid — without this
+          // update it would stay hidden from the POS.
+          //
+          // Order STATUS is deliberately NOT synced cloud → local. The mini PC is the
+          // source of truth for order status (staff accept/prepare/ready/complete all
+          // happen here, and flow UP to the cloud via pushStatusToCloud). Pulling cloud
+          // status back down would revert a locally-accepted order to "pending" whenever
+          // the fire-and-forget write-back to cloud lost the race or failed — making the
+          // order silently vanish from the KDS (KDS hides "pending"). That was the
+          // intermittent "accepted order not reaching the KDS" bug.
           const local = existing[0];
-          const cloudStatus        = (order.status        as string) ?? "pending";
           const cloudPaymentStatus = (order.paymentStatus as string) ?? "pending";
-          if (local.paymentStatus !== cloudPaymentStatus || local.status !== cloudStatus) {
+          if (local.paymentStatus !== cloudPaymentStatus) {
             await db
               .update(ordersTable)
               .set({
                 paymentStatus: cloudPaymentStatus as "pending" | "paid" | "failed" | "refunded",
-                status:        cloudStatus        as "pending" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled",
               })
               .where(eq(ordersTable.confirmationCode, code));
             imported++; // count as a meaningful sync event
