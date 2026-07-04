@@ -16,3 +16,4 @@
 - [Island Tacos cloud DB always empty](island-tacos-cloud-db.md) — menu_items/menu_categories = 0 on cloud Replit is normal; real data lives on mini PC only.
 - [Schema migration rule](schema-migration-rule.md) — every schema column addition must ALSO run ALTER TABLE against production DB immediately, or all queries on that table return 500.
 - [Online order status ownership](online-order-status-ownership.md) — cloud owns paymentStatus, mini PC owns order.status; sync must NEVER pull status cloud→local or accepted orders revert to pending and vanish from KDS.
+- [POS re-fire to KDS](pos-refire-to-kds.md) — manual re-fire button on POS order cards; PATCH kdsCleared:false (+status confirmed only if pending); both tenants + both deploy targets; recall note for Cedar agent.
