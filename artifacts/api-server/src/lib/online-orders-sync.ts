@@ -1,5 +1,5 @@
-import { db, ordersTable, orderItemsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, ordersTable, orderItemsTable, paymentEventsTable } from "@workspace/db";
+import { eq, gte } from "drizzle-orm";
 import { logger } from "./logger";
 
 const POLL_INTERVAL_MS = 5_000;
@@ -223,10 +223,104 @@ export function startOnlineOrdersSync(): void {
     }
   }
 
+  // Payment events are created only in the cloud (PlaceToPay's webhook can't reach
+  // the mini PC's LAN). Pull them down so the LOCAL admin's payment-events log
+  // mirrors the cloud. Kept on its own cursor so it can't stall order sync.
+  let lastPaymentEventSync = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  async function syncPaymentEvents() {
+    try {
+      const url = `${cloudUrl}/api/orders/payment-events-sync?since=${encodeURIComponent(lastPaymentEventSync)}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${syncSecret}` },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      if (!res.ok) {
+        logger.warn({ status: res.status }, "Payment-events sync: cloud responded with error");
+        return;
+      }
+
+      const events = await res.json() as Array<{
+        requestId:  number | null;
+        orderRef:   string | null;
+        event:      string;
+        rawStatus:  string | null;
+        sigPresent: boolean;
+        sigValid:   boolean | null;
+        notes:      string | null;
+        createdAt:  string;
+      }>;
+
+      if (events.length > 0) {
+        // payment_events has no natural unique key, so dedup on
+        // (orderRef, event, rawStatus, createdAt-ms). Load the events already
+        // stored in the incoming window once, then skip anything we already have.
+        const windowStart = new Date(Math.min(...events.map((e) => new Date(e.createdAt).getTime())));
+        const existing = await db
+          .select({
+            orderRef:  paymentEventsTable.orderRef,
+            event:     paymentEventsTable.event,
+            rawStatus: paymentEventsTable.rawStatus,
+            createdAt: paymentEventsTable.createdAt,
+          })
+          .from(paymentEventsTable)
+          .where(gte(paymentEventsTable.createdAt, windowStart));
+
+        const keyOf = (o: { orderRef: string | null; event: string; rawStatus: string | null; createdAt: Date | string }) =>
+          `${o.orderRef ?? ""}|${o.event}|${o.rawStatus ?? ""}|${new Date(o.createdAt).getTime()}`;
+        const seen = new Set(existing.map(keyOf));
+
+        let imported = 0;
+        for (const ev of events) {
+          const createdAt = new Date(ev.createdAt);
+          const key = keyOf({ ...ev, createdAt });
+          if (seen.has(key)) continue;
+
+          // Re-resolve the local order id from the confirmation code (numeric ids
+          // differ between DBs). The event still imports if the order isn't local
+          // yet — order_ref alone drives the admin log, so order_id stays null.
+          let localOrderId: number | null = null;
+          if (ev.orderRef) {
+            const [ord] = await db
+              .select({ id: ordersTable.id })
+              .from(ordersTable)
+              .where(eq(ordersTable.confirmationCode, ev.orderRef))
+              .limit(1);
+            localOrderId = ord?.id ?? null;
+          }
+
+          await db.insert(paymentEventsTable).values({
+            requestId:  ev.requestId ?? null,
+            orderId:    localOrderId,
+            orderRef:   ev.orderRef ?? null,
+            event:      ev.event,
+            rawStatus:  ev.rawStatus ?? null,
+            sigPresent: ev.sigPresent,
+            sigValid:   ev.sigValid ?? null,
+            notes:      ev.notes ?? null,
+            createdAt,
+          });
+          seen.add(key);
+          imported++;
+        }
+
+        if (imported > 0) {
+          logger.info({ imported }, "Synced payment events from cloud");
+        }
+      }
+
+      // 60-second overlap for clock skew; duplicates are dropped by the dedup set.
+      lastPaymentEventSync = new Date(Date.now() - 60_000).toISOString();
+    } catch (err) {
+      logger.error({ err }, "Payment events sync error");
+    }
+  }
+
   // Recursive loop — waits for each sync to finish before scheduling the next,
   // so a slow cloud response never causes overlapping requests.
   async function loop() {
     await sync();
+    await syncPaymentEvents();
     setTimeout(() => { void loop(); }, POLL_INTERVAL_MS);
   }
   void loop();

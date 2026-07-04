@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, desc, and, inArray, count, or, gte, ne, notInArray } from "drizzle-orm";
-import { db, ordersTable, orderItemsTable, menuItemsTable, menuCategoriesTable, refundsTable, storeSettingsTable } from "@workspace/db";
+import { db, ordersTable, orderItemsTable, menuItemsTable, menuCategoriesTable, refundsTable, storeSettingsTable, paymentEventsTable } from "@workspace/db";
 import { upsertCustomer } from "./customers";
 import { SETTING_DEFAULTS, computeStoreStatus } from "./settings";
 import { broadcastOrderEvent } from "./pos-events";
@@ -754,6 +754,59 @@ router.get("/orders/online-sync", async (req, res): Promise<void> => {
       modifierSelections: item.modifierSelections,
       subtotal:           item.subtotal,
     })),
+  }));
+
+  res.json(result);
+});
+
+// Sync payment events down to the mini PC.
+// PlaceToPay payment events are only ever created in the cloud (their webhook can
+// only reach a public URL — the mini PC sits on a private LAN). The mini PC pulls
+// them here so the LOCAL admin's payment-events log matches the cloud.
+// Protected by the shared SYNC_SECRET bearer token.
+router.get("/orders/payment-events-sync", async (req, res): Promise<void> => {
+  const syncSecret = process.env.SYNC_SECRET;
+  if (!syncSecret || req.headers.authorization !== `Bearer ${syncSecret}`) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const sinceStr = req.query.since as string | undefined;
+  const since = sinceStr ? new Date(sinceStr) : new Date(Date.now() - 2 * 60 * 60 * 1000);
+  if (isNaN(since.getTime())) {
+    res.status(400).json({ error: "Invalid since timestamp" });
+    return;
+  }
+
+  // Left-join orders so we can send the confirmation code (stable across cloud &
+  // mini PC). The numeric order_id differs between the two databases and must NOT
+  // be copied down — the mini PC re-resolves it from the confirmation code.
+  const rows = await db
+    .select({
+      requestId:  paymentEventsTable.requestId,
+      joinedRef:  ordersTable.confirmationCode,
+      storedRef:  paymentEventsTable.orderRef,
+      event:      paymentEventsTable.event,
+      rawStatus:  paymentEventsTable.rawStatus,
+      sigPresent: paymentEventsTable.sigPresent,
+      sigValid:   paymentEventsTable.sigValid,
+      notes:      paymentEventsTable.notes,
+      createdAt:  paymentEventsTable.createdAt,
+    })
+    .from(paymentEventsTable)
+    .leftJoin(ordersTable, eq(paymentEventsTable.orderId, ordersTable.id))
+    .where(gte(paymentEventsTable.createdAt, since))
+    .orderBy(paymentEventsTable.createdAt);
+
+  const result = rows.map((r) => ({
+    requestId:  r.requestId,
+    orderRef:   r.joinedRef ?? r.storedRef ?? null,
+    event:      r.event,
+    rawStatus:  r.rawStatus,
+    sigPresent: r.sigPresent,
+    sigValid:   r.sigValid,
+    notes:      r.notes,
+    createdAt:  r.createdAt,
   }));
 
   res.json(result);

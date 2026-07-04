@@ -17,3 +17,5 @@
 - [Schema migration rule](schema-migration-rule.md) — every schema column addition must ALSO run ALTER TABLE against production DB immediately, or all queries on that table return 500.
 - [Online order status ownership](online-order-status-ownership.md) — cloud owns paymentStatus, mini PC owns order.status; sync must NEVER pull status cloud→local or accepted orders revert to pending and vanish from KDS.
 - [POS re-fire to KDS](pos-refire-to-kds.md) — manual re-fire button on POS order cards; PATCH kdsCleared:false (+status confirmed only if pending); both tenants + both deploy targets; recall note for Cedar agent.
+- [Payment events sync gap](payment-events-sync.md) — payment_events are cloud-only (Placetopay webhook can't reach LAN); mini PC must PULL them; map to local order via confirmationCode, never numeric id.
+- [api-server dev runs a prebuilt bundle](api-server-dev-bundle.md) — dev script runs dist/index.mjs, NOT source; source edits need `run build` + restart to appear locally (a restart alone reloads stale code).

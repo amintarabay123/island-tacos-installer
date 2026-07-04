@@ -138,12 +138,18 @@ check PATCH /api/sync/settings                           401
 check POST  /api/sync/soldout/item/1                     401
 check POST  /api/sync/soldout/modifier-option            401
 
+# Bearer-token M2M routes (mini PC pulls online orders + payment events).
+check GET   /api/orders/online-sync                      401
+check GET   /api/orders/payment-events-sync              401
+
 if [ -n "$SYNC_SECRET" ]; then
   # With the right secret, these pass auth. Body-validation 4xx is fine —
   # the point is they MUST NOT return 401 (auth-passed proves the gate works).
   check GET   /api/sync/export                           200       -H "X-Sync-Secret: ${SYNC_SECRET}"
   check POST  /api/sync/receive                          400\|200  -H "X-Sync-Secret: ${SYNC_SECRET}"
   check PATCH /api/sync/settings                         400\|200  -H "X-Sync-Secret: ${SYNC_SECRET}"
+  check GET   /api/orders/online-sync                    200\|400  -H "Authorization: Bearer ${SYNC_SECRET}"
+  check GET   /api/orders/payment-events-sync            200\|400  -H "Authorization: Bearer ${SYNC_SECRET}"
 else
   echo "  (skipping with-secret checks — SYNC_SECRET env not set)"
 fi
