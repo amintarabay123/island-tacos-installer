@@ -15,3 +15,4 @@
 - [Cedar Cafe tenant setup](cedar-cafe-tenant.md) — routing, STORE_PROFILE_ID, dual-DB topology, rebuild-before-restart, deployment arch (separate Replit project → cedarcafebvi.com), artifact removal rule for CC publish.
 - [Island Tacos cloud DB always empty](island-tacos-cloud-db.md) — menu_items/menu_categories = 0 on cloud Replit is normal; real data lives on mini PC only.
 - [Schema migration rule](schema-migration-rule.md) — every schema column addition must ALSO run ALTER TABLE against production DB immediately, or all queries on that table return 500.
+- [Online order status ownership](online-order-status-ownership.md) — cloud owns paymentStatus, mini PC owns order.status; sync must NEVER pull status cloud→local or accepted orders revert to pending and vanish from KDS.
