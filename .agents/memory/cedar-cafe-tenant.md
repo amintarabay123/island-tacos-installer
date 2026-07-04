@@ -13,6 +13,8 @@ The SaaS product (Netaurant) is a future separate repo. Never conflate these two
 - **One GitHub repo, two Replit projects, two domains.**
 - This Replit (Island Tacos) → deploys `artifacts/island-tacos` + `artifacts/api-server` → `orders.islandtacosbvi.com`
 - Cedar Cafe Replit (separate project) → deploys `artifacts/cedar-cafe` + `artifacts/cedar-api` → `cedarcafebvi.com`
+
+**Cedar is CLOUD-ONLY — no mini-PC / local install (confirmed Jul 2026).** Unlike Island Tacos (cloud + in-shop mini PC), Cedar runs entirely on its cloud deployment. There is no UPDATE.bat step for Cedar. Implication: the cloud↔local sync loop (`startOnlineOrdersSync`, only active when `SYNC_TARGET_URL`/`SYNC_SECRET` are set) NEVER runs for Cedar — cedar-api logs "Online orders sync disabled". Any bug that lives in that sync path cannot occur for Cedar; cedar-api parity edits to `online-orders-sync.ts` are harmless future-proofing, not fixes Cedar needs.
 - Cedar Cafe Replit pulls from branch `replit/cedar-cafe-tenant` on the same GitHub repo.
 - Code is maintained here (Island Tacos Replit) and pushed to the branch; the Cedar Cafe Replit pulls updates.
 
