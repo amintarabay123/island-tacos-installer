@@ -74,7 +74,10 @@ module.exports = {
       },
       watch: false,
       autorestart: true,
-      max_restarts: 5,
+      // The watchdog must be the most resilient process on the box — if PM2
+      // gives up on it, nobody is left to alert the owner (June 2026 incident:
+      // max_restarts 5 let PM2 mark the monitor "errored" and stop it).
+      max_restarts: 50,
       min_uptime: "10s",
       restart_delay: 5000,
       exp_backoff_restart_delay: 200,

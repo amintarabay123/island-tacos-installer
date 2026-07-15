@@ -192,9 +192,12 @@ router.post("/system/repair/:service", async (req, res): Promise<void> => {
       timeout = 25_000;
     }
   } else {
-    // api-process or api-http — use config file so PM2 re-runs loadEnv() and
+    // api-process or api-http — restart ONLY the API app. Using the bare
+    // config file restarts every app in it, including the monitor watchdog,
+    // which kills it mid-poll and silences alerting (June 2026 incident).
+    // startOrRestart + --only re-runs loadEnv() (picks up .env changes) and
     // works even when the process is in "errored" state after max_restarts.
-    cmd = "pm2 restart local-install/ecosystem.config.cjs --update-env";
+    cmd = "pm2 startOrRestart local-install/ecosystem.config.cjs --only island-tacos --update-env";
   }
 
   try {

@@ -21,7 +21,7 @@ const HUNTER  = "#2d6a4f";
 const HUNTER_LT = "#3d8f6a";
 
 const DARK_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Lato:wght@300;400;700&display=swap');
+  /* Playfair Display + Lato are self-hosted via @font-face in index.html */
   .chalk-font { font-family: 'Playfair Display', Georgia, serif !important; }
   .body-font  { font-family: 'Lato', system-ui, sans-serif !important; }
   [data-slot="sheet-content"] {
