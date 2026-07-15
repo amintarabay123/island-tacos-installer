@@ -680,17 +680,18 @@ function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: n
   const { storeName, phone, address } = useStoreSettings();
   const change = tendered != null ? Math.max(0, tendered - order.total) : null;
   const printRef = useRef<HTMLDivElement>(null);
+  const [printing, setPrinting] = useState(false);
+  const [printError, setPrintError] = useState<string | null>(null);
 
-  const print = () => {
-    const win = window.open("", "_blank", "width=320,height=600");
-    if (!win || !printRef.current) return;
-    win.document.write(`<html><head><title>Receipt</title><style>
-      body{font-family:monospace;font-size:12px;width:280px;margin:0 auto;padding:8px}
-      .center{text-align:center} .bold{font-weight:bold} .line{border-top:1px dashed #000;margin:6px 0}
-      .row{display:flex;justify-content:space-between;margin:2px 0}
-      .total{font-size:14px;font-weight:bold}
-    </style></head><body>${printRef.current.innerHTML}</body></html>`);
-    win.document.close(); win.focus(); win.print(); win.close();
+  // Uses the unified printer abstraction (printReceiptLines) so the configured
+  // print mode (WiFi Direct / network ESC-POS / browser) is respected — the old
+  // inline window.open() path here bypassed printer settings entirely and only
+  // ever did browser printing.
+  const print = async () => {
+    setPrinting(true); setPrintError(null);
+    const result = await printReceiptLines(buildReceiptLines(order, tendered, storeName, address, phone));
+    if (!result.ok) setPrintError(result.error ?? "Print failed");
+    setPrinting(false);
   };
 
   return (
@@ -751,13 +752,16 @@ function ReceiptModal({ order, tendered, onClose }: { order: Order; tendered?: n
             </div>
           </div>
         </div>
-        <div style={{ padding:20, borderTop:`1px solid ${IL.bord}`, display:"flex", gap:12 }}>
-          <button onClick={print} style={{ flex:1, height:48, borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.tm, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
-            🖨️ Print
+        <div style={{ padding:20, borderTop:`1px solid ${IL.bord}`, display:"flex", flexDirection:"column", gap:8 }}>
+          {printError && <p style={{ color:IL.red, fontSize:11, textAlign:"center", margin:0 }}>{printError}</p>}
+          <div style={{ display:"flex", gap:12 }}>
+          <button onClick={print} disabled={printing} style={{ flex:1, height:48, borderRadius:14, border:`1px solid ${IL.bord}`, color:IL.tm, background:"none", fontWeight:600, cursor:"pointer", fontFamily:"inherit", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", gap:8, opacity:printing?0.5:1 }}>
+            {printing ? "Printing…" : "🖨️ Print"}
           </button>
           <button onClick={onClose} style={{ flex:1, height:48, borderRadius:14, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:900, cursor:"pointer", fontFamily:"inherit", fontSize:14, boxShadow:"0 4px 18px rgba(16,185,129,0.4)" }}>
             New Order
           </button>
+          </div>
         </div>
       </div>
     </div>
