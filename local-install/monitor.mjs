@@ -66,7 +66,14 @@ const dotenv  = loadDotenv(join(ROOT, ".env"));
 const getEnv  = (k, fallback = "") => process.env[k] ?? dotenv[k] ?? fallback;
 
 const DATABASE_URL  = getEnv("DATABASE_URL");
-const API_PORT      = getEnv("PORT", "3001");
+// The API port is HARDCODED to 3001 in ecosystem.config.cjs (env override on
+// the island-tacos app), so the health probe must use 3001 too. Do NOT read
+// the generic PORT from .env here — if .env carries a different PORT (e.g. a
+// cloud template value), the probe hits a door nobody listens on, "fails"
+// every poll, and triggers the repair/restart loop even though the API is
+// perfectly healthy (July 2026 incident). MONITOR_API_PORT is an explicit
+// escape hatch if the API port ever really changes.
+const API_PORT      = getEnv("MONITOR_API_PORT", "3001");
 const PRINTER_IP    = getEnv("PRINTER_IP", "");
 const PRINTER_PORT  = parseInt(getEnv("PRINTER_PORT", "9100"), 10);
 const SMS_GW_URL    = getEnv("SMS_GATEWAY_URL", "");
