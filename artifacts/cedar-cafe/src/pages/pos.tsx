@@ -2027,13 +2027,69 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ─── Shift Z-Report helpers ──────────────────────────────────────────────────
+
+type ShiftSummary = { totalOrders: number; totalSales: number; byMethod: { cash: number; card: number; athmovil: number }; refundTotal: number; netSales: number; payIns: number; payOuts: number; expectedCash: number; cashTransactions: CashTxn[] };
+
+function buildZReportLines(shift: Shift, summary: ShiftSummary, actualCash: number | null, reprint: boolean, storeName: string, address: string): Parameters<typeof printReceiptLines>[0] {
+  return [
+    { text: storeName.toUpperCase(), bold: true, center: true, size: "large" },
+    { text: address, center: true },
+    { divider: true, text: "" },
+    { text: reprint ? "Z-REPORT (REPRINT)" : "Z-REPORT — END OF SHIFT", bold: true, center: true },
+    { text: new Date().toLocaleString(), center: true },
+    { divider: true, text: "" },
+    { text: `Opened: ${new Date(shift.openedAt).toLocaleString()}` },
+    { text: `Closed: ${shift.closedAt ? new Date(shift.closedAt).toLocaleString() : new Date().toLocaleString()}` },
+    { divider: true, text: "" },
+    { text: `Total Orders: ${summary.totalOrders}`, bold: true },
+    { text: `Gross Sales: ${fmt(summary.totalSales)}`, bold: true },
+    { text: `Cash Sales: ${fmt(summary.byMethod.cash)}` },
+    { text: `Card Sales: ${fmt(summary.byMethod.card)}` },
+    { text: `ATH Movil: ${fmt(summary.byMethod.athmovil)}` },
+    { divider: true, text: "" },
+    { text: `Refunds: -${fmt(summary.refundTotal)}` },
+    { text: `Net Sales: ${fmt(summary.netSales)}`, bold: true, size: "large" },
+    { divider: true, text: "" },
+    { text: `Opening Float: ${fmt(shift.openingFloat)}` },
+    { text: `Pay Ins: +${fmt(summary.payIns)}` },
+    { text: `Pay Outs: -${fmt(summary.payOuts)}` },
+    { text: `Expected Cash: ${fmt(summary.expectedCash)}`, bold: true },
+    ...(actualCash != null ? [{ text: `Actual Cash: ${fmt(actualCash)}` }, { text: `Difference: ${fmt(actualCash - summary.expectedCash)}` }] : []),
+    { divider: true, text: "" },
+    { text: "Thank you!", center: true },
+  ];
+}
+
 // ─── Open Shift Modal ────────────────────────────────────────────────────────
 
 function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
+  const { storeName, address } = useStoreSettings();
   const [float, setFloat] = useState("0");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reprinting, setReprinting] = useState(false);
+  const [reprintMsg, setReprintMsg] = useState<string | null>(null);
+
+  const reprintLastZ = async () => {
+    setReprinting(true); setReprintMsg(null);
+    try {
+      const r = await fetch("/api/shifts", { credentials: "include", headers: authHeaders() });
+      if (!r.ok) throw new Error("fetch shifts failed");
+      const shifts: Shift[] = await r.json();
+      const last = shifts.find(s => s.closedAt);
+      if (!last) { setReprintMsg("No closed shift found yet."); setReprinting(false); return; }
+      const sr = await fetch(`/api/shifts/${last.id}/summary`, { credentials: "include", headers: authHeaders() });
+      if (!sr.ok) throw new Error("fetch summary failed");
+      const summary: ShiftSummary = await sr.json();
+      await printReceiptLines(buildZReportLines(last, summary, last.closingFloat, true, storeName, address));
+      setReprintMsg("Z-Report sent to printer.");
+    } catch {
+      setReprintMsg("Couldn't print — check the printer and try again.");
+    }
+    setReprinting(false);
+  };
 
   const handleOpen = async () => {
     setSubmitting(true); setError(null);
@@ -2083,6 +2139,11 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
             Skip
           </button>
         </div>
+        <button onClick={reprintLastZ} disabled={reprinting}
+          style={{ width:"100%", marginTop:10, height:44, borderRadius:14, background:"rgba(74,48,32,0.4)", border:`1px solid ${IL.bord}`, color:IL.tm, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", opacity:reprinting?0.5:1 }}>
+          {reprinting ? "Printing…" : "🖨 Reprint Last Z-Report"}
+        </button>
+        {reprintMsg && <p style={{ fontSize:12, textAlign:"center", marginTop:8, color:IL.mu }}>{reprintMsg}</p>}
         </div>
       </div>
     </div>
@@ -2119,34 +2180,7 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
   const printZReport = async () => {
     if (!summary) return;
     setPrintingZ(true);
-    const lines: Parameters<typeof printReceiptLines>[0] = [
-      { text: storeName.toUpperCase(), bold: true, center: true, size: "large" },
-      { text: address, center: true },
-      { divider: true, text: "" },
-      { text: "Z-REPORT — END OF SHIFT", bold: true, center: true },
-      { text: new Date().toLocaleString(), center: true },
-      { divider: true, text: "" },
-      { text: `Opened: ${new Date(shift.openedAt).toLocaleString()}` },
-      { text: `Closed: ${new Date().toLocaleString()}` },
-      { divider: true, text: "" },
-      { text: `Total Orders: ${summary.totalOrders}`, bold: true },
-      { text: `Gross Sales: ${fmt(summary.totalSales)}`, bold: true },
-      { text: `Cash Sales: ${fmt(summary.byMethod.cash)}` },
-      { text: `Card Sales: ${fmt(summary.byMethod.card)}` },
-      { text: `ATH Movil: ${fmt(summary.byMethod.athmovil)}` },
-      { divider: true, text: "" },
-      { text: `Refunds: -${fmt(summary.refundTotal)}` },
-      { text: `Net Sales: ${fmt(summary.netSales)}`, bold: true, size: "large" },
-      { divider: true, text: "" },
-      { text: `Opening Float: ${fmt(shift.openingFloat)}` },
-      { text: `Pay Ins: +${fmt(summary.payIns)}` },
-      { text: `Pay Outs: -${fmt(summary.payOuts)}` },
-      { text: `Expected Cash: ${fmt(summary.expectedCash)}`, bold: true },
-      ...(closingFloat ? [{ text: `Actual Cash: ${fmt(parseFloat(closingFloat))}` }, { text: `Difference: ${fmt(parseFloat(closingFloat) - summary.expectedCash)}` }] : []),
-      { divider: true, text: "" },
-      { text: "Thank you!", center: true },
-    ];
-    await printReceiptLines(lines);
+    await printReceiptLines(buildZReportLines(shift, summary, closingFloat ? parseFloat(closingFloat) : null, false, storeName, address));
     setPrintingZ(false);
   };
 
