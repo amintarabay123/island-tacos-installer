@@ -9,4 +9,6 @@ description: Monitor auto-repair on the mini PC must target only the API app, ne
 
 **How to apply:** When adding any new repair/restart path (monitor, admin repair routes, scripts), restart only the named app. Keep the watchdog's `max_restarts` high (50) — if PM2 gives up on the watchdog, nobody alerts the owner. `startOrRestart --only <name> --update-env` re-runs the config's loadEnv (picks up .env changes) and works from the "errored" state.
 
+**Related rule (memory limit):** `max_memory_restart` for the monitor must be well above Node 24's idle RSS (~64–80MB). 64M caused PM2 to memory-kill a healthy monitor every ~1 min (July 2026 boot-loop: repeating "Monitor process started" events with green statuses). Now 256M. Same trap applies to any small helper process under PM2.
+
 **Related rule (offline resilience):** frontends must never load fonts (or any render-blocking resource) from external CDNs — a Google Fonts link caused a blank white screen on the mini PC when shop internet was down. Fonts are self-hosted woff2 in each app's `src/fonts/` with `@font-face` in CSS (Vite rebases relative urls per base path; don't use %BASE_URL% in index.html — it doesn't get a trailing slash for sub-path apps like /cedar).

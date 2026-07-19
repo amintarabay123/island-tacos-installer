@@ -81,7 +81,9 @@ module.exports = {
       min_uptime: "10s",
       restart_delay: 5000,
       exp_backoff_restart_delay: 200,
-      max_memory_restart: "64M",
+      // 64M was below Node 24's idle memory footprint, so PM2 memory-killed a
+      // perfectly healthy monitor every ~1 min (July 2026 boot-loop incident).
+      max_memory_restart: "256M",
       log_date_format: "YYYY-MM-DD HH:mm:ss",
       windowsHide: true,
     },
