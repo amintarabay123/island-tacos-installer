@@ -5,7 +5,7 @@ import { notifyOrderPaid } from "../routes/orders";
 import { logger } from "./logger";
 
 async function logEvent(
-  requestId: string,
+  requestId: number,
   order: { id: number; confirmationCode: string | null },
   event: string,
   rawStatus: string,

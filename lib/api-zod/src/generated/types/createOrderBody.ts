@@ -9,6 +9,7 @@ import type { CreateOrderBodyOrderType } from "./createOrderBodyOrderType";
 import type { CreateOrderBodyPaymentMethod } from "./createOrderBodyPaymentMethod";
 import type { CreateOrderBodyPaymentStatus } from "./createOrderBodyPaymentStatus";
 import type { CreateOrderBodySource } from "./createOrderBodySource";
+import type { CreateOrderBodyStatus } from "./createOrderBodyStatus";
 import type { CreateOrderItemInput } from "./createOrderItemInput";
 
 export interface CreateOrderBody {
@@ -22,6 +23,7 @@ export interface CreateOrderBody {
   deliveryAddress?: string | null;
   paymentMethod: CreateOrderBodyPaymentMethod;
   paymentStatus?: CreateOrderBodyPaymentStatus;
+  status?: CreateOrderBodyStatus;
   source?: CreateOrderBodySource;
   discountAmount?: number;
   /** @nullable */

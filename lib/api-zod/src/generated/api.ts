@@ -197,6 +197,7 @@ export const ListOrdersQueryParams = zod.object({
     ])
     .optional(),
   kdsCleared: zod.enum(["true", "false"]).optional(),
+  activeOnly: zod.enum(["true", "false"]).optional(),
   limit: zod.coerce.number().optional(),
 });
 

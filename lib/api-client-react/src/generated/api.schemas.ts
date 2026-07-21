@@ -259,6 +259,13 @@ export const CreateOrderBodyPaymentStatus = {
   paid: "paid",
 } as const;
 
+export type CreateOrderBodyStatus =
+  (typeof CreateOrderBodyStatus)[keyof typeof CreateOrderBodyStatus];
+
+export const CreateOrderBodyStatus = {
+  completed: "completed",
+} as const;
+
 export type CreateOrderBodySource =
   (typeof CreateOrderBodySource)[keyof typeof CreateOrderBodySource];
 
@@ -279,6 +286,7 @@ export interface CreateOrderBody {
   deliveryAddress?: string | null;
   paymentMethod: CreateOrderBodyPaymentMethod;
   paymentStatus?: CreateOrderBodyPaymentStatus;
+  status?: CreateOrderBodyStatus;
   source?: CreateOrderBodySource;
   discountAmount?: number;
   /** @nullable */
@@ -440,6 +448,7 @@ export type ListMenuItemsParams = {
 export type ListOrdersParams = {
   status?: ListOrdersStatus;
   kdsCleared?: ListOrdersKdsCleared;
+  activeOnly?: ListOrdersActiveOnly;
   limit?: number;
 };
 
@@ -459,6 +468,14 @@ export type ListOrdersKdsCleared =
   (typeof ListOrdersKdsCleared)[keyof typeof ListOrdersKdsCleared];
 
 export const ListOrdersKdsCleared = {
+  true: "true",
+  false: "false",
+} as const;
+
+export type ListOrdersActiveOnly =
+  (typeof ListOrdersActiveOnly)[keyof typeof ListOrdersActiveOnly];
+
+export const ListOrdersActiveOnly = {
   true: "true",
   false: "false",
 } as const;

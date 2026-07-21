@@ -366,7 +366,7 @@ router.post("/payments/placetopay/session", async (req, res): Promise<void> => {
       order.customerName,
       order.customerPhone || "",
       notificationUrl,
-      order.email ?? undefined,
+      order.customerEmail ?? undefined,
       clientIp,
       clientUa,
     );
@@ -424,7 +424,7 @@ router.post("/payments/placetopay/notify", async (req, res): Promise<void> => {
     ip:      req.ip,
     ct:      req.headers["content-type"],
     body:    req.body,
-    rawLen:  (req as Request & { rawBody?: Buffer }).rawBody?.length ?? 0,
+    rawLen:  (req as unknown as Request & { rawBody?: Buffer }).rawBody?.length ?? 0,
   }, "[PTP] notify: incoming request");
 
   // Always respond 200 immediately — PlaceToPay will retry on non-2xx

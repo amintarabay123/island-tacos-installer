@@ -289,6 +289,19 @@ router.get("/orders", requireStaffUnlessCustomerPhoneHistory, async (req, res): 
   if (queryParsed.data.kdsCleared !== undefined) {
     conditions.push(eq(ordersTable.kdsCleared, queryParsed.data.kdsCleared === "true"));
   }
+  // activeOnly=true → only open tickets: everything except cancelled orders and
+  // completed+paid orders (completed+UNPAID must stay visible so staff can still
+  // charge them). This keeps the POS tickets drawer payload small — without it
+  // the POS downloads the entire order history and freezes on low-power devices.
+  if (queryParsed.data.activeOnly === "true") {
+    conditions.push(ne(ordersTable.status, "cancelled"));
+    conditions.push(
+      or(
+        ne(ordersTable.status, "completed"),
+        ne(ordersTable.paymentStatus, "paid"),
+      )!
+    );
+  }
   // Customer history filter (used by customer-facing order history)
   const phoneFilter = (req.query as Record<string, string>).customerPhone;
   if (phoneFilter) {

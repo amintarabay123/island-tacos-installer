@@ -1001,10 +1001,11 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/orders", { credentials: "include", headers: authHeaders() });
+      // activeOnly: server returns only open tickets (excludes cancelled and
+      // completed+paid). Fetching the full history here froze the POS device.
+      const r = await fetch("/api/orders?activeOnly=true", { credentials: "include", headers: authHeaders() });
       const data: Order[] = await r.json();
-      // Show all non-cancelled orders EXCEPT completed ones that are already paid —
-      // completed+unpaid tickets must remain visible so staff can still edit/charge them.
+      // Client-side filter kept as a safety net (e.g. older server without activeOnly).
       setOrders(data.filter(o => o.status !== "cancelled" && !(o.status === "completed" && o.paymentStatus === "paid")));
     } finally { setLoading(false); }
   }, []);
@@ -1456,7 +1457,9 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   const [refireStatus, setRefireStatus] = useState<"idle" | "sent" | "error">("idle");
 
   useEffect(() => {
-    fetch("/api/orders", { credentials: "include", headers: authHeaders() })
+    // Newest 300 orders is plenty for receipt lookup/search — an unbounded
+    // fetch of the entire history froze the POS device as data accumulated.
+    fetch("/api/orders?limit=300", { credentials: "include", headers: authHeaders() })
       .then(r => r.json())
       .then((data: Order[]) => {
         const done = data
@@ -2989,7 +2992,9 @@ export default function POS() {
   useEffect(() => {
     const poll = async () => {
       try {
-        const r = await fetch("/api/orders?limit=500", { credentials: "include", headers: authHeaders() });
+        // activeOnly keeps the every-8s payload small (open tickets only) —
+        // pending notifications and the held-ticket count only need active orders.
+        const r = await fetch("/api/orders?activeOnly=true&limit=500", { credentials: "include", headers: authHeaders() });
         const data: Order[] = await r.json();
 
         // ── Online + phone order notifications ──
