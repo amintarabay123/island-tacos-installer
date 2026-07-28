@@ -264,7 +264,7 @@ function RetryImg({ src, alt, className }: { src: string; alt: string; className
   if (failed) {
     return (
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-2xl opacity-30">🌮</span>
+        <span className="text-2xl opacity-30">☕</span>
       </div>
     );
   }
@@ -1403,7 +1403,7 @@ const ItemCard = memo(function ItemCard({ item, onClick }: { item: MenuItem; onC
   return (
     <button onClick={onClick} style={{ position:"relative", display:"block", cursor:"pointer", background:"none", border:"none", padding:0, paddingTop: hasImg ? 0 : 30, textAlign:"left", width:"100%" }}>
       {!hasImg && (
-        <div style={{ position:"absolute", top:-24, left:"50%", transform:"translateX(-50%)", zIndex:5, pointerEvents:"none", filter:`drop-shadow(0 6px 14px ${glow})`, fontSize:46, lineHeight:1 }}>🌮</div>
+        <div style={{ position:"absolute", top:-24, left:"50%", transform:"translateX(-50%)", zIndex:5, pointerEvents:"none", filter:`drop-shadow(0 6px 14px ${glow})`, fontSize:46, lineHeight:1 }}>☕</div>
       )}
       <div style={{ background: grad, borderRadius:18, position:"relative", overflow:"hidden", boxShadow:`0 6px 22px ${glow}`, width:"100%" }}>
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.08) 0%,transparent 50%)", pointerEvents:"none", zIndex:1 }} />
@@ -3812,7 +3812,7 @@ export default function POS() {
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32" style={{ color:IL.mu }}>
-                <span className="text-3xl mb-2">🌮</span>
+                <span className="text-3xl mb-2">☕</span>
                 <span className="text-sm">Tap items to add</span>
               </div>
             ) : (

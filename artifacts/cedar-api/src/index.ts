@@ -56,6 +56,27 @@ async function runMigrations() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    await client.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS placetopay_request_id INTEGER`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS payment_events (
+        id SERIAL PRIMARY KEY,
+        request_id INTEGER,
+        order_id INTEGER REFERENCES orders(id),
+        order_ref TEXT,
+        event TEXT NOT NULL,
+        raw_status TEXT,
+        sig_present BOOLEAN NOT NULL DEFAULT false,
+        sig_valid BOOLEAN,
+        notes TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    // Idempotent column additions for payment_events tables created before the full schema was known
+    await client.query(`ALTER TABLE payment_events ADD COLUMN IF NOT EXISTS request_id INTEGER`);
+    await client.query(`ALTER TABLE payment_events ADD COLUMN IF NOT EXISTS order_id INTEGER REFERENCES orders(id)`);
+    await client.query(`ALTER TABLE payment_events ADD COLUMN IF NOT EXISTS sig_present BOOLEAN NOT NULL DEFAULT false`);
+    await client.query(`ALTER TABLE payment_events ADD COLUMN IF NOT EXISTS sig_valid BOOLEAN`);
+    await client.query(`ALTER TABLE payment_events ADD COLUMN IF NOT EXISTS notes TEXT`);
   } finally {
     client.release();
   }
