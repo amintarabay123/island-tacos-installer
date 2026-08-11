@@ -2820,18 +2820,17 @@ export default function POS() {
   const [allItems, setAllItems] = useState<MenuItem[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
 
-  const _API = import.meta.env.BASE_URL.replace(/\/$/, "");
   const reloadMenu = useCallback(() => {
     Promise.all([
-      fetch(`${_API}/api/menu/categories`, { credentials: "include", headers: authHeaders() }).then(r => r.json()),
-      fetch(`${_API}/api/menu/items`, { credentials: "include", headers: authHeaders() }).then(r => r.json()),
+      fetch(`/cedar-api/api/menu/categories`, { credentials: "include", headers: authHeaders() }).then(r => r.json()),
+      fetch(`/cedar-api/api/menu/items`, { credentials: "include", headers: authHeaders() }).then(r => r.json()),
     ]).then(([cats, items]) => {
       setCategories(Array.isArray(cats) ? cats : []);
       setAllItems(Array.isArray(items) ? items : []);
     }).catch(err => {
       console.error("POS menu load failed:", err);
     }).finally(() => setLoadingMenu(false));
-  }, [_API]);
+  }, []);
   useEffect(() => { reloadMenu(); }, [reloadMenu]);
 
   // Cart state
