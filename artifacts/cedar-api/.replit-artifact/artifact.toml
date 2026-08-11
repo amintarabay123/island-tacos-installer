@@ -21,7 +21,9 @@ kind = "api"
   NODE_ENV = "production"
 
   [services.production.run]
-  args = ["node", "--enable-source-maps", "artifacts/cedar-api/dist/index.mjs"]
+  # start-prod.sh swaps Replit's injected DATABASE_URL to use the "cedarcafe" database.
+  # Do NOT hardcode DATABASE_URL here — it is runtime-managed by Replit.
+  args = ["sh", "artifacts/cedar-api/start-prod.sh"]
 
   [services.production.run.env]
   PORT = "8181"
@@ -32,7 +34,8 @@ kind = "api"
 
   [services.env]
   PORT = "8181"
-  DATABASE_URL = "postgresql://postgres:password@helium/cedarcafe?sslmode=disable"
+  # DATABASE_URL is intentionally absent here — Replit injects it automatically.
+  # The dev run script (pnpm dev) rewrites it to use the cedarcafe DB name.
   CONFIRMATION_CODE_PREFIX = "CC"
   STORE_PROFILE_ID = "2"
   STORE_NAME = "Cedar Cafe"

@@ -1,5 +1,5 @@
 kind = "web"
-previewPath = "/cedar"
+previewPath = "/"
 title = "Cedar Cafe - Online Ordering"
 version = "1.0.0"
 id = "artifacts/cedar-cafe"
@@ -11,7 +11,7 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-paths = [ "/cedar" ]
+paths = [ "/" ]
 localPort = 24657
 
 [services.development]
@@ -30,5 +30,5 @@ to = "/index.html"
 
 [services.env]
 PORT = "24657"
-BASE_PATH = "/cedar"
+BASE_PATH = "/"
 VITE_ADMIN_PATH = "admin"
