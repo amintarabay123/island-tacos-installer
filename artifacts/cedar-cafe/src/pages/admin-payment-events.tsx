@@ -6,7 +6,7 @@ import { adminRoutes } from "@/lib/admin-path";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { useStoreSettings } from "@/lib/use-store-settings";
 
-const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+const API = "/cedar-api";
 
 const BG   = "#0d1612";
 const CARD = "#162518";

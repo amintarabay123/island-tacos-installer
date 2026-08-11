@@ -4,7 +4,7 @@ import { adminRoutes } from "@/lib/admin-path";
 import { authHeaders } from "@/lib/auth";
 import { ArrowLeft, Search, Users, Phone, Mail, ShoppingBag, DollarSign, ChevronDown, ChevronUp, Loader2, X, Trash2, Download } from "lucide-react";
 
-const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+const API = "/cedar-api";
 
 const BG = "#0d1612", CARD = "#162518", BORD = "rgba(255,255,255,0.06)";
 const TP = "#e8f5ed", TM = "#8cc4a0", TMUTED = "#5a8a6a";

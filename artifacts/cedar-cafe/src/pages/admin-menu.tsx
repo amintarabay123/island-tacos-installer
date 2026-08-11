@@ -144,7 +144,7 @@ export default function AdminMenu() {
     });
   }, [items]);
 
-  const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const API_BASE = "/cedar-api";
   const saveReorder = (ids: number[]) => {
     fetch(`${API_BASE}/api/menu/items/reorder`, {
       method: "POST", credentials: "include",

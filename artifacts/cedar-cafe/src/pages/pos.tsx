@@ -783,7 +783,7 @@ function HoldModal({ initialName, initialPhone, initialNote, onHold, onClose }: 
   const [suggestions, setSuggestions] = useState<CustomerSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
-  const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const API = "/cedar-api";
 
   useEffect(() => {
     const t = setTimeout(() => nameInputRef.current?.focus(), 50);
@@ -2863,7 +2863,7 @@ export default function POS() {
     return madeLines.every(c => snap.get(c.key) === c.quantity);
   }, [cart]);
 
-  const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const API = "/cedar-api";
 
   // UI state
   const [mobileView, setMobileView] = useState<"menu" | "cart">("menu");

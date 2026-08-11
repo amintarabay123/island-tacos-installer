@@ -89,7 +89,7 @@ export default function Home() {
   const [closedTodayReason, setClosedTodayReason] = useState<string | null>(null);
 
   useEffect(() => {
-    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const base = "/cedar-api";
     fetch(`${base}/api/settings`)
       .then(r => r.json())
       .then((d: Record<string, string>) => {

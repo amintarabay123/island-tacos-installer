@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Store, Users, Plus, Pencil, Trash2, Shield, User, Check, X, CreditCard, RefreshCw } from "lucide-react";
 import { useStoreSettings } from "@/lib/use-store-settings";
 
-const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+const API = "/cedar-api";
 
 type Settings = {
   hours: string; phone: string; address: string; payment_methods: string;

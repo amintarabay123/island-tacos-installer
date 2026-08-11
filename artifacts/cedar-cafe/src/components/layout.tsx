@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { useStoreSettings } from "@/lib/use-store-settings";
 import cedarLogo from "@/assets/cedar-logo.png";
 
-const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+const API = "/cedar-api";
 
 // ── Chalkboard Palette ─────────────────────────────────────────────────────────
 const BG      = "#0f0a06";

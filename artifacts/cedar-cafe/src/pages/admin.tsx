@@ -397,7 +397,7 @@ export default function Admin() {
   }, [navigate]);
 
   useEffect(() => {
-    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    const base = "/cedar-api";
     fetch(`${base}/api/settings`, { credentials: "include", headers: authHeaders() })
       .then(r => r.json())
       .then((d: Record<string, string>) => {
@@ -411,7 +411,7 @@ export default function Admin() {
     setPauseLoading(true);
     const until = new Date(Date.now() + hours * 3_600_000).toISOString();
     try {
-      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const base = "/cedar-api";
       const r = await fetch(`${base}/api/settings`, {
         method: "PATCH",
         credentials: "include",
@@ -432,7 +432,7 @@ export default function Admin() {
   const handleResume = async () => {
     setPauseLoading(true);
     try {
-      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const base = "/cedar-api";
       const r = await fetch(`${base}/api/settings`, {
         method: "PATCH",
         credentials: "include",

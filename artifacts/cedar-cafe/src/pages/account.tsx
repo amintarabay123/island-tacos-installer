@@ -5,7 +5,7 @@ import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp, LogIn, LogOut } from "lucide-react";
 
-const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+const API = "/cedar-api";
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 interface OrderItem { menuItemName: string; quantity: number; subtotal: number }

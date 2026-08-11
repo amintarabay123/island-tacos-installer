@@ -11,7 +11,7 @@ import {
   MessageSquare, Wrench, Info, Download,
 } from "lucide-react";
 
-const API = import.meta.env.BASE_URL.replace(/\/$/, "");
+const API = "/cedar-api";
 
 // ── Cedar Cafe Palette ────────────────────────────────────────────────────────
 const BG    = "#0d1612";

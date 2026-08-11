@@ -3,7 +3,7 @@ import { CheckCircle, Smartphone, Copy, Check, Loader2, RefreshCw } from "lucide
 import { Button } from "@/components/ui/button";
 import { useStoreSettings } from "@/lib/use-store-settings";
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const basePath = "/cedar-api";
 
 // ─── Automatic push-payment button ──────────────────────────────────────────
 // Flow: server calls ATH Móvil → push notification to customer's phone →
