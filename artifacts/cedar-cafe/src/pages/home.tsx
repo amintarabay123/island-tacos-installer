@@ -110,7 +110,7 @@ export default function Home() {
   const [topSellers, setTopSellers] = useState<any[] | null>(null);
 
   useEffect(() => {
-    fetch("/api/menu/popular?limit=5")
+    fetch("/cedar-api/api/menu/popular?limit=5")
       .then((r) => r.ok ? r.json() : null)
       .then((data: any[] | null) => { if (data) setTopSellers(data); })
       .catch(() => {});
@@ -201,7 +201,7 @@ export default function Home() {
     setShowNotes(false);
     setLoadingModifiers(true);
     try {
-      const res = await fetch(`/api/menu/items/${item.id}/modifiers`);
+      const res = await fetch(`/cedar-api/api/menu/items/${item.id}/modifiers`);
       if (res.ok) {
         const mods: ModifierGroup[] = await res.json();
         setModifierGroups(mods);

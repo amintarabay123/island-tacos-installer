@@ -553,7 +553,7 @@ function CustomerHistorySection({ phone }: { phone: string }) {
   useEffect(() => {
     if (!phone) return;
     setLoading(true);
-    fetch(`/api/orders?customerPhone=${encodeURIComponent(phone)}`)
+    fetch(`/cedar-api/api/orders?customerPhone=${encodeURIComponent(phone)}`)
       .then(r => r.json())
       .then(data => setOrders((data as HistoryOrder[]).map(o => ({ id: o.id, confirmationCode: o.confirmationCode, status: o.status, total: o.total, createdAt: o.createdAt, items: o.items }))))
       .catch(() => setOrders([]))

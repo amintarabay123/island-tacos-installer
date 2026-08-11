@@ -195,7 +195,7 @@ export default function Kitchen({ station }: { station?: string } = {}) {
   // Sync printer config from server on load — ensures all devices use the same settings
   // configured once from Admin → Reports → Printer Settings.
   useEffect(() => {
-    fetch("/api/settings", { credentials: "include", headers: authHeaders() })
+    fetch("/cedar-api/api/settings", { credentials: "include", headers: authHeaders() })
       .then(r => r.json())
       .then((data: Record<string, string>) => {
         if (data.printer_config) {
@@ -271,11 +271,11 @@ export default function Kitchen({ station }: { station?: string } = {}) {
   // Fetch category + item data — called on mount and refreshed every 60s so
   // admin changes (e.g. toggling KDS off for Drinks) take effect automatically.
   const fetchCategoryData = useCallback(() => {
-    fetch("/api/menu/categories", { headers: authHeaders() })
+    fetch("/cedar-api/api/menu/categories", { headers: authHeaders() })
       .then(r => r.json())
       .then((cats: KitchenCategory[]) => setKdsCategories(cats))
       .catch(() => {});
-    fetch("/api/menu/items", { headers: authHeaders() })
+    fetch("/cedar-api/api/menu/items", { headers: authHeaders() })
       .then(r => r.json())
       .then((menuItems: KitchenMenuItem[]) => {
         const map = new Map<number, number>();
@@ -316,7 +316,7 @@ export default function Kitchen({ station }: { station?: string } = {}) {
 
   const logout = async () => {
     clearAuthToken();
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include", headers: authHeaders() });
+    await fetch("/cedar-api/api/auth/logout", { method: "POST", credentials: "include", headers: authHeaders() });
     navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.kitchen)}`);
   };
 
@@ -456,7 +456,7 @@ export default function Kitchen({ station }: { station?: string } = {}) {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const res = await fetch("/api/orders", { credentials: "include", headers: authHeaders() });
+      const res = await fetch("/cedar-api/api/orders", { credentials: "include", headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to fetch");
       const data: Order[] = await res.json();
       // KDS shows orders that:
@@ -635,7 +635,7 @@ export default function Kitchen({ station }: { station?: string } = {}) {
     if (!next) return;
     setAdvancing((s) => new Set(s).add(order.id));
     try {
-      await fetch(`/api/orders/${order.id}`, {
+      await fetch(`/cedar-api/api/orders/${order.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -654,7 +654,7 @@ export default function Kitchen({ station }: { station?: string } = {}) {
   const markItemsMade = async (orderId: number, itemIds: number[]) => {
     setAdvancing((s) => new Set(s).add(orderId));
     try {
-      const res = await fetch(`/api/orders/${orderId}/items/mark-made`, {
+      const res = await fetch(`/cedar-api/api/orders/${orderId}/items/mark-made`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -681,7 +681,7 @@ export default function Kitchen({ station }: { station?: string } = {}) {
   const clearFromKds = async (order: Order) => {
     setAdvancing((s) => new Set(s).add(order.id));
     try {
-      await fetch(`/api/orders/${order.id}`, {
+      await fetch(`/cedar-api/api/orders/${order.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -703,7 +703,7 @@ export default function Kitchen({ station }: { station?: string } = {}) {
     setHistoryOpen(true);
     setHistoryLoading(true);
     try {
-      const r = await fetch("/api/orders?kdsCleared=true&limit=50", { credentials: "include", headers: authHeaders() });
+      const r = await fetch("/cedar-api/api/orders?kdsCleared=true&limit=50", { credentials: "include", headers: authHeaders() });
       const data: Order[] = await r.json();
       setHistoryOrders(data);
     } catch { /* silent */ } finally { setHistoryLoading(false); }
@@ -712,7 +712,7 @@ export default function Kitchen({ station }: { station?: string } = {}) {
   const recallOrder = async (order: Order) => {
     setRecalling(s => new Set(s).add(order.id));
     try {
-      await fetch(`/api/orders/${order.id}`, {
+      await fetch(`/cedar-api/api/orders/${order.id}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json", ...authHeaders() },

@@ -390,7 +390,7 @@ export default function Admin() {
   const isFirstFetchRef = useRef(true);
 
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
+    fetch("/cedar-api/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => { if (!d.authed) navigate(adminRoutes.login); else if (d.role !== "admin") navigate(adminRoutes.pos); })
       .catch(() => navigate(adminRoutes.login));
@@ -451,14 +451,14 @@ export default function Admin() {
 
   const logout = async () => {
     clearAuthToken();
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include", headers: authHeaders() });
+    await fetch("/cedar-api/api/auth/logout", { method: "POST", credentials: "include", headers: authHeaders() });
     navigate(adminRoutes.login);
   };
 
   const handleSync = async () => {
     setSyncState("syncing"); setSyncMessage("");
     try {
-      const r = await fetch("/api/sync/push", { method: "POST", credentials: "include", headers: authHeaders() });
+      const r = await fetch("/cedar-api/api/sync/push", { method: "POST", credentials: "include", headers: authHeaders() });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Sync failed");
       const ts = new Date().toLocaleString();
@@ -473,7 +473,7 @@ export default function Admin() {
     if (pullMenuState === "pulling") return;
     setPullMenuState("pulling"); setPullMenuMessage("");
     try {
-      const r = await fetch("/api/sync/pull", { method: "POST", credentials: "include", headers: authHeaders() });
+      const r = await fetch("/cedar-api/api/sync/pull", { method: "POST", credentials: "include", headers: authHeaders() });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Pull failed");
       setPullMenuState("success");
@@ -486,7 +486,7 @@ export default function Admin() {
     if (importState === "importing") return;
     setImportState("importing"); setImportMessage("Fetching data from Loyverse… this may take a minute.");
     try {
-      const r = await fetch("/api/loyverse/import-history", { method: "POST", credentials: "include", headers: authHeaders() });
+      const r = await fetch("/cedar-api/api/loyverse/import-history", { method: "POST", credentials: "include", headers: authHeaders() });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Import failed");
       const { customersImported, customersSkipped, ordersImported, ordersSkipped, truncated, errors } = data;
@@ -505,7 +505,7 @@ export default function Admin() {
     setCsvState("uploading"); setCsvMessage("Uploading & importing CSV — please wait…");
     try {
       const form = new FormData(); form.append("file", file);
-      const r = await fetch("/api/loyverse/import-csv", { method: "POST", credentials: "include", headers: authHeaders(), body: form });
+      const r = await fetch("/cedar-api/api/loyverse/import-csv", { method: "POST", credentials: "include", headers: authHeaders(), body: form });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "CSV import failed");
       const { imported, skipped, errors: errs } = data;
@@ -1081,7 +1081,7 @@ export default function Admin() {
                                 if (st === "sending" || st === "ok") return;
                                 setWaReceiptState(prev => ({ ...prev, [order.id]: "sending" }));
                                 try {
-                                  const r = await fetch(`/api/orders/${order.id}/whatsapp-receipt`, { method: "POST", credentials: "include", headers: authHeaders() });
+                                  const r = await fetch(`/cedar-api/api/orders/${order.id}/whatsapp-receipt`, { method: "POST", credentials: "include", headers: authHeaders() });
                                   setWaReceiptState(prev => ({ ...prev, [order.id]: r.ok ? "ok" : "error" }));
                                   setTimeout(() => setWaReceiptState(prev => ({ ...prev, [order.id]: "idle" })), 3000);
                                 } catch {

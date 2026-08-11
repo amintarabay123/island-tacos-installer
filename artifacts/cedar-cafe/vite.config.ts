@@ -82,9 +82,10 @@ export default defineConfig({
       deny: ["**/.*"],
     },
     proxy: {
-      "/api": {
+      "/cedar-api": {
         target: process.env.API_SERVER_URL ?? "http://localhost:8181",
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/cedar-api/, ""),
       },
     },
   },

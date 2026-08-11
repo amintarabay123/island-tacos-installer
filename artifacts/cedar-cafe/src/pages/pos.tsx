@@ -1003,7 +1003,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     try {
       // activeOnly: server returns only open tickets (excludes cancelled and
       // completed+paid). Fetching the full history here froze the POS device.
-      const r = await fetch("/api/orders?activeOnly=true", { credentials: "include", headers: authHeaders() });
+      const r = await fetch("/cedar-api/api/orders?activeOnly=true", { credentials: "include", headers: authHeaders() });
       const data: Order[] = await r.json();
       // Client-side filter kept as a safety net (e.g. older server without activeOnly).
       setOrders(data.filter(o => o.status !== "cancelled" && !(o.status === "completed" && o.paymentStatus === "paid")));
@@ -1014,7 +1014,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
 
   // Real-time sync: any order change on another POS instance triggers an immediate reload
   useEffect(() => {
-    const es = new EventSource("/api/pos/events", { withCredentials: true });
+    const es = new EventSource("/cedar-api/api/pos/events", { withCredentials: true });
     es.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data) as { type: string };
@@ -1042,7 +1042,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   const chargeTicket = (o: Order) => {
     // DB returns numeric fields as strings — coerce everything to number before sending
     const n = (v: unknown) => parseFloat(String(v)) || 0;
-    fetch("/api/display", {
+    fetch("/cedar-api/api/display", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -1064,7 +1064,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   };
 
   const voidTicket = async (id: number) => {
-    await fetch(`/api/orders/${id}`, {
+    await fetch(`/cedar-api/api/orders/${id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ status: "cancelled" }),
@@ -1073,7 +1073,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   };
 
   const updateStatus = async (id: number, status: string) => {
-    await fetch(`/api/orders/${id}`, {
+    await fetch(`/cedar-api/api/orders/${id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ status }),
@@ -1091,7 +1091,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     try {
       const body: Record<string, unknown> = { kdsCleared: false };
       if (o.status === "pending") body.status = "confirmed";
-      const r = await fetch(`/api/orders/${o.id}`, {
+      const r = await fetch(`/cedar-api/api/orders/${o.id}`, {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(body),
@@ -1111,7 +1111,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     const notes = splitNote
       ? (chargeOrder.notes ? `${chargeOrder.notes}\n${splitNote}` : splitNote)
       : chargeOrder.notes;
-    const r = await fetch(`/api/orders/${chargeOrder.id}`, {
+    const r = await fetch(`/cedar-api/api/orders/${chargeOrder.id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       // Set status:"completed" so the ticket is removed from held tickets.
@@ -1124,7 +1124,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
       return;
     }
     // Update customer display to "completed" state
-    fetch("/api/display", {
+    fetch("/cedar-api/api/display", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -1148,7 +1148,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
     const notes = splitNote
       ? (chargeOrder.notes ? `${chargeOrder.notes}\n${splitNote}` : splitNote)
       : chargeOrder.notes;
-    const r = await fetch(`/api/orders/${chargeOrder.id}`, {
+    const r = await fetch(`/cedar-api/api/orders/${chargeOrder.id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ actualPaymentMethod: method, paymentStatus: "paid", ...(tendered != null ? { amountTendered: tendered } : {}), ...(notes ? { notes } : {}) }),
@@ -1159,7 +1159,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   };
 
   const completeOrder = async (id: number) => {
-    await fetch(`/api/orders/${id}`, {
+    await fetch(`/cedar-api/api/orders/${id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ status: "completed" }),
@@ -1169,7 +1169,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
 
   const completeWithSplit = async (_groups: SplitGroup[], note: string, order: Order) => {
     const existingNotes = order.notes ? `${order.notes}\n${note}` : note;
-    await fetch(`/api/orders/${order.id}`, {
+    await fetch(`/cedar-api/api/orders/${order.id}`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       // Do NOT set status:"completed" — KDS owns removal, payment only marks as paid.
@@ -1338,7 +1338,7 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
           onTabChange={(tab) => {
             if (!chargeOrder) return;
             const n = (v: unknown) => parseFloat(String(v)) || 0;
-            fetch("/api/display", {
+            fetch("/cedar-api/api/display", {
               method: "POST",
               credentials: "include",
               headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -1459,7 +1459,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     // Newest 300 orders is plenty for receipt lookup/search — an unbounded
     // fetch of the entire history froze the POS device as data accumulated.
-    fetch("/api/orders?limit=300", { credentials: "include", headers: authHeaders() })
+    fetch("/cedar-api/api/orders?limit=300", { credentials: "include", headers: authHeaders() })
       .then(r => r.json())
       .then((data: Order[]) => {
         const done = data
@@ -1475,7 +1475,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (!selected) { setOrderRefunds([]); return; }
-    fetch(`/api/orders/${selected.id}/refunds`, { credentials: "include", headers: authHeaders() })
+    fetch(`/cedar-api/api/orders/${selected.id}/refunds`, { credentials: "include", headers: authHeaders() })
       .then(r => r.json())
       .then(setOrderRefunds)
       .catch(() => {});
@@ -1579,7 +1579,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                 setRefiring(true);
                 setRefireStatus("idle");
                 try {
-                  const r = await fetch(`/api/orders/${selected.id}`, {
+                  const r = await fetch(`/cedar-api/api/orders/${selected.id}`, {
                     method: "PATCH",
                     credentials: "include",
                     headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -1642,7 +1642,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   onClick={async () => {
                     setEmailSending(true); setEmailStatus("idle");
                     try {
-                      const r = await fetch(`/api/orders/${selected.id}/email-receipt`, {
+                      const r = await fetch(`/cedar-api/api/orders/${selected.id}/email-receipt`, {
                         method: "POST", credentials: "include",
                         headers: { "Content-Type": "application/json", ...authHeaders() },
                         body: JSON.stringify({ toEmail: emailAddress }),
@@ -1675,7 +1675,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                     if (!selected) return;
                     setWaReceiptState("sending");
                     try {
-                      const r = await fetch(`/api/orders/${selected.id}/whatsapp-receipt`, { method: "POST", credentials: "include", headers: authHeaders() });
+                      const r = await fetch(`/cedar-api/api/orders/${selected.id}/whatsapp-receipt`, { method: "POST", credentials: "include", headers: authHeaders() });
                       setWaReceiptState(r.ok ? "ok" : "error");
                       setTimeout(() => setWaReceiptState("idle"), 3000);
                     } catch {
@@ -1714,7 +1714,7 @@ function ReceiptsDrawer({ onClose }: { onClose: () => void }) {
                   onClick={async () => {
                     setRefundSubmitting(true);
                     try {
-                      const r = await fetch(`/api/orders/${selected.id}/refund`, {
+                      const r = await fetch(`/cedar-api/api/orders/${selected.id}/refund`, {
                         method: "POST", credentials: "include",
                         headers: { "Content-Type": "application/json", ...authHeaders() },
                         body: JSON.stringify({ amount: parseFloat(refundAmount), reason: refundReason, refundMethod }),
@@ -1877,7 +1877,7 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch("/api/menu/soldout", { credentials: "include", headers: authHeaders() });
+      const r = await fetch("/cedar-api/api/menu/soldout", { credentials: "include", headers: authHeaders() });
       if (r.ok) setData(await r.json());
     } finally { setLoading(false); }
   }, []);
@@ -1905,7 +1905,7 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
       if (preset.type === "item") {
         const targets = data.items.filter(i => matches(i.name, preset.keywords));
         await Promise.all(targets.map(item =>
-          fetch(`/api/menu/soldout/item/${item.id}`, {
+          fetch(`/cedar-api/api/menu/soldout/item/${item.id}`, {
             method: "POST", credentials: "include",
             headers: { "Content-Type": "application/json", ...authHeaders() },
             body: JSON.stringify({ available: !turnOff }),
@@ -1921,7 +1921,7 @@ function SoldOutDrawer({ onClose }: { onClose: () => void }) {
             mod.options
               .filter(o => matches(o.name, preset.keywords))
               .map(o =>
-                fetch("/api/menu/soldout/modifier-option", {
+                fetch("/cedar-api/api/menu/soldout/modifier-option", {
                   method: "POST", credentials: "include",
                   headers: { "Content-Type": "application/json", ...authHeaders() },
                   body: JSON.stringify({ modifierId: mod.id, optionId: o.id, available: !turnOff }),
@@ -2078,12 +2078,12 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
   const reprintLastZ = async () => {
     setReprinting(true); setReprintMsg(null);
     try {
-      const r = await fetch("/api/shifts", { credentials: "include", headers: authHeaders() });
+      const r = await fetch("/cedar-api/api/shifts", { credentials: "include", headers: authHeaders() });
       if (!r.ok) throw new Error("fetch shifts failed");
       const shifts: Shift[] = await r.json();
       const last = shifts.find(s => s.closedAt);
       if (!last) { setReprintMsg("No closed shift found yet."); setReprinting(false); return; }
-      const sr = await fetch(`/api/shifts/${last.id}/summary`, { credentials: "include", headers: authHeaders() });
+      const sr = await fetch(`/cedar-api/api/shifts/${last.id}/summary`, { credentials: "include", headers: authHeaders() });
       if (!sr.ok) throw new Error("fetch summary failed");
       const summary: ShiftSummary = await sr.json();
       await printReceiptLines(buildZReportLines(last, summary, last.closingFloat, true, storeName, address));
@@ -2097,7 +2097,7 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
   const handleOpen = async () => {
     setSubmitting(true); setError(null);
     try {
-      const r = await fetch("/api/shifts", {
+      const r = await fetch("/cedar-api/api/shifts", {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ openingFloat: parseFloat(float) || 0, notes: notes || undefined }),
@@ -2166,13 +2166,13 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
 
   useEffect(() => {
     if (shift.id === 0) return;
-    fetch(`/api/shifts/${shift.id}/summary`, { credentials: "include", headers: authHeaders() })
+    fetch(`/cedar-api/api/shifts/${shift.id}/summary`, { credentials: "include", headers: authHeaders() })
       .then(r => r.json()).then(d => { setSummary(d); }).catch(() => {});
   }, [shift.id]);
 
   const handleClose = async () => {
     setClosing(true);
-    await fetch(`/api/shifts/${shift.id}/close`, {
+    await fetch(`/cedar-api/api/shifts/${shift.id}/close`, {
       method: "PATCH", credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ closingFloat: closingFloat ? parseFloat(closingFloat) : undefined }),
@@ -2262,7 +2262,7 @@ function PayInOutModal({ shiftId, onClose }: { shiftId: number | null; onClose: 
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    const url = shiftId ? `/api/cash-transactions?shiftId=${shiftId}` : "/api/cash-transactions";
+    const url = shiftId ? `/cedar-api/api/cash-transactions?shiftId=${shiftId}` : "/cedar-api/api/cash-transactions";
     fetch(url, { credentials: "include", headers: authHeaders() })
       .then(r => r.json()).then(setTransactions).catch(() => {});
   }, [shiftId]);
@@ -2270,14 +2270,14 @@ function PayInOutModal({ shiftId, onClose }: { shiftId: number | null; onClose: 
   const submit = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
     setSubmitting(true);
-    await fetch("/api/cash-transactions", {
+    await fetch("/cedar-api/api/cash-transactions", {
       method: "POST", credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ shiftId, type, amount: parseFloat(amount), note: note || undefined }),
     });
     const msg = `${type === "pay_in" ? "Pay In" : "Pay Out"} ${fmt(parseFloat(amount))} recorded`;
     setSuccess(msg); setAmount(""); setNote(""); setSubmitting(false);
-    const url = shiftId ? `/api/cash-transactions?shiftId=${shiftId}` : "/api/cash-transactions";
+    const url = shiftId ? `/cedar-api/api/cash-transactions?shiftId=${shiftId}` : "/cedar-api/api/cash-transactions";
     fetch(url, { credentials: "include", headers: authHeaders() })
       .then(r => r.json()).then(setTransactions).catch(() => {});
     setTimeout(() => setSuccess(null), 3000);
@@ -2793,7 +2793,7 @@ export default function POS() {
   // Sync printer config from server on load — ensures all devices share one config
   // set from Admin → Reports → Printer Settings.
   useEffect(() => {
-    fetch("/api/settings", { credentials: "include", headers: authHeaders() })
+    fetch("/cedar-api/api/settings", { credentials: "include", headers: authHeaders() })
       .then(r => r.json())
       .then((data: Record<string, string>) => {
         if (data.printer_config) {
@@ -2809,7 +2809,7 @@ export default function POS() {
 
   // Auth guard
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
+    fetch("/cedar-api/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then(r => r.json())
       .then(d => { if (!d.authed) navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`); })
       .catch(() => navigate(`${adminRoutes.login}?redirect=${encodeURIComponent(adminRoutes.pos)}`));
@@ -2881,7 +2881,7 @@ export default function POS() {
   const [cashMgmtOpen, setCashMgmtOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/shifts/current", { credentials: "include", headers: authHeaders() })
+    fetch("/cedar-api/api/shifts/current", { credentials: "include", headers: authHeaders() })
       .then(r => r.json())
       .then(d => {
         if (d && d.id) { setCurrentShift(d); setShiftLoading(false); }
@@ -2994,7 +2994,7 @@ export default function POS() {
       try {
         // activeOnly keeps the every-8s payload small (open tickets only) —
         // pending notifications and the held-ticket count only need active orders.
-        const r = await fetch("/api/orders?activeOnly=true&limit=500", { credentials: "include", headers: authHeaders() });
+        const r = await fetch("/cedar-api/api/orders?activeOnly=true&limit=500", { credentials: "include", headers: authHeaders() });
         const data: Order[] = await r.json();
 
         // ── Online + phone order notifications ──
@@ -3046,7 +3046,7 @@ export default function POS() {
 
   // Real-time sync: fire the main poll immediately when any order changes on another instance
   useEffect(() => {
-    const es = new EventSource("/api/pos/events", { withCredentials: true });
+    const es = new EventSource("/cedar-api/api/pos/events", { withCredentials: true });
     es.onmessage = (e) => {
       try {
         const msg = JSON.parse(e.data) as { type: string };
@@ -3067,7 +3067,7 @@ export default function POS() {
   }, [popupOrders, playChime]);
 
   const acceptOnline = async (id: number) => {
-    await fetch(`/api/orders/${id}`, {
+    await fetch(`/cedar-api/api/orders/${id}`, {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -3081,7 +3081,7 @@ export default function POS() {
   };
 
   const rejectOnline = async (id: number) => {
-    await fetch(`/api/orders/${id}`, {
+    await fetch(`/cedar-api/api/orders/${id}`, {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -3113,7 +3113,7 @@ export default function POS() {
 
   // On mount: immediately reset display to idle so stale state from a previous session is cleared
   useEffect(() => {
-    fetch("/api/display", {
+    fetch("/cedar-api/api/display", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -3144,7 +3144,7 @@ export default function POS() {
             paymentMethod: showingAthMovil ? "athmovil" : undefined,
           }
         : { status: "idle", items: [], subtotal: 0, tax: 0, total: 0 };
-      fetch("/api/display", {
+      fetch("/cedar-api/api/display", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -3167,7 +3167,7 @@ export default function POS() {
       const now = Date.now();
       let mods = (cached && now - cached.ts < MODIFIER_CACHE_TTL_MS) ? cached.mods : null;
       if (!mods) {
-        const r = await fetch(`/api/menu/items/${item.id}/modifiers`, { credentials: "include" });
+        const r = await fetch(`/cedar-api/api/menu/items/${item.id}/modifiers`, { credentials: "include" });
         mods = await r.json() as Modifier[];
         modifierCacheRef.current.set(item.id, { mods, ts: now });
       }
@@ -3244,7 +3244,7 @@ export default function POS() {
       const nowEdit = Date.now();
       let mods = (cachedEdit && nowEdit - cachedEdit.ts < MODIFIER_CACHE_TTL_MS) ? cachedEdit.mods : null;
       if (!mods) {
-        const r = await fetch(`/api/menu/items/${menuItem.id}/modifiers`, { credentials: "include" });
+        const r = await fetch(`/cedar-api/api/menu/items/${menuItem.id}/modifiers`, { credentials: "include" });
         mods = await r.json() as Modifier[];
         modifierCacheRef.current.set(menuItem.id, { mods, ts: nowEdit });
       }
@@ -3299,7 +3299,7 @@ export default function POS() {
           if (tendered != null) patchBody.amountTendered = tendered;
         }
         // For "pending" (re-hold): just update notes/name if changed — keep status as-is
-        const r = await fetch(`/api/orders/${resumedOrderId}`, {
+        const r = await fetch(`/cedar-api/api/orders/${resumedOrderId}`, {
           method: "PATCH", credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify(patchBody),
@@ -3313,7 +3313,7 @@ export default function POS() {
       } else if (addOnOnly) {
         // Add-on items only, existing lines untouched — append to the existing order.
         // The original order stays on KDS with its current status and column position.
-        const addR = await fetch(`/api/orders/${resumedOrderId}/add-items`, {
+        const addR = await fetch(`/cedar-api/api/orders/${resumedOrderId}/add-items`, {
           method: "POST", credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
@@ -3345,7 +3345,7 @@ export default function POS() {
           patchBody.status = "completed";
           if (tendered != null) patchBody.amountTendered = tendered;
         }
-        const patchR = await fetch(`/api/orders/${resumedOrderId}`, {
+        const patchR = await fetch(`/cedar-api/api/orders/${resumedOrderId}`, {
           method: "PATCH", credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify(patchBody),
@@ -3359,7 +3359,7 @@ export default function POS() {
       } else {
         // Existing items were changed (qty or removed) — cancel old and create fresh order
         if (resumedOrderId) {
-          const cancelRes = await fetch(`/api/orders/${resumedOrderId}`, {
+          const cancelRes = await fetch(`/cedar-api/api/orders/${resumedOrderId}`, {
             method: "PATCH", credentials: "include",
             headers: { "Content-Type": "application/json", ...authHeaders() },
             body: JSON.stringify({ status: "cancelled" }),
@@ -3378,7 +3378,7 @@ export default function POS() {
           const cat = categories.find(cat => cat.id === mi.categoryId);
           return cat?.sendToKds === true;
         });
-        const r = await fetch("/api/orders", {
+        const r = await fetch("/cedar-api/api/orders", {
           method: "POST", credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
@@ -3424,7 +3424,7 @@ export default function POS() {
       if (paymentStatus === "paid") {
         // Push "completed" state to customer display only for actual payments
         displayCompletedAt.current = Date.now();
-        fetch("/api/display", {
+        fetch("/cedar-api/api/display", {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -3490,7 +3490,7 @@ export default function POS() {
 
       if (noNewItems) {
         // No new items — patch existing order's payment without touching status or KDS state
-        const r = await fetch(`/api/orders/${resumedOrderId}`, {
+        const r = await fetch(`/cedar-api/api/orders/${resumedOrderId}`, {
           method: "PATCH", credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
@@ -3505,7 +3505,7 @@ export default function POS() {
         }
       } else if (addOnOnly) {
         // Add-on items only — append to existing order, then patch payment
-        const addR = await fetch(`/api/orders/${resumedOrderId}/add-items`, {
+        const addR = await fetch(`/cedar-api/api/orders/${resumedOrderId}/add-items`, {
           method: "POST", credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
@@ -3528,7 +3528,7 @@ export default function POS() {
           const errData = await addR.json().catch(() => ({})) as { error?: string };
           throw new Error(errData.error ?? `Failed to add items (${addR.status})`);
         }
-        const patchR = await fetch(`/api/orders/${resumedOrderId}`, {
+        const patchR = await fetch(`/cedar-api/api/orders/${resumedOrderId}`, {
           method: "PATCH", credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
@@ -3544,7 +3544,7 @@ export default function POS() {
       } else {
         // Existing items were changed — cancel old ticket and create a new one
         if (resumedOrderId) {
-          const cancelRes = await fetch(`/api/orders/${resumedOrderId}`, {
+          const cancelRes = await fetch(`/cedar-api/api/orders/${resumedOrderId}`, {
             method: "PATCH", credentials: "include",
             headers: { "Content-Type": "application/json", ...authHeaders() },
             body: JSON.stringify({ status: "cancelled" }),
@@ -3554,7 +3554,7 @@ export default function POS() {
             throw new Error(errData.error ?? `Could not cancel previous ticket (${cancelRes.status}). Order not placed.`);
           }
         }
-        const r = await fetch("/api/orders", {
+        const r = await fetch("/cedar-api/api/orders", {
           method: "POST", credentials: "include",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({

@@ -108,7 +108,7 @@ export default function AdminMenu() {
 
   const openGallery = (target: "imageUrl" | "posImageUrl") => {
     setGalleryTarget(target); setGalleryOpen(true); setGalleryLoading(true);
-    fetch("/api/admin/uploaded-images", { credentials: "include" })
+    fetch("/cedar-api/api/admin/uploaded-images", { credentials: "include" })
       .then((r) => r.json())
       .then((d: { urls: string[] }) => setGalleryUrls(d.urls ?? []))
       .catch(() => setGalleryUrls([]))
@@ -126,7 +126,7 @@ export default function AdminMenu() {
   const [allModifiers, setAllModifiers] = useState<Modifier[]>([]);
 
   useEffect(() => {
-    fetch("/api/menu/modifiers").then((r) => r.json()).then((d) => setAllModifiers(d as Modifier[])).catch(() => {});
+    fetch("/cedar-api/api/menu/modifiers").then((r) => r.json()).then((d) => setAllModifiers(d as Modifier[])).catch(() => {});
   }, []);
 
   const [orderedIds, setOrderedIds] = useState<number[]>([]);
@@ -293,7 +293,7 @@ export default function AdminMenu() {
     setImageUploading(true);
     try {
       const body = new FormData(); body.append("file", file);
-      const r = await fetch("/api/upload", { method: "POST", credentials: "include", body });
+      const r = await fetch("/cedar-api/api/upload", { method: "POST", credentials: "include", body });
       if (!r.ok) throw new Error("Upload failed");
       const { url } = await r.json() as { url: string };
       setForm((f) => ({ ...f, imageUrl: url }));
@@ -305,7 +305,7 @@ export default function AdminMenu() {
     setPosImageUploading(true);
     try {
       const body = new FormData(); body.append("file", file);
-      const r = await fetch("/api/upload", { method: "POST", credentials: "include", body });
+      const r = await fetch("/cedar-api/api/upload", { method: "POST", credentials: "include", body });
       if (!r.ok) throw new Error("Upload failed");
       const { url } = await r.json() as { url: string };
       setForm((f) => ({ ...f, posImageUrl: url }));

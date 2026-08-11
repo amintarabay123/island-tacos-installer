@@ -18,7 +18,7 @@ function useModifiers() {
   const [loading, setLoading] = useState(true);
   const load = () => {
     setLoading(true);
-    fetch("/api/menu/modifiers")
+    fetch("/cedar-api/api/menu/modifiers")
       .then((r) => r.json())
       .then((d) => setModifiers(d as Modifier[]))
       .catch(() => {})
@@ -100,7 +100,7 @@ export default function AdminModifiers() {
   const saveReorder = (ordered: Modifier[]) => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      fetch("/api/menu/modifiers/reorder", {
+      fetch("/cedar-api/api/menu/modifiers/reorder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: ordered.map((m) => m.id) }),
@@ -152,9 +152,9 @@ export default function AdminModifiers() {
       const payload = { name: form.name.trim(), options: validOptions, required: form.required, minSelections: form.minSelections, maxSelections: form.maxSelections };
       let res: Response;
       if (dialog?.mode === "create") {
-        res = await fetch("/api/menu/modifiers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        res = await fetch("/cedar-api/api/menu/modifiers", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       } else {
-        res = await fetch(`/api/menu/modifiers/${dialog?.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        res = await fetch(`/cedar-api/api/menu/modifiers/${dialog?.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       }
       if (!res.ok) throw new Error(await res.text());
       toast({ title: dialog?.mode === "create" ? "Modifier created" : "Modifier updated" });
@@ -168,7 +168,7 @@ export default function AdminModifiers() {
     if (!window.confirm(`Delete modifier "${modName}"? This will remove it from all menu items.`)) return;
     setDeleting(id);
     try {
-      const res = await fetch(`/api/menu/modifiers/${id}`, { method: "DELETE" });
+      const res = await fetch(`/cedar-api/api/menu/modifiers/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await res.text());
       toast({ title: "Modifier deleted" }); reload();
     } catch (e) {

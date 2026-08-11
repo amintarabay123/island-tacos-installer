@@ -67,14 +67,14 @@ export default function AdminReports() {
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
+    fetch("/cedar-api/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then(r => r.json()).then(d => { if (!d.authed || d.role !== "admin") navigate(adminRoutes.login); })
       .catch(() => navigate(adminRoutes.login));
   }, [navigate]);
 
   // Load printer configs from server so settings are shared across all devices
   useEffect(() => {
-    fetch("/api/settings", { credentials: "include", headers: authHeaders() })
+    fetch("/cedar-api/api/settings", { credentials: "include", headers: authHeaders() })
       .then(r => r.json())
       .then((data: Record<string, string>) => {
         if (data.printer_config) {
@@ -96,7 +96,7 @@ export default function AdminReports() {
   const loadReport = useCallback(async (f: string, t: string) => {
     setLoading(true); setError(null);
     try {
-      const r = await fetch(`/api/reports/sales?from=${f}&to=${t}`, { credentials: "include", headers: authHeaders() });
+      const r = await fetch(`/cedar-api/api/reports/sales?from=${f}&to=${t}`, { credentials: "include", headers: authHeaders() });
       if (!r.ok) throw new Error(await r.text());
       setReport(await r.json());
     } catch (e) { setError(String(e)); }
@@ -121,7 +121,7 @@ export default function AdminReports() {
 
   const savePrinterConfig = () => {
     localStorage.setItem("printerConfig", JSON.stringify(printerConfig));
-    fetch("/api/settings", {
+    fetch("/cedar-api/api/settings", {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -133,7 +133,7 @@ export default function AdminReports() {
 
   const saveKdsPrinterConfig = () => {
     localStorage.setItem("kdsConfig", JSON.stringify(kdsPrinterConfig));
-    fetch("/api/settings", {
+    fetch("/cedar-api/api/settings", {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -731,7 +731,7 @@ export default function AdminReports() {
               <div style={{ marginTop:10, padding:12, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:8, fontSize:12, color:"#5a8a6a", lineHeight:1.7 }}>
                 <p style={{ fontWeight:600, color:"#e8f5ed", marginBottom:6 }}>Setup (one-time, ~2 minutes):</p>
                 <p>1. Install <strong style={{ color:"#e8f5ed" }}>Node.js</strong> on any Windows/Mac computer on your restaurant WiFi.</p>
-                <p>2. <a href="/api/print/bridge.js" download style={{ color:"#10b981", fontWeight:600 }}>Download the bridge script</a> — open in a text editor and set PRINTER_IP to your printer's local IP.</p>
+                <p>2. <a href="/cedar-api/api/print/bridge.js" download style={{ color:"#10b981", fontWeight:600 }}>Download the bridge script</a> — open in a text editor and set PRINTER_IP to your printer's local IP.</p>
                 <p>3. Run: <code style={{ background:"rgba(255,255,255,0.08)", padding:"1px 6px", borderRadius:4, color:"#e8f5ed" }}>node cedar-cafe-bridge.js</code></p>
                 <p>4. Leave that window open. Bridge URL = <strong style={{ color:"#e8f5ed" }}>http://localhost:8765</strong></p>
               </div>

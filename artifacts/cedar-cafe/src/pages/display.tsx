@@ -119,7 +119,7 @@ export default function CustomerDisplay() {
     const poll = async () => {
       if (!active) return;
       try {
-        const r = await fetch("/api/display", { cache: "no-store" });
+        const r = await fetch("/cedar-api/api/display", { cache: "no-store" });
         if (!r.ok) return;
         const data = await r.json() as DisplayState;
         if (!active) return;

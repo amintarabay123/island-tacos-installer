@@ -10,7 +10,7 @@ export default function ProtectedRoute({ children, adminOnly }: Props) {
   const [location, navigate] = useLocation();
 
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
+    fetch("/cedar-api/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then((r) => r.json())
       .then((d) => {
         if (d.authed && (!adminOnly || d.role === "admin")) {

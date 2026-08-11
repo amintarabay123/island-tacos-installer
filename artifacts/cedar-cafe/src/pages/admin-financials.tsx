@@ -445,7 +445,7 @@ export default function AdminFinancials() {
 
   // Check auth
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
+    fetch("/cedar-api/api/auth/me", { credentials: "include", cache: "no-store", headers: authHeaders() })
       .then(r => r.json()).then(d => { if (!d.authed || d.role !== "admin") navigate(adminRoutes.login); })
       .catch(() => navigate(adminRoutes.login));
   }, [navigate]);
@@ -454,7 +454,7 @@ export default function AdminFinancials() {
   const loadDrafts = useCallback(async () => {
     setLoadingDrafts(true);
     try {
-      const r = await fetch("/api/financials/drafts", { credentials: "include", headers: authHeaders() });
+      const r = await fetch("/cedar-api/api/financials/drafts", { credentials: "include", headers: authHeaders() });
       if (r.ok) setDrafts(await r.json());
     } finally { setLoadingDrafts(false); }
   }, []);
@@ -464,7 +464,7 @@ export default function AdminFinancials() {
   // Load specific draft
   useEffect(() => {
     if (!draftId) return;
-    fetch(`/api/financials/drafts/${draftId}`, { credentials: "include", headers: authHeaders() })
+    fetch(`/cedar-api/api/financials/drafts/${draftId}`, { credentials: "include", headers: authHeaders() })
       .then(r => r.json()).then(d => {
         if (d.period_start) setPeriodStart(d.period_start);
         if (d.period_end)   setPeriodEnd(d.period_end);
@@ -477,13 +477,13 @@ export default function AdminFinancials() {
     setSaving(true);
     try {
       if (draftId) {
-        await fetch(`/api/financials/drafts/${draftId}`, {
+        await fetch(`/cedar-api/api/financials/drafts/${draftId}`, {
           method: "PUT", credentials: "include",
           headers: { ...authHeaders(), "Content-Type": "application/json" },
           body: JSON.stringify({ period_start: periodStart, period_end: periodEnd, data: payload }),
         });
       } else {
-        const r = await fetch("/api/financials/drafts", {
+        const r = await fetch("/cedar-api/api/financials/drafts", {
           method: "POST", credentials: "include",
           headers: { ...authHeaders(), "Content-Type": "application/json" },
           body: JSON.stringify({ period_start: periodStart, period_end: periodEnd, data: payload }),
@@ -499,7 +499,7 @@ export default function AdminFinancials() {
   const fetchPOSData = async () => {
     setFetchingPOS(true);
     try {
-      const r = await fetch(`/api/reports/sales?from=${periodStart}&to=${periodEnd}`, {
+      const r = await fetch(`/cedar-api/api/reports/sales?from=${periodStart}&to=${periodEnd}`, {
         credentials: "include", headers: authHeaders(),
       });
       if (!r.ok) throw new Error("Failed");
@@ -522,7 +522,7 @@ export default function AdminFinancials() {
 
   const deleteDraft = async (id: number) => {
     if (!confirm("Delete this draft? This cannot be undone.")) return;
-    await fetch(`/api/financials/drafts/${id}`, { method: "DELETE", credentials: "include", headers: authHeaders() });
+    await fetch(`/cedar-api/api/financials/drafts/${id}`, { method: "DELETE", credentials: "include", headers: authHeaders() });
     await loadDrafts();
     if (draftId === id) { setDraftId(null); setData({ ...EMPTY_DRAFT }); setStep(0); setInWizard(false); }
   };
