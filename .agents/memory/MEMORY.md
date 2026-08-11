@@ -13,6 +13,7 @@
 - [Receipt PDF logo and layout](receipt-pdf-layout.md) — logo lives in api-server/src/assets/, copied to dist/assets/ at build; layout matches approved WA sample exactly.
 - [Placetopay tranKey algorithm](placetopay-auth-algorithm.md) — secret key goes in raw (no SHA-1); all SHA-1 variants return error 102 on their test server.
 - [Cedar Cafe tenant setup](cedar-cafe-tenant.md) — routing, STORE_PROFILE_ID, dual-DB topology, rebuild-before-restart, deployment arch (separate Replit project → cedarcafebvi.com), artifact removal rule for CC publish.
+- [Cedar Cafe / Island Tacos separation](cedar-cafe-separation.md) — hard no-cross-contamination rule; how to orient, what belongs where, what caused past violations.
 - [Island Tacos cloud DB always empty](island-tacos-cloud-db.md) — menu_items/menu_categories = 0 on cloud Replit is normal; real data lives on mini PC only.
 - [Schema migration rule](schema-migration-rule.md) — every schema column addition must ALSO run ALTER TABLE against production DB immediately, or all queries on that table return 500.
 - [Online order status ownership](online-order-status-ownership.md) — cloud owns paymentStatus, mini PC owns order.status; sync must NEVER pull status cloud→local or accepted orders revert to pending and vanish from KDS.
