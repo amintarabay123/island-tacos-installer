@@ -232,6 +232,8 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status        TEXT         N
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_type            TEXT         NOT NULL DEFAULT 'pickup';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS amount_tendered       NUMERIC(10,2);
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS wa_reminder_sent_at   TIMESTAMPTZ;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS wa_reminder_msg_id    TEXT;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS wa_reminder_status    TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS placetopay_request_id INTEGER;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address      TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email        TEXT         NOT NULL DEFAULT '';
@@ -247,6 +249,7 @@ ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS popular                BOOLEAN  
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS spicy                  BOOLEAN      NOT NULL DEFAULT false;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS vegetarian             BOOLEAN      NOT NULL DEFAULT false;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS open_price             BOOLEAN      NOT NULL DEFAULT false;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS hidden_online          BOOLEAN      NOT NULL DEFAULT false;
 -- modifiers
 ALTER TABLE modifiers ADD COLUMN IF NOT EXISTS unavailable_option_ids  TEXT[]       NOT NULL DEFAULT '{}';
 ALTER TABLE modifiers ADD COLUMN IF NOT EXISTS sort_order              INTEGER      NOT NULL DEFAULT 0;

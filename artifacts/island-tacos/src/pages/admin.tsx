@@ -26,7 +26,7 @@ import {
   Settings, Monitor, LogOut, XCircle, BarChart3, Users,
   CloudUpload, CloudDownload, Menu, X, ChefHat, UtensilsCrossed, Store,
   History, LayoutDashboard, CalendarIcon, Activity, PauseCircle, PlayCircle,
-  CreditCard,
+  CreditCard, Sparkles,
 } from "lucide-react";
 import { adminRoutes } from "@/lib/admin-path";
 import { useToast } from "@/hooks/use-toast";
@@ -635,6 +635,7 @@ export default function Admin() {
         { label: "Financials",      icon: History,    href: adminRoutes.financials,    iconColor: "text-emerald-400" },
         { label: "Customers",       icon: Users,      href: adminRoutes.customers,     iconColor: "text-blue-400" },
         { label: "Payment Events",  icon: CreditCard, href: adminRoutes.paymentEvents, iconColor: "text-yellow-400" },
+        { label: "AI Insights",     icon: Sparkles,   href: adminRoutes.insights,      iconColor: "text-violet-400" },
       ],
     },
   ];

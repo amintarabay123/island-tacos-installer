@@ -126,7 +126,13 @@ export function startOnlineOrdersSync(): void {
 
         // Check if order already exists locally
         const existing = await db
-          .select({ id: ordersTable.id, paymentStatus: ordersTable.paymentStatus, status: ordersTable.status })
+          .select({
+            id: ordersTable.id,
+            paymentStatus: ordersTable.paymentStatus,
+            status: ordersTable.status,
+            waReminderSentAt: ordersTable.waReminderSentAt,
+            waReminderStatus: ordersTable.waReminderStatus,
+          })
           .from(ordersTable)
           .where(eq(ordersTable.confirmationCode, code))
           .limit(1);
@@ -147,11 +153,22 @@ export function startOnlineOrdersSync(): void {
           // intermittent "accepted order not reaching the KDS" bug.
           const local = existing[0];
           const cloudPaymentStatus = (order.paymentStatus as string) ?? "pending";
-          if (local.paymentStatus !== cloudPaymentStatus) {
+          // Reminder fields are cloud-owned (the reminder job + Meta status
+          // webhook only run in the cloud), so always mirror them down like
+          // paymentStatus — never the other way around.
+          const cloudReminderSentAt = order.waReminderSentAt ? new Date(order.waReminderSentAt as string) : null;
+          const cloudReminderStatus = (order.waReminderStatus as string | null) ?? null;
+          if (
+            local.paymentStatus !== cloudPaymentStatus ||
+            local.waReminderStatus !== cloudReminderStatus ||
+            (local.waReminderSentAt?.getTime() ?? null) !== (cloudReminderSentAt?.getTime() ?? null)
+          ) {
             await db
               .update(ordersTable)
               .set({
                 paymentStatus: cloudPaymentStatus as "pending" | "paid" | "failed" | "refunded",
+                waReminderSentAt: cloudReminderSentAt,
+                waReminderStatus: cloudReminderStatus,
               })
               .where(eq(ordersTable.confirmationCode, code));
             imported++; // count as a meaningful sync event
@@ -180,6 +197,8 @@ export function startOnlineOrdersSync(): void {
             total:             order.total             as string,
             notes:             (order.notes            as string | null) ?? null,
             createdAt:         new Date(order.createdAt as string),
+            waReminderSentAt:  order.waReminderSentAt ? new Date(order.waReminderSentAt as string) : null,
+            waReminderStatus:  (order.waReminderStatus as string | null) ?? null,
           })
           .returning({ id: ordersTable.id });
 

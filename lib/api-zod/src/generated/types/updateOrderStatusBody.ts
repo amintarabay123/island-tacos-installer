@@ -22,4 +22,9 @@ export interface UpdateOrderStatusBody {
   amountTendered?: number | null;
   /** @nullable */
   notes?: string | null;
+  /**
+   * Updated discount for the order (e.g. applied while paying a resumed held ticket). The server recomputes the order total.
+   * @minimum 0
+   */
+  discountAmount?: number;
 }

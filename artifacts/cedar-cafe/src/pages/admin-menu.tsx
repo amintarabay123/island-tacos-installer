@@ -25,12 +25,12 @@ type Modifier = { id: number; loyverseId: string; name: string; options: Modifie
 type MenuItemForm = {
   categoryId: number; name: string; description: string; price: string;
   imageUrl: string; posImageUrl: string; available: boolean; popular: boolean;
-  spicy: boolean; vegetarian: boolean; openPrice: boolean; selectedModifierIds: string[];
+  spicy: boolean; vegetarian: boolean; openPrice: boolean; hiddenOnline: boolean; selectedModifierIds: string[];
 };
 const emptyForm: MenuItemForm = {
   categoryId: 0, name: "", description: "", price: "",
   imageUrl: "", posImageUrl: "", available: true, popular: false,
-  spicy: false, vegetarian: false, openPrice: false, selectedModifierIds: [],
+  spicy: false, vegetarian: false, openPrice: false, hiddenOnline: false, selectedModifierIds: [],
 };
 
 const BG = "#0d1612", CARD = "#162518", BORD = "rgba(100,200,130,0.12)";
@@ -253,6 +253,7 @@ export default function AdminMenu() {
       posImageUrl: (item as { posImageUrl?: string | null }).posImageUrl ?? "",
       available: item.available, popular: item.popular, spicy: item.spicy, vegetarian: item.vegetarian,
       openPrice: (item as { openPrice?: boolean }).openPrice ?? false,
+      hiddenOnline: (item as { hiddenOnline?: boolean }).hiddenOnline ?? false,
       selectedModifierIds: (item as { loyverseModifierIds?: string[] }).loyverseModifierIds ?? [],
     });
     setDialog({ mode: "edit", id });
@@ -267,6 +268,7 @@ export default function AdminMenu() {
       price, imageUrl: form.imageUrl || null, posImageUrl: form.posImageUrl || null,
       available: form.available, popular: form.popular, spicy: form.spicy, vegetarian: form.vegetarian,
       openPrice: form.openPrice,
+      hiddenOnline: form.hiddenOnline,
       loyverseModifierIds: form.selectedModifierIds.length > 0 ? form.selectedModifierIds : null,
     };
     const close = () => { invalidateItems(); setDialog(null); };
@@ -287,6 +289,10 @@ export default function AdminMenu() {
         invalidateItems();
       },
     });
+  };
+
+  const handleToggleHiddenOnline = (id: number, hiddenOnline: boolean) => {
+    updateItem.mutate({ id, data: { hiddenOnline } }, { onSuccess: invalidateItems });
   };
 
   const handleImageUpload = async (file: File) => {
@@ -553,6 +559,7 @@ export default function AdminMenu() {
                   <th style={{ textAlign: "left", padding: "10px 12px", fontWeight: 700, color: TM }}>Category</th>
                   <th style={{ textAlign: "right", padding: "10px 12px", fontWeight: 700, color: TM }}>Price</th>
                   <th style={{ textAlign: "center", padding: "10px 12px", fontWeight: 700, color: TM }}>Available</th>
+                  <th style={{ textAlign: "center", padding: "10px 12px", fontWeight: 700, color: TM }}>Online</th>
                   <th style={{ textAlign: "center", padding: "10px 12px", fontWeight: 700, color: TM }}>Actions</th>
                 </tr>
               </thead>
@@ -595,6 +602,7 @@ export default function AdminMenu() {
                         <div style={{ fontWeight: 600, color: TP, display: "flex", alignItems: "center", gap: 8 }}>
                           {item.name}
                           {!item.available && <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(255,255,255,0.06)", color: TMUTED, borderRadius: 4, padding: "2px 6px" }}>Hidden</span>}
+                          {((item as { hiddenOnline?: boolean }).hiddenOnline ?? false) && <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", background: "rgba(124,106,247,0.15)", color: PUR, borderRadius: 4, padding: "2px 6px" }}>Hidden Online</span>}
                         </div>
                         <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
                           {item.popular && <span style={{ fontSize: 11, color: OR }}>Popular</span>}
@@ -606,6 +614,12 @@ export default function AdminMenu() {
                       <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700, color: TP }}>${item.price.toFixed(2)}</td>
                       <td style={{ padding: "10px 12px", textAlign: "center" }}>
                         <Switch checked={item.available} onCheckedChange={(v) => handleToggleAvailable(item.id, v)} />
+                      </td>
+                      <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                        <Switch
+                          checked={!((item as { hiddenOnline?: boolean }).hiddenOnline ?? false)}
+                          onCheckedChange={(v) => handleToggleHiddenOnline(item.id, !v)}
+                        />
                       </td>
                       <td style={{ padding: "10px 12px", textAlign: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
@@ -768,6 +782,13 @@ export default function AdminMenu() {
                   <Switch checked={form[flag]} onCheckedChange={(v) => setForm((f) => ({ ...f, [flag]: v }))} />
                 </div>
               ))}
+              <div className="flex items-center justify-between" style={{ gridColumn: "1 / -1" }}>
+                <label style={{ fontSize: 13, fontWeight: 600, color: TM }}>
+                  Show on online menu
+                  <span style={{ display: "block", fontSize: 11, fontWeight: 400, color: TMUTED }}>Off = completely hidden from customers (POS still sees it)</span>
+                </label>
+                <Switch checked={!form.hiddenOnline} onCheckedChange={(v) => setForm((f) => ({ ...f, hiddenOnline: !v }))} />
+              </div>
             </div>
 
             {/* Modifier toggles */}

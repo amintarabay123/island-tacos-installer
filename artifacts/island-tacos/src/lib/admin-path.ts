@@ -16,4 +16,5 @@ export const adminRoutes = {
   settings: `${ADMIN_PATH}/settings`,
   system: `${ADMIN_PATH}/system`,
   paymentEvents: `${ADMIN_PATH}/payment-events`,
+  insights: `${ADMIN_PATH}/insights`,
 };

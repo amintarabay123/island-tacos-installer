@@ -5,6 +5,7 @@ import menuRouter from "./menu";
 import ordersRouter from "./orders";
 import paymentsRouter from "./payments";
 import adminRouter from "./admin";
+import insightsRouter from "./insights";
 import loyverseRouter from "./loyverse";
 import authRouter, { requireStaffAuth, requireAdminAuth } from "./auth";
 import webhooksRouter from "./webhooks";
@@ -160,11 +161,14 @@ router.use(printRouter);
 // in the centralized middleware block above — see comment there. They used to
 // be declared here but the routers were already mounted by this point, so the
 // guards never ran.)
-router.use(/^\/(admin|loyverse|reports|employees|financials)/, (req: Request, res: Response, next: NextFunction) => {
+// NOTE: /i flag — Express path matching is case-insensitive by default, so
+// without it "/Admin/..." would bypass this guard while still hitting the routers.
+router.use(/^\/(admin|loyverse|reports|employees|financials)/i, (req: Request, res: Response, next: NextFunction) => {
   requireAdminAuth(req, res, next);
 });
 
 router.use(adminRouter);
+router.use(insightsRouter);
 router.use(loyverseRouter);
 router.use(reportsRouter);
 router.use(employeesRouter);

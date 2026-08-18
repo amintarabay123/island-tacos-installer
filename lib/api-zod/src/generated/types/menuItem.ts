@@ -22,5 +22,6 @@ export interface MenuItem {
   spicy: boolean;
   vegetarian: boolean;
   openPrice: boolean;
+  hiddenOnline: boolean;
   createdAt: Date;
 }

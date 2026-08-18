@@ -94,6 +94,7 @@ export const ListMenuItemsResponseItem = zod.object({
   spicy: zod.boolean(),
   vegetarian: zod.boolean(),
   openPrice: zod.boolean(),
+  hiddenOnline: zod.boolean(),
   createdAt: zod.coerce.date(),
 });
 export const ListMenuItemsResponse = zod.array(ListMenuItemsResponseItem);
@@ -113,6 +114,7 @@ export const CreateMenuItemBody = zod.object({
   spicy: zod.boolean().optional(),
   vegetarian: zod.boolean().optional(),
   openPrice: zod.boolean().optional(),
+  hiddenOnline: zod.boolean().optional(),
 });
 
 /**
@@ -135,6 +137,7 @@ export const GetMenuItemResponse = zod.object({
   spicy: zod.boolean(),
   vegetarian: zod.boolean(),
   openPrice: zod.boolean(),
+  hiddenOnline: zod.boolean(),
   createdAt: zod.coerce.date(),
 });
 
@@ -157,6 +160,7 @@ export const UpdateMenuItemBody = zod.object({
   spicy: zod.boolean().optional(),
   vegetarian: zod.boolean().optional(),
   openPrice: zod.boolean().optional(),
+  hiddenOnline: zod.boolean().optional(),
 });
 
 export const UpdateMenuItemResponse = zod.object({
@@ -172,6 +176,7 @@ export const UpdateMenuItemResponse = zod.object({
   spicy: zod.boolean(),
   vegetarian: zod.boolean(),
   openPrice: zod.boolean(),
+  hiddenOnline: zod.boolean(),
   createdAt: zod.coerce.date(),
 });
 
@@ -408,6 +413,8 @@ export const UpdateOrderStatusParams = zod.object({
   id: zod.coerce.number(),
 });
 
+export const updateOrderStatusBodyDiscountAmountMin = 0;
+
 export const UpdateOrderStatusBody = zod.object({
   status: zod
     .enum([
@@ -428,6 +435,13 @@ export const UpdateOrderStatusBody = zod.object({
     .optional(),
   amountTendered: zod.number().nullish(),
   notes: zod.string().nullish(),
+  discountAmount: zod
+    .number()
+    .min(updateOrderStatusBodyDiscountAmountMin)
+    .optional()
+    .describe(
+      "Updated discount for the order (e.g. applied while paying a resumed held ticket). The server recomputes the order total.",
+    ),
 });
 
 export const UpdateOrderStatusResponse = zod.object({

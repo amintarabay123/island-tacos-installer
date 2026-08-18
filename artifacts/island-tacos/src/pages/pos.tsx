@@ -32,6 +32,8 @@ type Order = {
   amountTendered?: number | null;
   notes?: string | null; createdAt: string; customerPhone?: string | null; customerEmail?: string | null;
   orderType?: string; estimatedReadyAt?: string | null; scheduledPickupAt?: string | null;
+  waReminderSentAt?: string | null;
+  waReminderStatus?: string | null; // "sent" | "delivered" | "failed" | "failed_not_whatsapp"
   items: { id: number; menuItemId: number; menuItemName: string; quantity: number; menuItemPrice: number; subtotal: number; modifierSelections?: CartModifier[] | null; notes?: string | null; alreadyMade?: boolean | null }[];
 };
 
@@ -365,52 +367,50 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
           </div>
           {/* Content — scrollable middle */}
           <div className="flex-1 overflow-y-auto p-5 space-y-6" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
-          {modifiers.map((mod, modIdx) => {
+          {modifiers.map((mod) => {
             const groupTotal = totalSelForGroup(mod);
             const atMax = mod.maxSelections !== null && groupTotal >= mod.maxSelections;
             return (
               <div key={mod.id}>
                 <div className="flex items-center justify-between mb-3">
-                  <p style={{ color:IL.mu, fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".08em" }}>{mod.name}</p>
+                  <p style={{ color:IL.tm, fontSize:14, fontWeight:800, textTransform:"uppercase", letterSpacing:".06em" }}>{mod.name}</p>
                   <div className="flex items-center gap-1.5">
                     {mod.required && groupTotal === 0 && (
-                      <span style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:".04em", color:IL.red, background:"rgba(255,69,58,0.15)", padding:"2px 6px", borderRadius:4 }}>Required</span>
+                      <span style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:".04em", color:IL.red, background:"rgba(255,69,58,0.15)", padding:"3px 8px", borderRadius:6 }}>Required</span>
                     )}
                     {mod.minSelections > 0 && (
-                      <span style={{ fontSize:11, color:IL.mu }}>
+                      <span style={{ fontSize:12, fontWeight:600, color:IL.mu }}>
                         {mod.maxSelections === mod.minSelections ? `Pick ${mod.minSelections}` : mod.maxSelections ? `${mod.minSelections}–${mod.maxSelections}` : `Min ${mod.minSelections}`}
                       </span>
                     )}
                     {mod.maxSelections !== null && mod.minSelections === 0 && (
-                      <span style={{ fontSize:11, color:IL.mu }}>Up to {mod.maxSelections}</span>
+                      <span style={{ fontSize:12, fontWeight:600, color:IL.mu }}>Up to {mod.maxSelections}</span>
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {mod.options.sort((a, b) => a.position - b.position).map((opt, optIdx) => {
+                <div className="grid grid-cols-1 gap-2">
+                  {mod.options.sort((a, b) => a.position - b.position).map((opt) => {
                     const qty = qtys[mod.loyverseId]?.[opt.id] ?? 0;
                     const sel = qty > 0;
-                    const gi = (modIdx * 10 + optIdx) % ITEM_GRADS.length;
-                    const gd = ITEM_GRADS[gi];
                     if (opt.allowMultiple) {
+                      const plusDisabled = atMax || qty >= (opt.maxQuantity ?? 1);
                       return (
-                        <div key={opt.id} style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderRadius:14, border:"none", background:gd.grad, opacity:sel?1:0.5, boxShadow: sel ? `0 3px 14px ${gd.glow}` : "none" }}>
-                          <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none", opacity: sel ? 1 : 0.6 }} />
-                          <div style={{ display:"flex", flexDirection:"column", minWidth:0, marginRight:8, position:"relative" }}>
-                            <span style={{ fontWeight:600, fontSize:13, lineHeight:1.3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color:"#fff" }}>{opt.name}</span>
-                            {opt.price > 0 && <span style={{ color:"rgba(255,255,255,0.85)", fontSize:11, fontWeight:700 }}>+{fmt(opt.price)}</span>}
+                        <div key={opt.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", minHeight:60, borderRadius:12, background: sel ? "rgba(255,107,0,0.12)" : "rgba(255,255,255,0.04)", border: sel ? `2px solid ${IL.or}` : "2px solid rgba(255,255,255,0.12)" }}>
+                          <div style={{ display:"flex", flexDirection:"column", minWidth:0, marginRight:10 }}>
+                            <span style={{ fontWeight:700, fontSize:16, lineHeight:1.3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", color: sel ? "#fff" : IL.tp }}>{opt.name}</span>
+                            {opt.price > 0 && <span style={{ color: sel ? IL.or : IL.tm, fontSize:13, fontWeight:700 }}>+{fmt(opt.price)}</span>}
                           </div>
-                          <div style={{ display:"flex", alignItems:"center", gap:4, background:"rgba(0,0,0,0.28)", borderRadius:20, padding:"2px 4px", flexShrink:0, position:"relative" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
                             <button
-                              style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%", color: qty===0 ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.9)", background:"none", border:"none", cursor:qty===0?"not-allowed":"pointer", fontFamily:"inherit", fontSize:18, lineHeight:1 }}
+                              style={{ width:44, height:44, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:10, color: qty===0 ? IL.mu : IL.tp, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.14)", cursor:qty===0?"not-allowed":"pointer", fontFamily:"inherit", fontSize:22, lineHeight:1, opacity: qty===0 ? 0.4 : 1 }}
                               onClick={() => changeQty(mod, opt, -1)}
                               disabled={qty === 0}
                             >−</button>
-                            <span style={{ width:16, textAlign:"center", fontSize:13, fontWeight:700, color:"#fff" }}>{qty}</span>
+                            <span style={{ minWidth:24, textAlign:"center", fontSize:18, fontWeight:800, color: sel ? "#fff" : IL.tp }}>{qty}</span>
                             <button
-                              style={{ width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:"50%", color: (atMax||qty>=(opt.maxQuantity??1)) ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.9)", background:"none", border:"none", cursor:(atMax||qty>=(opt.maxQuantity??1))?"not-allowed":"pointer", fontFamily:"inherit", fontSize:18, lineHeight:1 }}
+                              style={{ width:44, height:44, display:"flex", alignItems:"center", justifyContent:"center", borderRadius:10, color: plusDisabled ? IL.mu : "#fff", background: plusDisabled ? "rgba(255,255,255,0.08)" : IL.or, border: plusDisabled ? "1px solid rgba(255,255,255,0.14)" : "none", cursor:plusDisabled?"not-allowed":"pointer", fontFamily:"inherit", fontSize:22, lineHeight:1, opacity: plusDisabled ? 0.4 : 1 }}
                               onClick={() => changeQty(mod, opt, 1)}
-                              disabled={atMax || qty >= (opt.maxQuantity ?? 1)}
+                              disabled={plusDisabled}
                             >+</button>
                           </div>
                         </div>
@@ -419,15 +419,14 @@ function ModifierModal({ item, modifiers, onConfirm, onClose, initialSelections 
                     return (
                       <button key={opt.id} onClick={() => changeQty(mod, opt, sel ? -1 : 1)}
                         disabled={!sel && atMax}
-                        style={{ position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderRadius:14, border:"none", background:gd.grad, cursor:(!sel&&atMax)?"not-allowed":"pointer", fontFamily:"inherit", opacity:(!sel&&atMax)?0.25:sel?1:0.5, boxShadow: sel ? `0 3px 14px ${gd.glow}` : "none" }}>
-                        <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none", opacity: sel ? 1 : 0.6 }} />
-                        <div style={{ display:"flex", alignItems:"center", gap:8, minWidth:0, position:"relative" }}>
-                          <div style={{ width:20, height:20, borderRadius:"50%", border:"2px solid rgba(255,255,255,0.8)", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", background: sel ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.2)" }}>
-                            {sel && <div style={{ width:8, height:8, borderRadius:"50%", background:"#333" }} />}
+                        style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", minHeight:56, borderRadius:12, background: sel ? "rgba(255,107,0,0.12)" : "rgba(255,255,255,0.04)", border: sel ? `2px solid ${IL.or}` : "2px solid rgba(255,255,255,0.12)", cursor:(!sel&&atMax)?"not-allowed":"pointer", fontFamily:"inherit", opacity:(!sel&&atMax)?0.35:1 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0 }}>
+                          <div style={{ width:26, height:26, borderRadius:8, border: sel ? "none" : "2px solid rgba(255,255,255,0.35)", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", background: sel ? IL.or : "transparent" }}>
+                            {sel && <span style={{ color:"#fff", fontSize:16, fontWeight:900, lineHeight:1 }}>✓</span>}
                           </div>
-                          <span style={{ fontWeight:600, fontSize:13, lineHeight:1.3, textAlign:"left", color:"#fff" }}>{opt.name}</span>
+                          <span style={{ fontWeight:700, fontSize:16, lineHeight:1.3, textAlign:"left", color: sel ? "#fff" : IL.tp }}>{opt.name}</span>
                         </div>
-                        {opt.price > 0 && <span style={{ color:"rgba(255,255,255,0.9)", fontSize:11, fontWeight:700, marginLeft:4, flexShrink:0, position:"relative" }}>+{fmt(opt.price)}</span>}
+                        {opt.price > 0 && <span style={{ color: sel ? IL.or : IL.tm, fontSize:14, fontWeight:700, marginLeft:8, flexShrink:0 }}>+{fmt(opt.price)}</span>}
                       </button>
                     );
                   })}
@@ -1188,6 +1187,10 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
   const STATUS_LABEL: Record<string, string> = {
     pending: "New", confirmed: "Accepted", preparing: "Cooking", ready: "Ready",
   };
+  // Flat card accent per status (left stripe + status pill)
+  const STATUS_ACCENT: Record<string, string> = {
+    pending: "#ffd60a", confirmed: "#0a84ff", preparing: IL.or, ready: IL.grn,
+  };
 
   return (
     <>
@@ -1234,48 +1237,65 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
               <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>No orders match "{search}"</p>
             )}
             {!loading && filteredOrders.map(o => {
-              const { grad: tg, glow: tGw } = ITEM_GRADS[o.id % ITEM_GRADS.length];
+              const accent = STATUS_ACCENT[o.status] ?? IL.pur;
               return (
-              <div key={o.id} style={{ background:tg, borderRadius:16, padding:14, boxShadow:`0 4px 20px ${tGw}`, position:"relative", overflow:"hidden" }}>
-                <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.10) 0%,transparent 55%)", pointerEvents:"none", zIndex:0 }} />
-                <div style={{ position:"relative", zIndex:1 }}>
+              <div key={o.id} style={{ background:IL.card, borderRadius:14, padding:14, border:"1px solid rgba(255,255,255,0.10)", borderLeft:`5px solid ${accent}` }}>
+                <div>
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <p style={{ color:"#fff", fontWeight:800, fontSize:15, lineHeight:1.2 }}>{o.customerName || "Walk-in"}</p>
+                    <p style={{ color:"#fff", fontWeight:800, fontSize:17, lineHeight:1.2 }}>{o.customerName || "Walk-in"}</p>
                     {o.customerPhone && (
-                      <a href={`tel:${o.customerPhone}`} style={{ color:"rgba(255,255,255,0.85)", fontSize:13, fontWeight:600, display:"block", marginTop:2, textDecoration:"none" }}>
+                      <a href={`tel:${o.customerPhone}`} style={{ color:IL.tm, fontSize:14, fontWeight:600, display:"block", marginTop:2, textDecoration:"none" }}>
                         📞 {o.customerPhone}
                       </a>
                     )}
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span style={{ color:"rgba(255,255,255,0.6)", fontSize:11, fontFamily:"monospace" }}>#{o.confirmationCode}</span>
-                      <span style={{ color:"#fff", fontSize:11, fontWeight:700, background:"rgba(0,0,0,0.28)", borderRadius:6, padding:"1px 6px" }}>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span style={{ color:IL.mu, fontSize:12, fontFamily:"monospace" }}>#{o.confirmationCode}</span>
+                      <span style={{ color:accent, fontSize:12, fontWeight:800, background:"rgba(255,255,255,0.07)", border:`1px solid ${accent}`, borderRadius:6, padding:"2px 8px" }}>
                         {STATUS_LABEL[o.status] ?? o.status}
                       </span>
                       {o.scheduledPickupAt && (
-                        <span style={{ fontSize:11, color:"#fff", background:"rgba(0,0,0,0.28)", borderRadius:6, padding:"1px 6px", fontWeight:600 }}>
+                        <span style={{ fontSize:12, color:IL.tm, background:"rgba(255,255,255,0.07)", borderRadius:6, padding:"2px 8px", fontWeight:600 }}>
                           ⏰ {new Date(o.scheduledPickupAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Puerto_Rico" })}
                         </span>
                       )}
-                      <span style={{ fontSize:11, color:"#fff", background:"rgba(0,0,0,0.28)", borderRadius:6, padding:"1px 6px", fontWeight:600 }}>
+                      <span style={{ fontSize:12, color:IL.tm, background:"rgba(255,255,255,0.07)", borderRadius:6, padding:"2px 8px", fontWeight:600 }}>
                         {o.source === "pos" ? "POS" : o.source === "phone" ? "📞 Phone" : "Online"}
                       </span>
-                      {(() => { const e = elapsedLabel(o.createdAt, now); const urgent = e.cls.includes("red"); return <span style={{ fontSize:11, color: urgent ? "#fca5a5" : "rgba(255,255,255,0.8)", background:"rgba(0,0,0,0.28)", borderRadius:6, padding:"1px 6px", fontWeight:600 }}>⏱ {e.label}</span>; })()}
+                      {(() => { const e = elapsedLabel(o.createdAt, now); const urgent = e.cls.includes("red"); return <span style={{ fontSize:12, color: urgent ? "#ff6b63" : IL.tm, background: urgent ? "rgba(255,69,58,0.15)" : "rgba(255,255,255,0.07)", borderRadius:6, padding:"2px 8px", fontWeight:700 }}>⏱ {e.label}</span>; })()}
                     </div>
                   </div>
-                  <span style={{ color:"#fff", fontWeight:800, fontSize:16, flexShrink:0 }}>{fmt(o.total)}</span>
+                  <span style={{ color:"#fff", fontWeight:800, fontSize:18, flexShrink:0 }}>{fmt(o.total)}</span>
                 </div>
-                <div className="mb-2 space-y-0.5">
+                <div className="mb-2 space-y-1">
                   {o.items.map((i, idx) => {
                     const mods = i.modifierSelections?.length ? ` (${i.modifierSelections.map(m => m.name).join(", ")})` : "";
                     return (
-                      <div key={idx} style={{ color:"rgba(255,255,255,0.75)", fontSize:12, lineHeight:1.4 }}>
-                        <span style={{ fontWeight:700, color:"#fff" }}>{i.quantity}×</span> {i.menuItemName}{mods}
+                      <div key={idx} style={{ color:IL.tm, fontSize:14, lineHeight:1.45 }}>
+                        <span style={{ fontWeight:800, color:"#fff" }}>{i.quantity}×</span> {i.menuItemName}{mods}
                       </div>
                     );
                   })}
                 </div>
-                {o.notes && <p style={{ color:"rgba(255,255,255,0.65)", fontSize:11, fontStyle:"italic", marginBottom:8 }}>"{o.notes}"</p>}
+                {o.notes && <p style={{ color:IL.tm, fontSize:12, fontStyle:"italic", marginBottom:8 }}>"{o.notes}"</p>}
+                {o.status === "ready" && o.waReminderSentAt && (
+                  (o.waReminderStatus === "failed_not_whatsapp" || o.waReminderStatus === "failed") ? (
+                    <div className="mb-2 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background:"rgba(255,69,58,0.18)", border:"1px solid rgba(255,69,58,0.5)" }}>
+                      <span style={{ color:"#ff8a84", fontSize:13, fontWeight:700 }}>
+                        {o.waReminderStatus === "failed_not_whatsapp"
+                          ? "⚠️ No WhatsApp on this number — call customer"
+                          : "⚠️ WhatsApp reminder failed — call customer"}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="mb-2 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)" }}>
+                      <span style={{ color:IL.tm, fontSize:13, fontWeight:700 }}>
+                        📨 Reminder sent {new Date(o.waReminderSentAt).toLocaleTimeString("en-US", { hour:"numeric", minute:"2-digit", timeZone:"America/Puerto_Rico" })}
+                        {o.waReminderStatus === "delivered" ? " ✓✓" : ""}
+                      </span>
+                    </div>
+                  )
+                )}
                 {o.paymentStatus === "paid" && o.source === "pos" && (
                   <div className="mb-2 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background:"rgba(48,209,88,0.22)", border:"1px solid rgba(48,209,88,0.45)" }}>
                     <span style={{ color:"#6ee7a0", fontSize:13, fontWeight:700 }}>✓ Pre-paid</span>
@@ -1286,38 +1306,38 @@ function TicketsDrawer({ onResume, onClose, onPaymentComplete }: {
                 <div className="flex flex-wrap gap-2">
                   {o.status === "pending" && (o.source === "online" || o.source === "phone") && (
                     <>
-                      <button onClick={() => updateStatus(o.id, "confirmed")} style={{ flex:1, height:40, borderRadius:10, background:"rgba(255,255,255,0.25)", border:"1px solid rgba(255,255,255,0.35)", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Accept</button>
-                      <button onClick={() => updateStatus(o.id, "cancelled")} style={{ height:40, padding:"0 12px", borderRadius:10, background:"rgba(255,69,58,0.3)", border:"1px solid rgba(255,69,58,0.5)", color:"#ffa5a1", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Reject</button>
+                      <button onClick={() => updateStatus(o.id, "confirmed")} style={{ flex:1, height:44, borderRadius:10, background:"rgba(10,132,255,0.22)", border:"1px solid rgba(10,132,255,0.5)", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Accept</button>
+                      <button onClick={() => updateStatus(o.id, "cancelled")} style={{ height:44, padding:"0 14px", borderRadius:10, background:"rgba(255,69,58,0.18)", border:"1px solid rgba(255,69,58,0.5)", color:"#ff8a84", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Reject</button>
                     </>
                   )}
                   {o.status === "confirmed" && (
-                    <button onClick={() => updateStatus(o.id, "preparing")} style={{ flex:1, height:40, borderRadius:10, background:"rgba(255,107,0,0.35)", border:"1px solid rgba(255,107,0,0.55)", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Start Cooking</button>
+                    <button onClick={() => updateStatus(o.id, "preparing")} style={{ flex:1, height:44, borderRadius:10, background:"rgba(255,107,0,0.22)", border:"1px solid rgba(255,107,0,0.55)", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Start Cooking</button>
                   )}
                   {o.status === "preparing" && (
-                    <button onClick={() => updateStatus(o.id, "ready")} style={{ flex:1, height:40, borderRadius:10, background:"rgba(48,209,88,0.3)", border:"1px solid rgba(48,209,88,0.55)", color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Mark Ready</button>
+                    <button onClick={() => updateStatus(o.id, "ready")} style={{ flex:1, height:44, borderRadius:10, background:"rgba(48,209,88,0.18)", border:"1px solid rgba(48,209,88,0.55)", color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Mark Ready</button>
                   )}
                   {o.paymentStatus === "pending" && (
-                    <button onClick={() => resume(o)} style={{ height:40, padding:"0 12px", borderRadius:10, background:"rgba(255,255,255,0.2)", border:"1px solid rgba(255,255,255,0.3)", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Edit</button>
+                    <button onClick={() => resume(o)} style={{ height:44, padding:"0 14px", borderRadius:10, background:"rgba(255,255,255,0.08)", border:"1px solid rgba(255,255,255,0.2)", color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Edit</button>
                   )}
                   {o.paymentStatus === "pending" ? (
-                    <button onClick={() => chargeTicket(o)} style={{ flex:1, height:40, borderRadius:10, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 3px 14px rgba(255,107,0,0.55)" }}>
+                    <button onClick={() => chargeTicket(o)} style={{ flex:1, height:44, borderRadius:10, background:IL.or, border:"none", color:"#fff", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
                       Charge {fmt(o.total)}
                     </button>
                   ) : o.status === "ready" ? (
-                    <button onClick={() => completeOrder(o.id)} style={{ flex:1, height:40, borderRadius:10, background:"linear-gradient(135deg,#10b981,#059669)", border:"none", color:"#fff", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 3px 14px rgba(16,185,129,0.55)" }}>
+                    <button onClick={() => completeOrder(o.id)} style={{ flex:1, height:44, borderRadius:10, background:"#059669", border:"none", color:"#fff", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>
                       ✓ Complete & Receipt
                     </button>
                   ) : (
-                    <button disabled style={{ flex:1, height:40, borderRadius:10, background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.4)", fontSize:13, cursor:"not-allowed", fontFamily:"inherit" }}>
+                    <button disabled style={{ flex:1, height:44, borderRadius:10, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.12)", color:"rgba(255,255,255,0.45)", fontSize:14, cursor:"not-allowed", fontFamily:"inherit" }}>
                       Pre-paid — awaiting kitchen
                     </button>
                   )}
-                  <button onClick={() => voidTicket(o.id)} style={{ height:40, padding:"0 12px", borderRadius:10, background:"rgba(255,69,58,0.25)", border:"1px solid rgba(255,69,58,0.45)", color:"#ffa5a1", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Void</button>
+                  <button onClick={() => voidTicket(o.id)} style={{ height:44, padding:"0 14px", borderRadius:10, background:"rgba(255,69,58,0.15)", border:"1px solid rgba(255,69,58,0.4)", color:"#ff8a84", fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Void</button>
                 </div>
                 <button
                   onClick={() => refireToKds(o)}
                   disabled={refireState[o.id] === "sending"}
-                  style={{ marginTop:8, width:"100%", height:34, borderRadius:10, background:"rgba(124,106,247,0.18)", border:"1px solid rgba(124,106,247,0.4)", color:"#c4b9ff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity: refireState[o.id] === "sending" ? 0.5 : 1 }}
+                  style={{ marginTop:8, width:"100%", height:38, borderRadius:10, background:"rgba(124,106,247,0.14)", border:"1px solid rgba(124,106,247,0.4)", color:"#c4b9ff", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity: refireState[o.id] === "sending" ? 0.5 : 1 }}
                 >
                   {refireState[o.id] === "sending" ? "Sending…" : refireState[o.id] === "sent" ? "✓ Sent to KDS" : refireState[o.id] === "error" ? "Re-fire failed — try again" : "🔁 Re-fire to KDS"}
                 </button>
@@ -2154,12 +2174,13 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
 
 // ─── Close Shift Modal ────────────────────────────────────────────────────────
 
-function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void }) {
+function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: (didClose: boolean) => void }) {
   type Summary = { totalOrders: number; totalSales: number; byMethod: { cash: number; card: number; athmovil: number }; refundTotal: number; netSales: number; payIns: number; payOuts: number; expectedCash: number; cashTransactions: CashTxn[] };
   const [summary, setSummary] = useState<Summary | null>(null);
   const [closingFloat, setClosingFloat] = useState("");
   const [closing, setClosing] = useState(false);
   const [closed, setClosed] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
   const [printingZ, setPrintingZ] = useState(false);
 
   useEffect(() => {
@@ -2170,12 +2191,23 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
 
   const handleClose = async () => {
     setClosing(true);
-    await fetch(`/api/shifts/${shift.id}/close`, {
-      method: "PATCH", credentials: "include",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ closingFloat: closingFloat ? parseFloat(closingFloat) : undefined }),
-    });
-    setClosed(true); setClosing(false);
+    setCloseError(null);
+    try {
+      const r = await fetch(`/api/shifts/${shift.id}/close`, {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ closingFloat: closingFloat ? parseFloat(closingFloat) : undefined }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error ?? `Close failed (${r.status})`);
+      }
+      setClosed(true);
+    } catch (e) {
+      setCloseError(e instanceof Error ? e.message : "Could not close shift — try again");
+    } finally {
+      setClosing(false);
+    }
   };
 
   const printZReport = async () => {
@@ -2186,12 +2218,12 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={closed ? onClose : undefined}>
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={closed ? () => onClose(true) : undefined}>
       <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.06)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
         <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background: closed ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,#ff453a,#c0392b)" }}>
           <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
           <h2 style={{ color:"#fff", fontSize:17, fontWeight:800, position:"relative" }}>{closed ? "✓ Shift Closed" : "Close Shift"}</h2>
-          <button onClick={onClose} style={{ color:"rgba(255,255,255,0.75)", fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit", position:"relative" }}>×</button>
+          <button onClick={() => onClose(closed)} style={{ color:"rgba(255,255,255,0.75)", fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit", position:"relative" }}>×</button>
         </div>
         <div style={{ padding:20, maxHeight:"70vh", overflowY:"auto" }}>
           {summary ? (
@@ -2222,6 +2254,7 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
                 </div>
               )}
               {closed && <div style={{ textAlign:"center", color:IL.grn, fontWeight:700, fontSize:17, padding:"8px 0" }}>✓ Shift Closed</div>}
+              {closeError && <div style={{ textAlign:"center", color:IL.red, fontWeight:600, fontSize:13, padding:"4px 0" }}>⚠️ {closeError}</div>}
             </div>
           ) : (
             <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>Loading summary…</p>
@@ -2239,7 +2272,7 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
             </button>
           )}
           {closed && (
-            <button onClick={onClose} style={{ flex:1, height:44, borderRadius:12, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 16px rgba(255,107,0,0.45)" }}>
+            <button onClick={() => onClose(true)} style={{ flex:1, height:44, borderRadius:12, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 16px rgba(255,107,0,0.45)" }}>
               Done
             </button>
           )}
@@ -3276,8 +3309,10 @@ export default function POS() {
 
       if (noNewItems) {
         // Unchanged resumed ticket — patch the existing order in-place so it stays on KDS.
+        // Always send the current discount: it may have been applied, changed, or
+        // removed while the ticket was resumed, and the PATCH path is the only save.
         const notes = (overrideNote ?? orderNotes) || undefined;
-        const patchBody: Record<string, unknown> = { ...(notes ? { notes } : {}) };
+        const patchBody: Record<string, unknown> = { discountAmount: discount, ...(notes ? { notes } : {}) };
         if (paymentStatus === "paid") {
           patchBody.actualPaymentMethod = method;
           patchBody.paymentStatus = "paid";
@@ -3322,9 +3357,11 @@ export default function POS() {
           const errData = await addR.json().catch(() => ({})) as { error?: string };
           throw new Error(errData.error ?? `Failed to add items (${addR.status})`);
         }
-        // PATCH payment / hold state on the same order
+        // PATCH payment / hold state on the same order (discount may have been
+        // applied/changed while resumed — the server recomputes the total, and
+        // add-items has already updated the subtotal at this point)
         const notes = (overrideNote ?? orderNotes) || undefined;
-        const patchBody: Record<string, unknown> = { ...(notes ? { notes } : {}) };
+        const patchBody: Record<string, unknown> = { discountAmount: discount, ...(notes ? { notes } : {}) };
         if (paymentStatus === "paid") {
           patchBody.actualPaymentMethod = method;
           patchBody.paymentStatus = "paid";
@@ -3668,7 +3705,7 @@ export default function POS() {
               boxShadow: ticketCount > 0 ? "0 2px 16px rgba(255,107,0,0.65)" : "0 2px 14px rgba(124,106,247,0.45)" }}
           >
             <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.2) 0%,transparent 55%)", pointerEvents:"none" }} />
-            🎫 <span style={{ position:"relative" }}>{ticketCount > 0 ? `${ticketCount} Held` : "Tickets"}</span>
+            🎫 <span style={{ position:"relative" }}>{ticketCount > 0 ? `${ticketCount} Active Orders` : "Active Orders"}</span>
           </button>
           {/* Desktop: Cash, Receipts, Sold Out, Admin, Reload */}
           <div className="hidden sm:flex items-center gap-2">
@@ -3882,16 +3919,10 @@ export default function POS() {
 
               {/* Payment buttons */}
               <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={handleHold} disabled={submitting}
-                    style={{ height:56, borderRadius:14, background:"rgba(245,158,11,0.12)", border:"1px solid rgba(245,158,11,0.35)", color:"#fbbf24", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:submitting?0.5:1 }}>
-                    🎫 Hold
-                  </button>
-                  <button onClick={() => setSplitModal(true)} disabled={submitting || cart.length < 2}
-                    style={{ height:56, borderRadius:14, background:"rgba(255,255,255,0.06)", border:`1px solid ${IL.bord}`, color:IL.tm, fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:(submitting||cart.length<2)?0.4:1 }}>
-                    ✂ Split
-                  </button>
-                </div>
+                <button onClick={handleHold} disabled={submitting}
+                  style={{ width:"100%", height:56, borderRadius:14, background:"rgba(245,158,11,0.12)", border:"1px solid rgba(245,158,11,0.35)", color:"#fbbf24", fontSize:14, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:submitting?0.5:1 }}>
+                  🎫 Save Order
+                </button>
                 <button onClick={() => setPaymentModal(true)} disabled={submitting}
                   style={{ width:"100%", height:64, borderRadius:16, background:`linear-gradient(135deg,${IL.or},#ff9500)`, border:"none", color:"#fff", fontWeight:900, fontSize:20, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 6px 24px rgba(255,107,0,0.45)", opacity:submitting?0.5:1 }}>
                   {submitting ? "Processing…" : `Charge ${fmt(total)}`}
@@ -4194,7 +4225,14 @@ export default function POS() {
       {closeShiftModal && currentShift && (
         <CloseShiftModal
           shift={currentShift}
-          onClose={() => { setCloseShiftModal(false); setCurrentShift(null); setOpenShiftModal(true); }}
+          onClose={(didClose) => {
+            setCloseShiftModal(false);
+            // Only forget the shift if it was actually closed on the server.
+            // Dismissing the dialog (×) must keep the shift shown as open,
+            // otherwise the UI says "No Shift" while the server still has it
+            // open and re-opening fails with "shift already open".
+            if (didClose) { setCurrentShift(null); setOpenShiftModal(true); }
+          }}
         />
       )}
       {cashMgmtOpen && (

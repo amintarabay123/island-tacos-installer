@@ -218,7 +218,8 @@ export class WhatsAppApiError extends Error {
   }
 }
 
-// Returns true if Meta accepted the message, false on any error.
+// Returns the Meta message id (wamid) if Meta accepted the message, false on
+// any error. Truthy = accepted (so existing boolean checks keep working).
 // Callers that need to record delivery (e.g. wa_reminder_sent_at) should
 // check the return value before stamping — a false means the customer was
 // NOT notified and the stamp should be skipped so a retry can happen.
@@ -230,7 +231,7 @@ export async function sendWhatsAppTemplate(
   languageCode: string,
   bodyParams: string[],   // ordered list of {{1}}, {{2}}, … substitutions
   headerDocument?: { link: string; filename: string }, // optional PDF/document header
-): Promise<boolean> {
+): Promise<string | false> {
   const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
   const accessToken   = process.env.META_ACCESS_TOKEN;
 
@@ -287,9 +288,11 @@ export async function sendWhatsAppTemplate(
     }
 
     const data = await response.json() as { messages?: { id: string }[] };
-    logger.info({ to: toNormalized, template: templateName, msgId: data.messages?.[0]?.id },
+    const msgId = data.messages?.[0]?.id;
+    logger.info({ to: toNormalized, template: templateName, msgId },
       "[whatsapp] Template sent");
-    return true;
+    // Always return a truthy value on acceptance, even if Meta omitted the id
+    return msgId ?? "accepted";
   } catch (err) {
     if (err instanceof WhatsAppApiError) throw err; // let explicit rejections propagate
     logger.error({ err, to: toNormalized, template: templateName }, "[whatsapp] Template send error");
@@ -355,9 +358,11 @@ export async function sendOrderReadyWhatsApp(order: OrderLike): Promise<void> {
  * Template: island_tacos_order_reminder
  * Body params: {{1}} = name, {{2}} = confirmation code
  */
-// Returns true if Meta accepted the message (caller should only stamp
-// wa_reminder_sent_at on true — false means no notification was sent).
-export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<boolean> {
+// Returns the Meta message id (wamid) if Meta accepted the message (caller
+// should only stamp wa_reminder_sent_at on a truthy return — false means no
+// notification was sent). The wamid lets the status webhook map delivery
+// failures (e.g. number not on WhatsApp) back to the order.
+export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<string | false> {
   if (!order.customerPhone) return false;
 
   const templateName = process.env.WA_TEMPLATE_REMINDER ?? "island_tacos_order_reminder";
@@ -381,7 +386,7 @@ export async function sendOrderReminderWhatsApp(order: OrderLike): Promise<boole
  */
 export async function sendOrderReceiptWhatsApp(
   order: Pick<OrderLike, "customerPhone" | "customerName" | "confirmationCode">,
-): Promise<boolean> {
+): Promise<string | false> {
   if (!order.customerPhone) return false;
 
   const templateName = process.env.WA_TEMPLATE_RECEIPT ?? "island_tacos_order_receipt";

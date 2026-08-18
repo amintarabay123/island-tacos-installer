@@ -2155,13 +2155,14 @@ function OpenShiftModal({ onOpen }: { onOpen: (shift: Shift) => void }) {
 
 // ─── Close Shift Modal ────────────────────────────────────────────────────────
 
-function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void }) {
+function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: (didClose: boolean) => void }) {
   const { storeName, address } = useStoreSettings();
   type Summary = { totalOrders: number; totalSales: number; byMethod: { cash: number; card: number; athmovil: number }; refundTotal: number; netSales: number; payIns: number; payOuts: number; expectedCash: number; cashTransactions: CashTxn[] };
   const [summary, setSummary] = useState<Summary | null>(null);
   const [closingFloat, setClosingFloat] = useState("");
   const [closing, setClosing] = useState(false);
   const [closed, setClosed] = useState(false);
+  const [closeError, setCloseError] = useState<string | null>(null);
   const [printingZ, setPrintingZ] = useState(false);
 
   useEffect(() => {
@@ -2172,12 +2173,23 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
 
   const handleClose = async () => {
     setClosing(true);
-    await fetch(`/cedar-api/api/shifts/${shift.id}/close`, {
-      method: "PATCH", credentials: "include",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ closingFloat: closingFloat ? parseFloat(closingFloat) : undefined }),
-    });
-    setClosed(true); setClosing(false);
+    setCloseError(null);
+    try {
+      const r = await fetch(`/cedar-api/api/shifts/${shift.id}/close`, {
+        method: "PATCH", credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ closingFloat: closingFloat ? parseFloat(closingFloat) : undefined }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({})) as { error?: string };
+        throw new Error(d.error ?? `Close failed (${r.status})`);
+      }
+      setClosed(true);
+    } catch (e) {
+      setCloseError(e instanceof Error ? e.message : "Could not close shift — try again");
+    } finally {
+      setClosing(false);
+    }
   };
 
   const printZReport = async () => {
@@ -2188,12 +2200,12 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={closed ? onClose : undefined}>
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={closed ? () => onClose(true) : undefined}>
       <div style={{ background:IL.card, borderRadius:24, width:"100%", maxWidth:384, boxShadow:"0 24px 80px rgba(0,0,0,0.65),0 0 0 1px rgba(100,200,130,0.12)", overflow:"hidden" }} onClick={e => e.stopPropagation()}>
         <div style={{ position:"relative", overflow:"hidden", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", background: closed ? "linear-gradient(135deg,#3d8f6a,#2d6a4f)" : "linear-gradient(135deg,#d4614a,#a03d2a)" }}>
           <div style={{ position:"absolute", inset:0, background:"linear-gradient(155deg,rgba(255,255,255,0.18) 0%,transparent 55%)", pointerEvents:"none" }} />
           <h2 style={{ color:"#fff", fontSize:17, fontWeight:800, position:"relative" }}>{closed ? "✓ Shift Closed" : "Close Shift"}</h2>
-          <button onClick={onClose} style={{ color:"rgba(255,255,255,0.75)", fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit", position:"relative" }}>×</button>
+          <button onClick={() => onClose(closed)} style={{ color:"rgba(255,255,255,0.75)", fontSize:26, background:"none", border:"none", cursor:"pointer", lineHeight:1, fontFamily:"inherit", position:"relative" }}>×</button>
         </div>
         <div style={{ padding:20, maxHeight:"70vh", overflowY:"auto" }}>
           {summary ? (
@@ -2224,6 +2236,7 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
                 </div>
               )}
               {closed && <div style={{ textAlign:"center", color:IL.grn, fontWeight:700, fontSize:17, padding:"8px 0" }}>✓ Shift Closed</div>}
+              {closeError && <div style={{ textAlign:"center", color:IL.red, fontWeight:600, fontSize:13, padding:"4px 0" }}>⚠️ {closeError}</div>}
             </div>
           ) : (
             <p style={{ color:IL.mu, textAlign:"center", padding:"32px 0" }}>Loading summary…</p>
@@ -2241,7 +2254,7 @@ function CloseShiftModal({ shift, onClose }: { shift: Shift; onClose: () => void
             </button>
           )}
           {closed && (
-            <button onClick={onClose} style={{ flex:1, height:44, borderRadius:12, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 16px rgba(16,185,129,0.45)" }}>
+            <button onClick={() => onClose(true)} style={{ flex:1, height:44, borderRadius:12, background:`linear-gradient(135deg,${IL.or},#059669)`, border:"none", color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 16px rgba(16,185,129,0.45)" }}>
               Done
             </button>
           )}
@@ -4206,7 +4219,12 @@ export default function POS() {
       {closeShiftModal && currentShift && (
         <CloseShiftModal
           shift={currentShift}
-          onClose={() => { setCloseShiftModal(false); setCurrentShift(null); setOpenShiftModal(true); }}
+          onClose={(didClose) => {
+            setCloseShiftModal(false);
+            // Only forget the shift if it was actually closed on the server;
+            // dismissing with × must keep it shown as open.
+            if (didClose) { setCurrentShift(null); setOpenShiftModal(true); }
+          }}
         />
       )}
       {cashMgmtOpen && (

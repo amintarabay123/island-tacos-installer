@@ -33,16 +33,22 @@ async function checkAndSendReminders(): Promise<void> {
     for (const order of staleOrders) {
       logger.info({ orderId: order.id, code: order.confirmationCode }, "[reminders] sending pickup reminder");
 
-      const ok = await sendOrderReminderWhatsApp(order).catch((err) => {
+      const msgId = await sendOrderReminderWhatsApp(order).catch((err) => {
         logger.error({ err: err?.message, orderId: order.id }, "[reminders] WhatsApp send failed");
-        return false;
+        return false as const;
       });
 
-      if (ok) {
-        // Only stamp after confirmed delivery — failed sends remain un-stamped for retry
+      if (msgId) {
+        // Only stamp after Meta accepted the send — failed sends remain un-stamped for retry.
+        // Store the wamid + "sent" status; the status webhook upgrades this to
+        // "delivered" or "failed"/"failed_not_whatsapp" when Meta reports back.
         await db
           .update(ordersTable)
-          .set({ waReminderSentAt: new Date() })
+          .set({
+            waReminderSentAt: new Date(),
+            waReminderMsgId: typeof msgId === "string" ? msgId : null,
+            waReminderStatus: "sent",
+          })
           .where(eq(ordersTable.id, order.id));
         sent++;
       } else {

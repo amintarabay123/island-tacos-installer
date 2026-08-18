@@ -21,4 +21,5 @@ export interface UpdateMenuItemBody {
   spicy?: boolean;
   vegetarian?: boolean;
   openPrice?: boolean;
+  hiddenOnline?: boolean;
 }

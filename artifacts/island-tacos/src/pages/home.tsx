@@ -66,7 +66,7 @@ export default function Home() {
 
   const filteredItems = useMemo(() => {
     if (!items) return [];
-    const visible = items.filter(item => !(item as { openPrice?: boolean }).openPrice);
+    const visible = items.filter(item => !(item as { openPrice?: boolean }).openPrice && !(item as { hiddenOnline?: boolean }).hiddenOnline);
     if (activeCategory === null) return visible;
     return visible.filter(item => item.categoryId === activeCategory);
   }, [items, activeCategory]);
@@ -207,7 +207,7 @@ export default function Home() {
     if (!items) return categories;
     const catIdsWithItems = new Set(
       items
-        .filter(i => i.available !== false && !(i as { openPrice?: boolean }).openPrice)
+        .filter(i => i.available !== false && !(i as { openPrice?: boolean }).openPrice && !(i as { hiddenOnline?: boolean }).hiddenOnline)
         .map(i => i.categoryId),
     );
     return categories.filter(c => catIdsWithItems.has(c.id));

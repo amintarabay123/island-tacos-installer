@@ -19,6 +19,8 @@
 - [Online order status ownership](online-order-status-ownership.md) — cloud owns paymentStatus, mini PC owns order.status; sync must NEVER pull status cloud→local or accepted orders revert to pending and vanish from KDS.
 - [Watchdog must never restart itself](watchdog-self-restart.md) — repairs use `--only island-tacos`; bare ecosystem restarts kill the monitor and silence alerts. Fonts must be self-hosted (offline mini PC).
 - [POS re-fire to KDS](pos-refire-to-kds.md) — manual re-fire button on POS order cards; PATCH kdsCleared:false (+status confirmed only if pending); both tenants + both deploy targets; recall note for Cedar agent.
+- [WA reminder delivery tracking](wa-reminder-delivery-tracking.md) — reminder status is cloud-owned, mirrors down like paymentStatus; webhook transitions must be monotonic; 131026 = not on WhatsApp.
 - [Payment events sync gap](payment-events-sync.md) — payment_events are cloud-only (Placetopay webhook can't reach LAN); mini PC must PULL them; map to local order via confirmationCode, never numeric id.
 - [api-server dev runs a prebuilt bundle](api-server-dev-bundle.md) — dev script runs dist/index.mjs, NOT source; source edits need `run build` + restart to appear locally (a restart alone reloads stale code).
+- [Express guards must be case-insensitive](express-case-insensitive-guards.md) — regex auth guards need /i or /Admin/... bypasses them; also gate sensitive routes directly.
 - [POS order fetches must be bounded](pos-order-fetch-bounds.md) — never call GET /api/orders unbounded from clients; use activeOnly=true or limit, or the Sunmi POS freezes as history grows.

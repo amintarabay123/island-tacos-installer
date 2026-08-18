@@ -463,6 +463,12 @@ router.post("/orders", async (req, res): Promise<void> => {
         res.status(400).json({ error: `Menu item "${menuItem.name}" is not available` });
         return;
       }
+      // Items hidden from the online menu can't be ordered by anonymous customers either —
+      // otherwise someone with a retained item id could still order it. POS/staff may.
+      if (menuItem.hiddenOnline && !isStaffAuthenticated(req)) {
+        res.status(400).json({ error: `Menu item "${menuItem.name}" is not available` });
+        return;
+      }
       // Open-price items (e.g. "Misc") let the cashier set a one-off price at the POS.
       // We only honor priceOverride when the menu item is flagged openPrice — never trust
       // a client-supplied price for normal items. Open-price is also a staff-only feature:

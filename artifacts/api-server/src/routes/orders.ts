@@ -463,6 +463,12 @@ router.post("/orders", async (req, res): Promise<void> => {
         res.status(400).json({ error: `Menu item "${menuItem.name}" is not available` });
         return;
       }
+      // Items hidden from the online menu can't be ordered by anonymous customers either —
+      // otherwise someone with a retained item id could still order it. POS/staff may.
+      if (menuItem.hiddenOnline && !isStaffAuthenticated(req)) {
+        res.status(400).json({ error: `Menu item "${menuItem.name}" is not available` });
+        return;
+      }
       // Open-price items (e.g. "Misc") let the cashier set a one-off price at the POS.
       // We only honor priceOverride when the menu item is flagged openPrice — never trust
       // a client-supplied price for normal items. Open-price is also a staff-only feature:
@@ -757,6 +763,8 @@ router.get("/orders/online-sync", async (req, res): Promise<void> => {
       total:             order.total,
       notes:             order.notes,
       createdAt:         order.createdAt,
+      waReminderSentAt:  order.waReminderSentAt,
+      waReminderStatus:  order.waReminderStatus,
     },
     items: (itemsByOrder.get(order.id) ?? []).map((item) => ({
       menuItemId:         item.menuItemId,
@@ -881,6 +889,30 @@ router.patch("/orders/:id", requireStaffAuth, async (req, res): Promise<void> =>
   }
   if (parsed.data.amountTendered !== undefined) {
     updates.amountTendered = parsed.data.amountTendered != null ? String(parsed.data.amountTendered) : null;
+  }
+  // Discount applied/changed on an existing order (e.g. while paying a resumed
+  // held ticket — the POS PATCH-in-place path). Recompute the total server-side
+  // from the stored subtotal/tax/deliveryFee so the two never drift apart.
+  if (parsed.data.discountAmount !== undefined) {
+    const [current] = await db
+      .select({
+        subtotal: ordersTable.subtotal,
+        tax: ordersTable.tax,
+        deliveryFee: ordersTable.deliveryFee,
+      })
+      .from(ordersTable)
+      .where(eq(ordersTable.id, params.data.id));
+    if (!current) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+    const discount = Math.max(0, parsed.data.discountAmount);
+    const newTotal = Math.max(
+      0,
+      parseFloat(current.subtotal) - discount + parseFloat(current.tax) + parseFloat(current.deliveryFee),
+    );
+    updates.discountAmount = discount.toFixed(2);
+    updates.total = newTotal.toFixed(2);
   }
   // Auto-mark as paid when completed from POS (not from KDS clear)
   if (parsed.data.status === "completed" && !parsed.data.paymentStatus && !parsed.data.kdsCleared) {

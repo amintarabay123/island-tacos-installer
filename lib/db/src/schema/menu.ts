@@ -27,6 +27,9 @@ export const menuItemsTable = pgTable("menu_items", {
   imageUrl: text("image_url"),
   posImageUrl: text("pos_image_url"),
   available: boolean("available").notNull().default(true),
+  // Hidden from the customer-facing online menu entirely (still visible to staff/POS).
+  // Different from available=false, which shows the item greyed out as "sold out".
+  hiddenOnline: boolean("hidden_online").notNull().default(false),
   popular: boolean("popular").notNull().default(false),
   spicy: boolean("spicy").notNull().default(false),
   vegetarian: boolean("vegetarian").notNull().default(false),

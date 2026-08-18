@@ -61,6 +61,7 @@ export interface MenuItem {
   spicy: boolean;
   vegetarian: boolean;
   openPrice: boolean;
+  hiddenOnline: boolean;
   createdAt: string;
 }
 
@@ -79,6 +80,7 @@ export interface CreateMenuItemBody {
   spicy?: boolean;
   vegetarian?: boolean;
   openPrice?: boolean;
+  hiddenOnline?: boolean;
 }
 
 export interface UpdateMenuItemBody {
@@ -96,6 +98,7 @@ export interface UpdateMenuItemBody {
   spicy?: boolean;
   vegetarian?: boolean;
   openPrice?: boolean;
+  hiddenOnline?: boolean;
 }
 
 export interface OrderItemModifier {
@@ -344,6 +347,11 @@ export interface UpdateOrderStatusBody {
   amountTendered?: number | null;
   /** @nullable */
   notes?: string | null;
+  /**
+   * Updated discount for the order (e.g. applied while paying a resumed held ticket). The server recomputes the order total.
+   * @minimum 0
+   */
+  discountAmount?: number;
 }
 
 export interface MarkOrderItemsMadeBody {

@@ -660,6 +660,8 @@ components:
           type: boolean
         openPrice:
           type: boolean
+        hiddenOnline:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -673,6 +675,7 @@ components:
         - spicy
         - vegetarian
         - openPrice
+        - hiddenOnline
         - createdAt
 
     CreateMenuItemBody:
@@ -699,6 +702,8 @@ components:
         vegetarian:
           type: boolean
         openPrice:
+          type: boolean
+        hiddenOnline:
           type: boolean
       required:
         - categoryId
@@ -728,6 +733,8 @@ components:
         vegetarian:
           type: boolean
         openPrice:
+          type: boolean
+        hiddenOnline:
           type: boolean
 
     OrderItemModifier:
@@ -964,6 +971,12 @@ components:
           type: ["number", "null"]
         notes:
           type: ["string", "null"]
+        discountAmount:
+          type: number
+          minimum: 0
+          description: >-
+            Updated discount for the order (e.g. applied while paying a resumed
+            held ticket). The server recomputes the order total.
 
     MarkOrderItemsMadeBody:
       type: object

@@ -125,7 +125,9 @@ router.get("/menu/items", async (req, res): Promise<void> => {
   // exploit where an attacker reads the item id and POSTs an order with a
   // self-supplied priceOverride. Staff sessions still see them so admin/POS work.
   const staff = isStaffAuthenticated(req);
-  const visible = staff ? items : items.filter((i) => !i.openPrice);
+  // hiddenOnline items are removed from the customer menu entirely (unlike
+  // available=false, which shows them greyed out as sold-out). Staff/POS still see them.
+  const visible = staff ? items : items.filter((i) => !i.openPrice && !i.hiddenOnline);
   // Pre-warm image cache so all Loyverse images are ready before the browser asks
   prewarmImageCache(visible.flatMap(i => [i.imageUrl, i.posImageUrl]));
   const result = visible.map((item) => ({
@@ -170,6 +172,7 @@ router.get("/menu/popular", async (req, res): Promise<void> => {
     JOIN menu_items mi ON mi.id = oi.menu_item_id
     WHERE mi.available = true
       AND mi.open_price = false
+      AND mi.hidden_online = false
       AND oi.menu_item_id IS NOT NULL
       ${days ? sql`AND o.created_at >= NOW() - (${days} || ' days')::interval` : sql``}
     GROUP BY mi.id
@@ -216,6 +219,7 @@ router.post("/menu/items", async (req, res): Promise<void> => {
       spicy: parsed.data.spicy ?? false,
       vegetarian: parsed.data.vegetarian ?? false,
       openPrice,
+      hiddenOnline: parsed.data.hiddenOnline ?? false,
     })
     .returning();
   res.status(201).json({ ...item, price: parseFloat(item.price as unknown as string) });
@@ -235,9 +239,9 @@ router.get("/menu/items/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Item not found" });
     return;
   }
-  // Open-price items are POS-only — return 404 to anonymous callers so this endpoint
-  // can't be used to fish for the item id (paired with the /menu/items list filter).
-  if (item.openPrice && !isStaffAuthenticated(req)) {
+  // Open-price and hidden-online items are not public — return 404 to anonymous callers
+  // so this endpoint can't be used to fish for the item id (paired with the list filter).
+  if ((item.openPrice || item.hiddenOnline) && !isStaffAuthenticated(req)) {
     res.status(404).json({ error: "Item not found" });
     return;
   }
@@ -252,8 +256,8 @@ router.get("/menu/items/:id/modifiers", async (req, res): Promise<void> => {
 
   const [item] = await db.select().from(menuItemsTable).where(eq(menuItemsTable.id, id));
   if (!item) { res.status(404).json({ error: "Item not found" }); return; }
-  // Don't leak open-price item existence via the modifiers endpoint either.
-  if (item.openPrice && !isStaffAuthenticated(req)) {
+  // Don't leak open-price/hidden item existence via the modifiers endpoint either.
+  if ((item.openPrice || item.hiddenOnline) && !isStaffAuthenticated(req)) {
     res.status(404).json({ error: "Item not found" });
     return;
   }
@@ -378,6 +382,7 @@ router.patch("/menu/items/:id", async (req, res): Promise<void> => {
   if (parsed.data.popular !== undefined) updates.popular = parsed.data.popular;
   if (parsed.data.spicy !== undefined) updates.spicy = parsed.data.spicy;
   if (parsed.data.vegetarian !== undefined) updates.vegetarian = parsed.data.vegetarian;
+  if (parsed.data.hiddenOnline !== undefined) updates.hiddenOnline = parsed.data.hiddenOnline;
   if (parsed.data.openPrice !== undefined) {
     updates.openPrice = parsed.data.openPrice;
     // Open-price items don't carry a fixed price — normalize to 0 so reports/exports

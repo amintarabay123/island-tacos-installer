@@ -54,6 +54,8 @@ type Order = {
   total: number;
   createdAt: string;
   scheduledPickupAt?: string | null;
+  waReminderSentAt?: string | null;
+  waReminderStatus?: string | null; // "sent" | "delivered" | "failed" | "failed_not_whatsapp"
   items: OrderItem[];
 };
 

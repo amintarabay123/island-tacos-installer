@@ -27,6 +27,11 @@ export const ordersTable = pgTable("orders", {
   estimatedReadyAt: timestamp("estimated_ready_at", { withTimezone: true }),
   scheduledPickupAt: timestamp("scheduled_pickup_at", { withTimezone: true }),
   waReminderSentAt: timestamp("wa_reminder_sent_at", { withTimezone: true }),
+  // Meta message id (wamid) of the pickup reminder — used to match delivery
+  // status webhooks back to this order.
+  waReminderMsgId: text("wa_reminder_msg_id"),
+  // "sent" | "delivered" | "failed" | "failed_not_whatsapp" (Meta error 131026)
+  waReminderStatus: text("wa_reminder_status"),
   placetopayRequestId: integer("placetopay_request_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
